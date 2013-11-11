@@ -30,6 +30,12 @@
         <request name="destroy" type="destructor">
             <description summary="destroy ivi_surface"/>
         </request>
+
+        <event name="visibility">
+            <description summary="visibility of ivi_surface has changed"/>
+            <arg name="visibility" type="int"/>
+        </event>
+
     </interface>
 
     <interface name="ivi_client" version="1">
@@ -46,3 +52,4 @@
     </interface>
 
 </protocol>
+
