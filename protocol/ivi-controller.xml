@@ -389,15 +389,6 @@
             <arg name="controller_surface" type="new_id" interface="ivi_controller_surface"/>
         </event>
 
-        <event name="nativesurface">
-            <description summary="Receive wl_surface and properties to control pure wl_shell_surface"/>
-            <arg name="surface" type="new_id" interface="wl_surface"/>
-            <arg name="pid" type="uint"/>
-            <arg name="title" type="string"/>
-            <arg name="width" type="int"/>
-            <arg name="height" type="int"/>
-        </event>
-
     </interface>
 
 </protocol>
