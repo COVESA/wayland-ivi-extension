@@ -181,6 +181,10 @@
             <arg name="pid" type="uint"/>
         </event>
 
+        <request name="destroy" type="destructor">
+            <description summary="destroy ivi_controller_surface"/>
+        </request>
+
         <event name="destroyed">
             <description summary="destroyed surface event"/>
         </event>
@@ -315,6 +319,10 @@
             <description summary="Receive a wl_output this ivi_layer belongs"/>
             <arg name="screen" type="object" interface="wl_output" allow-null="true"/>
         </event>
+
+        <request name="destroy" type="destructor">
+            <description summary="destroy ivi_controller_layer"/>
+        </request>
 
         <event name="destroyed">
             <description summary="destroyed layer event"/>
