@@ -1,0 +1,7 @@
+IVI Extension for Wayland
+=========================
+
+Directory       Content
+-------------------------------------------------------------------------------
+protocol        This directory contains the protocol specification for the
+                Wayland IVI extension.
