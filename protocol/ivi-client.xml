@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="ivi_client">
+
+    <copyright>
+    Copyright (C) 2013 DENSO CORPORATION
+    Copyright (c) 2013 BMW Car IT GmbH
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.
+    </copyright>
+
+    <interface name="ivi_surface" version="1">
+        <description summary="Tell property change of ivi_surface to client"/>
+
+        <request name="destroy" type="destructor">
+            <description summary="destroy ivi_surface"/>
+        </request>
+
+        <request name="set_native">
+            <description summary="Set the native content of an application to be used as surface content"/>
+            <arg name="surface" type="object" interface="wl_surface" allow-null="true"/>
+        </request>
+    </interface>
+
+    <interface name="ivi_client" version="1">
+        <description summary="creation of ivi_surface/ivi_layer"/>
+
+        <request name="surface_create">
+            <description summary="ilm_surfaceCreate"/>
+            <arg name="id_surface" type="uint"/>
+            <arg name="surface" type="object" interface="wl_surface" allow-null="true"/>
+            <arg name="width" type="int"/>
+            <arg name="height" type="int"/>
+            <arg name="id" type="new_id" interface="ivi_surface"/>
+        </request>
+
+    </interface>
+
+</protocol>
