@@ -45,8 +45,6 @@
             <description summary="ilm_surfaceCreate"/>
             <arg name="id_surface" type="uint"/>
             <arg name="surface" type="object" interface="wl_surface"/>
-            <arg name="width" type="int"/>
-            <arg name="height" type="int"/>
             <arg name="id" type="new_id" interface="ivi_surface"/>
         </request>
     </interface>
