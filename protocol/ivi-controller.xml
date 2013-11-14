@@ -382,7 +382,6 @@
         <event name="layer">
             <description summary="Receive id_layer and a layer controller"/>
             <arg name="id_layer" type="uint"/>
-            <arg name="controller_layer" type="new_id" interface="ivi_controller_layer"/>
         </event>
 
         <request name="surface_create">
