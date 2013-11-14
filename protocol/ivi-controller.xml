@@ -393,7 +393,6 @@
         <event name="surface">
             <description summary="Receive id_surface and a controller to control ivi_surface"/>
             <arg name="id_surface" type="uint"/>
-            <arg name="controller_surface" type="new_id" interface="ivi_controller_surface"/>
         </event>
 
     </interface>
