@@ -70,12 +70,6 @@
             <arg name="height" type="int"/>
         </request>
 
-        <request name="set_position">
-            <description summary="Set Position"/>
-            <arg name="x" type="int"/>
-            <arg name="y" type="int"/>
-        </request>
-
         <request name="set_orientation">
             <description summary="Set Orientation"/>
             <arg name="orientation" type="int"/>
@@ -116,12 +110,6 @@
             <description summary="sent in response to set_configuration"/>
             <arg name="width" type="int"/>
             <arg name="height" type="int"/>
-        </event>
-
-        <event name="position">
-            <description summary="sent in response to set_position"/>
-            <arg name="x" type="int"/>
-            <arg name="y" type="int"/>
         </event>
 
         <enum name="orientation">
