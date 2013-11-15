@@ -46,6 +46,19 @@
             <arg name="surface" type="object" interface="wl_surface"/>
             <arg name="id" type="new_id" interface="ivi_surface"/>
         </request>
+
+        <enum name="error_code">
+            <description summary="possible error codes returned in error event"/>
+            <entry name="unknown_error"   value="1" summary="unknown error encountered"/>
+            <entry name="resource_in_use" value="2" summary="resource is in use and can not be shared"/>
+        </enum>
+
+        <event name="error">
+            <description summary="request resulted in server-side error"/>
+            <arg name="error_code" type="int"/>
+            <arg name="error_text" type="string" allow-null="true"/>
+        </event>
+
     </interface>
 
 </protocol>
