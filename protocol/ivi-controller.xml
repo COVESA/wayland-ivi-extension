@@ -231,8 +231,8 @@
             <arg name="height" type="int"/>
         </request>
 
-        <request name="set_dimension">
-            <description summary="Set Dimension"/>
+        <request name="set_configuration">
+            <description summary="Set new configuration for layer"/>
             <arg name="width" type="int"/>
             <arg name="height" type="int"/>
         </request>
@@ -298,8 +298,8 @@
             <arg name="height" type="int"/>
         </event>
 
-        <event name="dimension">
-            <description summary="sent in response to set_dimension"/>
+        <event name="configuration">
+            <description summary="sent in response to set_configuration"/>
             <arg name="width" type="int"/>
             <arg name="height" type="int"/>
         </event>
