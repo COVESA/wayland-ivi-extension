@@ -395,6 +395,27 @@
             <arg name="id_surface" type="uint"/>
         </event>
 
+        <enum name="object_type">
+            <description summary="available object types in ivi compositor scene"/>
+            <entry name="surface" value="1" summary="surface object type"/>
+            <entry name="layer"   value="2" summary="layer object type"/>
+            <entry name="screen"  value="3" summary="screen object type"/>
+        </enum>
+
+        <enum name="error_code">
+            <description summary="possible error codes returned in error event"/>
+            <entry name="unknown_error" value="1" summary="unknown error encountered"/>
+            <entry name="file_error"    value="2" summary="file i/o error encountered"/>
+        </enum>
+
+        <event name="error">
+            <description summary="request resulted in server-side error"/>
+            <arg name="object_id" type="int"/>
+            <arg name="object_type" type="int"/>
+            <arg name="error_code" type="int"/>
+            <arg name="error_text" type="string" allow-null="true"/>
+        </event>
+
     </interface>
 
 </protocol>
