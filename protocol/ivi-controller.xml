@@ -189,6 +189,19 @@
             <description summary="destroyed surface event"/>
         </event>
 
+        <enum name="content_state">
+            <description summary="all possible states of content for a surface"/>
+            <entry name="content_available" value="1"
+                   summary="application provided wl_surface for this surface"/>
+            <entry name="content_removed" value="2"
+                   summary="wl_surface was removed for this surface"/>
+        </enum>
+
+        <event name="content">
+            <description summary="content state for surface has changed"/>
+            <arg name="content_state" type="int"/>
+        </event>
+
     </interface>
 
     <interface name="ivi_controller_layer" version="1">
