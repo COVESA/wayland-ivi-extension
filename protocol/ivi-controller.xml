@@ -171,6 +171,7 @@
 
         <request name="destroy" type="destructor">
             <description summary="destroy ivi_controller_surface"/>
+            <arg name="destroy_scene_object" type="int"/>
         </request>
 
         <event name="destroyed">
@@ -311,6 +312,7 @@
 
         <request name="destroy" type="destructor">
             <description summary="destroy ivi_controller_layer"/>
+            <arg name="destroy_scene_object" type="int"/>
         </request>
 
         <event name="destroyed">
