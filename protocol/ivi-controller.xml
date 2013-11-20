@@ -191,6 +191,16 @@
             <arg name="content_state" type="int"/>
         </event>
 
+        <request name="set_input_focus">
+            <description summary="set input_focus to this surface to direct non-graphical inputs (e.g. keyboard) to application providing this surface"/>
+            <arg name="enabled" type="int"/>
+        </request>
+
+        <event name="focus">
+            <description summary="received if input focus of surface has changed"/>
+            <arg name="enabled" type="int"/>
+        </event>
+
     </interface>
 
     <interface name="ivi_controller_layer" version="1">
