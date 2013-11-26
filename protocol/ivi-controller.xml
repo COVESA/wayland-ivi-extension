@@ -197,7 +197,7 @@
             <arg name="enabled" type="int"/>
         </request>
 
-        <event name="focus">
+        <event name="input_focus">
             <description summary="received if input focus of surface has changed"/>
             <arg name="enabled" type="int"/>
         </event>
