@@ -167,6 +167,7 @@
             <arg name="frame_count" type="uint"/>
             <arg name="update_count" type="uint"/>
             <arg name="pid" type="uint"/>
+            <arg name="process_name" type="string" allow-null="true"/>
         </event>
 
         <request name="destroy" type="destructor">
