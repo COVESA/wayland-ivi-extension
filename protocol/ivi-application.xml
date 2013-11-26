@@ -25,36 +25,60 @@
     </copyright>
 
     <interface name="ivi_surface" version="1">
-        <description summary="Tell property change of ivi_surface to application"/>
+        <description summary="application interface to surface in ivi compositor"/>
 
         <request name="destroy" type="destructor">
             <description summary="destroy ivi_surface"/>
         </request>
 
         <event name="visibility">
-            <description summary="visibility of ivi_surface has changed"/>
+            <description summary="visibility of surface in ivi compositor has changed">
+                The new visibility state is provided in argument visibility.
+                If visibility is 0, the surface has become invisible.
+                If visibility is not 0, the surface has become visible.
+            </description>
             <arg name="visibility" type="int"/>
         </event>
+
     </interface>
 
     <interface name="ivi_application" version="1">
-        <description summary="creation of ivi_surface"/>
+        <description summary="interface for ivi applications to use ivi compositor features"/>
 
         <request name="surface_create">
-            <description summary="ilm_surfaceCreate"/>
+            <description summary="create surface in ivi compositor">
+                surface_create will create a new surface with surface_id in ivi compositor,
+                if it does not yet exists. If the surface with surface_id already exists in
+                ivi compositor, the application content provided in argument surface will
+                be used as surface content. If an other ivi application already registered
+                content for surface with surface_id, an error event will indicate the problem.
+            </desription>
             <arg name="id_surface" type="uint"/>
             <arg name="surface" type="object" interface="wl_surface"/>
             <arg name="id" type="new_id" interface="ivi_surface"/>
         </request>
 
         <enum name="error_code">
-            <description summary="possible error codes returned in error event"/>
+            <description summary="possible error codes returned by ivi compositor">
+                These error codes define all possible error codes returned by ivi compositor
+                on server-side errors.
+            </description>
             <entry name="unknown_error"   value="1" summary="unknown error encountered"/>
             <entry name="resource_in_use" value="2" summary="resource is in use and can not be shared"/>
         </enum>
 
         <event name="error">
-            <description summary="request resulted in server-side error"/>
+            <description summary="server-side error detected">
+                The ivi compositor encountered error while processing a request by this
+                application. The error is defined by argument error_code and optional
+                error_text.
+                If the application requires to associate this error event to a request,
+                it can
+                    1. send request
+                    2. force display roundtrip
+                    3. check, if error event was received
+                 but this restricts the application to have only one open request at a time.
+            </description>
             <arg name="error_code" type="int"/>
             <arg name="error_text" type="string" allow-null="true"/>
         </event>
