@@ -1,7 +1,6 @@
 ############################################################################
 #
-# Copyright 2010-2012 BMW Car IT GmbH
-# Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+# Copyright (C) 2013 DENSO CORPORATION
 #
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,18 +18,10 @@
 ############################################################################
 
 cmake_minimum_required (VERSION 2.6)
-project (LayerManager)
+project (ivi-layermanagement-examples)
 
 #===========================================================================================================
 # cmake configuration
 #===========================================================================================================
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/DefaultSettings.txt)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/CMakeVersions.txt)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/CustomMacros.txt)
-add_subdirectory(ivi-layermanagement-api/ilmClient)
-add_subdirectory(ivi-layermanagement-api/ilmCommon)
-add_subdirectory(ivi-layermanagement-api/ilmControl)
-add_subdirectory(weston-ivi-shell)
-add_subdirectory(config)
-add_subdirectory(ivi-layermanagement-examples)
+add_subdirectory(LayerManagerUtils)
+add_subdirectory(EGLWLMockNavigation)
