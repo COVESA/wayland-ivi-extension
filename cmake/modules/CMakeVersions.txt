@@ -1,0 +1,58 @@
+############################################################################
+#
+# Copyright 2010, 2011 BMW Car IT GmbH
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+############################################################################
+
+set( ${PROJECT_NAME}_MAJOR_VERSION 0 )
+set( ${PROJECT_NAME}_MINOR_VERSION 9 )
+set( ${PROJECT_NAME}_PATCH_LEVEL 9 )
+set( ${PROJECT_NAME}_RELEASE release )
+
+set(VERSION ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION}.${${PROJECT_NAME}_PATCH_LEVEL}.${${PROJECT_NAME}_RELEASE})
+
+if(NOT DEFINED ILM_VERSION)
+
+execute_process(COMMAND git describe --tags WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                RESULT_VARIABLE RESULT_VAR
+                OUTPUT_VARIABLE ILM_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET)
+
+if(NOT "${RESULT_VAR}" STREQUAL 0)
+
+message(STATUS "Unable launch automatic version build! Using default version!")
+set(ILM_VERSION ${VERSION})
+
+else(NOT "${RESULT_VAR}" STREQUAL 0)
+
+string(REPLACE "-" "_" ILM_VERSION ${ILM_VERSION})
+
+endif(NOT "${RESULT_VAR}" STREQUAL 0)
+
+endif(NOT DEFINED ILM_VERSION)
+
+set(LICENSE "APACHE 2.0")
+
+set(GENIVI_PROJECT_VERSION ${VERSION})
+message(STATUS
+        "Build for Version ${VERSION} build ${ILM_VERSION}"
+        )
+
+##################### RPM CONFIG ########################
+set(GENIVI_RPM_RELEASE "${ILM_VERSION}")
+set(SPEC_DIR ".")
+#########################################################
