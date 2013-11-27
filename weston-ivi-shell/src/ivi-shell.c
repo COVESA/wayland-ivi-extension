@@ -1120,7 +1120,7 @@ controller_surface_send_stats(struct wl_client *client,
     wl_client_get_credentials(client, &pid, &uid, &gid);
 
     ivi_controller_surface_send_stats(resource, 0, 0,
-                                      ivisurf->update_count, pid);
+                                      ivisurf->update_count, pid, "");
 }
 
 static void

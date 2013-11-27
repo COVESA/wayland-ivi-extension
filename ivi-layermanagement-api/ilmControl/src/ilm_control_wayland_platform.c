@@ -1112,10 +1112,12 @@ controller_surface_listener_stats(void *data,
                                   uint32_t redraw_count,
                                   uint32_t frame_count,
                                   uint32_t update_count,
-                                  uint32_t pid)
+                                  uint32_t pid,
+                                  const char *process_name)
 {
     struct ilm_control_context *ctx = data;
     struct surface_context *ctx_surf = NULL;
+    (void)process_name;
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
