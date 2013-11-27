@@ -1160,6 +1160,16 @@ controller_surface_listener_content(void *data,
     (void)content_state;
 }
 
+static void
+controller_surface_listener_input_focus(void *data,
+                   struct ivi_controller_surface *controller,
+                   int32_t enabled)
+{
+    (void)data;
+    (void)controller;
+    (void)enabled;
+}
+
 static struct ivi_controller_surface_listener controller_surface_listener =
 {
     controller_surface_listener_visibility,
@@ -1172,7 +1182,8 @@ static struct ivi_controller_surface_listener controller_surface_listener =
     controller_surface_listener_layer,
     controller_surface_listener_stats,
     controller_surface_listener_destroyed,
-    controller_surface_listener_content
+    controller_surface_listener_content,
+    controller_surface_listener_input_focus
 };
 
 static void
