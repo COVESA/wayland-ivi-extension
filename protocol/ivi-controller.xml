@@ -206,7 +206,7 @@
         </event>
 
         <request name="send_stats">
-            <description summary="request statistics for surface in ivi compositor"/>
+            <description summary="request statistics for surface in ivi compositor">
                 These stats contain information required for monitoring, debugging, logging
                 and tracing.
             </description>
@@ -285,7 +285,7 @@
     </interface>
 
     <interface name="ivi_controller_layer" version="1">
-        <description summary="controller interface to layer in ivi compositor">
+        <description summary="controller interface to layer in ivi compositor"/>
 
         <request name="set_visibility">
             <description summary="set visibility of layer in ivi compositor">
@@ -552,7 +552,7 @@
                 if it does not yet exists. If the layer with id_layer already exists in
                 ivi compositor, a handle to the existing layer is returned and width and
                 height properties are ignored.
-            </desription>
+            </description>
             <arg name="id_layer" type="uint"/>
             <arg name="width" type="int"/>
             <arg name="height" type="int"/>
@@ -571,7 +571,7 @@
                 surface_create will create a new surface with id_surface in ivi compositor,
                 if it does not yet exists. If the surface with id_surface already exists in
                 ivi compositor, a handle to the existing surface is returned.
-            </desription>
+            </description>
             <arg name="id_surface" type="uint"/>
             <arg name="id" type="new_id" interface="ivi_controller_surface"/>
         </request>

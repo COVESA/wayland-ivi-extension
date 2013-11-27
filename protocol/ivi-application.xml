@@ -52,7 +52,7 @@
                 ivi compositor, the application content provided in argument surface will
                 be used as surface content. If an other ivi application already registered
                 content for surface with surface_id, an error event will indicate the problem.
-            </desription>
+            </description>
             <arg name="id_surface" type="uint"/>
             <arg name="surface" type="object" interface="wl_surface"/>
             <arg name="id" type="new_id" interface="ivi_surface"/>
