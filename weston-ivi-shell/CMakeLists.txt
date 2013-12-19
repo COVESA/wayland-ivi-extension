@@ -19,7 +19,7 @@
 
 cmake_minimum_required (VERSION 2.6)
 
-project(ivi-shell)
+project(ivi-controller)
 project_type(CORE)
 
 find_package(Cairo REQUIRED)
@@ -62,8 +62,7 @@ include_directories(
 
 
 add_library(${PROJECT_NAME} MODULE
-    src/ivi-shell.c
-    src/ivi-application-protocol.c
+    src/ivi-controller.c
     src/ivi-controller-protocol.c
 )
 
@@ -74,6 +73,7 @@ add_dependencies(${PROJECT_NAME}
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${PIXMAN_LIBRARIES}
+    ${WESTON_LIBRARIES}
 )
 
 set(LIBS
@@ -82,6 +82,7 @@ set(LIBS
     dl
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
+    ${WESTON_LIBRARIES}
 )
 
 target_link_libraries(${PROJECT_NAME} ${LIBS} -ldl)
