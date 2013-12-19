@@ -1215,42 +1215,40 @@ controller_listener_layer(void *data,
     struct layer_context *ctx_layer = NULL;
     int32_t is_inside = 0;
 
-    do {
-        /* Return failed, if layerid is already inside list_layer */
-        is_inside = wayland_controller_is_inside_layer_list(
-                            &ctx->list_layer, id_layer);
-        if (0 != is_inside) {
-            break;
-        }
+    /* Return failed, if layerid is already inside list_layer */
+    is_inside = wayland_controller_is_inside_layer_list(
+                        &ctx->list_layer, id_layer);
+    if (0 != is_inside) {
+        return;
+    }
 
-        ctx_layer = calloc(1, sizeof *ctx_layer);
-        if (ctx_layer == NULL) {
-            fprintf(stderr, "Failed to allocate memory for layer_context\n");
-            break;
-        }
+    ctx_layer = calloc(1, sizeof *ctx_layer);
+    if (ctx_layer == NULL) {
+        fprintf(stderr, "Failed to allocate memory for layer_context\n");
+        return;
+    }
 
-        ctx_layer->controller = ivi_controller_layer_create(
-                                    controller, id_layer, 10, 10);
-        if (ctx_layer->controller == NULL) {
-            fprintf(stderr, "Failed to create layer\n");
-            free(ctx_layer);
-            break;
-        }
-        ctx_layer->id_layer = id_layer;
+    ctx_layer->controller = ivi_controller_layer_create(
+                                controller, id_layer, 10, 10);
+    if (ctx_layer->controller == NULL) {
+        fprintf(stderr, "Failed to create layer\n");
+        free(ctx_layer);
+        ctx_layer = NULL;
+        return;
+    }
+    ctx_layer->id_layer = id_layer;
 
-        wl_list_init(&ctx_layer->link);
-        wl_list_insert(&ctx->list_layer, &ctx_layer->link);
-        wl_list_init(&ctx_layer->order.link);
-        wl_list_init(&ctx_layer->order.list_surface);
+    wl_list_init(&ctx_layer->link);
+    wl_list_insert(&ctx->list_layer, &ctx_layer->link);
+    wl_list_init(&ctx_layer->order.link);
+    wl_list_init(&ctx_layer->order.list_surface);
 
-        wl_display_flush(ctx->display);
-        wl_display_dispatch(ctx->display);
-        wl_display_roundtrip(ctx->display);
+    ivi_controller_layer_add_listener(ctx_layer->controller,
+                                  &controller_layer_listener, ctx);
 
-        ivi_controller_layer_add_listener(ctx_layer->controller,
-                                      &controller_layer_listener, ctx);
-
-    } while(0);
+    wl_display_flush(ctx->display);
+    wl_display_dispatch(ctx->display);
+    wl_display_roundtrip(ctx->display);
 }
 
 static void
@@ -1289,6 +1287,8 @@ controller_listener_surface(void *data,
     ivi_controller_surface_add_listener(ctx_surf->controller,
                                         &controller_surface_listener, ctx);
     wl_display_flush(ctx->display);
+    wl_display_dispatch(ctx->display);
+    wl_display_roundtrip(ctx->display);
 }
 
 static void
@@ -1605,6 +1605,10 @@ wayland_getPropertiesOfLayer(t_ilm_uint layerID,
                         ctx, (uint32_t)layerID);
 
         if (ctx_layer != NULL) {
+            wl_display_flush(ctx->display);
+            wayland_controller_display_dispatch(ctx);
+            wl_display_roundtrip(ctx->display);
+
             *pLayerProperties = ctx_layer->prop;
             returnValue = ILM_SUCCESS;
         }
