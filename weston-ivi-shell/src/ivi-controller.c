@@ -1061,51 +1061,6 @@ controller_commit_changes(struct wl_client *client,
     }
 }
 
-static struct ivilayer*
-layer_create(struct wl_client *client,
-                        struct ivicontroller *ctrl,
-                        uint32_t id_layer,
-                        int32_t width,
-                        int32_t height,
-                        uint32_t id)
-{
-    struct ivishell *shell = ctrl->shell;
-    struct ivilayer *ivilayer = NULL;
-    struct ivicontroller *controller = NULL;
-    struct weston_layout_layer *layout_layer = NULL;
-    (void)client;
-    (void)width;
-    (void)height;
-    (void)id;
-
-    layout_layer = weston_layout_layerCreateWithDimension(id_layer,
-                       (uint32_t)width, (uint32_t)height);
-    if (layout_layer == NULL) {
-        weston_log("id_layer is already created\n");
-        return NULL;
-    }
-
-    ivilayer = calloc(1, sizeof *ivilayer);
-    if (!ivilayer) {
-        weston_log("no memory to allocate client layer\n");
-        return NULL;
-    }
-
-    ivilayer->shell = shell;
-    wl_list_init(&ivilayer->list_screen);
-    wl_list_init(&ivilayer->link);
-    wl_list_insert(&shell->list_layer, &ivilayer->link);
-    ivilayer->layout_layer = layout_layer;
-
-    weston_layout_layerAddNotification(layout_layer, send_layer_prop, ivilayer);
-
-    wl_list_for_each(controller, &shell->list_controller, link) {
-        ivi_controller_send_layer(controller->resource, id_layer);
-    }
-
-    return ivilayer;
-}
-
 static void
 controller_layer_create(struct wl_client *client,
                         struct wl_resource *resource,
@@ -1116,14 +1071,24 @@ controller_layer_create(struct wl_client *client,
 {
     struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
     struct ivishell *shell = ctrl->shell;
+    struct weston_layout_layer *layout_layer = NULL;
     struct ivicontroller_layer *ctrllayer = NULL;
     struct ivilayer *ivilayer = NULL;
     struct weston_layout_LayerProperties prop;
 
     ivilayer = get_layer(&shell->list_layer, id_layer);
     if (ivilayer == NULL) {
-        ivilayer = layer_create(client, ctrl, id_layer, width, height, id);
+        layout_layer = weston_layout_layerCreateWithDimension(id_layer,
+                           (uint32_t)width, (uint32_t)height);
+        if (layout_layer == NULL) {
+            weston_log("id_layer is already created\n");
+            return;
+        }
+
+        /* ivilayer will be created by layer_event_create */
+        ivilayer = get_layer(&shell->list_layer, id_layer);
         if (ivilayer == NULL) {
+            weston_log("couldn't get layer object\n");
             return;
         }
     }
@@ -1141,7 +1106,7 @@ controller_layer_create(struct wl_client *client,
     ctrllayer->resource = wl_resource_create(client,
                                &ivi_controller_layer_interface, 1, id);
     if (ctrllayer->resource == NULL) {
-        weston_log("couldn't layer object\n");
+        weston_log("couldn't get layer object\n");
         return;
     }
 
@@ -1324,6 +1289,70 @@ create_screen(struct ivishell *shell, struct weston_output *output)
 }
 
 static void
+layer_event_create(struct weston_layout_layer *layout_layer,
+                     void *userdata)
+{
+    struct ivishell *shell = userdata;
+    struct ivicontroller *controller = NULL;
+    struct ivilayer *ivilayer = NULL;
+    uint32_t id_layer = 0;
+
+    id_layer = weston_layout_getIdOfLayer(layout_layer);
+
+    ivilayer = calloc(1, sizeof *ivilayer);
+    if (!ivilayer) {
+        weston_log("no memory to allocate client layer\n");
+        return;
+    }
+
+    ivilayer->shell = shell;
+    wl_list_init(&ivilayer->list_screen);
+    wl_list_init(&ivilayer->link);
+    wl_list_insert(&shell->list_layer, &ivilayer->link);
+    ivilayer->layout_layer = layout_layer;
+
+    weston_layout_layerAddNotification(layout_layer, send_layer_prop, ivilayer);
+
+    wl_list_for_each(controller, &shell->list_controller, link) {
+        ivi_controller_send_layer(controller->resource, id_layer);
+    }
+
+    return;
+}
+
+static void
+layer_event_remove(struct weston_layout_layer *layout_layer,
+                     void *userdata)
+{
+    struct ivishell *shell = userdata;
+    struct ivicontroller_layer *ctrllayer = NULL;
+    struct ivilayer *ivilayer = NULL;
+    struct ivilayer *next = NULL;
+    uint32_t id_layer = 0;
+
+    wl_list_for_each_safe(ivilayer, next, &shell->list_layer, link) {
+        if (layout_layer != ivilayer->layout_layer) {
+            continue;
+        }
+
+        wl_list_remove(&ivilayer->link);
+        free(ivilayer);
+        ivilayer = NULL;
+        break;
+    }
+
+    id_layer = weston_layout_getIdOfLayer(layout_layer);
+
+    wl_list_for_each(ctrllayer, &shell->list_controller_layer, link) {
+        if (id_layer != ctrllayer->id_layer) {
+            continue;
+        }
+        ivi_controller_layer_send_destroyed(ctrllayer->resource);
+    }
+}
+
+
+static void
 surface_event_create(struct weston_layout_surface *layout_surface,
                      void *userdata)
 {
@@ -1435,6 +1464,9 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
             wl_list_insert(&shell->list_screen, &iviscrn->link);
         }
     }
+
+    weston_layout_setNotificationCreateLayer(layer_event_create, shell);
+    weston_layout_setNotificationRemoveLayer(layer_event_remove, shell);
 
     weston_layout_setNotificationCreateSurface(surface_event_create, shell);
     weston_layout_setNotificationRemoveSurface(surface_event_remove, shell);
