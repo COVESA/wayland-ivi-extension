@@ -113,30 +113,6 @@ struct link_shell_weston_surface
     struct wl_list link;
 };
 
-struct ping_timer {
-    struct wl_event_source *source;
-    uint32_t serial;
-};
-
-struct shell_surface {
-    struct wl_resource *resource;
-
-    struct weston_surface *surface;
-    struct wl_listener surface_destroy_listener;
-
-    struct ivishell *shell;
-    struct ping_timer *ping_timer;
-
-    char *title, *class;
-    int32_t width;
-    int32_t height;
-    pid_t pid;
-    struct wl_list link;
-
-    const struct weston_shell_client *client;
-    struct weston_output *output;
-};
-
 struct ivishell {
     struct wl_resource *resource;
 
