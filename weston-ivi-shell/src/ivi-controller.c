@@ -1398,7 +1398,20 @@ surface_event_remove(struct weston_layout_surface *layout_surface,
 {
     struct ivishell *shell = userdata;
     struct ivicontroller_surface *ctrlsurf = NULL;
+    struct ivisurface *ivisurf = NULL;
+    struct ivisurface *next = NULL;
     uint32_t id_surface = 0;
+
+    wl_list_for_each_safe(ivisurf, next, &shell->list_surface, link) {
+        if (layout_surface != ivisurf->layout_surface) {
+            continue;
+        }
+
+        wl_list_remove(&ivisurf->link);
+        free(ivisurf);
+        ivisurf = NULL;
+        break;
+    }
 
     id_surface = weston_layout_getIdOfSurface(layout_surface);
 
