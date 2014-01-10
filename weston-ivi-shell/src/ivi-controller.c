@@ -1264,21 +1264,24 @@ create_screen(struct ivishell *shell, struct weston_output *output)
     return iviscrn;
 }
 
-static void
-layer_event_create(struct weston_layout_layer *layout_layer,
-                     void *userdata)
+static struct ivilayer*
+create_layer(struct ivishell *shell,
+             struct weston_layout_layer *layout_layer,
+             uint32_t id_layer)
 {
-    struct ivishell *shell = userdata;
-    struct ivicontroller *controller = NULL;
     struct ivilayer *ivilayer = NULL;
-    uint32_t id_layer = 0;
+    struct ivicontroller *controller = NULL;
 
-    id_layer = weston_layout_getIdOfLayer(layout_layer);
+    ivilayer = get_layer(&shell->list_layer, id_layer);
+    if (ivilayer != NULL) {
+        weston_log("id_layer is already created\n");
+        return NULL;
+    }
 
     ivilayer = calloc(1, sizeof *ivilayer);
-    if (!ivilayer) {
+    if (NULL == ivilayer) {
         weston_log("no memory to allocate client layer\n");
-        return;
+        return NULL;
     }
 
     ivilayer->shell = shell;
@@ -1293,7 +1296,61 @@ layer_event_create(struct weston_layout_layer *layout_layer,
         ivi_controller_send_layer(controller->resource, id_layer);
     }
 
-    return;
+    return ivilayer;
+}
+
+static struct ivisurface*
+create_surface(struct ivishell *shell,
+               struct weston_layout_surface *layout_surface,
+               uint32_t id_surface)
+{
+    struct ivisurface *ivisurf = NULL;
+    struct ivicontroller *controller = NULL;
+
+    ivisurf = get_surface(&shell->list_surface, id_surface);
+    if (ivisurf != NULL) {
+        weston_log("id_surface is already created\n");
+        return NULL;
+    }
+
+    ivisurf = calloc(1, sizeof *ivisurf);
+    if (ivisurf == NULL) {
+        weston_log("no memory to allocate client surface\n");
+        return NULL;
+    }
+
+    ivisurf->shell = shell;
+    ivisurf->layout_surface = layout_surface;
+    wl_list_init(&ivisurf->list_layer);
+    wl_list_init(&ivisurf->link);
+    wl_list_insert(&shell->list_surface, &ivisurf->link);
+
+    wl_list_for_each(controller, &shell->list_controller, link) {
+        ivi_controller_send_surface(controller->resource,
+                                    id_surface);
+    }
+
+    weston_layout_surfaceAddNotification(layout_surface,
+                                    send_surface_prop, ivisurf);
+
+    return ivisurf;
+}
+
+static void
+layer_event_create(struct weston_layout_layer *layout_layer,
+                     void *userdata)
+{
+    struct ivishell *shell = userdata;
+    struct ivilayer *ivilayer = NULL;
+    uint32_t id_layer = 0;
+
+    id_layer = weston_layout_getIdOfLayer(layout_layer);
+
+    ivilayer = create_layer(shell, layout_layer, id_layer);
+    if (ivilayer == NULL) {
+        weston_log("failed to create layer");
+        return;
+    }
 }
 
 static void
@@ -1334,38 +1391,15 @@ surface_event_create(struct weston_layout_surface *layout_surface,
 {
     struct ivishell *shell = userdata;
     struct ivisurface *ivisurf = NULL;
-    struct ivicontroller *controller = NULL;
     uint32_t id_surface = 0;
 
     id_surface = weston_layout_getIdOfSurface(layout_surface);
 
-    ivisurf = get_surface(&shell->list_surface, id_surface);
-    if (ivisurf != NULL)
-    {
-        weston_log("id_surface is already created\n");
-        return;
-    }
-
-    ivisurf = calloc(1, sizeof *ivisurf);
+    ivisurf = create_surface(shell, layout_surface, id_surface);
     if (ivisurf == NULL) {
-        weston_log("no memory to allocate client surface\n");
+        weston_log("failed to create surface");
         return;
     }
-
-    ivisurf->shell = shell;
-    ivisurf->layout_surface = layout_surface;
-    wl_list_init(&ivisurf->list_layer);
-    wl_list_init(&ivisurf->link);
-    wl_list_insert(&shell->list_surface, &ivisurf->link);
-
-    wl_list_for_each(controller, &shell->list_controller, link) {
-        ivi_controller_send_surface(controller->resource,
-                                    id_surface);
-    }
-
-    weston_layout_surfaceAddNotification(layout_surface,
-                                    &send_surface_prop, ivisurf);
-
 }
 
 static void
@@ -1429,11 +1463,83 @@ surface_event_configure(struct weston_layout_surface *layout_surface,
     }
 }
 
+static int32_t
+check_layout_layers(struct ivishell *shell)
+{
+    weston_layout_layer_ptr *pArray = NULL;
+    struct ivilayer *ivilayer = NULL;
+    uint32_t id_layer = 0;
+    uint32_t length = 0;
+    uint32_t i = 0;
+    int32_t ret = 0;
+
+    ret = weston_layout_getLayers(&length, &pArray);
+    if(ret != 0) {
+        weston_log("failed to get layers at check_layout_layers\n");
+        return -1;
+    }
+
+    if (length == 0) {
+        /* if length is 0, pArray doesn't need to free.*/
+        return 0;
+    }
+
+    for (i = 0; i < length; i++) {
+        id_layer = weston_layout_getIdOfLayer(pArray[i]);
+        ivilayer = create_layer(shell, pArray[i], id_layer);
+        if (ivilayer == NULL) {
+            weston_log("failed to create layer");
+        }
+    }
+
+    free(pArray);
+    pArray = NULL;
+
+    return 0;
+}
+
+static int32_t
+check_layout_surfaces(struct ivishell *shell)
+{
+    weston_layout_surface_ptr *pArray = NULL;
+    struct ivisurface *ivisurf = NULL;
+    uint32_t id_surface = 0;
+    uint32_t length = 0;
+    uint32_t i = 0;
+    int32_t ret = 0;
+
+    ret = weston_layout_getSurfaces(&length, &pArray);
+    if(ret != 0) {
+        weston_log("failed to get surfaces at check_layout_surfaces\n");
+        return -1;
+    }
+
+    if (length == 0) {
+        /* if length is 0, pArray doesn't need to free.*/
+        return 0;
+    }
+
+    for (i = 0; i < length; i++) {
+        id_surface = weston_layout_getIdOfSurface(pArray[i]);
+        ivisurf = create_surface(shell, pArray[i], id_surface);
+        if (ivisurf == NULL) {
+            weston_log("failed to create surface");
+        }
+    }
+
+    free(pArray);
+    pArray = NULL;
+
+    return 0;
+}
+
 static void
 init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
 {
     struct weston_output *output = NULL;
     struct iviscreen *iviscrn = NULL;
+    int32_t ret = 0;
+
     shell->compositor = ec;
 
     wl_list_init(&ec->layer_list);
@@ -1452,6 +1558,16 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
         if (iviscrn != NULL) {
             wl_list_insert(&shell->list_screen, &iviscrn->link);
         }
+    }
+
+    ret = check_layout_layers(shell);
+    if (ret != 0) {
+        weston_log("failed to check_layout_layers");
+    }
+
+    ret = check_layout_surfaces(shell);
+    if (ret != 0) {
+        weston_log("failed to check_layout_surfaces");
     }
 
     weston_layout_setNotificationCreateLayer(layer_event_create, shell);
