@@ -21,7 +21,8 @@
 cmake_minimum_required (VERSION 2.6)
 project(wayland-ivi-extension)
 
-SET(ILM_VERSION "1.2.0")
+SET(IVI_EXTENSION_VERSION 1.0.0)
+SET(ILM_API_VERSION 1.2.0)
 
 add_subdirectory(protocol)
 
@@ -31,3 +32,22 @@ add_subdirectory(ivi-layermanagement-api/ilmCommon)
 add_subdirectory(ivi-layermanagement-api/ilmClient)
 add_subdirectory(ivi-layermanagement-api/ilmControl)
 add_subdirectory(ivi-layermanagement-examples)
+
+
+#=============================================================================================
+# generate all documents
+#=============================================================================================
+add_custom_target(doc
+                  COMMAND echo "====================================="
+                  COMMAND echo "generated documents"
+                  COMMAND echo "    `pwd`/ivi-application-api-${IVI_EXTENSION_VERSION}.pdf"
+                  COMMAND echo "    `pwd`/ivi-controller-api-${IVI_EXTENSION_VERSION}.pdf"
+                  COMMAND echo "    `pwd`/ilm-client-api-${ILM_API_VERSION}.pdf"
+                  COMMAND echo "    `pwd`/ilm-control-api-${ILM_API_VERSION}.pdf"
+                  COMMAND echo "====================================="
+                  DEPENDS ivi-application-doc
+                          ivi-controller-doc
+                          ilm-client-doc
+                          ilm-control-doc
+)
+

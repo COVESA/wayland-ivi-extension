@@ -67,4 +67,23 @@ install (
     DESTINATION include/ilm
 )
 
-SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_VERSION} SOVERSION ${ILM_VERSION})
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_API_VERSION} SOVERSION ${ILM_API_VERSION})
+
+
+#=============================================================================================
+# generate documentation for ilmClient API
+#=============================================================================================
+
+add_custom_target(ilm-client-doc
+                  COMMAND cat ${CMAKE_SOURCE_DIR}/doc/Doxyfile.template
+                          | sed 's/___DOC_NAME___/ilmClient API/'
+                          | sed 's/___DOC_VERSION___/${ILM_API_VERSION}/'
+                          | sed 's!___INPUT_FILE___!${CMAKE_CURRENT_SOURCE_DIR}/include/ilm_client.h ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ilm_common.h!'
+                          | sed 's/___OUTPUT_DIR___/ilm-client-doc/'
+                          | doxygen -
+                  COMMAND make --silent -C ilm-client-doc/latex
+                  COMMAND cp ilm-client-doc/latex/refman.pdf
+                             ${CMAKE_BINARY_DIR}/ilm-client-api-${ILM_API_VERSION}.pdf
+                  COMMENT "Generating ilm-client-api-${ILM_API_VERSION}.pdf"
+)
+

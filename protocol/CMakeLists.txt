@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#		http://www.apache.org/licenses/LICENSE-2.0
+#       http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -94,3 +94,61 @@ add_library(${PROJECT_NAME} STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-server-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-protocol.c
 )
+
+
+#=============================================================================================
+# generate documentation for ivi-application API
+#=============================================================================================
+SET(IVI_APP_XML      ${CMAKE_CURRENT_SOURCE_DIR}/ivi-application.xml)
+SET(IVI_APP_CLIENT_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client.h)
+SET(IVI_APP_SERVER_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-server.h)
+
+add_custom_target(ivi-application-doc
+                  COMMAND wayland-scanner client-header < ${IVI_APP_XML} > ${IVI_APP_CLIENT_H}
+                  COMMAND wayland-scanner server-header < ${IVI_APP_XML} > ${IVI_APP_SERVER_H}
+
+                  COMMAND cat ${CMAKE_SOURCE_DIR}/doc/Doxyfile.template
+                          | sed 's!___DOC_NAME___!IVI Application API!'
+                          | sed 's!___DOC_VERSION___!${IVI_EXTENSION_VERSION}!'
+                          | sed 's!___INPUT_FILE___!${IVI_APP_CLIENT_H} ${IVI_APP_SERVER_H}!'
+                          | sed 's!___OUTPUT_DIR___!ivi-application-tmp!'
+                          | doxygen -
+
+                  COMMAND make --silent -C ivi-application-tmp/latex
+
+                  COMMAND cp ivi-application-tmp/latex/refman.pdf
+                             ${CMAKE_BINARY_DIR}/ivi-application-api-${IVI_EXTENSION_VERSION}.pdf
+
+                  DEPENDS ${IVI_APP_XML}
+
+                  COMMENT "Generating ivi-application-api-${IVI_EXTENSION_VERSION}.pdf"
+)
+
+#=============================================================================================
+# generate documentation ivi-controller API
+#=============================================================================================
+SET(IVI_CTL_XML      ${CMAKE_CURRENT_SOURCE_DIR}/ivi-controller.xml)
+SET(IVI_CTL_CLIENT_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-client.h)
+SET(IVI_CTL_SERVER_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-server.h)
+
+add_custom_target(ivi-controller-doc
+                  COMMAND wayland-scanner client-header < ${IVI_CTL_XML} > ${IVI_CTL_CLIENT_H}
+                  COMMAND wayland-scanner server-header < ${IVI_CTL_XML} > ${IVI_CTL_SERVER_H}
+
+                  COMMAND cat ${CMAKE_SOURCE_DIR}/doc/Doxyfile.template
+                          | sed 's!___DOC_NAME___!IVI Controller API!'
+                          | sed 's!___DOC_VERSION___!${IVI_EXTENSION_VERSION}!'
+                          | sed 's!___INPUT_FILE___!${IVI_CTL_CLIENT_H} ${IVI_CTL_SERVER_H}!'
+                          | sed 's!___OUTPUT_DIR___!ivi-controller-tmp!'
+                          | doxygen -
+
+                  COMMAND make --silent -C ivi-controller-tmp/latex
+
+                  COMMAND cp ivi-controller-tmp/latex/refman.pdf
+                             ${CMAKE_BINARY_DIR}/ivi-controller-api-${IVI_EXTENSION_VERSION}.pdf
+
+                  DEPENDS ${IVI_CTL_XML}
+
+                  COMMENT "Generating ivi-controller-api-${IVI_EXTENSION_VERSION}.pdf"
+)
+
