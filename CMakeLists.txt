@@ -19,7 +19,7 @@
 ############################################################################
 
 cmake_minimum_required (VERSION 2.6)
-project (LayerManager)
+project(wayland-ivi-extension)
 
 SET(ILM_VERSION "1.2.0")
 
