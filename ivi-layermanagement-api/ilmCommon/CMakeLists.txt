@@ -27,24 +27,26 @@ find_package(Threads)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
 
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
 add_custom_command(
     OUTPUT ivi-application-client-protocol.h
-    COMMAND ${CMAKE_INSTALL_PREFIX}/bin/wayland-scanner client-header <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ivi-application-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ivi-application-client-protocol.h
 )
 
 add_custom_command(
     OUTPUT ivi-application-protocol.c
-    COMMAND ${CMAKE_INSTALL_PREFIX}/bin/wayland-scanner code <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/src/ivi-application-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/src/ivi-application-protocol.c
 )
 
 add_custom_command(
     OUTPUT ivi-controller-client-protocol.h
-    COMMAND ${CMAKE_INSTALL_PREFIX}/bin/wayland-scanner client-header <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ivi-controller-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ivi-controller-client-protocol.h
 )
 
 add_custom_command(
     OUTPUT ivi-controller-protocol.c
-    COMMAND ${CMAKE_INSTALL_PREFIX}/bin/wayland-scanner code <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/src/ivi-controller-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/src/ivi-controller-protocol.c
 )
 
 add_custom_target(

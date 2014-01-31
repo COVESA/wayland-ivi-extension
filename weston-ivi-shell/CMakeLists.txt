@@ -28,24 +28,26 @@ pkg_check_modules(CAIRO cairo REQUIRED)
 pkg_check_modules(WESTON weston REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
 add_custom_command(
     OUTPUT ivi-application-server-protocol.h
-    COMMAND ${CMAKE_INSTALL_PREFIX}/bin/wayland-scanner server-header <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/include/ivi-application-server-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/include/ivi-application-server-protocol.h
 )
 
 add_custom_command(
     OUTPUT ivi-application-protocol.c
-    COMMAND ${CMAKE_INSTALL_PREFIX}/bin/wayland-scanner code <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/src/ivi-application-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/src/ivi-application-protocol.c
 )
 
 add_custom_command(
     OUTPUT ivi-controller-server-protocol.h
-    COMMAND ${CMAKE_INSTALL_PREFIX}/bin/wayland-scanner server-header <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/include/ivi-controller-server-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/include/ivi-controller-server-protocol.h
 )
 
 add_custom_command(
     OUTPUT ivi-controller-protocol.c
-    COMMAND ${CMAKE_INSTALL_PREFIX}/bin/wayland-scanner code <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/src/ivi-controller-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/src/ivi-controller-protocol.c
 )
 
 add_custom_target(
