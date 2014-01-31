@@ -22,10 +22,11 @@ cmake_minimum_required (VERSION 2.6)
 project(ivi-controller)
 project_type(CORE)
 
-find_package(Cairo REQUIRED)
-find_package(Wayland REQUIRED)
-find_package(Weston REQUIRED)
-find_package(Pixman REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
+pkg_check_modules(CAIRO cairo REQUIRED)
+pkg_check_modules(WESTON weston REQUIRED)
+pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
 add_custom_command(
     OUTPUT ivi-application-server-protocol.h
@@ -54,10 +55,10 @@ add_custom_target(
 
 include_directories(
     "include"
-    ${WAYLAND_SERVER_INCLUDE_DIR}
-    ${CAIRO_INCLUDE_DIR}
-    ${WESTON_INCLUDE_DIR}
-    ${PIXMAN_INCLUDE_DIR}
+    ${WAYLAND_SERVER_INCLUDE_DIRS}
+    ${CAIRO_INCLUDE_DIRS}
+    ${WESTON_INCLUDE_DIRS}
+    ${PIXMAN_INCLUDE_DIRS}
 )
 
 

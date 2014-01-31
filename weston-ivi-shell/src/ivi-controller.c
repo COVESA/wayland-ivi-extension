@@ -28,9 +28,9 @@
 #include <linux/input.h>
 #include <cairo.h>
 
-#include "compositor.h"
+#include "weston/compositor.h"
 #include "ivi-controller-server-protocol.h"
-#include "weston-layout.h"
+#include "weston/weston-layout.h"
 
 struct ivishell;
 struct ivilayer;

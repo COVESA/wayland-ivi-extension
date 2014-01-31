@@ -22,15 +22,16 @@ cmake_minimum_required (VERSION 2.6)
 
 project_type(EXAMPLE)
 
-find_package(GLESv2 REQUIRED)
-find_package(EGL REQUIRED)
-find_package(Wayland REQUIRED)
+find_package(PkgConfig)
+pkg_check_modules(GLESv2 glesv2 REQUIRED)
+pkg_check_modules(EGL egl REQUIRED)
+pkg_check_modules(WAYLAND_EGL wayland-egl REQUIRED)
+pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
 include_directories(
-    ${GLESv2_INCLUDE_DIR}
-    ${EGL_INCLUDE_DIR}
-    ${WAYLAND_CLIENT_INCLUDE_DIR}
-    ${FFI_INCLUDE_DIR}
+    ${GLESv2_INCLUDE_DIRS}
+    ${EGL_INCLUDE_DIRS}
+    ${WAYLAND_CLIENT_INCLUDE_DIRS}
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
@@ -86,8 +87,7 @@ set(LIBS
 	${GLESv2_LIBRARIES}
 	${WAYLAND_CLIENT_LIBRARIES}
 	${WAYLAND_EGL_LIBRARIES}
-	${FFI_LIBRARIES}
-	${EGL_LIBRARY}
+	${EGL_LIBRARIES}
 	LayerManagerUtils
 	ilmClient
 	ilmControl

@@ -24,7 +24,8 @@ project(ilmControl)
 project_type(CORE)
 
 find_package(Threads)
-find_package(Wayland REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
 include_directories(
     "include"

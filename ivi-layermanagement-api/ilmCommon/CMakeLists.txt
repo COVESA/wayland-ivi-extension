@@ -24,7 +24,8 @@ project(ilmCommon)
 project_type(CORE)
 
 find_package(Threads)
-find_package(Wayland REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
 
 add_custom_command(
     OUTPUT ivi-application-client-protocol.h
