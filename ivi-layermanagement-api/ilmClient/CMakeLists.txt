@@ -64,3 +64,5 @@ install (
     FILES       ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include/ilm_client.h
     DESTINATION include/ilm
 )
+
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_VERSION} SOVERSION ${ILM_VERSION})
