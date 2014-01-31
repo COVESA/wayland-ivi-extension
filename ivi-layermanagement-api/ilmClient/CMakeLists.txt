@@ -1,6 +1,6 @@
 ############################################################################
 #
-# Copyright 2010-2012 BMW Car IT GmbH
+# Copyright 2010-2014 BMW Car IT GmbH
 # Copyright (C) 2013 DENSO CORPORATION
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,36 +25,33 @@ find_package(Threads)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
+GET_TARGET_PROPERTY(ILM_COMMON_INCLUDE_DIRS ilmCommon INCLUDE_DIRECTORIES)
 
 include_directories(
-    "include"
-    "${CMAKE_SOURCE_DIR}/config"
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
+    include
+    ${ILM_COMMON_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIR}
 )
 
 add_library(${PROJECT_NAME} SHARED
     src/ilm_client.c
     src/ilm_client_wayland_platform.c
-    ../ilmCommon/src/ivi-application-protocol.c
-)
-
-add_dependencies(${PROJECT_NAME}
-    ilmCommon
-    ${WAYLAND_CLIENT_LIBRARIES}
 )
 
 set(LIBS
     ${LIBS}
     ilmCommon
-    rt
-    dl
-    ${CMAKE_THREAD_LIBS_INIT}
+    ivi-extension-protocol
     ${WAYLAND_CLIENT_LIBRARIES}
 )
 
-target_link_libraries(${PROJECT_NAME} ${LIBS})
+add_dependencies(${PROJECT_NAME}
+    ${LIBS}
+)
+
+target_link_libraries(${PROJECT_NAME}
+    ${LIBS}
+)
 
 install (
     TARGETS             ${PROJECT_NAME}
@@ -62,7 +59,7 @@ install (
 )
 
 install (
-    FILES       ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include/ilm_client.h
+    FILES       ${CMAKE_CURRENT_SOURCE_DIR}/include/ilm_client.h
     DESTINATION include/ilm
 )
 

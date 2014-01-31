@@ -1,6 +1,7 @@
 ############################################################################
 #
 # Copyright (C) 2013 DENSO CORPORATION
+# Copyright 2014 BMW Car IT GmbH
 #
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,35 +28,11 @@ pkg_check_modules(CAIRO cairo REQUIRED)
 pkg_check_modules(WESTON weston REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
-find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
-
-add_custom_command(
-    OUTPUT ivi-application-server-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/include/ivi-application-server-protocol.h
-)
-
-add_custom_command(
-    OUTPUT ivi-application-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/src/ivi-application-protocol.c
-)
-
-add_custom_command(
-    OUTPUT ivi-controller-server-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/include/ivi-controller-server-protocol.h
-)
-
-add_custom_command(
-    OUTPUT ivi-controller-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/weston-ivi-shell/src/ivi-controller-protocol.c
-)
-
-add_custom_target(
-    generate_wayland_protocol_codes_for_server
-    DEPENDS ivi-application-server-protocol.h ivi-application-protocol.c ivi-controller-server-protocol.h ivi-controller-protocol.c
-)
+GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
 
 include_directories(
-    "include"
+    include
+    ${IVI_EXTENSION_INCLUDE_DIRS}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
@@ -65,13 +42,12 @@ include_directories(
 
 add_library(${PROJECT_NAME} MODULE
     src/ivi-controller.c
-    src/ivi-controller-protocol.c
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 add_dependencies(${PROJECT_NAME}
-    generate_wayland_protocol_codes_for_server
+    ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${PIXMAN_LIBRARIES}
@@ -80,14 +56,13 @@ add_dependencies(${PROJECT_NAME}
 
 set(LIBS
     ${LIBS}
-    rt
-    dl
+    ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${WESTON_LIBRARIES}
 )
 
-target_link_libraries(${PROJECT_NAME} ${LIBS} -ldl)
+target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 install (
     TARGETS             ${PROJECT_NAME}

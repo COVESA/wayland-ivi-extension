@@ -1,6 +1,6 @@
 ############################################################################
 #
-# Copyright 2010-2012 BMW Car IT GmbH
+# Copyright 2010-2014 BMW Car IT GmbH
 # Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
 #
 #
@@ -20,77 +20,82 @@
 
 cmake_minimum_required (VERSION 2.6)
 
+project(EGLWLMockNavigation)
+
 find_package(PkgConfig)
 pkg_check_modules(GLESv2 glesv2 REQUIRED)
 pkg_check_modules(EGL egl REQUIRED)
 pkg_check_modules(WAYLAND_EGL wayland-egl REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
+GET_TARGET_PROPERTY(ILM_CLIENT_INCLUDE_DIRS  ilmClient  INCLUDE_DIRECTORIES)
+GET_TARGET_PROPERTY(ILM_CONTROL_INCLUDE_DIRS ilmControl INCLUDE_DIRECTORIES)
+
 include_directories(
+    include
+    ${ILM_CLIENT_INCLUDE_DIRS}
+    ${ILM_CONTROL_INCLUDE_DIRS}
     ${GLESv2_INCLUDE_DIRS}
     ${EGL_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include"
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
-    "include"
 )
 
 set (HEADER_FILES
-
-	include/Camera.h
-	include/Car.h
+    include/Camera.h
+    include/Car.h
     include/Argument.h
-	include/OpenGLES2App.h
-	include/Ground.h
-	include/House.h
-	include/IRenderable.h
-	include/IUpdateable.h
-	include/MockNavi.h
-	include/Street.h
-	include/ShaderBase.h
-	include/ShaderLighting.h
+    include/OpenGLES2App.h
+    include/Ground.h
+    include/House.h
+    include/IRenderable.h
+    include/IUpdateable.h
+    include/MockNavi.h
+    include/Street.h
+    include/ShaderBase.h
+    include/ShaderLighting.h
 )
 
 set (SRC_FILES
-
-	src/Camera.cpp
-	src/Car.cpp
+    src/Camera.cpp
+    src/Car.cpp
     src/Argument.cpp
-	src/OpenGLES2App.cpp
-	src/Ground.cpp
-	src/House.cpp
-	src/MockNavi.cpp
-	src/Street.cpp
-	src/ShaderBase.cpp
-	src/ShaderLighting.cpp
-	src/main.cpp
-        src/WaylandServerinfoProtocol.cpp
-        src/IlmMatrix.cpp
+    src/OpenGLES2App.cpp
+    src/Ground.cpp
+    src/House.cpp
+    src/MockNavi.cpp
+    src/Street.cpp
+    src/ShaderBase.cpp
+    src/ShaderLighting.cpp
+    src/main.cpp
+    src/WaylandServerinfoProtocol.cpp
+    src/IlmMatrix.cpp
 )
 
-add_executable(EGLWLMockNavigation
+add_executable(${PROJECT_NAME}
     ${SRC_FILES}
     ${HEADER_FILES}
 )
 
-add_dependencies(EGLWLMockNavigation
-    ilmCommon
-    ilmClient
-    ilmControl
-    wayland-client
-)
 
 set(LIBS
-	${LIBS}
-	${GLESv2_LIBRARIES}
-	${WAYLAND_CLIENT_LIBRARIES}
-	${WAYLAND_EGL_LIBRARIES}
-	${EGL_LIBRARIES}
-	ilmClient
-	ilmControl
+    ${LIBS}
+    ${GLESv2_LIBRARIES}
+    ${WAYLAND_CLIENT_LIBRARIES}
+    ${WAYLAND_EGL_LIBRARIES}
+    ${EGL_LIBRARIES}
+    ilmClient
+    ilmControl
 )
 
-target_link_libraries(EGLWLMockNavigation ${LIBS} -ldl)
+add_dependencies(${PROJECT_NAME}
+    ${LIBS}
+)
 
-install (TARGETS EGLWLMockNavigation DESTINATION bin)
+target_link_libraries(${PROJECT_NAME}
+    ${LIBS}
+)
+
+install(
+    TARGETS     ${PROJECT_NAME}
+    DESTINATION bin
+)

@@ -1,6 +1,6 @@
 ############################################################################
 #
-# Copyright 2010-2012 BMW Car IT GmbH
+# Copyright 2010-2014 BMW Car IT GmbH
 # Copyright (C) 2013 DENSO CORPORATION
 #
 #
@@ -26,17 +26,17 @@ find_package(Threads)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
+GET_TARGET_PROPERTY(ILM_COMMON_INCLUDE_DIRS ilmCommon INCLUDE_DIRECTORIES)
+
 include_directories(
-    "include"
-    "${CMAKE_SOURCE_DIR}/config"
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
+    include
+    ${ILM_COMMON_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIR}
 )
 
 add_library(${PROJECT_NAME} SHARED
     src/ilm_control.c
     src/ilm_control_wayland_platform.c
-    ../ilmCommon/src/ivi-controller-protocol.c
 )
 
 add_dependencies(${PROJECT_NAME}

@@ -1,6 +1,6 @@
 ############################################################################
 #
-# Copyright 2010-2012 BMW Car IT GmbH
+# Copyright 2010-2014 BMW Car IT GmbH
 # Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
 #
 #
@@ -23,11 +23,11 @@ project(wayland-ivi-extension)
 
 SET(ILM_VERSION "1.2.0")
 
-#===========================================================================================================
-# cmake configuration
-#===========================================================================================================
-add_subdirectory(ivi-layermanagement-api/ilmClient)
-add_subdirectory(ivi-layermanagement-api/ilmCommon)
-add_subdirectory(ivi-layermanagement-api/ilmControl)
+add_subdirectory(protocol)
+
 add_subdirectory(weston-ivi-shell)
+
+add_subdirectory(ivi-layermanagement-api/ilmCommon)
+add_subdirectory(ivi-layermanagement-api/ilmClient)
+add_subdirectory(ivi-layermanagement-api/ilmControl)
 add_subdirectory(ivi-layermanagement-examples)

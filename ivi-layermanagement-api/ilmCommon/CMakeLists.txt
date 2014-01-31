@@ -1,6 +1,6 @@
 ############################################################################
 #
-# Copyright 2010-2012 BMW Car IT GmbH
+# Copyright 2010-2014 BMW Car IT GmbH
 # Copyright (C) 2013 DENSO CORPORATION
 #
 #
@@ -24,63 +24,29 @@ project(ilmCommon)
 
 find_package(Threads)
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
+pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
-find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
-
-add_custom_command(
-    OUTPUT ivi-application-client-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ivi-application-client-protocol.h
-)
-
-add_custom_command(
-    OUTPUT ivi-application-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code <${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/src/ivi-application-protocol.c
-)
-
-add_custom_command(
-    OUTPUT ivi-controller-client-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ivi-controller-client-protocol.h
-)
-
-add_custom_command(
-    OUTPUT ivi-controller-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code <${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml> ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/src/ivi-controller-protocol.c
-)
-
-add_custom_target(
-    generate_wayland_protocol_codes_for_client
-    DEPENDS ivi-application-client-protocol.h ivi-application-protocol.c ivi-controller-client-protocol.h ivi-controller-protocol.c
-)
+GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
 
 include_directories(
-    "include"
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
-    ${WAYLAND_CLIENT_INCLUDE_DIR}
+    include
+    ${IVI_EXTENSION_INCLUDE_DIRS}
+    ${WAYLAND_CLIENT_INCLUDE_DIRS}
 )
-
 
 add_library(${PROJECT_NAME} SHARED
     src/ilm_common.c
     src/ilm_common_wayland_platform.c
-    src/ivi-application-protocol.c
-    src/ivi-controller-protocol.c
+)
+
+target_link_libraries(${PROJECT_NAME}
+    ${WAYLAND_CLIENT_LIBRARIES}
 )
 
 add_dependencies(${PROJECT_NAME}
-    generate_wayland_protocol_codes_for_client
     ${WAYLAND_CLIENT_LIBRARIES}
+    ivi-extension-protocol
 )
-
-set(LIBS
-    ${LIBS}
-    rt
-    dl
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${WAYLAND_CLIENT_LIBRARIES}
-)
-
-target_link_libraries(${PROJECT_NAME} ${LIBS} -ldl)
 
 install (
     TARGETS             ${PROJECT_NAME}
