@@ -20,7 +20,6 @@
 cmake_minimum_required (VERSION 2.6)
 
 project(ilmClient)
-project_type(CORE)
 
 find_package(Threads)
 find_package(PkgConfig REQUIRED)

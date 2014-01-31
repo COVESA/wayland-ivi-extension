@@ -26,13 +26,8 @@ SET(ILM_VERSION "1.2.0")
 #===========================================================================================================
 # cmake configuration
 #===========================================================================================================
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/DefaultSettings.txt)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/CMakeVersions.txt)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/CustomMacros.txt)
 add_subdirectory(ivi-layermanagement-api/ilmClient)
 add_subdirectory(ivi-layermanagement-api/ilmCommon)
 add_subdirectory(ivi-layermanagement-api/ilmControl)
 add_subdirectory(weston-ivi-shell)
-add_subdirectory(config)
 add_subdirectory(ivi-layermanagement-examples)

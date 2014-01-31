@@ -18,14 +18,12 @@
 ############################################################################
 
 project (LayerManagerControl)
-project_type(CORE)
 
 include_directories(
     include
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include"
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-example/LayerManagerUtils/include"
 )
 
 add_executable(${PROJECT_NAME}
@@ -46,7 +44,6 @@ add_executable(${PROJECT_NAME}
 add_dependencies(${PROJECT_NAME}
     ilmClient
     ilmControl
-    LayerManagerUtils
 )
 
 target_link_libraries(${PROJECT_NAME} ilmClient ilmControl)

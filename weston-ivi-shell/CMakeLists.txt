@@ -20,7 +20,6 @@
 cmake_minimum_required (VERSION 2.6)
 
 project(ivi-controller)
-project_type(CORE)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)

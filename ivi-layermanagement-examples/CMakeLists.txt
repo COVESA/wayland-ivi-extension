@@ -23,6 +23,5 @@ project (ivi-layermanagement-examples)
 #===========================================================================================================
 # cmake configuration
 #===========================================================================================================
-add_subdirectory(LayerManagerUtils)
 add_subdirectory(LayerManagerControl)
 add_subdirectory(EGLWLMockNavigation)

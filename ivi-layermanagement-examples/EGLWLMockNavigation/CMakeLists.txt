@@ -20,8 +20,6 @@
 
 cmake_minimum_required (VERSION 2.6)
 
-project_type(EXAMPLE)
-
 find_package(PkgConfig)
 pkg_check_modules(GLESv2 glesv2 REQUIRED)
 pkg_check_modules(EGL egl REQUIRED)
@@ -36,8 +34,6 @@ include_directories(
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
     "include"
-    "../LayerSceneDescriptionExample/include"
-    "../LayerManagerUtils/include"
 )
 
 set (HEADER_FILES
@@ -70,6 +66,7 @@ set (SRC_FILES
 	src/ShaderLighting.cpp
 	src/main.cpp
         src/WaylandServerinfoProtocol.cpp
+        src/IlmMatrix.cpp
 )
 
 add_executable(EGLWLMockNavigation
@@ -78,8 +75,10 @@ add_executable(EGLWLMockNavigation
 )
 
 add_dependencies(EGLWLMockNavigation
+    ilmCommon
     ilmClient
-    EGLWLMockNavigation LayerManagerUtils wayland-client
+    ilmControl
+    wayland-client
 )
 
 set(LIBS
@@ -88,7 +87,6 @@ set(LIBS
 	${WAYLAND_CLIENT_LIBRARIES}
 	${WAYLAND_EGL_LIBRARIES}
 	${EGL_LIBRARIES}
-	LayerManagerUtils
 	ilmClient
 	ilmControl
 )

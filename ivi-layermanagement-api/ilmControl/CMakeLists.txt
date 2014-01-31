@@ -21,7 +21,6 @@
 cmake_minimum_required (VERSION 2.6)
 
 project(ilmControl)
-project_type(CORE)
 
 find_package(Threads)
 find_package(PkgConfig REQUIRED)
