@@ -39,6 +39,13 @@ include_directories(
     ${PIXMAN_INCLUDE_DIRS}
 )
 
+link_directories(
+    ${WAYLAND_SERVER_LIBRARY_DIRS}
+    ${CAIRO_LIBRARY_DIRS}
+    ${WESTON_LIBRARY_DIRS}
+    ${PIXMAN_LIBRARY_DIRS}
+)
+
 
 add_library(${PROJECT_NAME} MODULE
     src/ivi-controller.c

@@ -77,7 +77,13 @@ add_custom_command(
 
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
-    ${WAYLAND_CLIENT_INCLUDE_DIR}
+    ${WAYLAND_CLIENT_INCLUDE_DIRS}
+    ${WAYLAND_SERVER_INCLUDE_DIRS}
+)
+
+link_directories(
+    ${WAYLAND_CLIENT_LIBRARY_DIRS}
+    ${WAYLAND_SERVER_LIBRARY_DIRS}
 )
 
 add_library(${PROJECT_NAME} STATIC

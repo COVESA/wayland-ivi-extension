@@ -40,6 +40,13 @@ include_directories(
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
 )
 
+link_directories(
+    ${GLESv2_LIBRARY_DIRS}
+    ${EGL_LIBRARY_DIRS}
+    ${WAYLAND_CLIENT_LIBRARY_DIRS}
+)
+
+
 set (HEADER_FILES
     include/Camera.h
     include/Car.h
