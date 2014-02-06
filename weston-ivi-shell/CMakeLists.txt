@@ -44,6 +44,7 @@ link_directories(
     ${CAIRO_LIBRARY_DIRS}
     ${WESTON_LIBRARY_DIRS}
     ${PIXMAN_LIBRARY_DIRS}
+    ${WESTON_LIBDIR}/weston
 )
 
 
@@ -55,6 +56,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 add_dependencies(${PROJECT_NAME}
     ivi-extension-protocol
+    weston-layout
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${PIXMAN_LIBRARIES}
@@ -64,6 +66,7 @@ add_dependencies(${PROJECT_NAME}
 set(LIBS
     ${LIBS}
     ivi-extension-protocol
+    weston-layout
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${WESTON_LIBRARIES}
