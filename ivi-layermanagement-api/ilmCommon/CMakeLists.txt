@@ -34,6 +34,10 @@ include_directories(
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
 )
 
+link_directories(
+    ${WAYLAND_CLIENT_LIBRARY_DIRS}
+)
+
 add_library(${PROJECT_NAME} SHARED
     src/ilm_common.c
     src/ilm_common_wayland_platform.c

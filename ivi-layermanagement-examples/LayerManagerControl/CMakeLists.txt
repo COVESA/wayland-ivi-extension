@@ -24,6 +24,11 @@ include_directories(
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include"
+    ${WAYLAND_CLIENT_INCLUDE_DIR}
+)
+
+link_directories(
+    ${WAYLAND_CLIENT_LIBRARY_DIRS}
 )
 
 add_executable(${PROJECT_NAME}
