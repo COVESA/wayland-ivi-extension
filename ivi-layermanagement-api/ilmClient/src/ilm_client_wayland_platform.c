@@ -541,7 +541,7 @@ wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
         surf = ivi_application_surface_create(ctx->ivi_application, surfaceid,
                                          (struct wl_surface*)nativehandle);
         wl_display_flush(ctx->display);
-        wl_display_dispatch(ctx->display);
+        wayland_client_display_dispatch(ctx);
         wl_display_roundtrip(ctx->display);
 
         if (surf != NULL) {
