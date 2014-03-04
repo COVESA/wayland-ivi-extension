@@ -122,7 +122,6 @@ OpenGLES2App::OpenGLES2App(float fps, float animationSpeed, SurfaceConfiguration
 : m_framesPerSecond(fps)
 , m_animationSpeed(animationSpeed)
 , m_timerIntervalInMs(1000.0 / m_framesPerSecond)
-, m_layerId(0)
 , m_surfaceId(0)
 {
     createWLContext(config);
@@ -153,7 +152,6 @@ OpenGLES2App::~OpenGLES2App()
     destroyWLContext();
 
     ilm_surfaceRemove(m_surfaceId);
-    ilm_layerRemove(m_layerId);
     ilm_destroy();
 }
 
@@ -213,17 +211,16 @@ bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
         destroyWLContext();
     }
 
-    m_wlContextStruct.wlShellSurface = wl_shell_get_shell_surface(m_wlContextStruct.wlShell,
-                                                                  m_wlContextStruct.wlSurface);
-    if (NULL == m_wlContextStruct.wlShellSurface)
-    {
-        cout << "Error: wl_shell_get_shell_surface() failed.\n";
-        destroyWLContext();
+    if (m_wlContextStruct.wlShell) {
+        m_wlContextStruct.wlShellSurface = wl_shell_get_shell_surface(m_wlContextStruct.wlShell,
+                                                                      m_wlContextStruct.wlSurface);
     }
 
-    wl_shell_surface_add_listener(
-        reinterpret_cast<struct wl_shell_surface*>(m_wlContextStruct.wlShellSurface),
-        &shellSurfaceListener, &m_wlContextStruct);
+    if (m_wlContextStruct.wlShellSurface) {
+        wl_shell_surface_add_listener(
+            reinterpret_cast<struct wl_shell_surface*>(m_wlContextStruct.wlShellSurface),
+            &shellSurfaceListener, &m_wlContextStruct);
+    }
 
     m_wlContextStruct.wlNativeWindow = wl_egl_window_create(m_wlContextStruct.wlSurface, width, height);
     if (NULL == m_wlContextStruct.wlNativeWindow)
@@ -232,8 +229,10 @@ bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
         destroyWLContext();
     }
 
-    wl_shell_surface_set_title(m_wlContextStruct.wlShellSurface, "mocknavi");
-    wl_shell_surface_set_toplevel(m_wlContextStruct.wlShellSurface);
+    if (m_wlContextStruct.wlShellSurface) {
+        wl_shell_surface_set_title(m_wlContextStruct.wlShellSurface, "mocknavi");
+        wl_shell_surface_set_toplevel(m_wlContextStruct.wlShellSurface);
+    }
 
     return result;
 }
@@ -324,12 +323,9 @@ ilmErrorTypes OpenGLES2App::setupLayerMangement(SurfaceConfiguration* config)
     ilmErrorTypes error = ILM_FAILED;
 
     // register surfaces to layermanager
-    t_ilm_layer layerid = (t_ilm_layer)config->layerId;//LAYER_EXAMPLE_GLES_APPLICATIONS;
     t_ilm_surface surfaceid = (t_ilm_surface)config->surfaceId;//SURFACE_EXAMPLE_EGLX11_APPLICATION;
     int width = config->surfaceWidth;
     int height = config->surfaceHeight;
-    int posX = config->surfacePosX;
-    int posY = config->surfacePosY;
     float opacity = config->opacity;
 
     if (config->nosky)
@@ -340,12 +336,6 @@ ilmErrorTypes OpenGLES2App::setupLayerMangement(SurfaceConfiguration* config)
     {
         glClearColor(0.2f, 0.2f, 0.5f, 1.0f);
     }
-
-    ilm_layerCreateWithDimension(&layerid, width, height);
-    ilm_layerSetSourceRectangle(layerid, 0, 0, width, height);
-    ilm_layerSetDestinationRectangle(layerid, posX, posY, width, height);
-    ilm_layerSetVisibility(layerid, ILM_TRUE);
-    ilm_layerSetOpacity(layerid, opacity);
 
     ilm_surfaceCreate((t_ilm_nativehandle)m_wlContextStruct.wlSurface, width, height,
             ILM_PIXELFORMAT_RGBA_8888, &surfaceid);
@@ -360,15 +350,10 @@ ilmErrorTypes OpenGLES2App::setupLayerMangement(SurfaceConfiguration* config)
     cout << "Set surface " << surfaceid << " opacity " << opacity << "\n";
     ilm_surfaceSetOpacity(surfaceid, opacity);
 
-    cout << "add surface " << surfaceid << " to layer " << layerid << "\n";
-    error = ilm_layerAddSurface(layerid, surfaceid);
-    ilm_displaySetRenderOrder(0, &layerid, 1);
-
     cout << "commit\n";
     error = ilm_commitChanges();
 
     m_surfaceId = surfaceid;
-    m_layerId = layerid;
 
     return error;
 }

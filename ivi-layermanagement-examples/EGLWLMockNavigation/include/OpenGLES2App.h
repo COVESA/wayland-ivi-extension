@@ -29,12 +29,9 @@
 
 struct SurfaceConfiguration
 {
-    unsigned int layerId;
     unsigned int surfaceId;
     unsigned int surfaceWidth;
     unsigned int surfaceHeight;
-    unsigned int surfacePosX;
-    unsigned int surfacePosY;
     float opacity;
     bool nosky;
 };
@@ -103,7 +100,6 @@ public:
 protected:
     WLContextStruct m_wlContextStruct;
 
-    t_ilm_layer   m_layerId;
     t_ilm_surface m_surfaceId;
 };
 
