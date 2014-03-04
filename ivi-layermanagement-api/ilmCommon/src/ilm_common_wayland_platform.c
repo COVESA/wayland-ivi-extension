@@ -47,9 +47,6 @@ void init_ilmCommonPlatformTable()
 /* automatically gets assigned argv[0] */
 extern char *__progname;
 
-/* available to all client APIs, exported in ilm_common.h */
-struct IpcModule gIpcModule;
-
 struct ilm_common_context {
     int32_t valid;
 };

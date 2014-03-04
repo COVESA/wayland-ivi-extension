@@ -19,8 +19,6 @@
 #ifndef _ILM_CONFIGURATION_H_
 #define _ILM_CONFIGURATION_H_
 
-#include "IpcModuleLoader.h"
-
 /*
  * in ms, negative value for infinite
  */
