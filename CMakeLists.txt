@@ -19,6 +19,8 @@
 ############################################################################
 
 cmake_minimum_required (VERSION 2.6)
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
+
 project(wayland-ivi-extension)
 
 SET(IVI_EXTENSION_VERSION 1.0.0)
@@ -31,6 +33,7 @@ add_subdirectory(weston-ivi-shell)
 add_subdirectory(ivi-layermanagement-api/ilmCommon)
 add_subdirectory(ivi-layermanagement-api/ilmClient)
 add_subdirectory(ivi-layermanagement-api/ilmControl)
+add_subdirectory(ivi-layermanagement-api/test)
 add_subdirectory(ivi-layermanagement-examples)
 
 
