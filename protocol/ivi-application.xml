@@ -28,7 +28,9 @@
         <description summary="application interface to surface in ivi compositor"/>
 
         <request name="destroy" type="destructor">
-            <description summary="destroy ivi_surface"/>
+            <description summary="destroy ivi_surface">
+                This removes link from surface_id to wl_surface and destroys ivi_surface.
+            </description>
         </request>
 
         <event name="visibility">
@@ -40,50 +42,63 @@
             <arg name="visibility" type="int"/>
         </event>
 
+        <enum name="warning_code">
+            <description summary="possible warning codes returned by ivi compositor">
+                These warning codes define all possible warning codes returned by ivi compositor
+                on server-side warnings.
+                invalid_wl_surface: invalid wl_surface is set. This happens if wl_surface is destroyed before this.
+                surface_id_in_use: surface_id is already assigned by another application.
+            </description>
+            <entry name="invalid_wl_surface" value="1" summary="wl_surface is invalid"/>
+            <entry name="surface_id_in_use" value="2" summary="surface_id is in use and can not be shared"/>
+        </enum>
+
+        <event name="warning">
+            <description summary="server-side warning detected">
+                The ivi compositor encountered warning while processing a request by this
+                application. The warning is defined by argument warning_code and optional
+                warning_text. If the warning is detected, client shall destroy the ivi_surface
+                object.
+
+                When ivi compositor encounters warnings, a request is canceled and there is no
+                mapping from id_surface/wl_surface to this ivi_surface. Even if there is no
+                mapping but destroying this ivi_surface is recommended.
+            </description>
+            <arg name="warning_code" type="int"/>
+            <arg name="warning_text" type="string" allow-null="true"/>
+        </event>
+
     </interface>
 
     <interface name="ivi_application" version="1">
         <description summary="interface for ivi applications to use ivi compositor features"/>
 
         <request name="surface_create">
-            <description summary="create surface in ivi compositor">
-                surface_create will create a new surface with surface_id in ivi compositor,
-                if it does not yet exists. If the surface with surface_id already exists in
-                ivi compositor, the application content provided in argument surface will
-                be used as surface content. If an other ivi application already registered
-                content for surface with surface_id, an error event will indicate the problem.
+            <description summary="create ivi_surface with numeric ID in ivi compositor">
+                surface_create will create a interface:ivi_surface with numeric ID; surface_id in
+                ivi compositor. These surface_ids are defined as unique in the system to identify
+                it inside of ivi compositor. The ivi compositor implements business logic how to
+                set properties of the surface with surface_id according to status of the system.
+                E.g. a unique ID for Car Navigation application is used for implementing special
+                logic of the application about where it shall be located. 
+
+                Created ivi_surface notifies warnings when following situation happens,
+                - Invalid wl_surface is set. This happen if wl_surface is destroy before this.
+                - surface_id is already assigned by another application.
+                If a client sets a wl_surface to multiple id_surfaces, no warning is issued. Property
+                of the surface can be controlled by multiple ivi_surface. However this case shall
+                be avoided by a client.
             </description>
             <arg name="id_surface" type="uint"/>
             <arg name="surface" type="object" interface="wl_surface"/>
             <arg name="id" type="new_id" interface="ivi_surface"/>
         </request>
 
-        <enum name="error_code">
-            <description summary="possible error codes returned by ivi compositor">
-                These error codes define all possible error codes returned by ivi compositor
-                on server-side errors.
-            </description>
-            <entry name="unknown_error"   value="1" summary="unknown error encountered"/>
-            <entry name="resource_in_use" value="2" summary="resource is in use and can not be shared"/>
-        </enum>
-
-        <event name="error">
-            <description summary="server-side error detected">
-                The ivi compositor encountered error while processing a request by this
-                application. The error is defined by argument error_code and optional
-                error_text.
-                If the application requires to associate this error event to a request,
-                it can
-                    1. send request
-                    2. force display roundtrip
-                    3. check, if error event was received
-                 but this restricts the application to have only one open request at a time.
-            </description>
-            <arg name="error_code" type="int"/>
-            <arg name="error_text" type="string" allow-null="true"/>
+        <event name="wl_shell_info">
+            <arg name="pid" type="int"/>
+            <arg name="title" type="string" allow-null="true"/>
         </event>
 
     </interface>
 
 </protocol>
-
