@@ -20,7 +20,6 @@
 #include <string.h>
 #include <memory.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <signal.h>
 #include <poll.h>
 #include "ilm_client.h"
@@ -109,37 +108,13 @@ struct ilm_client_context {
     struct wl_list list_surface;
     struct wl_list list_screen;
 
-    pthread_t thread;
-    pthread_mutex_t mutex;
     uint32_t internal_id_surface;
     uint32_t name_controller;
 };
 
-#if 0
-#define ILM_PRIVATE_MUTEX_LOCK(_CTX_)
-#define ILM_PRIVATE_MUTEX_UNLOCK(_CTX_)
-#else
-#define ILM_PRIVATE_MUTEX_LOCK(_CTX_) { \
-    int _ans = pthread_mutex_lock(&(_CTX_)->mutex); \
-    if (_ans != 0) { \
-        fprintf(stderr, "failed to lock mutex\n"); \
-    } \
-}
-
-#define ILM_PRIVATE_MUTEX_UNLOCK(_CTX_) { \
-    pthread_mutex_unlock(&(_CTX_)->mutex); \
-}
-#endif
-
 static void
 wayland_client_init(struct ilm_client_context *ctx)
 {
-    int ans = 0;
-    ans = pthread_mutex_init(&ctx->mutex, NULL);
-    if (ans != 0) {
-        fprintf(stderr, "failed to initialize pthread_mutex\n");
-    }
-
     ctx->internal_id_surface = 0;
 }
 
@@ -159,23 +134,6 @@ wayland_client_gen_surface_id(struct ilm_client_context *ctx)
         }
         ctx->internal_id_surface++;
     } while(1);
-}
-
-static void
-wayland_client_display_dispatch(struct ilm_client_context *ctx)
-{
-    struct pollfd pfd[1];
-
-    pfd[0].fd = wl_display_get_fd(ctx->display);
-    pfd[0].events = POLLIN;
-    poll(pfd, 1, 0);
-
-    if (pfd[0].revents & POLLIN) {
-        /* wl_display_dispatch(ctx->display); */
-        wl_display_roundtrip(ctx->display);
-    } else {
-        wl_display_dispatch_pending(ctx->display);
-    }
 }
 
 static void
@@ -252,7 +210,7 @@ registry_handle_client(void *data, struct wl_registry *registry,
 {
     struct ilm_client_context *ctx = data;
     (void)version;
-fprintf(stderr, "registry_handle_client at ilm_client\n");
+
     if (strcmp(interface, "ivi_application") == 0) {
         ctx->ivi_application = wl_registry_bind(registry, name,
                                            &ivi_application_interface, 1);
@@ -334,49 +292,6 @@ wayland_init(t_ilm_nativedisplay nativedisplay)
     return ILM_SUCCESS;
 }
 
-static void*
-client_thread(void *p_ret)
-{
-    struct ilm_client_context *ctx = &ilm_context;
-    int ret = 0;
-    (void)p_ret;
-
-    ctx->num_screen = 0;
-
-    wl_list_init(&ctx->list_screen);
-    wl_list_init(&ctx->list_surface);
-
-    ctx->display = wl_display_connect(NULL);
-    if (ctx->display == NULL) {
-        fprintf(stderr, "Failed to connect display in libilmCommon\n");
-        return NULL;
-    }
-
-    ctx->registry = wl_display_get_registry(ctx->display);
-    if (ctx->registry == NULL) {
-        fprintf(stderr, "Failed to get registry\n");
-        return NULL;
-    }
-    if (wl_registry_add_listener(ctx->registry,
-                             &registry_client_listener, ctx)) {
-        fprintf(stderr, "Failed to add registry listener\n");
-        return NULL;
-    }
-
-    wl_display_flush(ctx->display);
-    wl_display_dispatch(ctx->display);
-    wl_display_roundtrip(ctx->display);
-
-    while ((0 < ctx->valid) && (-1 != ret))
-    {
-        wayland_client_display_dispatch(ctx);
-    }
-
-    destroy_client_resouses();
-
-    return NULL;
-}
-
 static void
 init_client()
 {
@@ -391,7 +306,6 @@ init_client()
     wl_list_init(&ctx->list_screen);
     wl_list_init(&ctx->list_surface);
 
-fprintf(stderr, "wl_display_get_registry at init_client\n");
     ctx->registry = wl_display_get_registry(ctx->display);
     if (ctx->registry == NULL) {
         fprintf(stderr, "Failed to get registry\n");
@@ -423,6 +337,8 @@ get_client_instance()
     if (ctx->valid < 0) {
         exit(0);
     }
+
+    wl_display_roundtrip(ctx->display);
 
     return ctx;
 }
@@ -473,7 +389,6 @@ wayland_getScreenResolution(t_ilm_uint screenID,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_client_context *ctx = get_client_instance();
-    ILM_PRIVATE_MUTEX_LOCK(ctx);
 
     if ((pWidth != NULL) && (pHeight != NULL))
     {
@@ -488,7 +403,6 @@ wayland_getScreenResolution(t_ilm_uint screenID,
         }
     }
 
-    ILM_PRIVATE_MUTEX_UNLOCK(ctx);
     return returnValue;
 }
 
@@ -499,7 +413,6 @@ wayland_surfaceAddNotification(t_ilm_surface surface,
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_client_context *ctx = get_client_instance();
     struct surface_context *ctx_surf = NULL;
-    ILM_PRIVATE_MUTEX_LOCK(ctx);
 
     ctx_surf = get_surface_context_by_id(ctx, (uint32_t)surface);
     if (ctx_surf == NULL) {
@@ -509,7 +422,6 @@ wayland_surfaceAddNotification(t_ilm_surface surface,
         returnValue = ILM_SUCCESS;
     }
 
-    ILM_PRIVATE_MUTEX_UNLOCK(ctx);
     return returnValue;
 }
 
@@ -527,7 +439,6 @@ wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
     (void)pixelFormat;
     (void)width;
     (void)height;
-    ILM_PRIVATE_MUTEX_LOCK(ctx);
 
     if (pSurfaceId != NULL) {
         if (*pSurfaceId == INVALID_ID) {
@@ -540,9 +451,6 @@ wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
 
         surf = ivi_application_surface_create(ctx->ivi_application, surfaceid,
                                          (struct wl_surface*)nativehandle);
-        wl_display_flush(ctx->display);
-        wayland_client_display_dispatch(ctx);
-        wl_display_roundtrip(ctx->display);
 
         if (surf != NULL) {
             create_client_surface(ctx, surfaceid, surf);
@@ -553,7 +461,6 @@ wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
         }
     }
 
-    ILM_PRIVATE_MUTEX_UNLOCK(ctx);
     return returnValue;
 }
 
@@ -564,8 +471,6 @@ wayland_surfaceRemove(t_ilm_surface surfaceId)
     struct surface_context *ctx_surf = NULL;
     struct surface_context *ctx_next = NULL;
 
-    ILM_PRIVATE_MUTEX_LOCK(ctx);
-
     wl_list_for_each_safe(ctx_surf, ctx_next,
                           &ctx->list_surface,
                           link) {
@@ -575,11 +480,6 @@ wayland_surfaceRemove(t_ilm_surface surfaceId)
         }
     }
 
-    wl_display_flush(ctx->display);
-    wayland_client_display_dispatch(ctx);
-    wl_display_roundtrip(ctx->display);
-
-    ILM_PRIVATE_MUTEX_UNLOCK(ctx);
     return ILM_SUCCESS;
 }
 
@@ -599,7 +499,6 @@ wayland_surfaceRemoveNotification(t_ilm_surface surface)
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_client_context *ctx = get_client_instance();
     struct surface_context *ctx_surf = NULL;
-    ILM_PRIVATE_MUTEX_LOCK(ctx);
 
     ctx_surf = get_surface_context_by_id(ctx, (uint32_t)surface);
     if (ctx_surf == NULL) {
@@ -609,7 +508,6 @@ wayland_surfaceRemoveNotification(t_ilm_surface surface)
         returnValue = ILM_SUCCESS;
     }
 
-    ILM_PRIVATE_MUTEX_UNLOCK(ctx);
     return returnValue;
 }
 
@@ -639,7 +537,6 @@ wayland_UpdateInputEventAcceptanceOn(t_ilm_surface surfaceId,
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_client_context *ctx = get_client_instance();
     struct surface_context *ctx_surf = NULL;
-    ILM_PRIVATE_MUTEX_LOCK(ctx);
 
     ctx_surf = get_surface_context_by_id(ctx, (uint32_t)surfaceId);
     if (ctx_surf != NULL) {
@@ -651,7 +548,6 @@ wayland_UpdateInputEventAcceptanceOn(t_ilm_surface surfaceId,
         returnValue = ILM_SUCCESS;
     }
 
-    ILM_PRIVATE_MUTEX_UNLOCK(ctx);
     return returnValue;
 }
 
