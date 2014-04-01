@@ -27,14 +27,17 @@
 #include "ilm_types.h"
 #include "ilm_configuration.h"
 #include "wayland-util.h"
+#include "wayland-client.h"
 
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
+static t_ilm_nativedisplay wayland_getNativedisplay();
 static t_ilm_bool wayland_isInitialized();
 static ilmErrorTypes wayland_destroy();
 
 void init_ilmCommonPlatformTable()
 {
     gIlmCommonPlatformFunc.init = wayland_init;
+    gIlmCommonPlatformFunc.getNativedisplay = wayland_getNativedisplay;
     gIlmCommonPlatformFunc.isInitialized = wayland_isInitialized;
     gIlmCommonPlatformFunc.destroy = wayland_destroy;
 }
@@ -49,19 +52,37 @@ extern char *__progname;
 
 struct ilm_common_context {
     int32_t valid;
+    struct wl_display *display;
 };
 
-static struct ilm_common_context ilm_context = {0};
+static struct ilm_common_context ilm_context = {0, 0};
 
 static ilmErrorTypes
 wayland_init(t_ilm_nativedisplay nativedisplay)
 {
     struct ilm_common_context *ctx = &ilm_context;
-    (void)nativedisplay;
+
+    if (nativedisplay != 0) {
+        ctx->display = (struct wl_display*)nativedisplay;
+    } else {
+        ctx->display = wl_display_connect(NULL);
+        if (ctx->display == NULL) {
+            fprintf(stderr, "Failed to connect display in libilmCommon\n");
+            return ILM_FAILED;
+        }
+    }
 
     ctx->valid = 1;
 
     return ILM_SUCCESS;
+}
+
+static t_ilm_nativedisplay
+wayland_getNativedisplay()
+{
+    struct ilm_common_context *ctx = &ilm_context;
+
+    return (t_ilm_nativedisplay)ctx->display;
 }
 
 static t_ilm_bool

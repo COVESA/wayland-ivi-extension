@@ -49,27 +49,30 @@ ILM_EXPORT ilmErrorTypes
 ilm_initWithNativedisplay(t_ilm_nativedisplay nativedisplay)
 {
     ilmErrorTypes err = ILM_SUCCESS;
+    t_ilm_nativedisplay display = 0;
 
     init_ilmCommonPlatformTable();
-
-    err = ilmClient_init(nativedisplay);
-    if (ILM_SUCCESS != err)
-    {
-        return err;
-    }
-
-    err = ilmControl_init(nativedisplay);
-    if (ILM_SUCCESS != err)
-    {
-        ilmClient_destroy();
-        return err;
-    }
 
     err = gIlmCommonPlatformFunc.init(nativedisplay);
     if (ILM_SUCCESS != err)
     {
+        return err;
+    }
+
+    display = gIlmCommonPlatformFunc.getNativedisplay();
+
+    err = ilmClient_init(display);
+    if (ILM_SUCCESS != err)
+    {
+        gIlmCommonPlatformFunc.destroy();
+        return err;
+    }
+
+    err = ilmControl_init(display);
+    if (ILM_SUCCESS != err)
+    {
+        gIlmCommonPlatformFunc.destroy();
         ilmClient_destroy();
-        ilmControl_destroy();
         return err;
     }
 

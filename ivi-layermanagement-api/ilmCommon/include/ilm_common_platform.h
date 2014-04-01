@@ -29,6 +29,7 @@ extern "C" {
 typedef struct _ILM_COMMON_PLATFORM_FUNC
 {
     ilmErrorTypes (*init)(t_ilm_nativedisplay nativedisplay);
+    t_ilm_nativedisplay (*getNativedisplay)();
     t_ilm_bool (*isInitialized)();
     ilmErrorTypes (*destroy)();
 } ILM_COMMON_PLATFORM_FUNC;
