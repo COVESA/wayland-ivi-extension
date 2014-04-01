@@ -1542,7 +1542,6 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
 
     shell->compositor = ec;
 
-    wl_list_init(&ec->layer_list);
     wl_list_init(&shell->list_surface);
     wl_list_init(&shell->list_layer);
     wl_list_init(&shell->list_screen);
