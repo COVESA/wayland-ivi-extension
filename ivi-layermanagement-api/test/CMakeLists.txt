@@ -54,6 +54,7 @@ IF(BUILD_ILM_API_TESTS)
     )
 
     SET(SRC_FILES
+        TestBase.cpp
         ilm_control_test.cpp
         ilm_control_notification_test.cpp
     )
