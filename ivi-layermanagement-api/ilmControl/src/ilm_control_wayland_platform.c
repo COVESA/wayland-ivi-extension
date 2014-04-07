@@ -581,8 +581,7 @@ controller_layer_listener_visibility(void *data,
 
     ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in \
-                         controller_layer_listener_visibility\n");
+        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
     }
 
@@ -605,8 +604,7 @@ controller_layer_listener_opacity(void *data,
 
     ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in \
-                         controller_layer_listener_opacity\n");
+        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
     }
 
@@ -632,8 +630,7 @@ controller_layer_listener_source_rectangle(void *data,
 
     ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in \
-                         controller_layer_listener_source_rectangle\n");
+        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
     }
 
@@ -668,8 +665,7 @@ controller_layer_listener_destination_rectangle(void *data,
 
     ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in \
-                         controller_layer_listener_destination_rectangle\n");
+        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
     }
 
@@ -696,8 +692,7 @@ controller_layer_listener_configuration(void *data,
 
     ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in \
-                         controller_layer_listener_position\n");
+        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
     }
 
@@ -716,8 +711,7 @@ controller_layer_listener_orientation(void *data,
 
     ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in \
-                         controller_layer_listener_orientation\n");
+        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
     }
 
@@ -757,8 +751,7 @@ controller_layer_listener_screen(void *data,
 
     ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in \
-                         controller_layer_listener_screen\n");
+        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
     }
 
@@ -778,8 +771,7 @@ controller_layer_listener_destroyed(void *data,
 
     ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in \
-                         controller_layer_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
     }
 
@@ -877,7 +869,7 @@ get_surface_context_by_controller(struct wayland_context *ctx,
         }
     }
 
-    fprintf(stderr, "failed to get surface context in ilmControl\n");
+    fprintf(stderr, "failed to get surface context in %s\n", __FUNCTION__);
     return NULL;
 }
 
@@ -891,8 +883,7 @@ controller_surface_listener_visibility(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
@@ -909,8 +900,7 @@ controller_surface_listener_opacity(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
@@ -928,8 +918,7 @@ controller_surface_listener_configuration(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
@@ -952,8 +941,7 @@ controller_surface_listener_source_rectangle(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
@@ -982,8 +970,7 @@ controller_surface_listener_destination_rectangle(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
@@ -1004,8 +991,7 @@ controller_surface_listener_orientation(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
@@ -1039,8 +1025,7 @@ controller_surface_listener_pixelformat(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
@@ -1059,8 +1044,7 @@ controller_surface_listener_layer(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_layer\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
@@ -1086,9 +1070,8 @@ controller_surface_listener_stats(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
-        return;
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
+
     }
 
     if (ctx_surf != NULL) {
@@ -1108,8 +1091,7 @@ controller_surface_listener_destroyed(void *data,
 
     ctx_surf = get_surface_context_by_controller(ctx, controller);
     if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in \
-                         controller_surface_listener_destroyed\n");
+        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
         return;
     }
 
