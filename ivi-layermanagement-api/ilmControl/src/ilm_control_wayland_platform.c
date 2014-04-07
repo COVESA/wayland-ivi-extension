@@ -1461,6 +1461,10 @@ destroy_control_resources()
         wl_display_disconnect(ctx->child_ctx.display);
         ctx->child_ctx.display = NULL;
     }
+
+    if (0 != pthread_mutex_destroy(&ctx->mutex)) {
+        fprintf(stderr, "failed to destroy pthread_mutex\n");
+    }
 }
 
 static void
