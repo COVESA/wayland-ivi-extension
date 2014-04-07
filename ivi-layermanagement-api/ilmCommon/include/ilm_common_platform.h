@@ -23,8 +23,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "ilm_types.h"
-#include "ilm_configuration.h"
-#include "ilm_tools.h"
 
 typedef struct _ILM_COMMON_PLATFORM_FUNC
 {

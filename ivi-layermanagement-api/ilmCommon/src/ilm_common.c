@@ -23,9 +23,7 @@
 #include <pthread.h>
 #include "ilm_common.h"
 #include "ilm_common_platform.h"
-#include "ilm_tools.h"
 #include "ilm_types.h"
-#include "ilm_configuration.h"
 
 /* GCC visibility */
 #if defined(__GNUC__) && __GNUC__ >= 4

@@ -25,10 +25,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "ilm_types.h"
-#include "ilm_configuration.h"
-#include "ilm_tools.h"
-
-extern struct IpcModule gIpcModule;
 
 /**
  * \brief Initializes the IVI LayerManagement Client.

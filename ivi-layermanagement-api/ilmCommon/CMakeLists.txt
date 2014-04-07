@@ -60,8 +60,6 @@ install (
 install (
     FILES       ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ilm_common.h
                 ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ilm_types.h
-                ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ilm_configuration.h
-                ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ilm_tools.h
                 ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include/ilm_platform.h
     DESTINATION include/ilm
 )

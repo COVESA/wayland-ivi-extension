@@ -27,6 +27,10 @@
  */
 #define ILM_BIT(x) (1 << (x))
 
+/**
+ * invalid ID does not refer to an acutaly object id.
+ */
+#define INVALID_ID 0xFFFFFFFF
 
 /**
  * \brief Represent the logical true value
