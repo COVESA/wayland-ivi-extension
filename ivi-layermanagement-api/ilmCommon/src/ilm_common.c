@@ -86,5 +86,8 @@ ilm_isInitialized()
 ILM_EXPORT ilmErrorTypes
 ilm_destroy()
 {
-    return gIlmCommonPlatformFunc.destroy();
+    ilmErrorTypes retVal = gIlmCommonPlatformFunc.destroy();
+    ilmClient_destroy();
+    ilmControl_destroy(); // block until control thread is stopped
+    return retVal;
 }

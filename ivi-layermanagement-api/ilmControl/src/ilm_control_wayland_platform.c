@@ -1429,6 +1429,11 @@ wayland_destroy()
 {
     struct ilm_control_context *ctx = &ilm_context;
     ctx->valid = 0;
+    void* threadRetVal = NULL;
+    pthread_cancel(ctx->thread);
+    if (0 != pthread_join(ctx->thread, &threadRetVal)) {
+        fprintf(stderr, "failed to join control thread\n");
+    }
 }
 
 static void
