@@ -477,6 +477,8 @@ wayland_surfaceRemove(t_ilm_surface surfaceId)
                           link) {
         if (ctx_surf->id_surface == surfaceId) {
             ivi_surface_destroy(ctx_surf->surface);
+            wl_list_remove(&ctx_surf->link);
+            free(ctx_surf);
             break;
         }
     }
