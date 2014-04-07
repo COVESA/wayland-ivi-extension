@@ -455,6 +455,7 @@ wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
         if (surf != NULL) {
             create_client_surface(ctx, surfaceid, surf);
             *pSurfaceId = surfaceid;
+            returnValue = ILM_SUCCESS;
         }
         else {
             fprintf(stderr, "Failed to create ivi_surface\n");
