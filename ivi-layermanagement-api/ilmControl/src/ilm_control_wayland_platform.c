@@ -1803,10 +1803,13 @@ wayland_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray)
 
         *ppArray = (t_ilm_layer*)malloc(length * sizeof *ppArray);
         if (*ppArray != NULL) {
-            t_ilm_layer* ids = *ppArray;
-            wl_list_for_each(ctx_layer, &ctx->main_ctx.list_layer, link) {
+            // compositor sends layers in opposite order
+            // write ids from back to front to turn them around
+            t_ilm_layer* ids = &((*ppArray)[length - 1]);
+            wl_list_for_each(ctx_layer, &ctx->main_ctx.list_layer, link)
+            {
                 *ids = ctx_layer->id_layer;
-                ids++;
+                --ids;
             }
             *pLength = length;
 
