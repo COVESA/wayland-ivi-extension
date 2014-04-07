@@ -1104,9 +1104,26 @@ controller_surface_listener_content(void *data,
                    struct ivi_controller_surface *controller,
                    int32_t content_state)
 {
-    (void)data;
-    (void)controller;
-    (void)content_state;
+    // if client surface (=content) was removed with ilm_surfaceDestroy()
+    // the expected behavior within ILM API mandates a full removal
+    // of the surface from the scene. We must remove the controller
+    // from scene, too.
+    if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_REMOVED == content_state)
+    {
+        struct wayland_context *ctx = data;
+        struct surface_context *ctx_surf = NULL;
+
+        ctx_surf = get_surface_context_by_controller(ctx, controller);
+        if (ctx_surf == NULL) {
+            fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
+            return;
+        }
+
+        ivi_controller_surface_destroy(controller, IVI_CONTROLLER_OBJECT_TYPE_SURFACE);
+
+        wl_list_remove(&ctx_surf->link);
+        free(ctx_surf);
+    }
 }
 
 static void
