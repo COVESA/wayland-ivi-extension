@@ -164,9 +164,11 @@ destroy_ivicontroller_surface(struct wl_resource *resource)
 
     wl_list_for_each_safe(ctrlsurf, next,
                           &shell->list_controller_surface, link) {
-        if (id_surface != ctrlsurf->id_surface) {
+
+        if (resource != ctrlsurf->resource) {
             continue;
         }
+
 
         wl_list_remove(&ctrlsurf->link);
         free(ctrlsurf);
@@ -188,7 +190,8 @@ destroy_ivicontroller_layer(struct wl_resource *resource)
 
     wl_list_for_each_safe(ctrllayer, next,
                           &shell->list_controller_layer, link) {
-        if (id_layer != ctrllayer->id_layer) {
+
+        if (resource != ctrllayer->resource) {
             continue;
         }
 
@@ -214,6 +217,11 @@ destroy_ivicontroller_screen(struct wl_resource *resource)
             continue;
         }
 #endif
+
+        if (resource != ctrlscrn->resource) {
+            continue;
+        }
+
         wl_list_remove(&ctrlscrn->link);
         free(ctrlscrn);
         ctrlscrn = NULL;
@@ -708,18 +716,21 @@ controller_surface_destroy(struct wl_client *client,
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
     struct ivishell *shell = ivisurf->shell;
     struct ivicontroller_surface *ctrlsurf = NULL;
+    struct ivicontroller_surface *next = NULL;
     uint32_t id_surface = weston_layout_getIdOfSurface(ivisurf->layout_surface);
     (void)client;
     (void)destroy_scene_object;
 
-    wl_list_for_each(ctrlsurf, &shell->list_controller_surface, link) {
-        if (ctrlsurf->id_surface != id_surface) {
+    wl_list_for_each_safe(ctrlsurf, next,
+                          &shell->list_controller_surface, link) {
+        if (ctrlsurf->resource != resource) {
             continue;
         }
 
         if (!wl_list_empty(&ctrlsurf->link)) {
             wl_list_remove(&ctrlsurf->link);
         }
+        free(ctrlsurf);
         wl_resource_destroy(resource);
         break;
     }
@@ -910,6 +921,7 @@ controller_layer_destroy(struct wl_client *client,
         if (!wl_list_empty(&ctrllayer->link)) {
             wl_list_remove(&ctrllayer->link);
         }
+        free(ctrllayer);
         wl_resource_destroy(resource);
         break;
     }
@@ -945,8 +957,13 @@ controller_screen_destroy(struct wl_client *client,
 
     wl_list_for_each_safe(ctrlscrn, next,
                           &iviscrn->shell->list_controller_screen, link) {
-// TODO : Only Single display
-        destroy_ivicontroller_screen(ctrlscrn->resource);
+        if (resource != ctrlscrn->resource) {
+            continue;
+        }
+
+        wl_list_remove(&ctrlscrn->link);
+        free(ctrlscrn);
+        ctrlscrn = NULL;
         wl_resource_destroy(ctrlscrn->resource);
         break;
     }
