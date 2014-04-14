@@ -440,6 +440,10 @@ wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
     (void)width;
     (void)height;
 
+    if (nativehandle == 0) {
+        return returnValue;
+    }
+
     if (pSurfaceId != NULL) {
         if (*pSurfaceId == INVALID_ID) {
             surfaceid =
