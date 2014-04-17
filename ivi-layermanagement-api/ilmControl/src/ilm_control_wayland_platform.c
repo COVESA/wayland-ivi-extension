@@ -2029,19 +2029,28 @@ wayland_getLayerIDsOnScreen(t_ilm_uint screenId,
             struct layer_context *ctx_layer = NULL;
             t_ilm_int length = wl_list_length(&ctx_screen->order.list_layer);
 
-            *ppArray = (t_ilm_layer*)malloc(length * sizeof *ppArray);
-            if (*ppArray != NULL) {
-                t_ilm_layer* ids = *ppArray;
-                wl_list_for_each(ctx_layer,
-                                 &ctx_screen->order.list_layer,
-                                 order.link) {
-                    *ids = ctx_layer->id_layer;
-                    ids++;
-                }
-                *pLength = length;
+            if (0 < length)
+            {
+                *ppArray = (t_ilm_layer*)malloc(length * sizeof *ppArray);
+                if (*ppArray != NULL) {
+                    // compositor sends layers in opposite order
+                    // write ids from back to front to turn them around
+                    t_ilm_layer* ids = &((*ppArray)[length - 1]);
+                    wl_list_for_each(ctx_layer, &ctx->main_ctx.list_layer, link)
+                    {
+                        *ids = ctx_layer->id_layer;
+                        --ids;
+                    }
 
-                returnValue = ILM_SUCCESS;
+                }
             }
+            else
+            {
+                *ppArray = NULL;
+            }
+
+            *pLength = length;
+            returnValue = ILM_SUCCESS;
         }
     }
 
