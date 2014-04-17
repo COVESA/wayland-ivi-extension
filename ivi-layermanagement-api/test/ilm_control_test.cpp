@@ -171,7 +171,7 @@ TEST_F(IlmCommandTest, SetGetLayerOrientation) {
     ASSERT_EQ(ILM_ZERO, returned);
 }
 
-TEST_F(IlmCommandTest, DISABLED_SetGetSurfaceOpacity) {
+TEST_F(IlmCommandTest, SetGetSurfaceOpacity) {
     uint surface1 = 36;
     uint surface2 = 44;
     t_ilm_float opacity;
@@ -190,7 +190,7 @@ TEST_F(IlmCommandTest, DISABLED_SetGetSurfaceOpacity) {
     EXPECT_FLOAT_EQ(0.001, opacity);
 }
 
-TEST_F(IlmCommandTest, DISABLED_SetGetLayerOpacity) {
+TEST_F(IlmCommandTest, SetGetLayerOpacity) {
     uint layer1 = 36;
     uint layer2 = 44;
     t_ilm_float opacity;
@@ -289,7 +289,7 @@ TEST_F(IlmCommandTest, ilm_getLayerIDs) {
     ASSERT_EQ(layer2, IDs[1]);
 }
 
-TEST_F(IlmCommandTest, DISABLED_ilm_getLayerIDsOfScreen) {
+TEST_F(IlmCommandTest, ilm_getLayerIDsOfScreen) {
     t_ilm_layer layer1 = 3246;
     t_ilm_layer layer2 = 46586;
     t_ilm_uint roLength = 2;
@@ -707,7 +707,7 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
     ASSERT_EQ(numberOfHardwareLayers, screenProperties.harwareLayerCount);
 }
 
-TEST_F(IlmCommandTest, DISABLED_DisplaySetRenderOrder_growing) {
+TEST_F(IlmCommandTest, DisplaySetRenderOrder_growing) {
     //prepare needed layers
     t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
     t_ilm_uint layerCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
@@ -744,7 +744,7 @@ TEST_F(IlmCommandTest, DISABLED_DisplaySetRenderOrder_growing) {
     }
 }
 
-TEST_F(IlmCommandTest, DISABLED_DisplaySetRenderOrder_shrinking) {
+TEST_F(IlmCommandTest, DisplaySetRenderOrder_shrinking) {
     //prepare needed layers
     t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
     t_ilm_uint layerCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
@@ -781,7 +781,7 @@ TEST_F(IlmCommandTest, DISABLED_DisplaySetRenderOrder_shrinking) {
     }
 }
 
-TEST_F(IlmCommandTest, DISABLED_LayerSetRenderOrder_growing) {
+TEST_F(IlmCommandTest, LayerSetRenderOrder_growing) {
     //prepare needed layers and surfaces
     t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
     t_ilm_uint surfaceCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
@@ -833,7 +833,7 @@ TEST_F(IlmCommandTest, DISABLED_LayerSetRenderOrder_growing) {
     }
 }
 
-TEST_F(IlmCommandTest, DISABLED_LayerSetRenderOrder_shrinking) {
+TEST_F(IlmCommandTest, LayerSetRenderOrder_shrinking) {
     //prepare needed layers and surfaces
     t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
     t_ilm_uint surfaceCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
@@ -885,7 +885,7 @@ TEST_F(IlmCommandTest, DISABLED_LayerSetRenderOrder_shrinking) {
     }
 }
 
-TEST_F(IlmCommandTest, DISABLED_LayerSetRenderOrder_duplicates) {
+TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
     //prepare needed layers and surfaces
     t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
     t_ilm_uint surfaceCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
@@ -918,7 +918,7 @@ TEST_F(IlmCommandTest, DISABLED_LayerSetRenderOrder_duplicates) {
     ASSERT_EQ(2, layerSurfaceCount);
 }
 
-TEST_F(IlmCommandTest, DISABLED_LayerSetRenderOrder_empty) {
+TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
     //prepare needed layers and surfaces
     t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
     t_ilm_uint surfaceCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
