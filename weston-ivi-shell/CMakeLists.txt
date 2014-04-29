@@ -37,6 +37,7 @@ include_directories(
     ${CAIRO_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
     ${PIXMAN_INCLUDE_DIRS}
+    ${WESTON_INCLUDE_DIRS}/weston
 )
 
 link_directories(
@@ -56,7 +57,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 add_dependencies(${PROJECT_NAME}
     ivi-extension-protocol
-    weston-layout
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${PIXMAN_LIBRARIES}
@@ -66,11 +66,12 @@ add_dependencies(${PROJECT_NAME}
 set(LIBS
     ${LIBS}
     ivi-extension-protocol
-    weston-layout
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${WESTON_LIBRARIES}
 )
+
+set(CMAKE_C_LDFLAGS "-module -avoid-version")
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
