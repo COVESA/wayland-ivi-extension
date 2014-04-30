@@ -234,16 +234,24 @@ TEST_F(IlmCommandTest, SetGetSurfaceOpacity) {
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface1, 0.88));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetOpacity(surface1, &opacity));
-    EXPECT_FLOAT_EQ(0.88, opacity);
+    EXPECT_NEAR(0.88, opacity, 0.01);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface2, 0.001));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetOpacity(surface2, &opacity));
-    EXPECT_FLOAT_EQ(0.001, opacity);
+    EXPECT_NEAR(0.001, opacity, 0.01);
 
     // cleanup
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
+}
+
+TEST_F(IlmCommandTest, SetGetSurfaceOpacity_InvalidInput) {
+    t_ilm_uint surface = 0xdeadbeef;
+    t_ilm_float opacity;
+
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.88));
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetOpacity(surface, &opacity));
 }
 
 TEST_F(IlmCommandTest, SetGetLayerOpacity) {
@@ -257,16 +265,24 @@ TEST_F(IlmCommandTest, SetGetLayerOpacity) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetOpacity(layer1, 0.88));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetOpacity(layer1, &opacity));
-    EXPECT_FLOAT_EQ(0.88, opacity);
+    EXPECT_NEAR(0.88, opacity, 0.01);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetOpacity(layer2, 0.001));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetOpacity(layer2, &opacity));
-    EXPECT_FLOAT_EQ(0.001, opacity);
+    EXPECT_NEAR(0.001, opacity, 0.01);
 
     // cleanup
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer1));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer2));
+}
+
+TEST_F(IlmCommandTest, SetGetLayerOpacity_InvalidInput) {
+    t_ilm_layer layer = 0xdeadbeef;
+    t_ilm_float opacity;
+
+    ASSERT_NE(ILM_SUCCESS, ilm_layerSetOpacity(layer, 0.88));
+    ASSERT_NE(ILM_SUCCESS, ilm_layerGetOpacity(layer, &opacity));
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceVisibility) {
