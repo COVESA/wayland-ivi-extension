@@ -925,20 +925,116 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_InvalidInput) {
 }
 
 TEST_F(IlmCommandTest, ilm_takeScreenshot) {
+    char* outputFile = "/tmp/test.bmp";
     // make sure the file is not there before
-    FILE* f = fopen("/tmp/test.bmp", "r");
+    FILE* f = fopen(outputFile, "r");
     if (f!=NULL){
         fclose(f);
-        int result = remove("/tmp/test.bmp");
+        int result = remove(outputFile);
         ASSERT_EQ(0, result);
     }
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeScreenshot(0, "/tmp/test.bmp"));
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeScreenshot(0, outputFile));
 
     sleep(1);
-    f = fopen("/tmp/test.bmp", "r");
+    f = fopen(outputFile, "r");
     ASSERT_TRUE(f!=NULL);
     fclose(f);
+    remove(outputFile);
+}
+
+TEST_F(IlmCommandTest, ilm_takeScreenshot_InvalidInputs) {
+    char* outputFile = "/tmp/test.bmp";
+    // make sure the file is not there before
+    FILE* f = fopen(outputFile, "r");
+    if (f!=NULL){
+        fclose(f);
+        ASSERT_EQ(0, remove(outputFile));
+    }
+
+    // try to dump an non-existing screen
+    ASSERT_NE(ILM_SUCCESS, ilm_takeScreenshot(0xdeadbeef, outputFile));
+
+    // make sure, no screen dump file was created for invalid screen
+    ASSERT_NE(0, remove(outputFile));
+}
+
+TEST_F(IlmCommandTest, ilm_takeLayerScreenshot) {
+    char* outputFile = "/tmp/test.bmp";
+    // make sure the file is not there before
+    FILE* f = fopen(outputFile, "r");
+    if (f!=NULL){
+        fclose(f);
+        int result = remove(outputFile);
+        ASSERT_EQ(0, result);
+    }
+
+    t_ilm_layer layer = 0xbeef;
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeLayerScreenshot(outputFile, layer));
+
+    sleep(1);
+    f = fopen(outputFile, "r");
+    ASSERT_TRUE(f!=NULL);
+    fclose(f);
+    remove(outputFile);
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
+}
+
+TEST_F(IlmCommandTest, ilm_takeLayerScreenshot_InvalidInputs) {
+    char* outputFile = "/tmp/test.bmp";
+    // make sure the file is not there before
+    FILE* f = fopen(outputFile, "r");
+    if (f!=NULL){
+        fclose(f);
+        ASSERT_EQ(0, remove(outputFile));
+    }
+
+    // try to dump an non-existing screen
+    ASSERT_NE(ILM_SUCCESS, ilm_takeLayerScreenshot(outputFile, 0xdeadbeef));
+
+    // make sure, no screen dump file was created for invalid screen
+    ASSERT_NE(0, remove(outputFile));
+}
+
+TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot) {
+    char* outputFile = "/tmp/test.bmp";
+    // make sure the file is not there before
+    FILE* f = fopen(outputFile, "r");
+    if (f!=NULL){
+        fclose(f);
+        int result = remove(outputFile);
+        ASSERT_EQ(0, result);
+    }
+
+    t_ilm_surface surface = 0xbeef;
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, surface));
+
+    sleep(1);
+    f = fopen(outputFile, "r");
+    ASSERT_TRUE(f!=NULL);
+    fclose(f);
+    remove(outputFile);
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
+}
+
+TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
+    char* outputFile = "/tmp/test.bmp";
+    // make sure the file is not there before
+    FILE* f = fopen(outputFile, "r");
+    if (f!=NULL){
+        fclose(f);
+        ASSERT_EQ(0, remove(outputFile));
+    }
+
+    // try to dump an non-existing screen
+    ASSERT_NE(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, 0xdeadbeef));
+
+    // make sure, no screen dump file was created for invalid screen
+    ASSERT_NE(0, remove(outputFile));
 }
 
 TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat) {
