@@ -53,6 +53,7 @@ public:
         {
             EXPECT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surfaces[i]));
         };
+        free(surfaces);
 
         EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
         EXPECT_EQ(ILM_SUCCESS, ilm_destroy());
