@@ -83,7 +83,7 @@ TEST_F(IlmCommandTest, SetGetSurfaceDimension_InvalidInput) {
     t_ilm_uint dim[2] = {15, 25};
 
     ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetDimension(surface, dim));
-    EXPECT_NE(ILM_SUCCESS, ilm_surfaceGetDimension(surface, dim));
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetDimension(surface, dim));
 }
 
 TEST_F(IlmCommandTest, SetGetLayerDimension) {
@@ -110,9 +110,6 @@ TEST_F(IlmCommandTest, SetGetLayerDimension_InvalidInput) {
 
     ASSERT_NE(ILM_SUCCESS, ilm_layerSetDimension(layer, dim));
     ASSERT_NE(ILM_SUCCESS, ilm_layerGetDimension(layer, dim));
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, SetGetSurfacePosition) {
@@ -374,8 +371,7 @@ TEST_F(IlmCommandTest, SetSurfaceSourceRectangle) {
 }
 
 TEST_F(IlmCommandTest, SetSurfaceSourceRectangle_InvalidInput) {
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(0xdeadbeef, 89, 6538, 638, 4));
-    ASSERT_NE(ILM_SUCCESS, ilm_commitChanges());
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(0xdeadbeef, 89, 6538, 638, 4));
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenIDs) {
@@ -541,21 +537,11 @@ TEST_F(IlmCommandTest, ilm_layerCreate_Remove) {
 }
 
 TEST_F(IlmCommandTest, ilm_layerRemove_InvalidInput) {
-    t_ilm_int length;
-    t_ilm_uint* IDs;
-    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
-    free(IDs);
-
-    t_ilm_int new_length;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(0xdeadbeef));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&new_length, &IDs));
-    ASSERT_EQ(length, new_length);
-    free(IDs);
+    ASSERT_NE(ILM_SUCCESS, ilm_layerRemove(0xdeadbeef));
 }
 
 TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
-    uint layer = 0xdeadbeef;
+    uint layer = 0xbeef;
     t_ilm_uint* IDs;
     t_ilm_int orig_length;
     t_ilm_int length;
@@ -580,11 +566,7 @@ TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
     free(IDs);
 
     // try to remove the same layer once more
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&new_length, &IDs));
-    ASSERT_EQ(length, new_length);
-    free(IDs);
+    ASSERT_NE(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, ilm_layerGetType) {
