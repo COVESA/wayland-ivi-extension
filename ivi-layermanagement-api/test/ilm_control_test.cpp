@@ -586,6 +586,28 @@ TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
     free(IDs);
 }
 
+TEST_F(IlmCommandTest, ilm_layerGetType) {
+    t_ilm_uint layer = 0xbeef;
+    ilmLayerType type;
+
+    // add a layer and check its type
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetType(layer, &type));
+    ASSERT_EQ(ILM_LAYERTYPE_SOFTWARE2D, type);
+
+    // cleanup
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(0xbeef));
+}
+
+TEST_F(IlmCommandTest, ilm_layerGetType_InvalidInput) {
+    ilmLayerType type;
+
+    // check type of a non-existing layer
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetType(0xdeadbeef, &type));
+    ASSERT_EQ(ILM_LAYERTYPE_UNKNOWN, type);
+}
+
 TEST_F(IlmCommandTest, ilm_surface_initialize) {
     uint surface_10 = 10;
     uint surface_20 = 20;
