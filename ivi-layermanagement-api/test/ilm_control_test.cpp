@@ -1165,6 +1165,22 @@ TEST_F(IlmCommandTest, SetGetOptimizationMode) {
     ASSERT_EQ(mode, retmode);
 }
 
+TEST_F(IlmCommandTest, ilm_getNumberOfHardwareLayers) {
+    t_ilm_uint numberOfScreens = 0;
+    t_ilm_uint* screenIDs = NULL;
+    ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
+    ASSERT_TRUE(numberOfScreens>0);
+
+    t_ilm_display screen = screenIDs[0];
+    t_ilm_uint numberOfHardwareLayers;
+
+    // Depends on the platform the test is executed on - just check if the
+    // function doesn't fail. The ilm_getPropertiesOfScreen test does a more
+    // comprehensive verification.
+    ASSERT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
+    ASSERT_GT(numberOfHardwareLayers, 0u);
+}
+
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
