@@ -714,6 +714,42 @@ TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurface
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
+TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidInput) {
+    uint layer = 0xdeadbeef;
+
+    t_ilm_int length;
+    t_ilm_uint* IDs;
+    ASSERT_NE(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, &IDs));
+}
+
+TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidResources) {
+    uint layer = 3246;
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
+    uint surface1 = 0xbeef1;
+    uint surface2 = 0xbeef2;
+    uint surface3 = 0xbeef3;
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface3));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+
+    t_ilm_int length;
+    t_ilm_uint IDs[3];
+    IDs[0] = surface1;
+    IDs[1] = surface2;
+    IDs[2] = surface3;
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, IDs, 3));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+
+    ASSERT_NE(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, NULL));
+
+    // cleanup
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface3));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
+}
+
 TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_ilm_surfaceSetDestinationRectangle_ilm_surfaceSetChromaKey) {
     t_ilm_uint surface = 0xbeef;
     t_ilm_int chromaKey[3] = {3, 22, 111};
