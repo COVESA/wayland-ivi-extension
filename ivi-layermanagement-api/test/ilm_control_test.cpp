@@ -132,6 +132,13 @@ TEST_F(IlmCommandTest, SetGetSurfacePosition) {
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
+TEST_F(IlmCommandTest, SetGetSurfacePosition_InvalidInput) {
+    uint surface = 0xdeadbeef;
+    t_ilm_uint pos[2] = {15, 25};
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetPosition(surface, pos));
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetPosition(surface, pos));
+}
+
 TEST_F(IlmCommandTest, SetGetLayerPosition) {
     uint layer = 4316;
 
@@ -148,6 +155,13 @@ TEST_F(IlmCommandTest, SetGetLayerPosition) {
 
     // cleanup
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
+}
+
+TEST_F(IlmCommandTest, SetGetLayerPosition_InvalidInput) {
+    uint layer = 0xdeadbeef;
+    t_ilm_uint pos[2] = {15, 25};
+    ASSERT_NE(ILM_SUCCESS, ilm_layerSetPosition(layer, pos));
+    ASSERT_NE(ILM_SUCCESS, ilm_layerGetPosition(layer, pos));
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceOrientation) {
