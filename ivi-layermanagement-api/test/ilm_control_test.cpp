@@ -908,7 +908,7 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_InvalidInput) {
 }
 
 TEST_F(IlmCommandTest, ilm_takeScreenshot) {
-    char* outputFile = "/tmp/test.bmp";
+    const char* outputFile = "/tmp/test.bmp";
     // make sure the file is not there before
     FILE* f = fopen(outputFile, "r");
     if (f!=NULL){
@@ -927,7 +927,7 @@ TEST_F(IlmCommandTest, ilm_takeScreenshot) {
 }
 
 TEST_F(IlmCommandTest, ilm_takeScreenshot_InvalidInputs) {
-    char* outputFile = "/tmp/test.bmp";
+    const char* outputFile = "/tmp/test.bmp";
     // make sure the file is not there before
     FILE* f = fopen(outputFile, "r");
     if (f!=NULL){
@@ -943,7 +943,7 @@ TEST_F(IlmCommandTest, ilm_takeScreenshot_InvalidInputs) {
 }
 
 TEST_F(IlmCommandTest, ilm_takeLayerScreenshot) {
-    char* outputFile = "/tmp/test.bmp";
+    const char* outputFile = "/tmp/test.bmp";
     // make sure the file is not there before
     FILE* f = fopen(outputFile, "r");
     if (f!=NULL){
@@ -966,7 +966,7 @@ TEST_F(IlmCommandTest, ilm_takeLayerScreenshot) {
 }
 
 TEST_F(IlmCommandTest, ilm_takeLayerScreenshot_InvalidInputs) {
-    char* outputFile = "/tmp/test.bmp";
+    const char* outputFile = "/tmp/test.bmp";
     // make sure the file is not there before
     FILE* f = fopen(outputFile, "r");
     if (f!=NULL){
@@ -982,7 +982,7 @@ TEST_F(IlmCommandTest, ilm_takeLayerScreenshot_InvalidInputs) {
 }
 
 TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot) {
-    char* outputFile = "/tmp/test.bmp";
+    const char* outputFile = "/tmp/test.bmp";
     // make sure the file is not there before
     FILE* f = fopen(outputFile, "r");
     if (f!=NULL){
@@ -1005,7 +1005,7 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot) {
 }
 
 TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
-    char* outputFile = "/tmp/test.bmp";
+    const char* outputFile = "/tmp/test.bmp";
     // make sure the file is not there before
     FILE* f = fopen(outputFile, "r");
     if (f!=NULL){
