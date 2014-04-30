@@ -353,6 +353,30 @@ TEST_F(IlmCommandTest, SetGetLayerVisibility_InvalidInput) {
     ASSERT_NE(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_FALSE));
 }
 
+TEST_F(IlmCommandTest, SetSurfaceSourceRectangle) {
+    t_ilm_uint surface = 0xbeef;
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(surface, 89, 6538, 638, 4));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+
+    ilmSurfaceProperties surfaceProperties;
+    ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface, &surfaceProperties));
+    ASSERT_EQ(89u, surfaceProperties.sourceX);
+    ASSERT_EQ(6538u, surfaceProperties.sourceY);
+    ASSERT_EQ(638u, surfaceProperties.sourceWidth);
+    ASSERT_EQ(4u, surfaceProperties.sourceHeight);
+
+    // cleaning
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
+}
+
+TEST_F(IlmCommandTest, SetSurfaceSourceRectangle_InvalidInput) {
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(0xdeadbeef, 89, 6538, 638, 4));
+    ASSERT_NE(ILM_SUCCESS, ilm_commitChanges());
+}
+
 TEST_F(IlmCommandTest, ilm_getScreenIDs) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
