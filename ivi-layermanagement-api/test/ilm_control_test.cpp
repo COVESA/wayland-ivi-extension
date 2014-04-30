@@ -287,7 +287,7 @@ TEST_F(IlmCommandTest, ilm_getScreenIDs) {
     ASSERT_GT(numberOfScreens, 0u);
 }
 
-TEST_F(IlmCommandTest, ilm_getScreenResolution) {
+TEST_F(IlmCommandTest, ilm_getScreenResolution_SingleScreen) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
@@ -298,6 +298,22 @@ TEST_F(IlmCommandTest, ilm_getScreenResolution) {
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenResolution(firstScreen, &width, &height));
     ASSERT_GT(width, 0u);
     ASSERT_GT(height, 0u);
+}
+
+TEST_F(IlmCommandTest, ilm_getScreenResolution_MultiScreen) {
+    t_ilm_uint numberOfScreens = 0;
+    t_ilm_uint* screenIDs = NULL;
+    ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
+    ASSERT_TRUE(numberOfScreens>0);
+
+    for (uint screenIndex = 0; screenIndex < numberOfScreens; ++screenIndex)
+    {
+        uint screen = screenIDs[screenIndex];
+        t_ilm_uint width = 0, height = 0;
+        ASSERT_EQ(ILM_SUCCESS, ilm_getScreenResolution(screen, &width, &height));
+        ASSERT_GT(width, 0u);
+        ASSERT_GT(height, 0u);
+    }
 }
 
 TEST_F(IlmCommandTest, ilm_getLayerIDs) {
