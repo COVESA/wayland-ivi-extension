@@ -77,6 +77,14 @@ TEST_F(IlmCommandTest, SetGetSurfaceDimension) {
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
+TEST_F(IlmCommandTest, SetGetSurfaceDimension_InvalidInput) {
+    uint surface = 0xdeadbeef;
+    t_ilm_uint dim[2] = {15, 25};
+
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetDimension(surface, dim));
+    EXPECT_NE(ILM_SUCCESS, ilm_surfaceGetDimension(surface, dim));
+}
+
 TEST_F(IlmCommandTest, SetGetLayerDimension) {
     uint layer = 4316;
 
@@ -90,6 +98,17 @@ TEST_F(IlmCommandTest, SetGetLayerDimension) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetDimension(layer, dimreturned));
     EXPECT_EQ(dim[0], dimreturned[0]);
     EXPECT_EQ(dim[1], dimreturned[1]);
+
+    // cleanup
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
+}
+
+TEST_F(IlmCommandTest, SetGetLayerDimension_InvalidInput) {
+    uint layer = 0xdeadbeef;
+    t_ilm_uint dim[2] = {115, 125};
+
+    ASSERT_NE(ILM_SUCCESS, ilm_layerSetDimension(layer, dim));
+    ASSERT_NE(ILM_SUCCESS, ilm_layerGetDimension(layer, dim));
 
     // cleanup
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
