@@ -1083,8 +1083,12 @@ TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat) {
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface7));
 }
 
-TEST_F(IlmCommandTest, ilm_keyboard_focus)
-{
+TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
+    ilmPixelFormat p;
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetPixelformat(0xdeadbeef, &p));
+}
+
+TEST_F(IlmCommandTest, ilm_keyboard_focus) {
     uint surface;
     uint surface1 = 36;
     uint surface2 = 44;
