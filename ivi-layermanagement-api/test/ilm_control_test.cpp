@@ -286,47 +286,71 @@ TEST_F(IlmCommandTest, SetGetLayerOpacity_InvalidInput) {
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceVisibility) {
-    uint surface1 = 36;
+    uint surface = 36;
     t_ilm_bool visibility;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface1, ILM_TRUE));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_TRUE));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(surface1, &visibility));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(surface, &visibility));
     ASSERT_EQ(ILM_TRUE, visibility);
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface1, ILM_FALSE));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_FALSE));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(surface1, &visibility));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(surface, &visibility));
     ASSERT_EQ(ILM_FALSE, visibility);
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface1, ILM_TRUE));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_TRUE));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(surface1, &visibility));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(surface, &visibility));
     ASSERT_EQ(ILM_TRUE, visibility);
+
+    // cleanup
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
+}
+
+TEST_F(IlmCommandTest, SetGetSurfaceVisibility_InvalidInput) {
+    uint surface = 0xdeadbeef;
+    t_ilm_bool visibility;
+
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetVisibility(surface, &visibility));
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_TRUE));
+    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_FALSE));
 }
 
 TEST_F(IlmCommandTest, SetGetLayerVisibility) {
-    uint layer1 = 36;
+    uint layer = 36;
     t_ilm_bool visibility;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer1, 800, 480));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer1, ILM_TRUE));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_TRUE));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetVisibility(layer1, &visibility));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetVisibility(layer, &visibility));
     ASSERT_EQ(ILM_TRUE, visibility);
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer1, ILM_FALSE));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_FALSE));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetVisibility(layer1, &visibility));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetVisibility(layer, &visibility));
     ASSERT_EQ(ILM_FALSE, visibility);
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer1, ILM_TRUE));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_TRUE));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetVisibility(layer1, &visibility));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetVisibility(layer, &visibility));
     ASSERT_EQ(ILM_TRUE, visibility);
+
+    // cleanup
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
+}
+
+TEST_F(IlmCommandTest, SetGetLayerVisibility_InvalidInput) {
+    uint layer = 0xdeadbeef;
+    t_ilm_bool visibility;
+
+    ASSERT_NE(ILM_SUCCESS, ilm_layerGetVisibility(layer, &visibility));
+    ASSERT_NE(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_TRUE));
+    ASSERT_NE(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_FALSE));
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenIDs) {
