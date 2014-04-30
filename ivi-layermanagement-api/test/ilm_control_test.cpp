@@ -539,6 +539,53 @@ TEST_F(IlmCommandTest, ilm_layerCreate_Remove) {
     free(IDs);
 }
 
+TEST_F(IlmCommandTest, ilm_layerRemove_InvalidInput) {
+    t_ilm_int length;
+    t_ilm_uint* IDs;
+    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
+    free(IDs);
+
+    t_ilm_int new_length;
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(0xdeadbeef));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&new_length, &IDs));
+    ASSERT_EQ(length, new_length);
+    free(IDs);
+}
+
+TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
+    uint layer = 0xdeadbeef;
+    t_ilm_uint* IDs;
+    t_ilm_int orig_length;
+    t_ilm_int length;
+    t_ilm_int new_length;
+
+    // get the initial number of layers
+    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&orig_length, &IDs));
+    free(IDs);
+
+    // add the layer
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
+    ASSERT_EQ(length, orig_length+1);
+    free(IDs);
+
+    // remove the new layer
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
+    ASSERT_EQ(length, orig_length);
+    free(IDs);
+
+    // try to remove the same layer once more
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
+    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+    ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&new_length, &IDs));
+    ASSERT_EQ(length, new_length);
+    free(IDs);
+}
+
 TEST_F(IlmCommandTest, ilm_surface_initialize) {
     uint surface_10 = 10;
     uint surface_20 = 20;
