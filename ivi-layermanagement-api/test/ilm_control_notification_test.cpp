@@ -58,6 +58,16 @@ class NotificationTest: public TestBase, public ::testing::Test {
         }
     };
 
+    void IlmCommitChanges()
+    {
+        int error = wl_display_roundtrip(wlDisplay);
+        if (error) {
+            throw std::exception();
+        }
+
+        ilm_commitChanges();
+    }
+
 public:
 
     static void SetUpTestCase() {
@@ -78,15 +88,15 @@ public:
         // create a layer
         layer = 345;
         ilm_layerRemove(layer);
-        ilm_commitChanges();
+        IlmCommitChanges();
         ilm_layerCreateWithDimension(&layer, 800, 480);
-        ilm_commitChanges();
+        IlmCommitChanges();
         // create a surface
         surface = 456;
         ilm_surfaceRemove(surface);
-        ilm_commitChanges();
+        IlmCommitChanges();
         ilm_surfaceCreate((t_ilm_nativehandle)wlSurface,10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
-        ilm_commitChanges();
+        IlmCommitChanges();
         timesCalled=0;
     }
 
