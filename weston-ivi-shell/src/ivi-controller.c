@@ -54,6 +54,8 @@ struct ivisurface {
     struct ivi_layout_surface *layout_surface;
     struct wl_listener surface_destroy_listener;
     struct wl_list list_layer;
+    uint32_t controller_surface_count;
+    int can_be_removed;
 };
 
 struct ivilayer {
@@ -61,6 +63,7 @@ struct ivilayer {
     struct ivishell *shell;
     struct ivi_layout_layer *layout_layer;
     struct wl_list list_screen;
+    uint32_t controller_layer_count;
 };
 
 struct iviscreen {
@@ -158,9 +161,7 @@ destroy_ivicontroller_surface(struct wl_resource *resource)
     struct ivishell *shell = ivisurf->shell;
     struct ivicontroller_surface *ctrlsurf = NULL;
     struct ivicontroller_surface *next = NULL;
-    uint32_t id_surface = 0;
-
-    id_surface = ivi_layout_getIdOfSurface(ivisurf->layout_surface);
+    int is_removed = 0;
 
     wl_list_for_each_safe(ctrlsurf, next,
                           &shell->list_controller_surface, link) {
@@ -169,11 +170,24 @@ destroy_ivicontroller_surface(struct wl_resource *resource)
             continue;
         }
 
+        if (!wl_list_empty(&ctrlsurf->link)) {
+            wl_list_remove(&ctrlsurf->link);
+        }
 
-        wl_list_remove(&ctrlsurf->link);
+        is_removed = 1;
         free(ctrlsurf);
         ctrlsurf = NULL;
+        --ivisurf->controller_surface_count;
         break;
+    }
+
+    if ((is_removed) && (ivisurf->controller_surface_count == 0)) {
+        if (ivisurf->can_be_removed) {
+            free(ivisurf);
+        }
+        else {
+            ivisurf->can_be_removed = 1;
+        }
     }
 }
 
@@ -196,9 +210,15 @@ destroy_ivicontroller_layer(struct wl_resource *resource)
         }
 
         wl_list_remove(&ctrllayer->link);
+        --ivilayer->controller_layer_count;
         free(ctrllayer);
         ctrllayer = NULL;
         break;
+    }
+
+    if ((ivilayer->layout_layer != NULL) &&
+        (ivilayer->controller_layer_count == 0)) {
+        ivi_layout_layerRemove(ivilayer->layout_layer);
     }
 }
 
@@ -323,7 +343,7 @@ static void
 send_surface_add_event(struct ivisurface *ivisurf,
                        struct wl_resource *resource)
 {
-    ivi_layout_layer_ptr *pArray = NULL;
+    struct ivi_layout_layer **pArray = NULL;
     uint32_t length = 0;
     int32_t ans = 0;
     int i = 0;
@@ -472,7 +492,7 @@ static void
 send_layer_add_event(struct ivilayer *ivilayer,
                      struct wl_resource *resource)
 {
-    ivi_layout_screen_ptr *pArray = NULL;
+    struct ivi_layout_screen **pArray = NULL;
     uint32_t length = 0;
     int32_t ans = 0;
     int i = 0;
@@ -713,27 +733,9 @@ controller_surface_destroy(struct wl_client *client,
               struct wl_resource *resource,
               int32_t destroy_scene_object)
 {
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
-    struct ivishell *shell = ivisurf->shell;
-    struct ivicontroller_surface *ctrlsurf = NULL;
-    struct ivicontroller_surface *next = NULL;
-    uint32_t id_surface = ivi_layout_getIdOfSurface(ivisurf->layout_surface);
     (void)client;
     (void)destroy_scene_object;
-
-    wl_list_for_each_safe(ctrlsurf, next,
-                          &shell->list_controller_surface, link) {
-        if (ctrlsurf->resource != resource) {
-            continue;
-        }
-
-        if (!wl_list_empty(&ctrlsurf->link)) {
-            wl_list_remove(&ctrlsurf->link);
-        }
-        free(ctrlsurf);
-        wl_resource_destroy(resource);
-        break;
-    }
+    wl_resource_destroy(resource);
 }
 
 static void
@@ -909,24 +911,19 @@ controller_layer_destroy(struct wl_client *client,
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
     struct ivishell *shell = ivilayer->shell;
     struct ivicontroller_layer *ctrllayer = NULL;
+    struct ivicontroller_layer *next = NULL;
     uint32_t id_layer = ivi_layout_getIdOfLayer(ivilayer->layout_layer);
     (void)client;
     (void)destroy_scene_object;
 
-    wl_list_for_each(ctrllayer, &shell->list_controller_layer, link) {
-        if (ctrllayer->id_layer != id_layer) {
+    wl_list_for_each_safe(ctrllayer, next, &shell->list_controller_layer, link) {
+        if (ctrllayer->resource != resource) {
             continue;
-        }
+    }
 
-        if (!wl_list_empty(&ctrllayer->link)) {
-            wl_list_remove(&ctrllayer->link);
-        }
-        free(ctrllayer);
         wl_resource_destroy(resource);
         break;
     }
-
-    ivi_layout_layerRemove(ivilayer->layout_layer);
 }
 
 static const
@@ -1092,6 +1089,8 @@ controller_layer_create(struct wl_client *client,
         return;
     }
 
+    ++ivilayer->controller_layer_count;
+
     ctrllayer->shell = shell;
     ctrllayer->client = client;
     ctrllayer->id = id;
@@ -1113,13 +1112,26 @@ controller_layer_create(struct wl_client *client,
     memset(&prop, 0, sizeof prop);
 
     ivi_layout_getPropertiesOfLayer(ivilayer->layout_layer, &prop);
+    send_layer_event(ctrllayer->resource, ivilayer,
+                     &prop, IVI_NOTIFICATION_ALL);
+}
 
-    wl_list_for_each(ctrllayer, &shell->list_controller_layer, link) {
-        if (id_layer != ctrllayer->id_layer) {
-            continue;
+static void
+surface_event_content(struct ivi_layout_surface *layout_surface, int32_t content, void *userdata)
+{
+    struct ivishell *shell = userdata;
+    struct ivicontroller_surface *ctrlsurf = NULL;
+    uint32_t id_surface = 0;
+
+    if (content == 0) {
+        id_surface = ivi_layout_getIdOfSurface(layout_surface);
+
+        wl_list_for_each(ctrlsurf, &shell->list_controller_surface, link) {
+            if (id_surface != ctrlsurf->id_surface) {
+                continue;
+            }
+            ivi_controller_surface_send_destroyed(ctrlsurf->resource);
         }
-        send_layer_event(ctrllayer->resource, ivilayer,
-                         &prop, IVI_NOTIFICATION_ALL);
     }
 }
 
@@ -1160,6 +1172,8 @@ controller_surface_create(struct wl_client *client,
         return;
     }
 
+    ++ivisurf->controller_surface_count;
+
     wl_resource_set_implementation(ctrlsurf->resource,
                                    &controller_surface_implementation,
                                    ivisurf, destroy_ivicontroller_surface);
@@ -1167,14 +1181,10 @@ controller_surface_create(struct wl_client *client,
     memset(&prop, 0, sizeof prop);
 
     ivi_layout_getPropertiesOfSurface(ivisurf->layout_surface, &prop);
+    ivi_layout_surfaceSetContentObserver(ivisurf->layout_surface, surface_event_content, shell);
 
-    wl_list_for_each(ctrlsurf, &shell->list_controller_surface, link) {
-        if (id_surface != ctrlsurf->id_surface) {
-            continue;
-        }
-        send_surface_event(ctrlsurf->resource, ivisurf,
-                           &prop, IVI_NOTIFICATION_ALL);
-    }
+    send_surface_event(ctrlsurf->resource, ivisurf,
+                       &prop, IVI_NOTIFICATION_ALL);
 }
 
 static const struct ivi_controller_interface controller_implementation = {
@@ -1379,6 +1389,7 @@ layer_event_remove(struct ivi_layout_layer *layout_layer,
     struct ivilayer *ivilayer = NULL;
     struct ivilayer *next = NULL;
     uint32_t id_layer = 0;
+    int is_removed = 0;
 
     wl_list_for_each_safe(ivilayer, next, &shell->list_layer, link) {
         if (layout_layer != ivilayer->layout_layer) {
@@ -1386,18 +1397,22 @@ layer_event_remove(struct ivi_layout_layer *layout_layer,
         }
 
         wl_list_remove(&ivilayer->link);
+
+        is_removed = 1;
         free(ivilayer);
         ivilayer = NULL;
         break;
     }
 
-    id_layer = ivi_layout_getIdOfLayer(layout_layer);
+    if (is_removed) {
+        id_layer = ivi_layout_getIdOfLayer(layout_layer);
 
-    wl_list_for_each(ctrllayer, &shell->list_controller_layer, link) {
-        if (id_layer != ctrllayer->id_layer) {
-            continue;
+        wl_list_for_each(ctrllayer, &shell->list_controller_layer, link) {
+            if (id_layer != ctrllayer->id_layer) {
+                continue;
+            }
+            ivi_controller_layer_send_destroyed(ctrllayer->resource);
         }
-        ivi_controller_layer_send_destroyed(ctrllayer->resource);
     }
 }
 
@@ -1428,6 +1443,7 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
     struct ivisurface *ivisurf = NULL;
     struct ivisurface *next = NULL;
     uint32_t id_surface = 0;
+    int is_removed = 0;
 
     wl_list_for_each_safe(ivisurf, next, &shell->list_surface, link) {
         if (layout_surface != ivisurf->layout_surface) {
@@ -1435,18 +1451,27 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
         }
 
         wl_list_remove(&ivisurf->link);
-        free(ivisurf);
-        ivisurf = NULL;
+        is_removed = 1;
+
+        if (ivisurf->controller_surface_count == 0) {
+            free(ivisurf);
+        }
+        else {
+            ivisurf->can_be_removed = 1;
+        }
+
         break;
     }
 
-    id_surface = ivi_layout_getIdOfSurface(layout_surface);
+    if (is_removed) {
+        id_surface = ivi_layout_getIdOfSurface(layout_surface);
 
-    wl_list_for_each(ctrlsurf, &shell->list_controller_surface, link) {
-        if (id_surface != ctrlsurf->id_surface) {
-            continue;
+        wl_list_for_each(ctrlsurf, &shell->list_controller_surface, link) {
+            if (id_surface != ctrlsurf->id_surface) {
+                continue;
+            }
+            ivi_controller_surface_send_destroyed(ctrlsurf->resource);
         }
-        ivi_controller_surface_send_destroyed(ctrlsurf->resource);
     }
 }
 
@@ -1483,7 +1508,7 @@ surface_event_configure(struct ivi_layout_surface *layout_surface,
 static int32_t
 check_layout_layers(struct ivishell *shell)
 {
-    ivi_layout_layer_ptr *pArray = NULL;
+    struct ivi_layout_layer **pArray = NULL;
     struct ivilayer *ivilayer = NULL;
     uint32_t id_layer = 0;
     uint32_t length = 0;
@@ -1518,7 +1543,7 @@ check_layout_layers(struct ivishell *shell)
 static int32_t
 check_layout_surfaces(struct ivishell *shell)
 {
-    ivi_layout_surface_ptr *pArray = NULL;
+    struct ivi_layout_surface **pArray = NULL;
     struct ivisurface *ivisurf = NULL;
     uint32_t id_surface = 0;
     uint32_t length = 0;
@@ -1586,12 +1611,12 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
         weston_log("failed to check_layout_surfaces");
     }
 
-    ivi_layout_setNotificationCreateLayer(layer_event_create, shell);
-    ivi_layout_setNotificationRemoveLayer(layer_event_remove, shell);
+    ivi_layout_addNotificationCreateLayer(layer_event_create, shell);
+    ivi_layout_addNotificationRemoveLayer(layer_event_remove, shell);
 
-    ivi_layout_setNotificationCreateSurface(surface_event_create, shell);
-    ivi_layout_setNotificationRemoveSurface(surface_event_remove, shell);
-    ivi_layout_setNotificationConfigureSurface(surface_event_configure, shell);
+    ivi_layout_addNotificationCreateSurface(surface_event_create, shell);
+    ivi_layout_addNotificationRemoveSurface(surface_event_remove, shell);
+    ivi_layout_addNotificationConfigureSurface(surface_event_configure, shell);
 }
 
 WL_EXPORT int

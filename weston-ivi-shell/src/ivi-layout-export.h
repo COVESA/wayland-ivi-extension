@@ -52,22 +52,72 @@ extern "C" {
 #include "compositor.h"
 #include "ivi-layout.h"
 
-typedef struct ivi_layout_surface* ivi_layout_surface_ptr;
-typedef struct ivi_layout_layer*   ivi_layout_layer_ptr;
-typedef struct ivi_layout_screen*  ivi_layout_screen_ptr;
+struct ivi_layout_SurfaceProperties
+{
+    float    opacity;
+    uint32_t sourceX;
+    uint32_t sourceY;
+    uint32_t sourceWidth;
+    uint32_t sourceHeight;
+    uint32_t origSourceWidth;
+    uint32_t origSourceHeight;
+    int32_t  destX;
+    int32_t  destY;
+    uint32_t destWidth;
+    uint32_t destHeight;
+    uint32_t orientation;
+    uint32_t visibility;
+    uint32_t frameCounter;
+    uint32_t drawCounter;
+    uint32_t updateCounter;
+    uint32_t pixelformat;
+    uint32_t nativeSurface;
+    uint32_t inputDevicesAcceptance;
+    uint32_t chromaKeyEnabled;
+    uint32_t chromaKeyRed;
+    uint32_t chromaKeyGreen;
+    uint32_t chromaKeyBlue;
+    int32_t  creatorPid;
+};
 
-#define IVI_BIT(x) (1 << (x))
+struct ivi_layout_LayerProperties
+{
+    float    opacity;
+    uint32_t sourceX;
+    uint32_t sourceY;
+    uint32_t sourceWidth;
+    uint32_t sourceHeight;
+    uint32_t origSourceWidth;
+    uint32_t origSourceHeight;
+    int32_t  destX;
+    int32_t  destY;
+    uint32_t destWidth;
+    uint32_t destHeight;
+    uint32_t orientation;
+    uint32_t visibility;
+    uint32_t type;
+    uint32_t chromaKeyEnabled;
+    uint32_t chromaKeyRed;
+    uint32_t chromaKeyGreen;
+    uint32_t chromaKeyBlue;
+    int32_t  creatorPid;
+};
+
+struct ivi_layout_layer;
+struct ivi_layout_screen;
+
 enum ivi_layout_notification_mask {
-    IVI_NOTIFICATION_OPACITY     = IVI_BIT(1),
-    IVI_NOTIFICATION_SOURCE_RECT = IVI_BIT(2),
-    IVI_NOTIFICATION_DEST_RECT   = IVI_BIT(3),
-    IVI_NOTIFICATION_DIMENSION   = IVI_BIT(4),
-    IVI_NOTIFICATION_POSITION    = IVI_BIT(5),
-    IVI_NOTIFICATION_ORIENTATION = IVI_BIT(6),
-    IVI_NOTIFICATION_VISIBILITY  = IVI_BIT(7),
-    IVI_NOTIFICATION_PIXELFORMAT = IVI_BIT(8),
-    IVI_NOTIFICATION_ADD         = IVI_BIT(9),
-    IVI_NOTIFICATION_REMOVE      = IVI_BIT(10),
+    IVI_NOTIFICATION_NONE        = 0,
+    IVI_NOTIFICATION_OPACITY     = (1 << 1),
+    IVI_NOTIFICATION_SOURCE_RECT = (1 << 2),
+    IVI_NOTIFICATION_DEST_RECT   = (1 << 3),
+    IVI_NOTIFICATION_DIMENSION   = (1 << 4),
+    IVI_NOTIFICATION_POSITION    = (1 << 5),
+    IVI_NOTIFICATION_ORIENTATION = (1 << 6),
+    IVI_NOTIFICATION_VISIBILITY  = (1 << 7),
+    IVI_NOTIFICATION_PIXELFORMAT = (1 << 8),
+    IVI_NOTIFICATION_ADD         = (1 << 9),
+    IVI_NOTIFICATION_REMOVE      = (1 << 10),
     IVI_NOTIFICATION_ALL         = 0xFFFF
 };
 
@@ -117,42 +167,62 @@ ivi_layout_initWithCompositor(struct weston_compositor *ec);
  * \brief register for notification when layer is created
  */
 int32_t
-ivi_layout_setNotificationCreateLayer(layerCreateNotificationFunc callback,
-                                           void *userdata);
+ivi_layout_addNotificationCreateLayer(layerCreateNotificationFunc callback,
+                                      void *userdata);
+
+void
+ivi_layout_removeNotificationCreateLayer(layerCreateNotificationFunc callback,
+                                         void *userdata);
 
 /**
  * \brief register for notification when layer is removed
  */
 int32_t
-ivi_layout_setNotificationRemoveLayer(layerRemoveNotificationFunc callback,
-                                           void *userdata);
+ivi_layout_addNotificationRemoveLayer(layerRemoveNotificationFunc callback,
+                                      void *userdata);
+
+void
+ivi_layout_removeNotificationRemoveLayer(layerRemoveNotificationFunc callback,
+                                         void *userdata);
 
 /**
  * \brief register for notification when surface is created
  */
 int32_t
-ivi_layout_setNotificationCreateSurface(surfaceCreateNotificationFunc callback,
+ivi_layout_addNotificationCreateSurface(surfaceCreateNotificationFunc callback,
+                                        void *userdata);
+
+void
+ivi_layout_removeNotificationCreateSurface(surfaceCreateNotificationFunc callback,
                                            void *userdata);
 
 /**
  * \brief register for notification when surface is removed
  */
 int32_t
-ivi_layout_setNotificationRemoveSurface(surfaceRemoveNotificationFunc callback,
+ivi_layout_addNotificationRemoveSurface(surfaceRemoveNotificationFunc callback,
+                                        void *userdata);
+
+void
+ivi_layout_removeNotificationRemoveSurface(surfaceRemoveNotificationFunc callback,
                                            void *userdata);
 
 /**
  * \brief register for notification when surface is configured
  */
 int32_t
-ivi_layout_setNotificationConfigureSurface(surfaceConfigureNotificationFunc callback,
+ivi_layout_addNotificationConfigureSurface(surfaceConfigureNotificationFunc callback,
                                            void *userdata);
+
+void
+ivi_layout_removeNotificationConfigureSurface(surfaceConfigureNotificationFunc callback,
+                                              void *userdata);
 
 /**
  * \brief get id of surface from ivi_layout_surface
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 uint32_t
 ivi_layout_getIdOfSurface(struct ivi_layout_surface *ivisurf);
@@ -162,7 +232,7 @@ ivi_layout_getIdOfSurface(struct ivi_layout_surface *ivisurf);
  *
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 uint32_t
 ivi_layout_getIdOfLayer(struct ivi_layout_layer *ivilayer);
@@ -172,7 +242,7 @@ ivi_layout_getIdOfLayer(struct ivi_layout_layer *ivilayer);
  *
  * \return (struct ivi_layout_layer *)
  *              if the method call was successful
- * \return NULL if the client can not call the method on the service.
+ * \return NULL if the method call was failed
  */
 struct ivi_layout_layer *
 ivi_layout_getLayerFromId(uint32_t id_layer);
@@ -182,7 +252,7 @@ ivi_layout_getLayerFromId(uint32_t id_layer);
  *
  * \return (struct ivi_layout_surface *)
  *              if the method call was successful
- * \return NULL if the client can not call the method on the service.
+ * \return NULL if the method call was failed
  */
 struct ivi_layout_surface *
 ivi_layout_getSurfaceFromId(uint32_t id_surface);
@@ -192,7 +262,7 @@ ivi_layout_getSurfaceFromId(uint32_t id_surface);
  *
  * \return (struct ivi_layout_screen *)
  *              if the method call was successful
- * \return NULL if the client can not call the method on the service.
+ * \return NULL if the method call was failed
  */
 struct ivi_layout_screen *
 ivi_layout_getScreenFromId(uint32_t id_screen);
@@ -201,7 +271,7 @@ ivi_layout_getScreenFromId(uint32_t id_screen);
  * \brief Get the screen resolution of a specific screen
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_getScreenResolution(struct ivi_layout_screen *iviscrn,
@@ -212,7 +282,7 @@ ivi_layout_getScreenResolution(struct ivi_layout_screen *iviscrn,
  * \brief register for notification on property changes of surface
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceAddNotification(struct ivi_layout_surface *ivisurf,
@@ -223,7 +293,7 @@ ivi_layout_surfaceAddNotification(struct ivi_layout_surface *ivisurf,
  * \brief remove notification on property changes of surface
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceRemoveNotification(struct ivi_layout_surface *ivisurf);
@@ -232,7 +302,7 @@ ivi_layout_surfaceRemoveNotification(struct ivi_layout_surface *ivisurf);
  * \brief Create a surface
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 /*
 struct ivi_layout_surface *
@@ -245,7 +315,7 @@ ivi_layout_surfaceCreate(struct weston_surface *wl_surface,
  *        If wl_surface is NULL, remove the native content of a surface
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 /*
 int32_t
@@ -268,7 +338,7 @@ ivi_layout_surfaceConfigure(struct ivi_layout_surface *ivisurf,
  * \brief Remove a surface
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceRemove(struct ivi_layout_surface *ivisurf);
@@ -285,7 +355,7 @@ ivi_layout_surfaceRemove(struct ivi_layout_surface *ivisurf);
  * you can set all above surfaces to refuse input events)
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_UpdateInputEventAcceptanceOn(struct ivi_layout_surface *ivisurf,
@@ -296,7 +366,7 @@ ivi_layout_UpdateInputEventAcceptanceOn(struct ivi_layout_surface *ivisurf,
  * \brief  Get the layer properties
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_getPropertiesOfLayer(struct ivi_layout_layer *ivilayer,
@@ -306,7 +376,7 @@ ivi_layout_getPropertiesOfLayer(struct ivi_layout_layer *ivilayer,
  * \brief  Get the number of hardware layers of a screen
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_getNumberOfHardwareLayers(uint32_t id_screen,
@@ -316,78 +386,78 @@ ivi_layout_getNumberOfHardwareLayers(uint32_t id_screen,
  * \brief Get the screens
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_getScreens(uint32_t *pLength, ivi_layout_screen_ptr **ppArray);
+ivi_layout_getScreens(uint32_t *pLength, struct ivi_layout_screen ***ppArray);
 
 /**
  * \brief Get the screens under the given layer
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_getScreensUnderLayer(struct ivi_layout_layer *ivilayer,
                                    uint32_t *pLength,
-                                   ivi_layout_screen_ptr **ppArray);
+                                   struct ivi_layout_screen ***ppArray);
 
 /**
  * \brief Get all Layers which are currently registered and managed by the services
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_getLayers(uint32_t *pLength, ivi_layout_layer_ptr **ppArray);
+ivi_layout_getLayers(uint32_t *pLength, struct ivi_layout_layer ***ppArray);
 
 /**
  * \brief Get all Layers of the given screen
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_getLayersOnScreen(struct ivi_layout_screen *iviscrn,
                                 uint32_t *pLength,
-                                ivi_layout_layer_ptr **ppArray);
+                                struct ivi_layout_layer ***ppArray);
 
 /**
  * \brief Get all Layers under the given surface
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_getLayersUnderSurface(struct ivi_layout_surface *ivisurf,
                                     uint32_t *pLength,
-                                    ivi_layout_layer_ptr **ppArray);
+                                    struct ivi_layout_layer ***ppArray);
 
 /**
  * \brief Get all Surfaces which are currently registered and managed by the services
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_getSurfaces(uint32_t *pLength, ivi_layout_surface_ptr **ppArray);
+ivi_layout_getSurfaces(uint32_t *pLength, struct ivi_layout_surface ***ppArray);
 
 /**
  * \brief Get all Surfaces which are currently registered to a given layer and are managed by the services
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_getSurfacesOnLayer(struct ivi_layout_layer *ivilayer,
                                  uint32_t *pLength,
-                                 ivi_layout_surface_ptr **ppArray);
+                                 struct ivi_layout_surface ***ppArray);
 
 /**
  * \brief Create a layer which should be managed by the service
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 struct ivi_layout_layer *
 ivi_layout_layerCreateWithDimension(uint32_t id_layer,
@@ -397,7 +467,7 @@ ivi_layout_layerCreateWithDimension(uint32_t id_layer,
  * \brief Removes a layer which is currently managed by the service
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerRemove(struct ivi_layout_layer *ivilayer);
@@ -406,7 +476,7 @@ ivi_layout_layerRemove(struct ivi_layout_layer *ivilayer);
  * \brief Get the current type of the layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerGetType(struct ivi_layout_layer *ivilayer,
@@ -417,7 +487,7 @@ ivi_layout_layerGetType(struct ivi_layout_layer *ivilayer,
  * surfaces will not be rendered.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetVisibility(struct ivi_layout_layer *ivilayer,
@@ -428,7 +498,7 @@ ivi_layout_layerSetVisibility(struct ivi_layout_layer *ivilayer,
  * surfaces will not be rendered.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerGetVisibility(struct ivi_layout_layer *ivilayer,
@@ -438,7 +508,7 @@ ivi_layout_layerGetVisibility(struct ivi_layout_layer *ivilayer,
  * \brief Set the opacity of a layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetOpacity(struct ivi_layout_layer *ivilayer, float opacity);
@@ -447,7 +517,7 @@ ivi_layout_layerSetOpacity(struct ivi_layout_layer *ivilayer, float opacity);
  * \brief Get the opacity of a layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerGetOpacity(struct ivi_layout_layer *ivilayer, float *pOpacity);
@@ -457,7 +527,7 @@ ivi_layout_layerGetOpacity(struct ivi_layout_layer *ivilayer, float *pOpacity);
  *        Only this part will be visible.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetSourceRectangle(struct ivi_layout_layer *ivilayer,
@@ -469,7 +539,7 @@ ivi_layout_layerSetSourceRectangle(struct ivi_layout_layer *ivilayer,
  *        The layer will be scaled and positioned to this rectangle for rendering
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetDestinationRectangle(struct ivi_layout_layer *ivilayer,
@@ -480,7 +550,7 @@ ivi_layout_layerSetDestinationRectangle(struct ivi_layout_layer *ivilayer,
  * \brief Get the horizontal and vertical dimension of the layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerGetDimension(struct ivi_layout_layer *ivilayer,
@@ -490,7 +560,7 @@ ivi_layout_layerGetDimension(struct ivi_layout_layer *ivilayer,
  * \brief Set the horizontal and vertical dimension of the layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetDimension(struct ivi_layout_layer *ivilayer,
@@ -500,7 +570,7 @@ ivi_layout_layerSetDimension(struct ivi_layout_layer *ivilayer,
  * \brief Get the horizontal and vertical position of the layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerGetPosition(struct ivi_layout_layer *ivilayer,
@@ -510,7 +580,7 @@ ivi_layout_layerGetPosition(struct ivi_layout_layer *ivilayer,
  * \brief Sets the horizontal and vertical position of the layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetPosition(struct ivi_layout_layer *ivilayer,
@@ -520,7 +590,7 @@ ivi_layout_layerSetPosition(struct ivi_layout_layer *ivilayer,
  * \brief Sets the orientation of a layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetOrientation(struct ivi_layout_layer *ivilayer,
@@ -530,7 +600,7 @@ ivi_layout_layerSetOrientation(struct ivi_layout_layer *ivilayer,
  * \brief Gets the orientation of a layer.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerGetOrientation(struct ivi_layout_layer *ivilayer,
@@ -540,7 +610,7 @@ ivi_layout_layerGetOrientation(struct ivi_layout_layer *ivilayer,
  * \brief Sets the color value which defines the transparency value.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetChromaKey(struct ivi_layout_layer *ivilayer,
@@ -550,7 +620,7 @@ ivi_layout_layerSetChromaKey(struct ivi_layout_layer *ivilayer,
  * \brief Sets render order of surfaces within one layer
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerSetRenderOrder(struct ivi_layout_layer *ivilayer,
@@ -561,7 +631,7 @@ ivi_layout_layerSetRenderOrder(struct ivi_layout_layer *ivilayer,
  * \brief Get the capabilities of a layer
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerGetCapabilities(struct ivi_layout_layer *ivilayer,
@@ -571,7 +641,7 @@ ivi_layout_layerGetCapabilities(struct ivi_layout_layer *ivilayer,
  * \brief Get the possible capabilities of a layertype
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerTypeGetCapabilities(uint32_t layerType,
@@ -581,7 +651,7 @@ ivi_layout_layerTypeGetCapabilities(uint32_t layerType,
  * \brief Create the logical surface, which has no native buffer associated
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceInitialize(struct ivi_layout_surface **pSurface);
@@ -591,7 +661,7 @@ ivi_layout_surfaceInitialize(struct ivi_layout_surface **pSurface);
  *        If a surface is not visible it will not be rendered.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceSetVisibility(struct ivi_layout_surface *ivisurf,
@@ -602,7 +672,7 @@ ivi_layout_surfaceSetVisibility(struct ivi_layout_surface *ivisurf,
  *        If a surface is not visible it will not be rendered.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceGetVisibility(struct ivi_layout_surface *ivisurf,
@@ -612,7 +682,7 @@ ivi_layout_surfaceGetVisibility(struct ivi_layout_surface *ivisurf,
  * \brief Set the opacity of a surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceSetOpacity(struct ivi_layout_surface *ivisurf,
@@ -622,7 +692,7 @@ ivi_layout_surfaceSetOpacity(struct ivi_layout_surface *ivisurf,
  * \brief Get the opacity of a surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceGetOpacity(struct ivi_layout_surface *ivisurf,
@@ -635,7 +705,7 @@ ivi_layout_surfaceGetOpacity(struct ivi_layout_surface *ivisurf,
  *  2- The keyboard focus must be set on that surface
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_SetKeyboardFocusOn(struct ivi_layout_surface *ivisurf);
@@ -644,7 +714,7 @@ ivi_layout_SetKeyboardFocusOn(struct ivi_layout_surface *ivisurf);
  * \brief Get the indentifier of the surface which hold the keyboard focus
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_GetKeyboardFocusSurfaceId(struct ivi_layout_surface **pSurfaceId);
@@ -654,7 +724,7 @@ ivi_layout_GetKeyboardFocusSurfaceId(struct ivi_layout_surface **pSurfaceId);
  *        The surface will be scaled to this rectangle for rendering.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceSetDestinationRectangle(struct ivi_layout_surface *ivisurf,
@@ -665,7 +735,7 @@ ivi_layout_surfaceSetDestinationRectangle(struct ivi_layout_surface *ivisurf,
  * \brief Set the horizontal and vertical dimension of the surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceSetDimension(struct ivi_layout_surface *ivisurf,
@@ -675,7 +745,7 @@ ivi_layout_surfaceSetDimension(struct ivi_layout_surface *ivisurf,
  * \brief Get the horizontal and vertical dimension of the surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceGetDimension(struct ivi_layout_surface *ivisurf,
@@ -685,7 +755,7 @@ ivi_layout_surfaceGetDimension(struct ivi_layout_surface *ivisurf,
  * \brief Sets the horizontal and vertical position of the surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceSetPosition(struct ivi_layout_surface *ivisurf,
@@ -695,7 +765,7 @@ ivi_layout_surfaceSetPosition(struct ivi_layout_surface *ivisurf,
  * \brief Get the horizontal and vertical position of the surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceGetPosition(struct ivi_layout_surface *ivisurf,
@@ -705,7 +775,7 @@ ivi_layout_surfaceGetPosition(struct ivi_layout_surface *ivisurf,
  * \brief Sets the orientation of a surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceSetOrientation(struct ivi_layout_surface *ivisurf,
@@ -715,7 +785,7 @@ ivi_layout_surfaceSetOrientation(struct ivi_layout_surface *ivisurf,
  * \brief Gets the orientation of a surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceGetOrientation(struct ivi_layout_surface *ivisurf,
@@ -725,7 +795,7 @@ ivi_layout_surfaceGetOrientation(struct ivi_layout_surface *ivisurf,
  * \brief Gets the pixelformat of a surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceGetPixelformat(struct ivi_layout_layer *ivisurf,
@@ -735,7 +805,7 @@ ivi_layout_surfaceGetPixelformat(struct ivi_layout_layer *ivisurf,
  * \brief Sets the color value which defines the transparency value of a surface.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceSetChromaKey(struct ivi_layout_surface *ivisurf,
@@ -745,7 +815,7 @@ ivi_layout_surfaceSetChromaKey(struct ivi_layout_surface *ivisurf,
  * \brief Add a layer to a screen which is currently managed by the service
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_screenAddLayer(struct ivi_layout_screen *iviscrn,
@@ -755,7 +825,7 @@ ivi_layout_screenAddLayer(struct ivi_layout_screen *iviscrn,
  * \brief Sets render order of layers on a display
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_screenSetRenderOrder(struct ivi_layout_screen *iviscrn,
@@ -767,7 +837,7 @@ ivi_layout_screenSetRenderOrder(struct ivi_layout_screen *iviscrn,
  * The screenshot is saved as bmp file with the corresponding filename.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_takeScreenshot(struct ivi_layout_screen *iviscrn,
@@ -778,7 +848,7 @@ ivi_layout_takeScreenshot(struct ivi_layout_screen *iviscrn,
  * The screenshot is saved as bmp file with the corresponding filename.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_takeLayerScreenshot(const char *filename,
@@ -789,7 +859,7 @@ ivi_layout_takeLayerScreenshot(const char *filename,
  * The screenshot is saved as bmp file with the corresponding filename.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_takeSurfaceScreenshot(const char *filename,
@@ -799,7 +869,7 @@ ivi_layout_takeSurfaceScreenshot(const char *filename,
  * \brief Enable or disable a rendering optimization
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_SetOptimizationMode(uint32_t id, uint32_t mode);
@@ -808,7 +878,7 @@ ivi_layout_SetOptimizationMode(uint32_t id, uint32_t mode);
  * \brief Get the current enablement for an optimization
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_GetOptimizationMode(uint32_t id, uint32_t *pMode);
@@ -817,7 +887,7 @@ ivi_layout_GetOptimizationMode(uint32_t id, uint32_t *pMode);
  * \brief register for notification on property changes of layer
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerAddNotification(struct ivi_layout_layer *ivilayer,
@@ -828,7 +898,7 @@ ivi_layout_layerAddNotification(struct ivi_layout_layer *ivilayer,
  * \brief remove notification on property changes of layer
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerRemoveNotification(struct ivi_layout_layer *ivilayer);
@@ -837,7 +907,7 @@ ivi_layout_layerRemoveNotification(struct ivi_layout_layer *ivilayer);
  * \brief Get the surface properties
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_getPropertiesOfSurface(struct ivi_layout_surface *ivisurf,
@@ -847,7 +917,7 @@ ivi_layout_getPropertiesOfSurface(struct ivi_layout_surface *ivisurf,
  * \brief Add a surface to a layer which is currently managed by the service
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerAddSurface(struct ivi_layout_layer *ivilayer,
@@ -857,7 +927,7 @@ ivi_layout_layerAddSurface(struct ivi_layout_layer *ivilayer,
  * \brief Removes a surface from a layer which is currently managed by the service
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_layerRemoveSurface(struct ivi_layout_layer *ivilayer,
@@ -867,7 +937,7 @@ ivi_layout_layerRemoveSurface(struct ivi_layout_layer *ivilayer,
  * \brief Set the area of a surface which should be used for the rendering.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_surfaceSetSourceRectangle(struct ivi_layout_surface *ivisurf,
@@ -878,7 +948,7 @@ ivi_layout_surfaceSetSourceRectangle(struct ivi_layout_surface *ivisurf,
  * \brief Commit all changes and execute all enqueued commands since last commit.
  *
  * \return  0 if the method call was successful
- * \return -1 if the client can not call the method on the service.
+ * \return -1 if the method call was failed
  */
 int32_t
 ivi_layout_commitChanges(void);
