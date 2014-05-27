@@ -42,6 +42,22 @@ static pthread_cond_t  waiterVariable = PTHREAD_COND_INITIALIZER;
 static int timesCalled=0;
 
 class NotificationTest: public TestBase, public ::testing::Test {
+    class PthreadMutexLock {
+    private:
+        pthread_mutex_t &mutex_;
+
+        PthreadMutexLock(const PthreadMutexLock&);
+        PthreadMutexLock& operator=(const PthreadMutexLock&);
+
+    public:
+        explicit PthreadMutexLock(pthread_mutex_t &mutex): mutex_(mutex) {
+            pthread_mutex_lock(&mutex_);
+        }
+        ~PthreadMutexLock() {
+            pthread_mutex_unlock(&mutex_);
+        }
+    };
+
 public:
 
     static void SetUpTestCase() {
@@ -93,7 +109,7 @@ public:
         static struct timespec theTime;
         clock_gettime(CLOCK_REALTIME, &theTime);
         theTime.tv_sec += 2;
-        pthread_mutex_lock( &notificationMutex );
+        PthreadMutexLock lock(notificationMutex);
         int status = 0;
         do {
             if (numberOfExpectedCalls!=timesCalled){
@@ -101,7 +117,6 @@ public:
             }
         } while (status!=ETIMEDOUT && numberOfExpectedCalls!=timesCalled);
         ASSERT_NE(ETIMEDOUT, status);
-        pthread_mutex_unlock( &notificationMutex );
         timesCalled=0;
     }
 
@@ -109,35 +124,32 @@ public:
         struct timespec theTime;
         clock_gettime(CLOCK_REALTIME, &theTime);
         theTime.tv_sec += 1;
-        pthread_mutex_lock( &notificationMutex );
+        PthreadMutexLock lock(notificationMutex);
         // assert that we have not been notified
         ASSERT_EQ(ETIMEDOUT, pthread_cond_timedwait( &waiterVariable, &notificationMutex, &theTime));
-        pthread_mutex_unlock( &notificationMutex );
     }
 
 
     static void LayerCallbackFunction(t_ilm_layer layer, struct ilmLayerProperties* LayerProperties, t_ilm_notification_mask mask)
     {
-        pthread_mutex_lock( &notificationMutex );
+        PthreadMutexLock lock(notificationMutex);
 
         NotificationTest::callbackLayerId = layer;
         NotificationTest::LayerProperties = *LayerProperties;
         NotificationTest::mask = mask;
         timesCalled++;
         pthread_cond_signal( &waiterVariable );
-        pthread_mutex_unlock( &notificationMutex );
     }
 
     static void SurfaceCallbackFunction(t_ilm_surface surface, struct ilmSurfaceProperties* surfaceProperties, t_ilm_notification_mask mask)
     {
-        pthread_mutex_lock( &notificationMutex );
+        PthreadMutexLock lock(notificationMutex);
 
         NotificationTest::callbackSurfaceId = surface;
         NotificationTest::SurfaceProperties = *surfaceProperties;
         NotificationTest::mask = mask;
         timesCalled++;
         pthread_cond_signal( &waiterVariable );
-        pthread_mutex_unlock( &notificationMutex );
     }
 };
 
