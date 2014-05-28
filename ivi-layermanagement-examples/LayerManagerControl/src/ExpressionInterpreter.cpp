@@ -166,6 +166,7 @@ CommandResult ExpressionInterpreter::interpretCommand(string userInput)
             {
                 Expression* exec = executables.front();
                 exec->execute();
+                ilm_commitChanges();
                 ilm_destroy();
             }
         }
