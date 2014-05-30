@@ -1,5 +1,6 @@
 #include "TestBase.h"
 #include <cstring>
+#include <stdexcept>
 
 void registry_listener_callback(void* data, struct wl_registry* registry, uint32_t id, const char* interface, uint32_t version)
 {
@@ -16,6 +17,10 @@ TestBase::TestBase()
 , wlRegistry(NULL)
 {
     wlDisplay = wl_display_connect(NULL);
+    if (!wlDisplay)
+    {
+        throw std::runtime_error("could not connect to wayland display");
+    }
     wlRegistry = wl_display_get_registry(wlDisplay);
 
     static const struct wl_registry_listener registry_listener = {
