@@ -1268,7 +1268,7 @@ TEST_F(IlmCommandTest, DisplaySetRenderOrder_shrinking) {
         ilmScreenProperties screenProps;
 
         //trying different render orders with decreasing sizes
-        for (unsigned int j = 0; j <= layerCount; ++j)
+        for (unsigned int j = 0; j < layerCount; ++j)
         {
             //put them from end to beginning, so that in each loop iteration the order of layers change
             ASSERT_EQ(ILM_SUCCESS, ilm_displaySetRenderOrder(screen, renderOrder + j, layerCount - j));
@@ -1384,7 +1384,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_shrinking) {
         t_ilm_surface* layerSurfaceIDs;
 
         //trying different render orders with decreasing sizes
-        for (unsigned int j = 0; j <= layerCount; ++j)
+        for (unsigned int j = 0; j < layerCount; ++j)
         {
             //put them from end to beginning, so that in each loop iteration the order of surafces change
             ASSERT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, renderOrder + j, surfaceCount - j));
