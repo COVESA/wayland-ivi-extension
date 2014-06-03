@@ -2044,6 +2044,7 @@ get_instance()
         exit(0);
     }
 
+    usleep(20000);
     wl_display_roundtrip(ctx->main_ctx.display);
     return ctx;
 }
