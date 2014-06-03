@@ -391,7 +391,7 @@ send_surface_add_event(struct ivisurface *ivisurf,
                 break;
             }
         }
-        if (found != -1) {
+        if (found != 0) {
             continue;
         }
 
