@@ -58,27 +58,10 @@ class NotificationTest: public TestBase, public ::testing::Test {
         }
     };
 
-    void IlmCommitChanges()
-    {
-        int error = wl_display_roundtrip(wlDisplay);
-        if (error) {
-            throw std::exception();
-        }
-
-        ilm_commitChanges();
-    }
-
 public:
-
-    static void SetUpTestCase() {
-        ilm_init();
-     }
-    static void TearDownTestCase() {
-        ilm_destroy();
-    }
-
-    NotificationTest()
+    void SetUp()
     {
+        ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay);
         // set default values
         callbackLayerId = -1;
         LayerProperties = ilmLayerProperties();
@@ -88,17 +71,24 @@ public:
         // create a layer
         layer = 345;
         ilm_layerRemove(layer);
-        IlmCommitChanges();
+        ilm_commitChanges();
         ilm_layerCreateWithDimension(&layer, 800, 480);
-        IlmCommitChanges();
+        ilm_commitChanges();
         // create a surface
         surface = 456;
         ilm_surfaceRemove(surface);
-        IlmCommitChanges();
+        ilm_commitChanges();
         ilm_surfaceCreate((t_ilm_nativehandle)wlSurface,10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
-        IlmCommitChanges();
+        ilm_commitChanges();
         timesCalled=0;
     }
+
+    void TearDown()
+    {
+        ilm_destroy();
+    }
+
+    NotificationTest(){}
 
     ~NotificationTest(){}
 
