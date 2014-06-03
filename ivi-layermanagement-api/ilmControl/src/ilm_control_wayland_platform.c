@@ -820,6 +820,8 @@ add_ordersurface_to_layer(struct wayland_context *ctx,
                           struct ivi_controller_layer *layer)
 {
     struct layer_context *ctx_layer = NULL;
+    struct surface_context *link = NULL;
+    int found = 0;
 
     ctx_layer = get_layer_context(ctx, layer);
     if (ctx_layer == NULL) {
@@ -827,8 +829,17 @@ add_ordersurface_to_layer(struct wayland_context *ctx,
         return;
     }
 
-    wl_list_init(&ctx_surf->order.link);
-    wl_list_insert(&ctx_layer->order.list_surface, &ctx_surf->order.link);
+    wl_list_for_each(link, &ctx_layer->order.list_surface, order.link) {
+        if (link == ctx_surf) {
+            found = 1;
+            break;
+        }
+    }
+
+    if (found == 0) {
+        wl_list_init(&ctx_surf->order.link);
+        wl_list_insert(&ctx_layer->order.list_surface, &ctx_surf->order.link);
+    }
 }
 
 static void
