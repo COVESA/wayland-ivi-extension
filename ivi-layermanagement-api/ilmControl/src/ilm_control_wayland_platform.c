@@ -2170,6 +2170,7 @@ wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
         else {
             /* Generate ID, if layerid is INVALID_ID */
             layerid = gen_layer_id(ctx);
+            *pLayerId = layerid;
         }
 
         ctx_layer = calloc(1, sizeof *ctx_layer);
