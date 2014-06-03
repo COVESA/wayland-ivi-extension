@@ -78,7 +78,7 @@ public:
         surface = 456;
         ilm_surfaceRemove(surface);
         ilm_commitChanges();
-        ilm_surfaceCreate((t_ilm_nativehandle)wlSurface,10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
+        ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
         ilm_commitChanges();
         timesCalled=0;
     }
@@ -187,7 +187,7 @@ TEST_F(NotificationTest, ilm_surfaceAddNotificationWithoutCallback)
     // create a layer
     t_ilm_uint surface = 67;
 
-    ilm_surfaceCreate((t_ilm_nativehandle)wlSurface,10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
+    ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
     ilm_commitChanges();
 
     // add notification

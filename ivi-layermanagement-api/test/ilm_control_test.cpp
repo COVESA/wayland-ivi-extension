@@ -63,7 +63,7 @@ public:
 TEST_F(IlmCommandTest, SetGetSurfaceDimension) {
     uint surface = 36;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 10, 10, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 10, 10, ILM_PIXELFORMAT_RGBA_8888, &surface));
 
     t_ilm_uint dim[2] = {15, 25};
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetDimension(surface, dim));
@@ -115,7 +115,7 @@ TEST_F(IlmCommandTest, SetGetLayerDimension_InvalidInput) {
 TEST_F(IlmCommandTest, SetGetSurfacePosition) {
     uint surface = 37;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 10, 10, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 10, 10, ILM_PIXELFORMAT_RGBA_8888, &surface));
 
     t_ilm_uint pos[2] = {15, 25};
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetPosition(surface, pos));
@@ -165,7 +165,7 @@ TEST_F(IlmCommandTest, SetGetLayerPosition_InvalidInput) {
 TEST_F(IlmCommandTest, SetGetSurfaceOrientation) {
     uint surface = 36;
     ilmOrientation returned;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOrientation(surface, ILM_NINETY));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
@@ -226,8 +226,8 @@ TEST_F(IlmCommandTest, SetGetSurfaceOpacity) {
     uint surface2 = 44;
     t_ilm_float opacity;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface1, 0.88));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
@@ -287,7 +287,7 @@ TEST_F(IlmCommandTest, SetGetSurfaceVisibility) {
     uint surface = 36;
     t_ilm_bool visibility;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_TRUE));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
@@ -353,7 +353,7 @@ TEST_F(IlmCommandTest, SetGetLayerVisibility_InvalidInput) {
 
 TEST_F(IlmCommandTest, SetSurfaceSourceRectangle) {
     t_ilm_uint surface = 0xbeef;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(surface, 89, 6538, 638, 4));
@@ -461,8 +461,8 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
     t_ilm_int old_length;
 
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&old_length, &IDs));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     free(IDs);
 
@@ -482,8 +482,8 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
 TEST_F(IlmCommandTest, ilm_surfaceCreate_Remove) {
     uint surface1 = 3246;
     uint surface2 = 46586;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     t_ilm_int length;
@@ -653,8 +653,8 @@ TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurface
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
     uint surface1 = 3246;
     uint surface2 = 46586;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     t_ilm_int length;
@@ -711,9 +711,9 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidResources) {
     uint surface1 = 0xbeef1;
     uint surface2 = 0xbeef2;
     uint surface3 = 0xbeef3;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface3));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[2], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface3));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     t_ilm_int length;
@@ -735,7 +735,7 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidResources) {
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_ilm_surfaceSetDestinationRectangle) {
     t_ilm_uint surface = 0xbeef;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.8765));
@@ -787,7 +787,7 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_
 TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_ilm_surfaceSetDestinationRectangle_ilm_surfaceSetChromaKey) {
     t_ilm_uint surface = 0xbeef;
     t_ilm_int chromaKey[3] = {3, 22, 111};
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.8765));
@@ -992,7 +992,7 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot) {
     }
 
     t_ilm_surface surface = 0xbeef;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, surface));
 
@@ -1029,13 +1029,13 @@ TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat) {
     t_ilm_uint surface6=5;
     t_ilm_uint surface7=6;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_4444, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_5551, &surface2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_6661, &surface3));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface4));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGB_565, &surface5));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGB_888, &surface6));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_R_8, &surface7));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_4444, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_5551, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[2], 0, 0, ILM_PIXELFORMAT_RGBA_6661, &surface3));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[3], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface4));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[4], 0, 0, ILM_PIXELFORMAT_RGB_565, &surface5));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[5], 0, 0, ILM_PIXELFORMAT_RGB_888, &surface6));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[6], 0, 0, ILM_PIXELFORMAT_R_8, &surface7));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ilmPixelFormat p1, p2, p3, p4, p5, p6, p7;
@@ -1076,8 +1076,8 @@ TEST_F(IlmCommandTest, ilm_keyboard_focus) {
     uint surface1 = 36;
     uint surface2 = 44;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
 
     ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
     EXPECT_EQ(0xFFFFFFFF, surface);
@@ -1097,8 +1097,8 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     uint surface2 = 44;
     ilmSurfaceProperties surfaceProperties;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
 
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface1, &surfaceProperties));
     EXPECT_EQ(ILM_INPUT_DEVICE_ALL, surfaceProperties.inputDevicesAcceptance);
@@ -1297,7 +1297,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_growing) {
 
     for (unsigned int i = 0; i < surfaceCount; ++i)
     {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
+        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
         ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 
@@ -1359,7 +1359,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_shrinking) {
 
     for (unsigned int i = 0; i < surfaceCount; ++i)
     {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
+        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
         ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 
@@ -1421,7 +1421,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
 
     for (unsigned int i = 0; i < surfaceCount; ++i)
     {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
+        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
         ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 
@@ -1461,7 +1461,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
 
     for (unsigned int i = 0; i < surfaceCount; ++i)
     {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurface, 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
+        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
         ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 

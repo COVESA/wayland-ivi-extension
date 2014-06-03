@@ -1,5 +1,6 @@
 
 #include "wayland-client.h"
+#include <vector>
 
 class TestBase
 {
@@ -8,7 +9,7 @@ public:
     virtual ~TestBase();
 
 protected:
-    wl_surface*    wlSurface;
+    std::vector<wl_surface *> wlSurfaces;
     wl_display*    wlDisplay;
 
 private:

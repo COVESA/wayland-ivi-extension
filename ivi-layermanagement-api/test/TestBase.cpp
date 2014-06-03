@@ -12,8 +12,7 @@ void registry_listener_callback(void* data, struct wl_registry* registry, uint32
 }
 
 TestBase::TestBase()
-: wlSurface(NULL)
-, wlDisplay(NULL)
+: wlDisplay(NULL)
 , wlRegistry(NULL)
 {
     wlDisplay = wl_display_connect(NULL);
@@ -32,12 +31,22 @@ TestBase::TestBase()
     wl_display_dispatch(wlDisplay);
     wl_display_roundtrip(wlDisplay);
 
-    wlSurface = wl_compositor_create_surface(wlCompositor);
+    wlSurfaces.reserve(10);
+    for (int i = 0; i < wlSurfaces.capacity(); ++i)
+    {
+        wlSurfaces.push_back(wl_compositor_create_surface(wlCompositor));
+    }
 }
 
 TestBase::~TestBase()
 {
-    wl_surface_destroy(wlSurface);
+    for (std::vector<wl_surface *>::reverse_iterator it = wlSurfaces.rbegin();
+         it != wlSurfaces.rend();
+         ++it)
+    {
+        wl_surface_destroy(*it);
+    }
+    wlSurfaces.clear();
     wl_compositor_destroy(wlCompositor);
     wl_registry_destroy(wlRegistry);
     wl_display_disconnect(wlDisplay);
