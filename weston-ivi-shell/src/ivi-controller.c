@@ -153,6 +153,7 @@ struct ivishell {
     int previous_state;
     int event_restriction;
 };
+static void surface_event_remove(struct ivi_layout_surface *, void *);
 
 static void
 destroy_ivicontroller_surface(struct wl_resource *resource)
@@ -1127,14 +1128,7 @@ surface_event_content(struct ivi_layout_surface *layout_surface, int32_t content
     uint32_t id_surface = 0;
 
     if (content == 0) {
-        id_surface = ivi_layout_getIdOfSurface(layout_surface);
-
-        wl_list_for_each(ctrlsurf, &shell->list_controller_surface, link) {
-            if (id_surface != ctrlsurf->id_surface) {
-                continue;
-            }
-            ivi_controller_surface_send_destroyed(ctrlsurf->resource);
-        }
+        surface_event_remove(layout_surface, userdata);
     }
 }
 
