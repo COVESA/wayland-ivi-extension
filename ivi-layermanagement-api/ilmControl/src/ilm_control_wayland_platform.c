@@ -2186,6 +2186,7 @@ wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
 static ilmErrorTypes
 wayland_layerRemove(t_ilm_layer layerId)
 {
+    ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
     struct layer_context *ctx_layer = NULL;
     struct layer_context *ctx_next = NULL;
@@ -2199,11 +2200,12 @@ wayland_layerRemove(t_ilm_layer layerId)
             wl_list_remove(&ctx_layer->link);
             free(ctx_layer);
 
+            returnValue = ILM_SUCCESS;
             break;
         }
     }
 
-    return ILM_SUCCESS;
+    return returnValue;
 }
 
 static ilmErrorTypes
