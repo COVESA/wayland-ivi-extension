@@ -65,7 +65,7 @@ public:
         // set default values
         callbackLayerId = -1;
         LayerProperties = ilmLayerProperties();
-        mask = ILM_NOTIFICATION_ALL;
+        mask = static_cast<t_ilm_notification_mask>(0);
         surface = -1;
         SurfaceProperties = ilmSurfaceProperties();
         // create a layer
@@ -136,7 +136,7 @@ public:
 
         NotificationTest::callbackLayerId = layer;
         NotificationTest::LayerProperties = *LayerProperties;
-        NotificationTest::mask = mask;
+        NotificationTest::mask = static_cast<t_ilm_notification_mask>(NotificationTest::mask|mask);
         timesCalled++;
         pthread_cond_signal( &waiterVariable );
     }
@@ -147,7 +147,7 @@ public:
 
         NotificationTest::callbackSurfaceId = surface;
         NotificationTest::SurfaceProperties = *surfaceProperties;
-        NotificationTest::mask = mask;
+        NotificationTest::mask = static_cast<t_ilm_notification_mask>(NotificationTest::mask|mask);
         timesCalled++;
         pthread_cond_signal( &waiterVariable );
     }
