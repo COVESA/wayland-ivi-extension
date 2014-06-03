@@ -121,6 +121,9 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
     ilmErrorTypes (*layerAddNotification)(t_ilm_layer layer,
                    layerNotificationFunc callback);
     ilmErrorTypes (*layerRemoveNotification)(t_ilm_layer layer);
+    ilmErrorTypes (*surfaceAddNotification)(t_ilm_surface surface,
+                   surfaceNotificationFunc callback);
+    ilmErrorTypes (*surfaceRemoveNotification)(t_ilm_surface surface);
     ilmErrorTypes (*init)(t_ilm_nativedisplay nativedisplay);
     void (*destroy)();
     ilmErrorTypes (*getNativeHandle)(t_ilm_uint pid, t_ilm_int *p_handle,

@@ -29,8 +29,6 @@
 
 static ilmErrorTypes wayland_getScreenResolution(t_ilm_uint screenID,
                          t_ilm_uint* pWidth, t_ilm_uint* pHeight);
-static ilmErrorTypes wayland_surfaceAddNotification(t_ilm_surface surface,
-                         surfaceNotificationFunc callback);
 static ilmErrorTypes wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
                          t_ilm_int width, t_ilm_int height,
                          ilmPixelFormat pixelFormat,
@@ -38,7 +36,6 @@ static ilmErrorTypes wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
 static ilmErrorTypes wayland_surfaceRemove(const t_ilm_surface surfaceId);
 static ilmErrorTypes wayland_surfaceRemoveNativeContent(
                          t_ilm_surface surfaceId);
-static ilmErrorTypes wayland_surfaceRemoveNotification(t_ilm_surface surface);
 static ilmErrorTypes wayland_surfaceSetNativeContent(
                          t_ilm_nativehandle nativehandle,
                          t_ilm_int width, t_ilm_int height,
@@ -56,16 +53,12 @@ void init_ilmClientPlatformTable()
 {
     gIlmClientPlatformFunc.getScreenResolution =
         wayland_getScreenResolution;
-    gIlmClientPlatformFunc.surfaceAddNotification =
-        wayland_surfaceAddNotification;
     gIlmClientPlatformFunc.surfaceCreate =
         wayland_surfaceCreate;
     gIlmClientPlatformFunc.surfaceRemove =
         wayland_surfaceRemove;
     gIlmClientPlatformFunc.surfaceRemoveNativeContent =
         wayland_surfaceRemoveNativeContent;
-    gIlmClientPlatformFunc.surfaceRemoveNotification =
-        wayland_surfaceRemoveNotification;
     gIlmClientPlatformFunc.surfaceSetNativeContent =
         wayland_surfaceSetNativeContent;
     gIlmClientPlatformFunc.UpdateInputEventAcceptanceOn =
@@ -82,7 +75,6 @@ struct surface_context {
     struct ivi_surface *surface;
     t_ilm_uint id_surface;
     struct ilmSurfaceProperties prop;
-    surfaceNotificationFunc notification;
 
     struct wl_list link;
 };
@@ -413,25 +405,6 @@ wayland_getScreenResolution(t_ilm_uint screenID,
 }
 
 static ilmErrorTypes
-wayland_surfaceAddNotification(t_ilm_surface surface,
-                               surfaceNotificationFunc callback)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_client_context *ctx = get_client_instance();
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_id(ctx, (uint32_t)surface);
-    if (ctx_surf == NULL) {
-        returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-    } else {
-        ctx_surf->notification = callback;
-        returnValue = ILM_SUCCESS;
-    }
-
-    return returnValue;
-}
-
-static ilmErrorTypes
 wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
                       t_ilm_int width,
                       t_ilm_int height,
@@ -504,24 +477,6 @@ wayland_surfaceRemoveNativeContent(t_ilm_surface surfaceId)
     /* There is no API to set native content
         as such ivi_surface_set_native. */
     return ILM_FAILED;
-}
-
-static ilmErrorTypes
-wayland_surfaceRemoveNotification(t_ilm_surface surface)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_client_context *ctx = get_client_instance();
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_id(ctx, (uint32_t)surface);
-    if (ctx_surf == NULL) {
-        returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-    } else {
-        ctx_surf->notification = NULL;
-        returnValue = ILM_SUCCESS;
-    }
-
-    return returnValue;
 }
 
 static ilmErrorTypes

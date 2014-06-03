@@ -69,17 +69,6 @@ ilmErrorTypes ilm_layerAddSurface(t_ilm_layer layerId, t_ilm_surface surfaceId);
 ilmErrorTypes ilm_layerRemoveSurface(t_ilm_layer layerId, t_ilm_surface surfaceId);
 
 /**
- * \brief register for notification on property changes of surface
- * \ingroup ilmClient
- * \param[in] surface id of surface to register for notification
- * \param[in] callback pointer to function to be called for notification
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- * \return ILM_ERROR_INVALID_ARGUMENT if the given surface already has notification callback registered
- */
-ilmErrorTypes ilm_surfaceAddNotification(t_ilm_surface surface, surfaceNotificationFunc callback);
-
-/**
  * \brief Create a surface
  * \ingroup ilmClient
  * \param[in] nativehandle The native windowsystem's handle for the surface
@@ -141,16 +130,6 @@ ilmErrorTypes ilm_surfaceRemove(const t_ilm_surface surfaceId);
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_surfaceRemoveNativeContent(t_ilm_surface surfaceId);
-
-/**
- * \brief remove notification on property changes of surface
- * \ingroup ilmClient
- * \param[in] surface id of surface to remove notification
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- * \return ILM_ERROR_INVALID_ARGUMENT if the given surface has no notification callback registered
- */
-ilmErrorTypes ilm_surfaceRemoveNotification(t_ilm_surface surface);
 
 /**
  * \brief Set the native content of an application to be used as surface content

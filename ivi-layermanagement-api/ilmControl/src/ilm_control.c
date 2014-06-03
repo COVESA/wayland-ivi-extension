@@ -368,6 +368,18 @@ ilm_layerRemoveNotification(t_ilm_layer layer)
 }
 
 ILM_EXPORT ilmErrorTypes
+ilm_surfaceAddNotification(t_ilm_surface surface, surfaceNotificationFunc callback)
+{
+    return gIlmControlPlatformFunc.surfaceAddNotification(surface, callback);
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceRemoveNotification(t_ilm_surface surface)
+{
+    return gIlmControlPlatformFunc.surfaceRemoveNotification(surface);
+}
+
+ILM_EXPORT ilmErrorTypes
 ilm_getNativeHandle(t_ilm_uint pid, t_ilm_const_char *p_window_title,
                     t_ilm_int *p_handle, t_ilm_nativehandle **p_handles)
 {

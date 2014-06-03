@@ -56,13 +56,6 @@ ilm_getScreenResolution(t_ilm_uint screenID,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceAddNotification(t_ilm_surface surface,
-                           surfaceNotificationFunc callback)
-{
-    return gIlmClientPlatformFunc.surfaceAddNotification(surface, callback);
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceCreate(t_ilm_nativehandle nativehandle,
                   t_ilm_int width, t_ilm_int height,
                   ilmPixelFormat pixelFormat, t_ilm_surface* pSurfaceId)
@@ -81,12 +74,6 @@ ILM_EXPORT ilmErrorTypes
 ilm_surfaceRemoveNativeContent(t_ilm_surface surfaceId)
 {
     return gIlmClientPlatformFunc.surfaceRemoveNativeContent(surfaceId);
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceRemoveNotification(t_ilm_surface surface)
-{
-    return gIlmClientPlatformFunc.surfaceRemoveNotification(surface);
 }
 
 ILM_EXPORT ilmErrorTypes
