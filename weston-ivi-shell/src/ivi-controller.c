@@ -612,6 +612,9 @@ send_layer_event(struct wl_resource *resource,
     if (mask & IVI_NOTIFICATION_ADD) {
         send_layer_add_event(ivilayer, resource);
     }
+    if (mask & IVI_NOTIFICATION_REMOVE) {
+        send_layer_add_event(ivilayer, resource);
+    }
 }
 
 static void
