@@ -1408,6 +1408,7 @@ controller_listener_surface_for_child(void *data,
         return;
     }
     ctx_surf->id_surface = id_surface;
+    ctx_surf->prop.inputDevicesAcceptance = ILM_INPUT_DEVICE_ALL;
 
     wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
@@ -1497,6 +1498,7 @@ controller_listener_surface_for_main(void *data,
         return;
     }
     ctx_surf->id_surface = id_surface;
+    ctx_surf->prop.inputDevicesAcceptance = ILM_INPUT_DEVICE_ALL;
 
     wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->main_ctx.list_surface, &ctx_surf->link);
