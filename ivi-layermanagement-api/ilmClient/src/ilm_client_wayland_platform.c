@@ -123,12 +123,18 @@ wayland_client_gen_surface_id(struct ilm_client_context *ctx)
 {
     struct surface_context *ctx_surf = NULL;
     do {
+        int found = 0;
         if (wl_list_length(&ctx->list_surface) == 0) {
             ctx->internal_id_surface++;
             return ctx->internal_id_surface;
         }
         wl_list_for_each(ctx_surf, &ctx->list_surface, link) {
-            if (ctx_surf->id_surface != ctx->internal_id_surface) {
+            if (ctx_surf->id_surface == ctx->internal_id_surface) {
+                found = 1;
+                break;
+            }
+
+            if (found == 0) {
                 return ctx->internal_id_surface;
             }
         }

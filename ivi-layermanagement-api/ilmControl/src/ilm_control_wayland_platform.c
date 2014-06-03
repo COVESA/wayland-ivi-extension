@@ -1813,12 +1813,18 @@ gen_layer_id(struct ilm_control_context *ctx)
 {
     struct layer_context *ctx_layer = NULL;
     do {
+        int found = 0;
         if (wl_list_length(&ctx->main_ctx.list_layer) == 0) {
             ctx->internal_id_layer++;
             return ctx->internal_id_layer;
         }
         wl_list_for_each(ctx_layer, &ctx->main_ctx.list_layer, link) {
-            if (ctx_layer->id_layer != ctx->internal_id_layer) {
+            if (ctx_layer->id_layer == ctx->internal_id_layer) {
+                found = 1;
+                break;
+            }
+
+            if (found == 0) {
                 return ctx->internal_id_layer;
             }
         }
