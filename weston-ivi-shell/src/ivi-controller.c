@@ -425,6 +425,9 @@ send_surface_add_event(struct ivisurface *ivisurf,
             if (id_layout_layer != ctrllayer->id_layer) {
                 continue;
             }
+            if (resource != ctrllayer->resource) {
+                continue;
+            }
             ivi_controller_surface_send_layer(resource, ctrllayer->resource);
         }
     }
