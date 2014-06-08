@@ -64,6 +64,7 @@ struct ivilayer {
     struct ivi_layout_layer *layout_layer;
     struct wl_list list_screen;
     uint32_t controller_layer_count;
+    int layer_canbe_removed;
 };
 
 struct iviscreen {
@@ -218,7 +219,8 @@ destroy_ivicontroller_layer(struct wl_resource *resource)
     }
 
     if ((ivilayer->layout_layer != NULL) &&
-        (ivilayer->controller_layer_count == 0)) {
+        (ivilayer->controller_layer_count == 0) &&
+        (ivilayer->layer_canbe_removed == 1)) {
         ivi_layout_layerRemove(ivilayer->layout_layer);
     }
 }
@@ -920,6 +922,7 @@ controller_layer_destroy(struct wl_client *client,
     (void)client;
     (void)destroy_scene_object;
 
+    ivilayer->layer_canbe_removed = 1;
     wl_list_for_each_safe(ctrllayer, next, &shell->list_controller_layer, link) {
         if (ctrllayer->resource != resource) {
             continue;
@@ -1094,6 +1097,7 @@ controller_layer_create(struct wl_client *client,
     }
 
     ++ivilayer->controller_layer_count;
+    ivilayer->layer_canbe_removed = 0;
 
     ctrllayer->shell = shell;
     ctrllayer->client = client;
