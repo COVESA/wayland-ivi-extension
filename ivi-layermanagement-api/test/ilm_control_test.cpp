@@ -800,7 +800,7 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_
 
     ilmSurfaceProperties surfaceProperties;
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface, &surfaceProperties));
-    ASSERT_EQ(0.8765, surfaceProperties.opacity);
+    ASSERT_NEAR(0.8765, surfaceProperties.opacity, 0.1);
     ASSERT_EQ(89u, surfaceProperties.sourceX);
     ASSERT_EQ(6538u, surfaceProperties.sourceY);
     ASSERT_EQ(638u, surfaceProperties.sourceWidth);
@@ -826,7 +826,7 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_
 
     ilmSurfaceProperties surfaceProperties2;
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface, &surfaceProperties2));
-    ASSERT_EQ(0.436, surfaceProperties2.opacity);
+    ASSERT_NEAR(0.436, surfaceProperties2.opacity, 0.1);
     ASSERT_EQ(784u, surfaceProperties2.sourceX);
     ASSERT_EQ(546u, surfaceProperties2.sourceY);
     ASSERT_EQ(235u, surfaceProperties2.sourceWidth);
@@ -859,7 +859,7 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_
 
     ilmLayerProperties layerProperties1;
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfLayer(layer, &layerProperties1));
-    ASSERT_EQ(0.8765, layerProperties1.opacity);
+    ASSERT_NEAR(0.8765, layerProperties1.opacity, 0.1);
     ASSERT_EQ(89u, layerProperties1.sourceX);
     ASSERT_EQ(6538u, layerProperties1.sourceY);
     ASSERT_EQ(638u, layerProperties1.sourceWidth);
@@ -885,7 +885,7 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_
 
     ilmLayerProperties layerProperties2;
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfLayer(layer, &layerProperties2));
-    ASSERT_EQ(0.436, layerProperties2.opacity);
+    ASSERT_NEAR(0.436, layerProperties2.opacity, 0.1);
     ASSERT_EQ(784u, layerProperties2.sourceX);
     ASSERT_EQ(546u, layerProperties2.sourceY);
     ASSERT_EQ(235u, layerProperties2.sourceWidth);

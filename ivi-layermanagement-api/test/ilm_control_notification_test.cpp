@@ -273,7 +273,7 @@ TEST_F(NotificationTest, NotifyOnLayerSetOpacity)
     assertCallbackcalled();
 
     EXPECT_EQ(layer,callbackLayerId);
-    EXPECT_FLOAT_EQ(0.789,LayerProperties.opacity);
+    EXPECT_NEAR(0.789, LayerProperties.opacity, 0.1);
     EXPECT_EQ(ILM_NOTIFICATION_OPACITY,mask);
 
     ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
@@ -372,7 +372,7 @@ TEST_F(NotificationTest, NotifyOnLayerMultipleValues2)
 
     EXPECT_EQ(layer,callbackLayerId);
     EXPECT_TRUE(LayerProperties.visibility);
-    EXPECT_FLOAT_EQ(0.789,LayerProperties.opacity);
+    EXPECT_NEAR(0.789, LayerProperties.opacity, 0.1);
     EXPECT_EQ(33u,LayerProperties.destX);
     EXPECT_EQ(567u,LayerProperties.destY);
     EXPECT_EQ(55u,LayerProperties.destWidth);
@@ -405,7 +405,7 @@ TEST_F(NotificationTest, NotifyOnLayerAllValues)
     EXPECT_EQ(ILM_ONEHUNDREDEIGHTY,LayerProperties.orientation);
 
     EXPECT_TRUE(LayerProperties.visibility);
-    EXPECT_FLOAT_EQ(opacity,LayerProperties.opacity);
+    EXPECT_NEAR(opacity, LayerProperties.opacity, 0.1);
     EXPECT_EQ(133u,LayerProperties.destX);
     EXPECT_EQ(1567u,LayerProperties.destY);
     EXPECT_EQ(155u,LayerProperties.destWidth);
@@ -565,7 +565,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceSetOpacity)
     assertCallbackcalled();
 
     EXPECT_EQ(surface,callbackSurfaceId);
-    EXPECT_FLOAT_EQ(0.789,SurfaceProperties.opacity);
+    EXPECT_NEAR(0.789, SurfaceProperties.opacity, 0.1);
     EXPECT_EQ(ILM_NOTIFICATION_OPACITY,mask);
 
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
@@ -664,7 +664,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceMultipleValues2)
 
     EXPECT_EQ(surface,callbackSurfaceId);
     EXPECT_TRUE(SurfaceProperties.visibility);
-    EXPECT_FLOAT_EQ(0.789,SurfaceProperties.opacity);
+    EXPECT_NEAR(0.789, SurfaceProperties.opacity, 0.1);
     EXPECT_EQ(33u,SurfaceProperties.destX);
     EXPECT_EQ(567u,SurfaceProperties.destY);
     EXPECT_EQ(55u,SurfaceProperties.destWidth);
@@ -697,7 +697,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceAllValues)
     EXPECT_EQ(ILM_ONEHUNDREDEIGHTY,SurfaceProperties.orientation);
 
     EXPECT_TRUE(SurfaceProperties.visibility);
-    EXPECT_FLOAT_EQ(opacity,SurfaceProperties.opacity);
+    EXPECT_NEAR(opacity, SurfaceProperties.opacity, 0.1);
     EXPECT_EQ(133u,SurfaceProperties.destX);
     EXPECT_EQ(1567u,SurfaceProperties.destY);
     EXPECT_EQ(155u,SurfaceProperties.destWidth);
