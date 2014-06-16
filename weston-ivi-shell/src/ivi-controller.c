@@ -1190,7 +1190,7 @@ add_client_to_resources(struct ivishell *shell,
     uint32_t id_layout_surface = 0;
     uint32_t id_layout_layer = 0;
 
-    wl_list_for_each(ivisurf, &shell->list_surface, link) {
+    wl_list_for_each_reverse(ivisurf, &shell->list_surface, link) {
         id_layout_surface =
             ivi_layout_getIdOfSurface(ivisurf->layout_surface);
 
@@ -1198,7 +1198,7 @@ add_client_to_resources(struct ivishell *shell,
                                     id_layout_surface);
     }
 
-    wl_list_for_each(ivilayer, &shell->list_layer, link) {
+    wl_list_for_each_reverse(ivilayer, &shell->list_layer, link) {
         id_layout_layer =
             ivi_layout_getIdOfLayer(ivilayer->layout_layer);
 

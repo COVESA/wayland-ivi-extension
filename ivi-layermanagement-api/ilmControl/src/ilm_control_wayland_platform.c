@@ -2357,7 +2357,7 @@ wayland_getSurfaceIDs(t_ilm_int* pLength, t_ilm_surface** ppArray)
         *ppArray = (t_ilm_surface*)malloc(length * sizeof *ppArray);
         if (*ppArray != NULL) {
             t_ilm_surface* ids = *ppArray;
-            wl_list_for_each(ctx_surf, &ctx->main_ctx.list_surface, link) {
+            wl_list_for_each_reverse(ctx_surf, &ctx->main_ctx.list_surface, link) {
                 *ids = ctx_surf->id_surface;
                 ids++;
             }
@@ -2399,7 +2399,7 @@ wayland_getSurfaceIDsOnLayer(t_ilm_layer layer,
     }
 
     ids = *ppArray;
-    wl_list_for_each(ctx_surf, &ctx_layer->order.list_surface, order.link) {
+    wl_list_for_each_reverse(ctx_surf, &ctx_layer->order.list_surface, order.link) {
         *ids = (t_ilm_surface)ctx_surf->id_surface;
         ids++;
     }
