@@ -525,8 +525,19 @@ add_orderlayer_to_screen(struct wayland_context *ctx,
         return;
     }
 
-    wl_list_init(&ctx_layer->order.link);
-    wl_list_insert(&ctx_scrn->order.list_layer, &ctx_layer->order.link);
+    int found = 0;
+    struct layer_context *layer_link;
+    wl_list_for_each(layer_link, &ctx_scrn->order.list_layer, order.link) {
+        if (layer_link == ctx_layer) {
+            found = 1;
+            break;
+        }
+    }
+
+    if (found == 0) {
+        wl_list_init(&ctx_layer->order.link);
+        wl_list_insert(&ctx_scrn->order.list_layer, &ctx_layer->order.link);
+    }
 }
 
 static void
