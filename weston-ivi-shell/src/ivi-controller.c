@@ -213,6 +213,7 @@ destroy_ivicontroller_layer(struct wl_resource *resource)
 
         wl_list_remove(&ctrllayer->link);
         --ivilayer->controller_layer_count;
+        ivi_controller_layer_send_destroyed(ctrllayer->resource);
         free(ctrllayer);
         ctrllayer = NULL;
         break;
@@ -907,12 +908,11 @@ controller_layer_destroy(struct wl_client *client,
 
     ivilayer->layer_canbe_removed = 1;
     wl_list_for_each_safe(ctrllayer, next, &shell->list_controller_layer, link) {
-        if (ctrllayer->resource != resource) {
+        if (ctrllayer->id_layer != id_layer) {
             continue;
-    }
+        }
 
-        wl_resource_destroy(resource);
-        break;
+        wl_resource_destroy(ctrllayer->resource);
     }
 }
 
