@@ -496,7 +496,8 @@ send_surface_prop(struct ivi_layout_surface *layout_surface,
 
 static void
 send_layer_add_event(struct ivilayer *ivilayer,
-                     struct wl_resource *resource)
+                     struct wl_resource *resource,
+                     enum ivi_layout_notification_mask mask)
 {
     struct ivi_layout_screen **pArray = NULL;
     uint32_t length = 0;
@@ -506,7 +507,6 @@ send_layer_add_event(struct ivilayer *ivilayer,
     struct link_screen *next = NULL;
     struct iviscreen *iviscrn = NULL;
     struct ivishell *shell = ivilayer->shell;
-    int found = 0;
     struct wl_client *client = wl_resource_get_client(resource);
     struct wl_resource *resource_output = NULL;
 
@@ -518,64 +518,44 @@ send_layer_add_event(struct ivilayer *ivilayer,
     }
 
     /* Send Null to cancel added layer */
-    wl_list_for_each_safe(link_scrn, next, &ivilayer->list_screen, link) {
-        for (i = 0, found = 0; i < (int)length; i++) {
-            if (pArray[i] == link_scrn->screen->layout_screen) {
-                /* No need to send event, if new layer doesn't be added. */
-                found = 1;
-                break;
-            }
-        }
-        if (found != 0) {
-            continue;
-        }
-
-        ivi_controller_layer_send_screen(resource, NULL);
-        wl_list_remove(&link_scrn->link);
-        free(link_scrn);
-        link_scrn = NULL;
-    }
-
-    for (i = 0; i < (int)length; i++) {
-        found = 0;
-        wl_list_for_each(link_scrn, &ivilayer->list_screen, link) {
-            if (pArray[i] == link_scrn->screen->layout_screen) {
-                /* No need to send event, if new screen doesn't be added. */
-                found = 1;
-                break;
-            }
-        }
-        if (found != 0) {
-            continue;
-        }
-
-        /* Create list_screen */
-        link_scrn = calloc(1, sizeof(*link_scrn));
-        if (NULL == link_scrn) {
-            continue;
-        }
-        wl_list_init(&link_scrn->link);
-        link_scrn->screen = NULL;
-        wl_list_for_each(iviscrn, &shell->list_screen, link) {
-            if (iviscrn->layout_screen == pArray[i]) {
-                link_scrn->screen = iviscrn;
-                break;
-            }
-        }
-
-        if (link_scrn->screen == NULL) {
+    if (mask & IVI_NOTIFICATION_REMOVE) {
+        wl_list_for_each_safe(link_scrn, next, &ivilayer->list_screen, link) {
+            ivi_controller_layer_send_screen(resource, NULL);
+            wl_list_remove(&link_scrn->link);
             free(link_scrn);
             link_scrn = NULL;
-            continue;
         }
-        wl_list_insert(&ivilayer->list_screen, &link_scrn->link);
+    }
+    else if (mask & IVI_NOTIFICATION_ADD) {
+        for (i = 0; i < (int)length; i++) {
+            /* Create list_screen */
+            link_scrn = calloc(1, sizeof(*link_scrn));
+            if (NULL == link_scrn) {
+                continue;
+            }
+            wl_list_init(&link_scrn->link);
+            link_scrn->screen = NULL;
+            wl_list_for_each(iviscrn, &shell->list_screen, link) {
+                if (iviscrn->layout_screen == pArray[i]) {
+                    link_scrn->screen = iviscrn;
+                    break;
+                }
+            }
 
-        /* Send new layer event */
-        resource_output =
-            wl_resource_find_for_client(&iviscrn->output->resource_list,
-                                 client);
-        if (resource_output != NULL) {
-            ivi_controller_layer_send_screen(resource, resource_output);
+            if (link_scrn->screen == NULL) {
+                free(link_scrn);
+                link_scrn = NULL;
+                continue;
+            }
+            wl_list_insert(&ivilayer->list_screen, &link_scrn->link);
+
+            /* Send new layer event */
+            resource_output =
+                wl_resource_find_for_client(&iviscrn->output->resource_list,
+                                     client);
+            if (resource_output != NULL) {
+                ivi_controller_layer_send_screen(resource, resource_output);
+            }
         }
     }
 
@@ -616,10 +596,10 @@ send_layer_event(struct wl_resource *resource,
                                           prop->visibility);
     }
     if (mask & IVI_NOTIFICATION_ADD) {
-        send_layer_add_event(ivilayer, resource);
+        send_layer_add_event(ivilayer, resource, IVI_NOTIFICATION_ADD);
     }
     if (mask & IVI_NOTIFICATION_REMOVE) {
-        send_layer_add_event(ivilayer, resource);
+        send_layer_add_event(ivilayer, resource, IVI_NOTIFICATION_REMOVE);
     }
 }
 
