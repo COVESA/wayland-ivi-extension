@@ -336,6 +336,7 @@ struct wayland_context {
     struct wl_registry *registry;
     struct wl_compositor *compositor;
     struct ivi_controller *controller;
+    uint32_t num_screen;
 
     struct wl_list list_surface;
     struct wl_list list_layer;
@@ -1778,6 +1779,33 @@ registry_handle_control_for_child(void *data,
             fprintf(stderr, "Failed to add ivi_controller listener\n");
             return;
         }
+    } else if (strcmp(interface, "wl_output") == 0) {
+        struct screen_context *ctx_scrn = calloc(1, sizeof *ctx_scrn);
+        if (ctx_scrn == NULL) {
+            fprintf(stderr, "Failed to allocate memory for screen_context\n");
+            return;
+        }
+        wl_list_init(&ctx_scrn->link);
+        ctx_scrn->output = wl_registry_bind(registry, name,
+                                           &wl_output_interface, 1);
+        if (ctx_scrn->output == NULL) {
+            free(ctx_scrn);
+            fprintf(stderr, "Failed to registry bind wl_output\n");
+            return;
+        }
+
+        if (wl_output_add_listener(ctx_scrn->output,
+                                   &output_listener,
+                                   ctx_scrn)) {
+            free(ctx_scrn);
+            fprintf(stderr, "Failed to add wl_output listener\n");
+            return;
+        }
+
+        ctx_scrn->id_screen = ctx->num_screen;
+        ctx->num_screen++;
+        wl_list_init(&ctx_scrn->order.list_layer);
+        wl_list_insert(&ctx->list_screen, &ctx_scrn->link);
     }
 }
 
