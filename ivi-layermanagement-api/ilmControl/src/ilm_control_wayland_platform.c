@@ -422,7 +422,6 @@ output_listener_geometry(void *data,
                          const char *model,
                          int32_t transform)
 {
-    struct screen_context *ctx_scrn = data;
     (void)output;
     (void)x;
     (void)y;
@@ -430,9 +429,6 @@ output_listener_geometry(void *data,
     (void)make;
     (void)model;
     (void)transform;
-
-    ctx_scrn->prop.screenWidth = physical_width;
-    ctx_scrn->prop.screenHeight = physical_height;
 }
 
 static void
@@ -449,6 +445,9 @@ output_listener_mode(void *data,
     (void)width;
     (void)height;
     (void)refresh;
+    struct screen_context *ctx_scrn = data;
+    ctx_scrn->prop.screenWidth = width;
+    ctx_scrn->prop.screenHeight = height;
 }
 
 static void
