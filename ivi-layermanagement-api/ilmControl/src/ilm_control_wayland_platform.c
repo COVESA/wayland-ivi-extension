@@ -1067,11 +1067,7 @@ remove_ordersurface_from_layer(struct wayland_context *ctx,
         wl_list_for_each_safe(ctx_ordersurf, next,
                          &ctx_layer->order.list_surface,
                          order.link) {
-            pxy_surf = (struct wl_proxy*)ctx_surf->surface;
-            pxy_ordersurf = (struct wl_proxy*)ctx_ordersurf->surface;
-            id_surf = wl_proxy_get_id(pxy_surf);
-            id_ordersurf = wl_proxy_get_id(pxy_ordersurf);
-            if (id_surf == id_ordersurf) {
+            if (ctx_surf->id_surface == ctx_ordersurf->id_surface) {
                 wl_list_remove(&ctx_ordersurf->order.link);
             }
         }
