@@ -372,39 +372,24 @@ send_surface_add_event(struct ivisurface *ivisurf,
     if (mask & IVI_NOTIFICATION_REMOVE) {
         wl_list_for_each_safe(link_layer, next, &ivisurf->list_layer, link) {
             ivi_controller_surface_send_layer(resource, NULL);
-            wl_list_remove(&link_layer->link);
-            free(link_layer);
-            link_layer = NULL;
         }
     }
     else if (mask & IVI_NOTIFICATION_ADD) {
         for (i = 0; i < (int)length; i++) {
-            /* Create list_layer */
-            link_layer = calloc(1, sizeof(*link_layer));
-            if (NULL == link_layer) {
-                continue;
-            }
-            wl_list_init(&link_layer->link);
-            link_layer->layer = NULL;
+            /* Send new surface event */
+            ivilayer = NULL;
             wl_list_for_each(ivilayer, &shell->list_layer, link) {
                 if (ivilayer->layout_layer == pArray[i]) {
-                    link_layer->layer = ivilayer;
                     break;
                 }
             }
 
-            if (link_layer->layer == NULL) {
-                free(link_layer);
-                link_layer = NULL;
+            if (ivilayer == NULL) {
                 continue;
             }
 
-            struct link_layer *layer_link = NULL;
-            wl_list_insert(&ivisurf->list_layer, &link_layer->link);
-
-            /* Send new surface event */
             id_layout_layer =
-                ivi_layout_getIdOfLayer(link_layer->layer->layout_layer);
+                ivi_layout_getIdOfLayer(ivilayer->layout_layer);
             wl_list_for_each(ctrllayer, &shell->list_controller_layer, link) {
                 if (id_layout_layer != ctrllayer->id_layer) {
                     continue;
@@ -456,11 +441,66 @@ send_surface_event(struct wl_resource *resource,
         ivi_controller_surface_send_pixelformat(resource,
                                                 prop->pixelformat);
     }
+    if (mask & IVI_NOTIFICATION_REMOVE) {
+        send_surface_add_event(ivisurf, resource, IVI_NOTIFICATION_REMOVE);
+    }
     if (mask & IVI_NOTIFICATION_ADD) {
         send_surface_add_event(ivisurf, resource, IVI_NOTIFICATION_ADD);
     }
+}
+
+static void
+update_surface_prop(struct ivisurface *ivisurf,
+                    uint32_t mask)
+{
+    struct ivi_layout_layer **pArray = NULL;
+    uint32_t length = 0;
+    int32_t ans = 0;
+    int i = 0;
+    struct ivishell *shell = ivisurf->shell;
+
+    ans = ivi_layout_getLayersUnderSurface(ivisurf->layout_surface,
+                                          &length, &pArray);
+    if (0 != ans) {
+        weston_log("failed to get layers at send_surface_add_event\n");
+        return;
+    }
+
     if (mask & IVI_NOTIFICATION_REMOVE) {
-        send_surface_add_event(ivisurf, resource, IVI_NOTIFICATION_REMOVE);
+        struct link_layer *link_layer = NULL;
+        struct link_layer *next = NULL;
+
+        wl_list_for_each_safe(link_layer, next, &ivisurf->list_layer, link) {
+            wl_list_remove(&link_layer->link);
+            free(link_layer);
+            link_layer = NULL;
+        }
+    }
+    if (mask & IVI_NOTIFICATION_ADD) {
+        for (i = 0; i < (int)length; ++i) {
+            /* Create list_layer */
+            struct ivilayer *ivilayer = NULL;
+            struct link_layer *link_layer = calloc(1, sizeof(*link_layer));
+            if (NULL == link_layer) {
+                continue;
+            }
+            wl_list_init(&link_layer->link);
+            link_layer->layer = NULL;
+            wl_list_for_each(ivilayer, &shell->list_layer, link) {
+                if (ivilayer->layout_layer == pArray[i]) {
+                    link_layer->layer = ivilayer;
+                    break;
+                }
+            }
+
+            if (link_layer->layer == NULL) {
+                free(link_layer);
+                link_layer = NULL;
+                continue;
+            }
+
+            wl_list_insert(&ivisurf->list_layer, &link_layer->link);
+        }
     }
 }
 
@@ -483,6 +523,8 @@ send_surface_prop(struct ivi_layout_surface *layout_surface,
         }
         send_surface_event(ctrlsurf->resource, ivisurf, prop, mask);
     }
+
+    update_surface_prop(ivisurf, mask);
 }
 
 static void
