@@ -1702,9 +1702,50 @@ controller_listener_layer_for_main(void *data,
                           struct ivi_controller *controller,
                           uint32_t id_layer)
 {
-    (void)data;
     (void)controller;
-    (void)id_layer;
+
+    struct ilm_control_context *ctx = data;
+    struct layer_context *ctx_layer = NULL;
+    struct layer_context *layer_link = NULL;
+    int found = 0;
+
+    wl_list_for_each(layer_link, &ctx->main_ctx.list_layer, link) {
+        if (layer_link->id_layer == id_layer) {
+            found = 1;
+            break;
+        }
+    }
+
+    if (found != 0) {
+        return;
+    }
+
+    // For main context
+    ctx_layer = calloc(1, sizeof *ctx_layer);
+    if (ctx_layer == NULL) {
+        fprintf(stderr, "Failed to allocate memory for layer_context\n");
+        return;
+    }
+
+    /* width and height are dummy because of just creating controller_layer */
+    ctx_layer->controller = ivi_controller_layer_create(
+                                ctx->main_ctx.controller,
+                                id_layer, 1, 1);
+    if (ctx_layer->controller == NULL) {
+        fprintf(stderr, "Failed to create layer\n");
+        free(ctx_layer);
+        return;
+    }
+
+    ctx_layer->id_layer = id_layer;
+
+    wl_list_init(&ctx_layer->link);
+    wl_list_insert(&ctx->main_ctx.list_layer, &ctx_layer->link);
+    wl_list_init(&ctx_layer->order.link);
+    wl_list_init(&ctx_layer->order.list_surface);
+
+    ivi_controller_layer_add_listener(ctx_layer->controller,
+                                  &controller_layer_listener_main, ctx);
 }
 
 static void
