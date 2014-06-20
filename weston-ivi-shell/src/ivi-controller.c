@@ -1268,22 +1268,6 @@ add_client_to_resources(struct ivishell *shell,
     uint32_t id_layout_surface = 0;
     uint32_t id_layout_layer = 0;
 
-    wl_list_for_each_reverse(ivisurf, &shell->list_surface, link) {
-        id_layout_surface =
-            ivi_layout_getIdOfSurface(ivisurf->layout_surface);
-
-        ivi_controller_send_surface(controller->resource,
-                                    id_layout_surface);
-    }
-
-    wl_list_for_each_reverse(ivilayer, &shell->list_layer, link) {
-        id_layout_layer =
-            ivi_layout_getIdOfLayer(ivilayer->layout_layer);
-
-        ivi_controller_send_layer(controller->resource,
-                                  id_layout_layer);
-    }
-
     wl_list_for_each(iviscrn, &shell->list_screen, link) {
         resource_output = wl_resource_find_for_client(
                 &iviscrn->output->resource_list, client);
@@ -1299,6 +1283,20 @@ add_client_to_resources(struct ivishell *shell,
         ivi_controller_send_screen(controller->resource,
                                    wl_resource_get_id(resource_output),
                                    ctrlscrn->resource);
+    }
+    wl_list_for_each_reverse(ivilayer, &shell->list_layer, link) {
+        id_layout_layer =
+            ivi_layout_getIdOfLayer(ivilayer->layout_layer);
+
+        ivi_controller_send_layer(controller->resource,
+                                  id_layout_layer);
+    }
+    wl_list_for_each_reverse(ivisurf, &shell->list_surface, link) {
+        id_layout_surface =
+            ivi_layout_getIdOfSurface(ivisurf->layout_surface);
+
+        ivi_controller_send_surface(controller->resource,
+                                    id_layout_surface);
     }
 }
 
