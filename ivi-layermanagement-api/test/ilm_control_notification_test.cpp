@@ -592,9 +592,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceSetPosition)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
     // change something
-    t_ilm_uint* pos = new t_ilm_uint[2];
-    pos[0] = 7;
-    pos[1] = 2;
+    t_ilm_uint pos[] = { 7, 2 };
     ilm_surfaceSetPosition(surface,pos);
     ilm_commitChanges();
 
@@ -613,9 +611,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceSetDimension)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
     // change something
-    t_ilm_uint* pos = new t_ilm_uint[2];
-    pos[0] = 70;
-    pos[1] = 22;
+    t_ilm_uint pos[] = { 70, 22 };
     ilm_surfaceSetDimension(surface,pos);
     ilm_commitChanges();
 
