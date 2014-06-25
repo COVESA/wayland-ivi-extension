@@ -833,39 +833,6 @@ ivi_layout_screenSetRenderOrder(struct ivi_layout_screen *iviscrn,
                                    const uint32_t number);
 
 /**
- * \brief Take a screenshot from the current displayed layer scene.
- * The screenshot is saved as bmp file with the corresponding filename.
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_takeScreenshot(struct ivi_layout_screen *iviscrn,
-                             const char *filename);
-
-/**
- * \brief Take a screenshot of a certain layer
- * The screenshot is saved as bmp file with the corresponding filename.
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_takeLayerScreenshot(const char *filename,
-                                  struct ivi_layout_layer *ivilayer);
-
-/**
- * \brief Take a screenshot of a certain surface
- * The screenshot is saved as bmp file with the corresponding filename.
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_takeSurfaceScreenshot(const char *filename,
-                                    struct ivi_layout_surface *ivisurf);
-
-/**
  * \brief Enable or disable a rendering optimization
  *
  * \return  0 if the method call was successful
@@ -943,6 +910,16 @@ int32_t
 ivi_layout_surfaceSetSourceRectangle(struct ivi_layout_surface *ivisurf,
                                         uint32_t x, uint32_t y,
                                         uint32_t width, uint32_t height);
+
+/**
+ * \brief get weston_output from ivi_layout_screen.
+ *
+ * \return (struct weston_screen *)
+ *              if the method call was successful
+ * \return NULL if the method call was failed
+ */
+struct weston_output *
+ivi_layout_screenGetOutput(struct ivi_layout_screen *);
 
 /**
  * \brief Commit all changes and execute all enqueued commands since last commit.

@@ -777,9 +777,9 @@ controller_surface_screenshot(struct wl_client *client,
                   struct wl_resource *resource,
                   const char *filename)
 {
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
     (void)client;
-    ivi_layout_takeSurfaceScreenshot(filename, ivisurf->layout_surface);
+    (void)resource;
+    (void)filename;
 }
 
 static void
@@ -1066,7 +1066,65 @@ controller_screen_screenshot(struct wl_client *client,
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
     (void)client;
-    ivi_layout_takeScreenshot(iviscrn->layout_screen, filename);
+
+    struct weston_output *output = NULL;
+    cairo_surface_t *cairo_surf = NULL;
+    int32_t i = 0;
+    int32_t width = 0;
+    int32_t height = 0;
+    int32_t stride = 0;
+    uint8_t *readpixs = NULL;
+    uint8_t *writepixs = NULL;
+    uint8_t *d = NULL;
+    uint8_t *s = NULL;
+
+    output = ivi_layout_screenGetOutput(iviscrn->layout_screen);
+    --output->disable_planes;
+
+    width = output->current_mode->width;
+    height = output->current_mode->height;
+    stride = width * (PIXMAN_FORMAT_BPP(output->compositor->read_format) / 8);
+
+    readpixs = malloc(stride * height);
+    if (readpixs == NULL) {
+        weston_log("fails to allocate memory\n");
+        return;
+    }
+
+    writepixs = malloc(stride * height);
+    if (writepixs == NULL) {
+        weston_log("fails to allocate memory\n");
+        return;
+    }
+
+    output->compositor->renderer->read_pixels(
+            output,
+            output->compositor->read_format,
+            readpixs,
+            0,
+            0,
+            width,
+            height);
+
+    s = readpixs;
+    d = writepixs + stride * (height - 1);
+
+    for (i = 0; i < height; ++i) {
+        memcpy(d, s, stride);
+        d -= stride;
+        s += stride;
+    }
+
+    cairo_surf = cairo_image_surface_create_for_data(
+            writepixs,
+            CAIRO_FORMAT_ARGB32,
+            width,
+            height,
+            stride);
+    cairo_surface_write_to_png(cairo_surf, filename);
+    cairo_surface_destroy(cairo_surf);
+    free(writepixs);
+    free(readpixs);
 }
 
 static void
