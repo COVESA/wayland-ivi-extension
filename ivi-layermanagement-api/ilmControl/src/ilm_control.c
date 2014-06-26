@@ -41,7 +41,7 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
 }
 
 ILM_EXPORT void
-ilmControl_destroy()
+ilmControl_destroy(void)
 {
     gIlmControlPlatformFunc.destroy();
 }
@@ -428,7 +428,7 @@ ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_commitChanges()
+ilm_commitChanges(void)
 {
     return gIlmControlPlatformFunc.commitChanges();
 }

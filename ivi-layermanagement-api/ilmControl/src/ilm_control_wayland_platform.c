@@ -130,7 +130,7 @@ static ilmErrorTypes wayland_surfaceAddNotification(t_ilm_surface surface,
                          surfaceNotificationFunc callback);
 static ilmErrorTypes wayland_surfaceRemoveNotification(t_ilm_surface surface);
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
-static void wayland_destroy();
+static void wayland_destroy(void);
 static ilmErrorTypes wayland_getNativeHandle(t_ilm_uint pid,
                          t_ilm_int *n_handle,
                          t_ilm_nativehandle **p_handles);
@@ -147,9 +147,9 @@ static ilmErrorTypes wayland_surfaceGetVisibility(t_ilm_surface surfaceId,
 static ilmErrorTypes wayland_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
                          t_ilm_int x, t_ilm_int y,
                          t_ilm_int width, t_ilm_int height);
-static ilmErrorTypes wayland_commitChanges();
+static ilmErrorTypes wayland_commitChanges(void);
 
-void init_ilmControlPlatformTable()
+void init_ilmControlPlatformTable(void)
 {
     gIlmControlPlatformFunc.getPropertiesOfLayer =
         wayland_getPropertiesOfLayer;
@@ -408,7 +408,7 @@ wayland_controller_get_layer_context(struct wayland_context *ctx,
     return NULL;
 }
 
-static struct ilm_control_context* get_instance();
+static struct ilm_control_context* get_instance(void);
 
 static void
 output_listener_geometry(void *data,
@@ -1968,7 +1968,7 @@ registry_control_listener_for_main = {
 static struct ilm_control_context ilm_context = {0};
 
 static void
-wayland_destroy()
+wayland_destroy(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     ctx->valid = 0;
@@ -1980,7 +1980,7 @@ wayland_destroy()
 }
 
 static void
-destroy_control_resources()
+destroy_control_resources(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     struct screen_context *ctx_scrn;
@@ -2090,7 +2090,7 @@ control_thread(void *p_ret)
 }
 
 static void
-init_control()
+init_control(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     struct wayland_context *main_ctx = &ctx->main_ctx;
@@ -2142,7 +2142,7 @@ init_control()
 }
 
 static struct ilm_control_context*
-get_instance()
+get_instance(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     if (ctx->valid == 0) {
@@ -3522,7 +3522,7 @@ wayland_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
 }
 
 static ilmErrorTypes
-wayland_commitChanges()
+wayland_commitChanges(void)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();

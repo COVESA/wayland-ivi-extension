@@ -1,3 +1,4 @@
+
 /**************************************************************************
  *
  * Copyright (C) 2013 DENSO CORPORATION
@@ -42,7 +43,7 @@ ilmClient_init(t_ilm_nativedisplay nativedisplay)
 }
 
 ILM_EXPORT void
-ilmClient_destroy()
+ilmClient_destroy(void)
 {
     gIlmClientPlatformFunc.destroy();
 }

@@ -34,11 +34,11 @@
 
 ILM_EXPORT ilmErrorTypes ilmClient_init(t_ilm_nativedisplay);
 ILM_EXPORT ilmErrorTypes ilmControl_init(t_ilm_nativedisplay);
-ILM_EXPORT void ilmClient_destroy();
-ILM_EXPORT void ilmControl_destroy();
+ILM_EXPORT void ilmClient_destroy(void);
+ILM_EXPORT void ilmControl_destroy(void);
 
 ILM_EXPORT ilmErrorTypes
-ilm_init()
+ilm_init(void)
 {
     return ilm_initWithNativedisplay(0);
 }
@@ -78,13 +78,13 @@ ilm_initWithNativedisplay(t_ilm_nativedisplay nativedisplay)
 }
 
 ILM_EXPORT t_ilm_bool
-ilm_isInitialized()
+ilm_isInitialized(void)
 {
     return gIlmCommonPlatformFunc.isInitialized();
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_destroy()
+ilm_destroy(void)
 {
     ilmErrorTypes retVal = gIlmCommonPlatformFunc.destroy();
     ilmClient_destroy();

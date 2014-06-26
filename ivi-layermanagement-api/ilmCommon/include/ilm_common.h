@@ -32,7 +32,7 @@ extern "C" {
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if a connection can not be established to the services.
  */
-ilmErrorTypes ilm_init();
+ilmErrorTypes ilm_init(void);
 
 /**
  * \brief Initializes the IVI LayerManagement Client.
@@ -48,7 +48,7 @@ ilmErrorTypes ilm_initWithNativedisplay(t_ilm_nativedisplay nativedisplay);
  * \return true if client library is initialized
  * \return false if client library is not initialized
  */
-t_ilm_bool ilm_isInitialized();
+t_ilm_bool ilm_isInitialized(void);
 
 /**
  * \brief Commit all changes and execute all enqueued commands since last commit.
@@ -56,7 +56,7 @@ t_ilm_bool ilm_isInitialized();
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
-ilmErrorTypes ilm_commitChanges();
+ilmErrorTypes ilm_commitChanges(void);
 
 /**
  * \brief Destroys the IVI LayerManagement Client.
@@ -64,7 +64,7 @@ ilmErrorTypes ilm_commitChanges();
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not be closed or was not initialized.
  */
-ilmErrorTypes ilm_destroy();
+ilmErrorTypes ilm_destroy(void);
 
 
 

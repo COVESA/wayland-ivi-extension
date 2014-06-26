@@ -46,10 +46,10 @@ static ilmErrorTypes wayland_UpdateInputEventAcceptanceOn(
                          ilmInputDevice devices,
                          t_ilm_bool acceptance);
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
-static void wayland_destroy();
+static void wayland_destroy(void);
 static ilmErrorTypes wayland_surfaceInitialize(t_ilm_surface *pSurfaceId);
 
-void init_ilmClientPlatformTable()
+void init_ilmClientPlatformTable(void)
 {
     gIlmClientPlatformFunc.getScreenResolution =
         wayland_getScreenResolution;
@@ -253,14 +253,14 @@ static const struct wl_registry_listener registry_client_listener = {
 static struct ilm_client_context ilm_context = {0};
 
 static void
-wayland_destroy()
+wayland_destroy(void)
 {
     struct ilm_client_context *ctx = &ilm_context;
     ctx->valid = 0;
 }
 
 static void
-destroy_client_resouses()
+destroy_client_resouses(void)
 {
     struct ilm_client_context *ctx = &ilm_context;
     struct screen_context *ctx_scrn = NULL;
@@ -291,7 +291,7 @@ wayland_init(t_ilm_nativedisplay nativedisplay)
 }
 
 static void
-init_client()
+init_client(void)
 {
     struct ilm_client_context *ctx = &ilm_context;
 
@@ -325,7 +325,7 @@ init_client()
 }
 
 static struct ilm_client_context*
-get_client_instance()
+get_client_instance(void)
 {
     struct ilm_client_context *ctx = &ilm_context;
     if (ctx->valid == 0) {

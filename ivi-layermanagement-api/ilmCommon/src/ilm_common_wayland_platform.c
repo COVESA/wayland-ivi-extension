@@ -28,11 +28,11 @@
 #include "wayland-client.h"
 
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
-static t_ilm_nativedisplay wayland_getNativedisplay();
-static t_ilm_bool wayland_isInitialized();
-static ilmErrorTypes wayland_destroy();
+static t_ilm_nativedisplay wayland_getNativedisplay(void);
+static t_ilm_bool wayland_isInitialized(void);
+static ilmErrorTypes wayland_destroy(void);
 
-void init_ilmCommonPlatformTable()
+void init_ilmCommonPlatformTable(void)
 {
     gIlmCommonPlatformFunc.init = wayland_init;
     gIlmCommonPlatformFunc.getNativedisplay = wayland_getNativedisplay;
@@ -76,7 +76,7 @@ wayland_init(t_ilm_nativedisplay nativedisplay)
 }
 
 static t_ilm_nativedisplay
-wayland_getNativedisplay()
+wayland_getNativedisplay(void)
 {
     struct ilm_common_context *ctx = &ilm_context;
 
@@ -84,7 +84,7 @@ wayland_getNativedisplay()
 }
 
 static t_ilm_bool
-wayland_isInitialized()
+wayland_isInitialized(void)
 {
     struct ilm_common_context *ctx = &ilm_context;
 
@@ -96,7 +96,7 @@ wayland_isInitialized()
 }
 
 static ilmErrorTypes
-wayland_destroy()
+wayland_destroy(void)
 {
     struct ilm_common_context *ctx = &ilm_context;
 
