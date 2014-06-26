@@ -51,6 +51,7 @@ add_dependencies(${PROJECT_NAME}
 set(LIBS
     ${LIBS}
     ilmCommon
+    ivi-extension-protocol
     rt
     dl
     ${CMAKE_THREAD_LIBS_INIT}
