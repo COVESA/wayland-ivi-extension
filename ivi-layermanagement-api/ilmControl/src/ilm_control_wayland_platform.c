@@ -2391,7 +2391,7 @@ wayland_getLayerIDsOnScreen(t_ilm_uint screenId,
                     // compositor sends layers in opposite order
                     // write ids from back to front to turn them around
                     t_ilm_layer* ids = *ppArray;
-                    wl_list_for_each_reverse(ctx_layer, &ctx->main_ctx.list_layer, link)
+                    wl_list_for_each_reverse(ctx_layer, &ctx_screen->order.list_layer, order.link)
                     {
                         *ids = ctx_layer->id_layer;
                         ++ids;
