@@ -72,7 +72,8 @@ class NotificationTest: public TestBase, public ::testing::Test {
 public:
     void SetUp()
     {
-        ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay);
+        ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay));
+
         // set default values
         callbackLayerId = -1;
         LayerProperties = ilmLayerProperties();
@@ -99,7 +100,27 @@ public:
 
     void TearDown()
     {
-        ilm_destroy();
+       //print_lmc_get_scene();
+       t_ilm_layer* layers = NULL;
+       t_ilm_int numLayer=0;
+       EXPECT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&numLayer, &layers));
+       for (t_ilm_int i=0; i<numLayer; i++)
+       {
+           EXPECT_EQ(ILM_SUCCESS, ilm_layerRemove(layers[i]));
+       };
+       free(layers);
+
+       t_ilm_surface* surfaces = NULL;
+       t_ilm_int numSurfaces=0;
+       EXPECT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&numSurfaces, &surfaces));
+       for (t_ilm_int i=0; i<numSurfaces; i++)
+       {
+           EXPECT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surfaces[i]));
+       };
+       free(surfaces);
+
+       EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
+       EXPECT_EQ(ILM_SUCCESS, ilm_destroy());
     }
 
     NotificationTest(){}
