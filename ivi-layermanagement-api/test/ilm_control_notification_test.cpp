@@ -92,6 +92,9 @@ public:
         ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
         ilm_commitChanges();
         timesCalled=0;
+
+        callbackLayerId = INVALID_ID;
+        callbackSurfaceId = INVALID_ID;
     }
 
     void TearDown()
