@@ -27,6 +27,15 @@ extern "C" {
     #include "ilm_control.h"
 }
 
+template <typename T>
+bool contains(T const *actual, size_t as, T expected)
+{
+   for (unsigned i = 0; i < as; i++)
+      if (actual[i] == expected)
+         return true;
+   return false;
+}
+
 class IlmCommandTest : public TestBase, public ::testing::Test {
 public:
     void SetUp()
@@ -470,8 +479,8 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
 
     ASSERT_EQ(old_length+2, length);
-    ASSERT_EQ(surface1, IDs[old_length]);
-    ASSERT_EQ(surface2, IDs[old_length+1]);
+    EXPECT_TRUE(contains(IDs+old_length, 2, surface1));
+    EXPECT_TRUE(contains(IDs+old_length, 2, surface2));
     free(IDs);
 
     // cleanup
@@ -491,8 +500,8 @@ TEST_F(IlmCommandTest, ilm_surfaceCreate_Remove) {
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
 
     ASSERT_EQ(length, 2);
-    ASSERT_EQ(surface1, IDs[0]);
-    ASSERT_EQ(surface2, IDs[1]);
+    EXPECT_TRUE(contains(IDs, 2, surface1));
+    EXPECT_TRUE(contains(IDs, 2, surface2));
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
@@ -674,8 +683,8 @@ TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurface
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, &IDs));
     ASSERT_EQ(length, 2);
-    ASSERT_EQ(surface1, IDs[0]);
-    ASSERT_EQ(surface2, IDs[1]);
+    EXPECT_EQ(surface1, IDs[0]);
+    EXPECT_EQ(surface2, IDs[1]);
     free(IDs);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemoveSurface(layer, surface1));
