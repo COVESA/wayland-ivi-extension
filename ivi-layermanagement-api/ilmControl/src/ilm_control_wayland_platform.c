@@ -3310,21 +3310,7 @@ wayland_layerAddNotification(t_ilm_layer layer,
 static ilmErrorTypes
 wayland_layerRemoveNotification(t_ilm_layer layer)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = get_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->child_ctx, (uint32_t)layer);
-    if (ctx_layer == NULL) {
-        returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-    } else {
-        ctx_layer->notification = NULL;
-
-        returnValue = ILM_SUCCESS;
-    }
-
-    return returnValue;
+   return wayland_layerAddNotification(layer, NULL);
 }
 
 // TODO
@@ -3353,21 +3339,7 @@ wayland_surfaceAddNotification(t_ilm_surface surface,
 static ilmErrorTypes
 wayland_surfaceRemoveNotification(t_ilm_surface surface)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = get_instance();
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = (struct surface_context*)get_surface_context(
-                    &ctx->child_ctx, (uint32_t)surface);
-    if (ctx_surf == NULL) {
-        returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-    } else {
-        ctx_surf->notification = NULL;
-
-        returnValue = ILM_SUCCESS;
-    }
-
-    return returnValue;
+    return wayland_surfaceAddNotification(surface, NULL);
 }
 
 static ilmErrorTypes
