@@ -2570,12 +2570,18 @@ wayland_layerRemove(t_ilm_layer layerId)
 static ilmErrorTypes
 wayland_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType)
 {
-    (void)layerId;
-    /* Not supported */
-    if (pLayerType != NULL) {
-        *pLayerType = ILM_LAYERTYPE_SOFTWARE2D;
+    if (!pLayerType)
+    {
+       return ILM_ERROR_INVALID_ARGUMENTS;
     }
-    return ILM_SUCCESS;
+
+    struct ilm_control_context *ctx = get_instance();
+
+    *pLayerType = wayland_controller_is_inside_layer_list(&ctx->main_ctx.list_layer, layerId) ?
+       ILM_LAYERTYPE_SOFTWARE2D :
+       ILM_LAYERTYPE_UNKNOWN;
+
+    return ILM_SUCCESS; // even if non existent?
 }
 
 static ilmErrorTypes
