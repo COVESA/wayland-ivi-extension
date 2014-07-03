@@ -784,68 +784,8 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
-TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_ilm_surfaceSetDestinationRectangle_ilm_surfaceSetChromaKey) {
-    t_ilm_uint surface = 0xbeef;
-    t_ilm_int chromaKey[3] = {3, 22, 111};
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.8765));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(surface, 89, 6538, 638, 4));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetDestinationRectangle(surface, 54, 47, 947, 9));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOrientation(surface, ILM_NINETY));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, true));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetChromaKey(surface, &chromaKey[0]));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-    ilmSurfaceProperties surfaceProperties;
-    ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface, &surfaceProperties));
-    ASSERT_NEAR(0.8765, surfaceProperties.opacity, 0.1);
-    ASSERT_EQ(89u, surfaceProperties.sourceX);
-    ASSERT_EQ(6538u, surfaceProperties.sourceY);
-    ASSERT_EQ(638u, surfaceProperties.sourceWidth);
-    ASSERT_EQ(4u, surfaceProperties.sourceHeight);
-    ASSERT_EQ(54u, surfaceProperties.destX);
-    ASSERT_EQ(47u, surfaceProperties.destY);
-    ASSERT_EQ(947u, surfaceProperties.destWidth);
-    ASSERT_EQ(9u, surfaceProperties.destHeight);
-    ASSERT_EQ(ILM_NINETY, surfaceProperties.orientation);
-    ASSERT_TRUE( surfaceProperties.visibility);
-    ASSERT_TRUE( surfaceProperties.chromaKeyEnabled);
-    ASSERT_EQ(3u, surfaceProperties.chromaKeyRed);
-    ASSERT_EQ(22u, surfaceProperties.chromaKeyGreen);
-    ASSERT_EQ(111u, surfaceProperties.chromaKeyBlue);
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.436));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(surface, 784, 546, 235, 78));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetDestinationRectangle(surface, 536, 5372, 3, 4316));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOrientation(surface, ILM_TWOHUNDREDSEVENTY));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, false));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetChromaKey(surface, NULL));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-    ilmSurfaceProperties surfaceProperties2;
-    ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface, &surfaceProperties2));
-    ASSERT_NEAR(0.436, surfaceProperties2.opacity, 0.1);
-    ASSERT_EQ(784u, surfaceProperties2.sourceX);
-    ASSERT_EQ(546u, surfaceProperties2.sourceY);
-    ASSERT_EQ(235u, surfaceProperties2.sourceWidth);
-    ASSERT_EQ(78u, surfaceProperties2.sourceHeight);
-    ASSERT_EQ(536u, surfaceProperties2.destX);
-    ASSERT_EQ(5372u, surfaceProperties2.destY);
-    ASSERT_EQ(3u, surfaceProperties2.destWidth);
-    ASSERT_EQ(4316u, surfaceProperties2.destHeight);
-    ASSERT_EQ(ILM_TWOHUNDREDSEVENTY, surfaceProperties2.orientation);
-    ASSERT_FALSE(surfaceProperties2.visibility);
-    ASSERT_FALSE(surfaceProperties2.chromaKeyEnabled);
-
-    // cleaning
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
-}
-
-TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_layerSetDestinationRectangle_ilm_layerSetChromaKey) {
+TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_layerSetDestinationRectangle) {
     t_ilm_uint layer = 0xbeef;
-    t_ilm_int chromaKey[3] = {3, 22, 111};
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
@@ -854,7 +794,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetDestinationRectangle(layer, 54, 47, 947, 9));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetOrientation(layer, ILM_NINETY));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer, true));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetChromaKey(layer, chromaKey));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ilmLayerProperties layerProperties1;
@@ -870,17 +809,12 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_
     ASSERT_EQ(9u, layerProperties1.destHeight);
     ASSERT_EQ(ILM_NINETY, layerProperties1.orientation);
     ASSERT_TRUE( layerProperties1.visibility);
-    ASSERT_TRUE(layerProperties1.chromaKeyEnabled);
-    ASSERT_EQ(3u,   layerProperties1.chromaKeyRed);
-    ASSERT_EQ(22u,  layerProperties1.chromaKeyGreen);
-    ASSERT_EQ(111u, layerProperties1.chromaKeyBlue);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetOpacity(layer, 0.436));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetSourceRectangle(layer, 784, 546, 235, 78));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetDestinationRectangle(layer, 536, 5372, 3, 4316));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetOrientation(layer, ILM_TWOHUNDREDSEVENTY));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer, false));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetChromaKey(layer, NULL));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ilmLayerProperties layerProperties2;
@@ -896,7 +830,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_
     ASSERT_EQ(4316u, layerProperties2.destHeight);
     ASSERT_EQ(ILM_TWOHUNDREDSEVENTY, layerProperties2.orientation);
     ASSERT_FALSE(layerProperties2.visibility);
-    ASSERT_FALSE(layerProperties2.chromaKeyEnabled);
 
     // cleanup
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
