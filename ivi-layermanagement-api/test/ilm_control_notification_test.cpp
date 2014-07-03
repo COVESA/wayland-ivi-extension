@@ -26,13 +26,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <assert.h>
 
 extern "C" {
     #include "ilm_client.h"
     #include "ilm_control.h"
 }
 
+void add_nsecs(struct timespec *tv, long nsec)
+{
+   assert(nsec < 1000000000);
 
+   tv->tv_nsec += nsec;
+   if (tv->tv_nsec >= 1000000000)
+   {
+      tv->tv_nsec -= 1000000000;
+      tv->tv_sec++;
+   }
+}
 
 /* Tests with callbacks
  * For each test first set the global variables to point to where parameters of the callbacks are supposed to be placed.
@@ -104,11 +115,10 @@ public:
     static t_ilm_surface surface;
     static ilmSurfaceProperties SurfaceProperties;
 
-
     static void assertCallbackcalled(int numberOfExpectedCalls=1){
         static struct timespec theTime;
         clock_gettime(CLOCK_REALTIME, &theTime);
-        theTime.tv_sec += 2;
+        add_nsecs(&theTime, 500000000);
         PthreadMutexLock lock(notificationMutex);
         int status = 0;
         do {
@@ -123,7 +133,7 @@ public:
     static void assertNoCallbackIsCalled(){
         struct timespec theTime;
         clock_gettime(CLOCK_REALTIME, &theTime);
-        theTime.tv_sec += 1;
+        add_nsecs(&theTime, 500000000);
         PthreadMutexLock lock(notificationMutex);
         // assert that we have not been notified
         ASSERT_EQ(ETIMEDOUT, pthread_cond_timedwait( &waiterVariable, &notificationMutex, &theTime));
