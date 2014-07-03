@@ -127,15 +127,13 @@ public:
 
     ~NotificationTest(){}
 
-
-
     t_ilm_uint layer;
 
     // Pointers where to put received values for current Test
     static t_ilm_layer callbackLayerId;
-    static t_ilm_layer callbackSurfaceId;
+    static t_ilm_surface callbackSurfaceId;
     static struct ilmLayerProperties LayerProperties;
-    static t_ilm_notification_mask mask;
+    static unsigned int mask;
     static t_ilm_surface surface;
     static ilmSurfaceProperties SurfaceProperties;
 
@@ -163,35 +161,98 @@ public:
         ASSERT_EQ(ETIMEDOUT, pthread_cond_timedwait( &waiterVariable, &notificationMutex, &theTime));
     }
 
-
-    static void LayerCallbackFunction(t_ilm_layer layer, struct ilmLayerProperties* LayerProperties, t_ilm_notification_mask mask)
+    static void LayerCallbackFunction(t_ilm_layer layer, struct ilmLayerProperties* layerProperties, t_ilm_notification_mask m)
     {
         PthreadMutexLock lock(notificationMutex);
 
-        NotificationTest::callbackLayerId = layer;
-        NotificationTest::LayerProperties = *LayerProperties;
-        NotificationTest::mask = static_cast<t_ilm_notification_mask>(NotificationTest::mask|mask);
+        if ((unsigned)m & ILM_NOTIFICATION_VISIBILITY)
+        {
+            LayerProperties.visibility = layerProperties->visibility;
+        }
+
+        if ((unsigned)m & ILM_NOTIFICATION_OPACITY)
+        {
+            LayerProperties.opacity = layerProperties->opacity;
+        }
+
+        if ((unsigned)m & ILM_NOTIFICATION_ORIENTATION)
+        {
+            LayerProperties.orientation = layerProperties->orientation;
+        }
+
+        if ((unsigned)m & ILM_NOTIFICATION_SOURCE_RECT)
+        {
+            LayerProperties.sourceX = layerProperties->sourceX;
+            LayerProperties.sourceY = layerProperties->sourceY;
+            LayerProperties.sourceWidth = layerProperties->sourceWidth;
+            LayerProperties.sourceHeight = layerProperties->sourceHeight;
+        }
+
+        if ((unsigned)m & ILM_NOTIFICATION_DEST_RECT)
+        {
+            LayerProperties.destX = layerProperties->destX;
+            LayerProperties.destY = layerProperties->destY;
+            LayerProperties.destWidth = layerProperties->destWidth;
+            LayerProperties.destHeight = layerProperties->destHeight;
+        }
+
+        EXPECT_TRUE(callbackLayerId == (unsigned)-1 || callbackLayerId == layer);
+        callbackLayerId = layer;
+        mask |= (unsigned)m;
         timesCalled++;
+
         pthread_cond_signal( &waiterVariable );
     }
 
-    static void SurfaceCallbackFunction(t_ilm_surface surface, struct ilmSurfaceProperties* surfaceProperties, t_ilm_notification_mask mask)
+    static void SurfaceCallbackFunction(t_ilm_surface surface, struct ilmSurfaceProperties* surfaceProperties, t_ilm_notification_mask m)
     {
         PthreadMutexLock lock(notificationMutex);
 
-        NotificationTest::callbackSurfaceId = surface;
-        NotificationTest::SurfaceProperties = *surfaceProperties;
-        NotificationTest::mask = static_cast<t_ilm_notification_mask>(NotificationTest::mask|mask);
+        if ((unsigned)m & ILM_NOTIFICATION_VISIBILITY)
+        {
+            SurfaceProperties.visibility = surfaceProperties->visibility;
+        }
+
+        if ((unsigned)m & ILM_NOTIFICATION_OPACITY)
+        {
+            SurfaceProperties.opacity = surfaceProperties->opacity;
+        }
+
+        if ((unsigned)m & ILM_NOTIFICATION_ORIENTATION)
+        {
+            SurfaceProperties.orientation = surfaceProperties->orientation;
+        }
+
+        if ((unsigned)m & ILM_NOTIFICATION_SOURCE_RECT)
+        {
+            SurfaceProperties.sourceX = surfaceProperties->sourceX;
+            SurfaceProperties.sourceY = surfaceProperties->sourceY;
+            SurfaceProperties.sourceWidth = surfaceProperties->sourceWidth;
+            SurfaceProperties.sourceHeight = surfaceProperties->sourceHeight;
+        }
+
+        if ((unsigned)m & ILM_NOTIFICATION_DEST_RECT)
+        {
+            SurfaceProperties.destX = surfaceProperties->destX;
+            SurfaceProperties.destY = surfaceProperties->destY;
+            SurfaceProperties.destWidth = surfaceProperties->destWidth;
+            SurfaceProperties.destHeight = surfaceProperties->destHeight;
+        }
+
+        EXPECT_TRUE(callbackSurfaceId == (unsigned)-1 || callbackSurfaceId == surface);
+        callbackSurfaceId = surface;
+        mask |= (unsigned)m;
         timesCalled++;
+
         pthread_cond_signal( &waiterVariable );
     }
 };
 
 // Pointers where to put received values for current Test
 t_ilm_layer NotificationTest::callbackLayerId;
-t_ilm_layer NotificationTest::callbackSurfaceId;
+t_ilm_surface NotificationTest::callbackSurfaceId;
 struct ilmLayerProperties NotificationTest::LayerProperties;
-t_ilm_notification_mask NotificationTest::mask;
+unsigned int NotificationTest::mask;
 t_ilm_surface NotificationTest::surface;
 ilmSurfaceProperties NotificationTest::SurfaceProperties;
 
