@@ -144,11 +144,13 @@ public:
         PthreadMutexLock lock(notificationMutex);
         int status = 0;
         do {
-            if (numberOfExpectedCalls!=timesCalled){
+            if (numberOfExpectedCalls!=timesCalled) {
                 status = pthread_cond_timedwait( &waiterVariable, &notificationMutex, &theTime);
             }
         } while (status!=ETIMEDOUT && numberOfExpectedCalls!=timesCalled);
-        ASSERT_NE(ETIMEDOUT, status);
+
+        // we cannot rely on a timeout as layer callbacks are always called synchronously on ilm_commitChanges()
+        EXPECT_NE(ETIMEDOUT, status);
         timesCalled=0;
     }
 
