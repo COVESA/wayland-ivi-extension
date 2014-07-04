@@ -1364,7 +1364,7 @@ controller_surface_listener_content_child(void *data,
             return;
         }
 
-        ivi_controller_surface_destroy(controller, IVI_CONTROLLER_OBJECT_TYPE_SURFACE);
+        ivi_controller_surface_destroy(controller, 1);
 
         wl_list_remove(&ctx_surf->link);
         free(ctx_surf);
@@ -1557,7 +1557,7 @@ controller_surface_listener_content_main(void *data,
             return;
         }
 
-        ivi_controller_surface_destroy(controller, IVI_CONTROLLER_OBJECT_TYPE_SURFACE);
+        ivi_controller_surface_destroy(controller, 1);
 
         wl_list_remove(&ctx_surf->link);
         free(ctx_surf);
@@ -2553,8 +2553,7 @@ wayland_layerRemove(t_ilm_layer layerId)
     wl_list_for_each_safe(ctx_layer, ctx_next,
             &ctx->main_ctx.list_layer, link) {
         if (ctx_layer->id_layer == layerId) {
-            ivi_controller_layer_destroy(ctx_layer->controller,
-                IVI_CONTROLLER_OBJECT_TYPE_LAYER);
+            ivi_controller_layer_destroy(ctx_layer->controller, 1);
 
             wl_list_remove(&ctx_layer->link);
             free(ctx_layer);
