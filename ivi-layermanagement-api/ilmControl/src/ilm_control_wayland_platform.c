@@ -1405,73 +1405,11 @@ controller_listener_screen_for_main(void *data,
     ctx_screen->controller = controller_screen;
 }
 
-static void
-controller_listener_layer_for_main(void *data,
-                          struct ivi_controller *controller,
-                          uint32_t id_layer)
-{
-    create_controller_layer(data, 0, 0, id_layer);
-}
-
-static void
-controller_listener_surface_for_main(void *data,
-                            struct ivi_controller *controller,
-                            uint32_t id_surface)
-{
-    struct ilm_control_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-    int32_t is_inside = 0;
-
-    is_inside = wayland_controller_is_inside_surface_list(
-                    &ctx->main_ctx.list_surface, id_surface);
-
-    if (is_inside != 0) {
-        fprintf(stderr, "invalid id_surface in controller_listener_surface\n");
-        return;
-    }
-
-    ctx_surf = calloc(1, sizeof *ctx_surf);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Failed to allocate memory for surface_context\n");
-        return;
-    }
-
-    ctx_surf->controller = ivi_controller_surface_create(
-                               controller, id_surface);
-    if (ctx_surf->controller == NULL) {
-        fprintf(stderr, "Failed to create controller surface\n");
-        return;
-    }
-    ctx_surf->id_surface = id_surface;
-    ctx_surf->prop.inputDevicesAcceptance = ILM_INPUT_DEVICE_ALL;
-
-    wl_list_init(&ctx_surf->link);
-    wl_list_insert(&ctx->main_ctx.list_surface, &ctx_surf->link);
-    ivi_controller_surface_add_listener(ctx_surf->controller,
-                                        &controller_surface_listener_main, ctx);
-}
-
-static void
-controller_listener_error_for_main(void *data,
-                          struct ivi_controller *ivi_controller,
-	                  int32_t object_id,
-	                  int32_t object_type,
-	                  int32_t error_code,
-	                  const char *error_text)
-{
-    (void)data;
-    (void)ivi_controller;
-    (void)object_id;
-    (void)object_type;
-    (void)error_code;
-    (void)error_text;
-}
-
 static struct ivi_controller_listener controller_listener_for_main = {
     controller_listener_screen_for_main,
-    controller_listener_layer_for_main,
-    controller_listener_surface_for_main,
-    controller_listener_error_for_main
+    controller_listener_layer_for_child,
+    controller_listener_surface_for_child,
+    controller_listener_error_for_child
 };
 
 static void
