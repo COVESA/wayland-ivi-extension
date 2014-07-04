@@ -700,7 +700,7 @@ controller_layer_listener_destroyed_child(void *data,
     free(ctx_layer);
 }
 
-static struct ivi_controller_layer_listener controller_layer_listener_child =
+static struct ivi_controller_layer_listener controller_layer_listener =
 {
     controller_layer_listener_visibility_child,
     controller_layer_listener_opacity_child,
@@ -2076,7 +2076,7 @@ static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width
      wl_list_init(&ctx_layer->order.list_surface);
 
      ivi_controller_layer_add_listener(ctx_layer->controller,
-                                   &controller_layer_listener_child, ctx_layer);
+                                   &controller_layer_listener, ctx_layer);
 
      return 0;
 }
