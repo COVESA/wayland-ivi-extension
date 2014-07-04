@@ -516,13 +516,12 @@ get_screen_context_by_serverid(struct wayland_context *ctx,
 }
 
 static void
-add_orderlayer_to_screen(struct wayland_context *ctx,
-                         struct layer_context *ctx_layer,
+add_orderlayer_to_screen(struct layer_context *ctx_layer,
                          struct wl_output* output)
 {
     struct screen_context *ctx_scrn = NULL;
 
-    ctx_scrn = get_screen_context_by_output(ctx, output);
+    ctx_scrn = get_screen_context_by_output(ctx_layer->ctx, output);
     if (ctx_scrn == NULL) {
         fprintf(stderr, "failed to add_orderlayer_to_screen\n");
         return;
@@ -544,31 +543,10 @@ add_orderlayer_to_screen(struct wayland_context *ctx,
 }
 
 static void
-remove_orderlayer_from_screen(struct wayland_context *ctx,
-                              struct layer_context *ctx_layer)
+remove_orderlayer_from_screen(struct layer_context *ctx_layer)
 {
-    struct screen_context *ctx_scrn = NULL;
-    struct layer_context *ctx_orderlayer = NULL;
-    struct layer_context *next = NULL;
-    struct wl_proxy *pxy_layer = NULL;
-    struct wl_proxy *pxy_orderlayer = NULL;
-    uint32_t id_layer = 0;
-    uint32_t id_orderlayer = 0;
-
-    wl_list_for_each(ctx_scrn, &ctx->list_screen, link) {
-        wl_list_for_each_safe(ctx_orderlayer, next,
-                         &ctx_scrn->order.list_layer,
-                         order.link) {
-            pxy_layer = (struct wl_proxy*)ctx_layer->controller;
-            pxy_orderlayer = (struct wl_proxy*)ctx_orderlayer->controller;
-            id_layer = wl_proxy_get_id(pxy_layer);
-            id_orderlayer = wl_proxy_get_id(pxy_orderlayer);
-            if (id_layer == id_orderlayer) {
-                wl_list_remove(&ctx_orderlayer->order.link);
-                break;
-            }
-        }
-    }
+    wl_list_remove(&ctx_layer->order.link);
+    wl_list_init(&ctx_layer->order.link);
 }
 
 static void
@@ -707,9 +685,9 @@ controller_layer_listener_screen_child(void *data,
     struct layer_context *ctx_layer = data;
 
     if (output == NULL) {
-        remove_orderlayer_from_screen(ctx_layer->ctx, ctx_layer);
+        remove_orderlayer_from_screen(ctx_layer);
     } else {
-        add_orderlayer_to_screen(ctx_layer->ctx, ctx_layer, output);
+        add_orderlayer_to_screen(ctx_layer, output);
     }
 }
 
