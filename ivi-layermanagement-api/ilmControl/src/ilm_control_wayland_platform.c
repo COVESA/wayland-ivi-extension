@@ -1315,7 +1315,14 @@ controller_listener_layer_for_child(void *data,
                           struct ivi_controller *controller,
                           uint32_t id_layer)
 {
-    create_controller_layer(data, 0, 0, id_layer);
+   struct wayland_context *ctx = data;
+
+   if (wayland_controller_is_inside_layer_list(&ctx->list_layer, id_layer))
+   {
+      return;
+   }
+
+   (void) create_controller_layer(ctx, 0, 0, id_layer);
 }
 
 static void
@@ -2108,11 +2115,6 @@ wayland_getSurfaceIDsOnLayer(t_ilm_layer layer,
 
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid)
 {
-     if (wayland_controller_get_layer_context(ctx, layerid))
-     {
-         return -1;
-     }
-
      struct layer_context *ctx_layer = calloc(1, sizeof *ctx_layer);
      if (ctx_layer == NULL) {
          fprintf(stderr, "Failed to allocate memory for layer_context\n");
