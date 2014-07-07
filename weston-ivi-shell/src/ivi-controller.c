@@ -736,6 +736,12 @@ controller_surface_set_destination_rectangle(struct wl_client *client,
 {
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
     (void)client;
+
+    // TODO: create set transition type protocol
+    ivi_layout_surfaceSetTransition( ivisurf->layout_surface,
+                                     IVI_LAYOUT_TRANSITION_NONE,
+                                     300); // ms
+
     ivi_layout_surfaceSetDestinationRectangle(ivisurf->layout_surface,
             (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
