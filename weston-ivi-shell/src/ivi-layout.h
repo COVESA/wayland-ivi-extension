@@ -52,18 +52,89 @@ extern "C" {
 #include "compositor.h"
 
 struct ivi_layout_surface;
+struct ivi_layout_layer;
+struct ivi_layout_screen;
+
+struct ivi_layout_SurfaceProperties
+{
+    float    opacity;
+    uint32_t sourceX;
+    uint32_t sourceY;
+    uint32_t sourceWidth;
+    uint32_t sourceHeight;
+    uint32_t origSourceWidth;
+    uint32_t origSourceHeight;
+    int32_t  startX;
+    int32_t  startY;
+    uint32_t startWidth;
+    uint32_t startHeight;
+    int32_t  destX;
+    int32_t  destY;
+    uint32_t destWidth;
+    uint32_t destHeight;
+    uint32_t orientation;
+    uint32_t visibility;
+    uint32_t frameCounter;
+    uint32_t drawCounter;
+    uint32_t updateCounter;
+    uint32_t pixelformat;
+    uint32_t nativeSurface;
+    uint32_t inputDevicesAcceptance;
+    uint32_t chromaKeyEnabled;
+    uint32_t chromaKeyRed;
+    uint32_t chromaKeyGreen;
+    uint32_t chromaKeyBlue;
+    int32_t  creatorPid;
+    int32_t  transitionType;
+    uint32_t transitionDuration;
+};
+
+struct ivi_layout_LayerProperties
+{
+    float    opacity;
+    uint32_t sourceX;
+    uint32_t sourceY;
+    uint32_t sourceWidth;
+    uint32_t sourceHeight;
+    uint32_t origSourceWidth;
+    uint32_t origSourceHeight;
+    int32_t  destX;
+    int32_t  destY;
+    uint32_t destWidth;
+    uint32_t destHeight;
+    uint32_t orientation;
+    uint32_t visibility;
+    uint32_t type;
+    uint32_t chromaKeyEnabled;
+    uint32_t chromaKeyRed;
+    uint32_t chromaKeyGreen;
+    uint32_t chromaKeyBlue;
+    int32_t  creatorPid;
+    int32_t  transitionType;
+    uint32_t transitionDuration;
+    double   startAlpha;
+    double   endAlpha;
+    uint32_t isFadeIn;
+};
+
+enum ivi_layout_warning_flag {
+    IVI_WARNING_INVALID_WL_SURFACE,
+    IVI_WARNING_IVI_ID_IN_USE
+};
 
 struct ivi_layout_interface {
 	struct weston_view* (*get_weston_view)(struct ivi_layout_surface *surface);
 	void (*surfaceConfigure)(struct ivi_layout_surface *ivisurf,
-				 uint32_t width, uint32_t height);
+				 int32_t width, int32_t height);
 	int32_t (*surfaceSetNativeContent)(struct weston_surface *wl_surface,
-					   uint32_t width,
-                                           uint32_t height,
+                                           int32_t width,
+                                           int32_t height,
                                            uint32_t id_surface);
 	struct ivi_layout_surface* (*surfaceCreate)(struct weston_surface *wl_surface,
 							      uint32_t id_surface);
 	void (*initWithCompositor)(struct weston_compositor *ec);
+	void (*emitWarningSignal)(uint32_t id_surface,
+				enum ivi_layout_warning_flag flag);
 };
 
 WL_EXPORT struct ivi_layout_interface ivi_layout_interface;

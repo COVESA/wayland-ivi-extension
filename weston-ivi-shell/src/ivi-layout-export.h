@@ -52,57 +52,6 @@ extern "C" {
 #include "compositor.h"
 #include "ivi-layout.h"
 
-struct ivi_layout_SurfaceProperties
-{
-    float    opacity;
-    uint32_t sourceX;
-    uint32_t sourceY;
-    uint32_t sourceWidth;
-    uint32_t sourceHeight;
-    uint32_t origSourceWidth;
-    uint32_t origSourceHeight;
-    int32_t  destX;
-    int32_t  destY;
-    uint32_t destWidth;
-    uint32_t destHeight;
-    uint32_t orientation;
-    uint32_t visibility;
-    uint32_t frameCounter;
-    uint32_t drawCounter;
-    uint32_t updateCounter;
-    uint32_t pixelformat;
-    uint32_t nativeSurface;
-    uint32_t inputDevicesAcceptance;
-    uint32_t chromaKeyEnabled;
-    uint32_t chromaKeyRed;
-    uint32_t chromaKeyGreen;
-    uint32_t chromaKeyBlue;
-    int32_t  creatorPid;
-};
-
-struct ivi_layout_LayerProperties
-{
-    float    opacity;
-    uint32_t sourceX;
-    uint32_t sourceY;
-    uint32_t sourceWidth;
-    uint32_t sourceHeight;
-    uint32_t origSourceWidth;
-    uint32_t origSourceHeight;
-    int32_t  destX;
-    int32_t  destY;
-    uint32_t destWidth;
-    uint32_t destHeight;
-    uint32_t orientation;
-    uint32_t visibility;
-    uint32_t type;
-    uint32_t chromaKeyEnabled;
-    uint32_t chromaKeyRed;
-    uint32_t chromaKeyGreen;
-    uint32_t chromaKeyBlue;
-    int32_t  creatorPid;
-};
-
 struct ivi_layout_layer;
 struct ivi_layout_screen;
 
@@ -119,6 +68,17 @@ enum ivi_layout_notification_mask {
     IVI_NOTIFICATION_ADD         = (1 << 9),
     IVI_NOTIFICATION_REMOVE      = (1 << 10),
     IVI_NOTIFICATION_ALL         = 0xFFFF
+};
+
+enum ivi_layout_transition_type{
+    IVI_LAYOUT_TRANSITION_NONE,
+    IVI_LAYOUT_TRANSITION_VIEW_DEFAULT,
+    IVI_LAYOUT_TRANSITION_VIEW_DEST_RECT_ONLY,
+    IVI_LAYOUT_TRANSITION_VIEW_FADE_ONLY,
+    IVI_LAYOUT_TRANSITION_LAYER_FADE,
+    IVI_LAYOUT_TRANSITION_LAYER_MOVE,
+    IVI_LAYOUT_TRANSITION_LAYER_VIEW_ORDER,
+    IVI_LAYOUT_TRANSITION_MAX,
 };
 
 typedef void(*layerPropertyNotificationFunc)(struct ivi_layout_layer *ivilayer,
@@ -144,6 +104,10 @@ typedef void(*surfaceRemoveNotificationFunc)(struct ivi_layout_surface *ivisurf,
                                             void *userdata);
 
 typedef void(*surfaceConfigureNotificationFunc)(struct ivi_layout_surface *ivisurf,
+                                            void *userdata);
+
+typedef void(*ivi_controller_surface_content_callback)(struct ivi_layout_surface *ivisurf,
+                                            int32_t content,
                                             void *userdata);
 
 /**
@@ -275,8 +239,8 @@ ivi_layout_getScreenFromId(uint32_t id_screen);
  */
 int32_t
 ivi_layout_getScreenResolution(struct ivi_layout_screen *iviscrn,
-                                  uint32_t *pWidth,
-                                  uint32_t *pHeight);
+                                  int32_t *pWidth,
+                                  int32_t *pHeight);
 
 /**
  * \brief register for notification on property changes of surface
@@ -326,6 +290,17 @@ ivi_layout_surfaceSetNativeContent(struct weston_surface *wl_surface,
 */
 
 /**
+ * \brief Set an observer callback for surface content status change.
+ *
+ * \return  0 if the method call was successful
+ * \return -1 if the method call was failed
+ */
+int32_t
+ivi_layout_surfaceSetContentObserver(struct ivi_layout_surface *ivisurf,
+                                     ivi_controller_surface_content_callback callback,
+                                     void* userdata);
+
+/**
  * \brief initialize ivi_layout_surface dest/source width and height
  */
 /*
@@ -359,8 +334,8 @@ ivi_layout_surfaceRemove(struct ivi_layout_surface *ivisurf);
  */
 int32_t
 ivi_layout_UpdateInputEventAcceptanceOn(struct ivi_layout_surface *ivisurf,
-                                           uint32_t devices,
-                                           uint32_t acceptance);
+                                           int32_t devices,
+                                           int32_t acceptance);
 
 /**
  * \brief  Get the layer properties
@@ -380,7 +355,7 @@ ivi_layout_getPropertiesOfLayer(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_getNumberOfHardwareLayers(uint32_t id_screen,
-                                        uint32_t *pNumberOfHardwareLayers);
+                                        int32_t *pNumberOfHardwareLayers);
 
 /**
  * \brief Get the screens
@@ -389,7 +364,7 @@ ivi_layout_getNumberOfHardwareLayers(uint32_t id_screen,
  * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_getScreens(uint32_t *pLength, struct ivi_layout_screen ***ppArray);
+ivi_layout_getScreens(int32_t *pLength, struct ivi_layout_screen ***ppArray);
 
 /**
  * \brief Get the screens under the given layer
@@ -399,7 +374,7 @@ ivi_layout_getScreens(uint32_t *pLength, struct ivi_layout_screen ***ppArray);
  */
 int32_t
 ivi_layout_getScreensUnderLayer(struct ivi_layout_layer *ivilayer,
-                                   uint32_t *pLength,
+                                   int32_t *pLength,
                                    struct ivi_layout_screen ***ppArray);
 
 /**
@@ -409,7 +384,7 @@ ivi_layout_getScreensUnderLayer(struct ivi_layout_layer *ivilayer,
  * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_getLayers(uint32_t *pLength, struct ivi_layout_layer ***ppArray);
+ivi_layout_getLayers(int32_t *pLength, struct ivi_layout_layer ***ppArray);
 
 /**
  * \brief Get all Layers of the given screen
@@ -419,7 +394,7 @@ ivi_layout_getLayers(uint32_t *pLength, struct ivi_layout_layer ***ppArray);
  */
 int32_t
 ivi_layout_getLayersOnScreen(struct ivi_layout_screen *iviscrn,
-                                uint32_t *pLength,
+                                int32_t *pLength,
                                 struct ivi_layout_layer ***ppArray);
 
 /**
@@ -430,7 +405,7 @@ ivi_layout_getLayersOnScreen(struct ivi_layout_screen *iviscrn,
  */
 int32_t
 ivi_layout_getLayersUnderSurface(struct ivi_layout_surface *ivisurf,
-                                    uint32_t *pLength,
+                                    int32_t *pLength,
                                     struct ivi_layout_layer ***ppArray);
 
 /**
@@ -440,7 +415,7 @@ ivi_layout_getLayersUnderSurface(struct ivi_layout_surface *ivisurf,
  * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_getSurfaces(uint32_t *pLength, struct ivi_layout_surface ***ppArray);
+ivi_layout_getSurfaces(int32_t *pLength, struct ivi_layout_surface ***ppArray);
 
 /**
  * \brief Get all Surfaces which are currently registered to a given layer and are managed by the services
@@ -450,7 +425,7 @@ ivi_layout_getSurfaces(uint32_t *pLength, struct ivi_layout_surface ***ppArray);
  */
 int32_t
 ivi_layout_getSurfacesOnLayer(struct ivi_layout_layer *ivilayer,
-                                 uint32_t *pLength,
+                                 int32_t *pLength,
                                  struct ivi_layout_surface ***ppArray);
 
 /**
@@ -461,7 +436,7 @@ ivi_layout_getSurfacesOnLayer(struct ivi_layout_layer *ivilayer,
  */
 struct ivi_layout_layer *
 ivi_layout_layerCreateWithDimension(uint32_t id_layer,
-                                       uint32_t width, uint32_t height);
+                                       int32_t width, int32_t height);
 
 /**
  * \brief Removes a layer which is currently managed by the service
@@ -480,7 +455,7 @@ ivi_layout_layerRemove(struct ivi_layout_layer *ivilayer);
  */
 int32_t
 ivi_layout_layerGetType(struct ivi_layout_layer *ivilayer,
-                           uint32_t *pLayerType);
+                           int32_t *pLayerType);
 
 /**
  * \brief Set the visibility of a layer. If a layer is not visible, the layer and its
@@ -491,7 +466,7 @@ ivi_layout_layerGetType(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layerSetVisibility(struct ivi_layout_layer *ivilayer,
-                                 uint32_t newVisibility);
+                                 int32_t newVisibility);
 
 /**
  * \brief Get the visibility of a layer. If a layer is not visible, the layer and its
@@ -502,7 +477,7 @@ ivi_layout_layerSetVisibility(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layerGetVisibility(struct ivi_layout_layer *ivilayer,
-                                 uint32_t *pVisibility);
+                                 int32_t *pVisibility);
 
 /**
  * \brief Set the opacity of a layer.
@@ -531,8 +506,8 @@ ivi_layout_layerGetOpacity(struct ivi_layout_layer *ivilayer, float *pOpacity);
  */
 int32_t
 ivi_layout_layerSetSourceRectangle(struct ivi_layout_layer *ivilayer,
-                                      uint32_t x, uint32_t y,
-                                      uint32_t width, uint32_t height);
+                                      int32_t x, int32_t y,
+                                      int32_t width, int32_t height);
 
 /**
  * \brief Set the destination area on the display for a layer.
@@ -544,7 +519,7 @@ ivi_layout_layerSetSourceRectangle(struct ivi_layout_layer *ivilayer,
 int32_t
 ivi_layout_layerSetDestinationRectangle(struct ivi_layout_layer *ivilayer,
                                            int32_t x, int32_t y,
-                                           uint32_t width, uint32_t height);
+                                           int32_t width, int32_t height);
 
 /**
  * \brief Get the horizontal and vertical dimension of the layer.
@@ -554,7 +529,7 @@ ivi_layout_layerSetDestinationRectangle(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layerGetDimension(struct ivi_layout_layer *ivilayer,
-                                uint32_t *pDimension);
+                                int32_t *pDimension);
 
 /**
  * \brief Set the horizontal and vertical dimension of the layer.
@@ -564,7 +539,7 @@ ivi_layout_layerGetDimension(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layerSetDimension(struct ivi_layout_layer *ivilayer,
-                                uint32_t *pDimension);
+                                int32_t *pDimension);
 
 /**
  * \brief Get the horizontal and vertical position of the layer.
@@ -594,7 +569,7 @@ ivi_layout_layerSetPosition(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layerSetOrientation(struct ivi_layout_layer *ivilayer,
-                                  uint32_t orientation);
+                                  int32_t orientation);
 
 /**
  * \brief Gets the orientation of a layer.
@@ -604,7 +579,7 @@ ivi_layout_layerSetOrientation(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layerGetOrientation(struct ivi_layout_layer *ivilayer,
-                                  uint32_t *pOrientation);
+                                  int32_t *pOrientation);
 
 /**
  * \brief Sets the color value which defines the transparency value.
@@ -614,7 +589,7 @@ ivi_layout_layerGetOrientation(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layerSetChromaKey(struct ivi_layout_layer *ivilayer,
-                                uint32_t* pColor);
+                                int32_t* pColor);
 
 /**
  * \brief Sets render order of surfaces within one layer
@@ -625,7 +600,7 @@ ivi_layout_layerSetChromaKey(struct ivi_layout_layer *ivilayer,
 int32_t
 ivi_layout_layerSetRenderOrder(struct ivi_layout_layer *ivilayer,
                                   struct ivi_layout_surface **pSurface,
-                                  uint32_t number);
+                                  int32_t number);
 
 /**
  * \brief Get the capabilities of a layer
@@ -635,7 +610,7 @@ ivi_layout_layerSetRenderOrder(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layerGetCapabilities(struct ivi_layout_layer *ivilayer,
-                                   uint32_t *pCapabilities);
+                                   int32_t *pCapabilities);
 
 /**
  * \brief Get the possible capabilities of a layertype
@@ -644,8 +619,8 @@ ivi_layout_layerGetCapabilities(struct ivi_layout_layer *ivilayer,
  * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_layerTypeGetCapabilities(uint32_t layerType,
-                                       uint32_t *pCapabilities);
+ivi_layout_layerTypeGetCapabilities(int32_t layerType,
+                                       int32_t *pCapabilities);
 
 /**
  * \brief Create the logical surface, which has no native buffer associated
@@ -665,7 +640,7 @@ ivi_layout_surfaceInitialize(struct ivi_layout_surface **pSurface);
  */
 int32_t
 ivi_layout_surfaceSetVisibility(struct ivi_layout_surface *ivisurf,
-                                   uint32_t newVisibility);
+                                   int32_t newVisibility);
 
 /**
  * \brief Get the visibility of a surface.
@@ -676,7 +651,7 @@ ivi_layout_surfaceSetVisibility(struct ivi_layout_surface *ivisurf,
  */
 int32_t
 ivi_layout_surfaceGetVisibility(struct ivi_layout_surface *ivisurf,
-                                   uint32_t *pVisibility);
+                                   int32_t *pVisibility);
 
 /**
  * \brief Set the opacity of a surface.
@@ -729,7 +704,7 @@ ivi_layout_GetKeyboardFocusSurfaceId(struct ivi_layout_surface **pSurfaceId);
 int32_t
 ivi_layout_surfaceSetDestinationRectangle(struct ivi_layout_surface *ivisurf,
                                              int32_t x, int32_t y,
-                                             uint32_t width, uint32_t height);
+                                             int32_t width, int32_t height);
 
 /**
  * \brief Set the horizontal and vertical dimension of the surface.
@@ -739,7 +714,7 @@ ivi_layout_surfaceSetDestinationRectangle(struct ivi_layout_surface *ivisurf,
  */
 int32_t
 ivi_layout_surfaceSetDimension(struct ivi_layout_surface *ivisurf,
-                                  uint32_t *pDimension);
+                                  int32_t *pDimension);
 
 /**
  * \brief Get the horizontal and vertical dimension of the surface.
@@ -749,7 +724,7 @@ ivi_layout_surfaceSetDimension(struct ivi_layout_surface *ivisurf,
  */
 int32_t
 ivi_layout_surfaceGetDimension(struct ivi_layout_surface *ivisurf,
-                                  uint32_t *pDimension);
+                                  int32_t *pDimension);
 
 /**
  * \brief Sets the horizontal and vertical position of the surface.
@@ -779,7 +754,7 @@ ivi_layout_surfaceGetPosition(struct ivi_layout_surface *ivisurf,
  */
 int32_t
 ivi_layout_surfaceSetOrientation(struct ivi_layout_surface *ivisurf,
-                                    uint32_t orientation);
+                                    int32_t orientation);
 
 /**
  * \brief Gets the orientation of a surface.
@@ -789,7 +764,7 @@ ivi_layout_surfaceSetOrientation(struct ivi_layout_surface *ivisurf,
  */
 int32_t
 ivi_layout_surfaceGetOrientation(struct ivi_layout_surface *ivisurf,
-                                    uint32_t *pOrientation);
+                                    int32_t *pOrientation);
 
 /**
  * \brief Gets the pixelformat of a surface.
@@ -799,7 +774,7 @@ ivi_layout_surfaceGetOrientation(struct ivi_layout_surface *ivisurf,
  */
 int32_t
 ivi_layout_surfaceGetPixelformat(struct ivi_layout_layer *ivisurf,
-                                    uint32_t *pPixelformat);
+                                    int32_t *pPixelformat);
 
 /**
  * \brief Sets the color value which defines the transparency value of a surface.
@@ -809,7 +784,7 @@ ivi_layout_surfaceGetPixelformat(struct ivi_layout_layer *ivisurf,
  */
 int32_t
 ivi_layout_surfaceSetChromaKey(struct ivi_layout_surface *ivisurf,
-                                  uint32_t* pColor);
+                                  int32_t* pColor);
 
 /**
  * \brief Add a layer to a screen which is currently managed by the service
@@ -830,7 +805,7 @@ ivi_layout_screenAddLayer(struct ivi_layout_screen *iviscrn,
 int32_t
 ivi_layout_screenSetRenderOrder(struct ivi_layout_screen *iviscrn,
                                    struct ivi_layout_layer **pLayer,
-                                   const uint32_t number);
+                                   const int32_t number);
 
 /**
  * \brief Enable or disable a rendering optimization
@@ -839,7 +814,7 @@ ivi_layout_screenSetRenderOrder(struct ivi_layout_screen *iviscrn,
  * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_SetOptimizationMode(uint32_t id, uint32_t mode);
+ivi_layout_SetOptimizationMode(uint32_t id, int32_t mode);
 
 /**
  * \brief Get the current enablement for an optimization
@@ -848,7 +823,7 @@ ivi_layout_SetOptimizationMode(uint32_t id, uint32_t mode);
  * \return -1 if the method call was failed
  */
 int32_t
-ivi_layout_GetOptimizationMode(uint32_t id, uint32_t *pMode);
+ivi_layout_GetOptimizationMode(uint32_t id, int32_t *pMode);
 
 /**
  * \brief register for notification on property changes of layer
@@ -908,8 +883,8 @@ ivi_layout_layerRemoveSurface(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_surfaceSetSourceRectangle(struct ivi_layout_surface *ivisurf,
-                                        uint32_t x, uint32_t y,
-                                        uint32_t width, uint32_t height);
+                                        int32_t x, int32_t y,
+                                        int32_t width, int32_t height);
 
 /**
  * \brief get weston_output from ivi_layout_screen.
@@ -920,6 +895,24 @@ ivi_layout_surfaceSetSourceRectangle(struct ivi_layout_surface *ivisurf,
  */
 struct weston_output *
 ivi_layout_screenGetOutput(struct ivi_layout_screen *);
+
+int32_t
+ivi_layout_layerSetTransition(struct ivi_layout_layer *ivilayer,
+                              enum ivi_layout_transition_type type,
+                              uint32_t duration);
+
+int32_t
+ivi_layout_layerSetFadeInfo(struct ivi_layout_layer* layer,
+                                    uint32_t is_fade_in,
+                                    double start_alpha, double end_alpha);
+
+int32_t
+ivi_layout_surfaceSetTransition(struct ivi_layout_surface *ivisurf,
+                                enum ivi_layout_transition_type type,
+                                uint32_t duration);
+
+int32_t
+ivi_layout_surfaceSetTransitionDuration(struct ivi_layout_surface *ivisurf,uint32_t duration);
 
 /**
  * \brief Commit all changes and execute all enqueued commands since last commit.
