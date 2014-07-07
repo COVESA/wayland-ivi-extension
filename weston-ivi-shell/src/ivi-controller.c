@@ -1553,6 +1553,7 @@ surface_event_create(struct ivi_layout_surface *layout_surface,
     struct ivishell *shell = userdata;
     struct ivisurface *ivisurf = NULL;
     uint32_t id_surface = 0;
+    struct ivicontroller_surface *ctrlsurf = NULL;
 
     id_surface = ivi_layout_getIdOfSurface(layout_surface);
 
@@ -1560,6 +1561,13 @@ surface_event_create(struct ivi_layout_surface *layout_surface,
     if (ivisurf == NULL) {
         weston_log("failed to create surface");
         return;
+    }
+
+    wl_list_for_each(ctrlsurf, &shell->list_controller_surface, link) {
+        if (id_surface != ctrlsurf->id_surface) {
+            continue;
+        }
+        ivi_controller_surface_send_content(ctrlsurf->resource, IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_AVAILABLE);
     }
 }
 
@@ -1599,6 +1607,7 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
             if (id_surface != ctrlsurf->id_surface) {
                 continue;
             }
+            ivi_controller_surface_send_content(ctrlsurf->resource, IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_REMOVED);
             ivi_controller_surface_send_destroyed(ctrlsurf->resource);
         }
     }
