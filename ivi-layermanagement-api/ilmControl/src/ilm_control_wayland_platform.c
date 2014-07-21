@@ -810,10 +810,8 @@ controller_surface_listener_configuration_child(void *data,
 {
     struct surface_context *ctx_surf = data;
 
-    if (ctx_surf != NULL) {
-        ctx_surf->prop.sourceWidth = (t_ilm_uint)width;
-        ctx_surf->prop.sourceHeight = (t_ilm_uint)height;
-    }
+    ctx_surf->prop.sourceWidth = (t_ilm_uint)width;
+    ctx_surf->prop.sourceHeight = (t_ilm_uint)height;
 }
 
 static void
@@ -907,9 +905,7 @@ controller_surface_listener_pixelformat_child(void *data,
 {
     struct surface_context *ctx_surf = data;
 
-    if (ctx_surf != NULL) {
-        ctx_surf->prop.pixelformat = (t_ilm_uint)pixelformat;
-    }
+    ctx_surf->prop.pixelformat = (t_ilm_uint)pixelformat;
 }
 
 static void
