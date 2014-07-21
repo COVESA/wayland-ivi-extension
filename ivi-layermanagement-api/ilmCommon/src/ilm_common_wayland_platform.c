@@ -50,10 +50,11 @@ extern char *__progname;
 
 struct ilm_common_context {
     int32_t valid;
+    int32_t disconnect_display;
     struct wl_display *display;
 };
 
-static struct ilm_common_context ilm_context = {0, 0};
+static struct ilm_common_context ilm_context = {0};
 
 static ilmErrorTypes
 wayland_init(t_ilm_nativedisplay nativedisplay)
@@ -62,8 +63,10 @@ wayland_init(t_ilm_nativedisplay nativedisplay)
 
     if (nativedisplay != 0) {
         ctx->display = (struct wl_display*)nativedisplay;
+        ctx->disconnect_display = 0;
     } else {
         ctx->display = wl_display_connect(NULL);
+        ctx->disconnect_display = 1;
         if (ctx->display == NULL) {
             fprintf(stderr, "Failed to connect display in libilmCommon\n");
             return ILM_FAILED;
@@ -101,6 +104,14 @@ wayland_destroy(void)
     struct ilm_common_context *ctx = &ilm_context;
 
     ctx->valid = 0;
+
+    // we own the display, act like it.
+    if (ctx->disconnect_display)
+    {
+       wl_display_roundtrip(ctx->display);
+       wl_display_disconnect(ctx->display);
+       ctx->display = NULL;
+    }
 
     return ILM_SUCCESS;
 }
