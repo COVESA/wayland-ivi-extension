@@ -1270,6 +1270,11 @@ wayland_init(t_ilm_nativedisplay nativedisplay)
     return init_control() == 0 ? ILM_SUCCESS : ILM_FAILED;
 }
 
+static void cancel_read(void *d)
+{
+    wl_display_cancel_read(d);
+}
+
 static void*
 control_thread(void *p_ret)
 {
@@ -1307,7 +1312,13 @@ control_thread(void *p_ret)
         pfd.events = POLLIN;
         pfd.revents = 0;
 
-        if (poll(&pfd, 1, -1) != -1 && (pfd.revents & POLLIN))
+        int pollret = -1;
+
+        pthread_cleanup_push(cancel_read, wl->display);
+        pollret = poll(&pfd, 1, -1);
+        pthread_cleanup_pop(0);
+
+        if (pollret != -1 && (pfd.revents & POLLIN))
         {
             wl_display_read_events(wl->display);
 
