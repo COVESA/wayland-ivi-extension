@@ -2157,8 +2157,7 @@ wayland_layerSetRenderOrder(t_ilm_layer layerId,
             ctx_surf = get_surface_context(&ctx->wl, id);
 
             if (ctx_surf == NULL) {
-                fprintf(stderr, "invalud argument \
-                        in ilm_layerSetRenderOrder\n");
+                fprintf(stderr, "invalid argument in ilm_layerSetRenderOrder\n");
                 continue;
             }
             ivi_controller_layer_add_surface(ctx_layer->controller,
