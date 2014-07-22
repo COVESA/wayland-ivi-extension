@@ -69,8 +69,8 @@ ilm_initWithNativedisplay(t_ilm_nativedisplay nativedisplay)
     err = ilmControl_init(display);
     if (ILM_SUCCESS != err)
     {
-        gIlmCommonPlatformFunc.destroy();
         ilmClient_destroy();
+        gIlmCommonPlatformFunc.destroy();
         return err;
     }
 
@@ -86,8 +86,8 @@ ilm_isInitialized(void)
 ILM_EXPORT ilmErrorTypes
 ilm_destroy(void)
 {
-    ilmErrorTypes retVal = gIlmCommonPlatformFunc.destroy();
-    ilmClient_destroy();
     ilmControl_destroy(); // block until control thread is stopped
+    ilmClient_destroy();
+    ilmErrorTypes retVal = gIlmCommonPlatformFunc.destroy();
     return retVal;
 }
