@@ -1513,24 +1513,21 @@ wayland_getPropertiesOfScreen(t_ilm_display screenID,
                               struct ilmScreenProperties* pScreenProperties)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
+
+    if (! pScreenProperties)
+    {
+        return ILM_ERROR_INVALID_ARGUMENTS;
+    }
+
     struct ilm_control_context *ctx = sync_and_acquire_instance();
 
-    if (pScreenProperties != NULL) {
-        struct screen_context *ctx_screen = NULL;
-        ctx_screen = get_screen_context_by_id(&ctx->wl, (uint32_t)screenID);
-        if (ctx_screen != NULL) {
-            *pScreenProperties = ctx_screen->prop;
-            create_layerids(ctx_screen, &pScreenProperties->layerIds,
-                                        &pScreenProperties->layerCount);
-            returnValue = ILM_SUCCESS;
-        }
-    }
-    else {
-        pScreenProperties->layerCount = 0;
-        pScreenProperties->harwareLayerCount = 0;
-        pScreenProperties->layerIds = NULL;
-        pScreenProperties->screenWidth = 0;
-        pScreenProperties->screenHeight = 0;
+    struct screen_context *ctx_screen = NULL;
+    ctx_screen = get_screen_context_by_id(&ctx->wl, (uint32_t)screenID);
+    if (ctx_screen != NULL) {
+        *pScreenProperties = ctx_screen->prop;
+        create_layerids(ctx_screen, &pScreenProperties->layerIds,
+                                    &pScreenProperties->layerCount);
+        returnValue = ILM_SUCCESS;
     }
 
     release_instance();
