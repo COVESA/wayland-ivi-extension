@@ -1054,6 +1054,7 @@ controller_listener_surface(void *data,
     ctx_surf->controller = ivi_controller_surface_create(
                                controller, id_surface);
     if (ctx_surf->controller == NULL) {
+        free(ctx_surf);
         fprintf(stderr, "Failed to create controller surface\n");
         return;
     }
