@@ -1294,12 +1294,14 @@ control_thread(void *p_ret)
             break;
         }
 
-        lock_context(ctx);
-        while (wl_display_prepare_read_queue(wl->display, wl->queue) != 0)
+        if (wl_display_prepare_read_queue(wl->display, wl->queue) != 0)
         {
+            lock_context(ctx);
             wl_display_dispatch_queue_pending(wl->display, wl->queue);
+            unlock_context(ctx);
+
+            continue;
         }
-        unlock_context(ctx);
 
         if (wl_display_flush(wl->display) == -1)
         {
