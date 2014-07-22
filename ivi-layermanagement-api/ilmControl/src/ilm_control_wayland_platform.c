@@ -1280,6 +1280,9 @@ control_thread(void *p_ret)
 {
     struct ilm_control_context *ctx = &ilm_context;
     struct wayland_context *wl = &ctx->wl;
+    struct wl_display *display = wl->display;
+    struct wl_event_queue *queue = wl->queue;
+    int fd = wl_display_get_fd(display);
 
     (void) p_ret;
 
@@ -1294,38 +1297,38 @@ control_thread(void *p_ret)
             break;
         }
 
-        if (wl_display_prepare_read_queue(wl->display, wl->queue) != 0)
+        if (wl_display_prepare_read_queue(display, queue) != 0)
         {
             lock_context(ctx);
-            wl_display_dispatch_queue_pending(wl->display, wl->queue);
+            wl_display_dispatch_queue_pending(display, queue);
             unlock_context(ctx);
 
             continue;
         }
 
-        if (wl_display_flush(wl->display) == -1)
+        if (wl_display_flush(display) == -1)
         {
             break;
         }
 
         struct pollfd pfd;
 
-        pfd.fd = wl_display_get_fd(wl->display);
+        pfd.fd = fd;
         pfd.events = POLLIN;
         pfd.revents = 0;
 
         int pollret = -1;
 
-        pthread_cleanup_push(cancel_read, wl->display);
+        pthread_cleanup_push(cancel_read, display);
         pollret = poll(&pfd, 1, -1);
         pthread_cleanup_pop(0);
 
         if (pollret != -1 && (pfd.revents & POLLIN))
         {
-            wl_display_read_events(wl->display);
+            wl_display_read_events(display);
 
             lock_context(ctx);
-            int ret = wl_display_dispatch_queue_pending(wl->display, wl->queue);
+            int ret = wl_display_dispatch_queue_pending(display, queue);
             unlock_context(ctx);
 
             if (ret == -1)
@@ -1335,7 +1338,7 @@ control_thread(void *p_ret)
         }
         else
         {
-            wl_display_cancel_read(wl->display);
+            wl_display_cancel_read(display);
         }
     }
 
