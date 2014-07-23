@@ -351,8 +351,6 @@ struct ilm_control_context {
     struct wayland_context wl;
     bool initialized;
 
-    uint32_t num_screen;
-
     uint32_t internal_id_layer;
 
     struct wl_list list_nativehandle;
@@ -1266,9 +1264,6 @@ wayland_init(t_ilm_nativedisplay nativedisplay)
 
        pthread_mutexattr_destroy(&a);
     }
-
-    ctx->internal_id_surface = 0;
-    ctx->num_screen = 0;
 
     return init_control() == 0 ? ILM_SUCCESS : ILM_FAILED;
 }
