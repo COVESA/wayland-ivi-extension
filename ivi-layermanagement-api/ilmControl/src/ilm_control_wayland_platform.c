@@ -2157,24 +2157,16 @@ wayland_layerSetRenderOrder(t_ilm_layer layerId,
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
                     &ctx->wl, (uint32_t)layerId);
-    if (ctx_layer) {
-        int cnt = 0;
-        uint32_t id = 0;
-        struct surface_context *ctx_surf = NULL;
-        ivi_controller_layer_clear_surfaces(ctx_layer->controller);
 
-        for (cnt = 0; cnt < number; cnt++) {
-            id = (uint32_t)*(pSurfaceId + cnt);
-            ctx_surf = get_surface_context(&ctx->wl, id);
-
-            if (ctx_surf == NULL) {
-                fprintf(stderr, "invalid argument in ilm_layerSetRenderOrder\n");
-                continue;
-            }
-            ivi_controller_layer_add_surface(ctx_layer->controller,
-                                             ctx_surf->controller);
-        }
-
+    if (ctx_layer)
+    {
+        struct wl_array ids;
+        wl_array_init(&ids);
+        uint32_t *pids = wl_array_add(&ids, number * sizeof *pids);
+        t_ilm_uint i;
+        for (i = 0; i < number; i++) pids[i] = (uint32_t)pSurfaceId[i];
+        ivi_controller_layer_set_render_order(ctx_layer->controller, &ids);
+        wl_array_release(&ids);
         returnValue = ILM_SUCCESS;
     }
 
@@ -2471,23 +2463,13 @@ wayland_displaySetRenderOrder(t_ilm_display display,
 
     ctx_scrn = get_screen_context_by_id(&ctx->wl, (uint32_t)display);
     if (ctx_scrn != NULL) {
-        int cnt = 0;
-        uint32_t id = 0;
-        struct layer_context *ctx_layer = NULL;
-
-        ivi_controller_screen_clear(ctx_scrn->controller);
-
-        for (cnt = 0; cnt < (int)number; cnt++) {
-            id = (uint32_t)*(pLayerId + cnt);
-            ctx_layer =
-                 (struct layer_context*)wayland_controller_get_layer_context(
-                            &ctx->wl, id);
-            if (ctx_layer != NULL) {
-                ivi_controller_screen_add_layer(ctx_scrn->controller,
-                                                ctx_layer->controller);
-            }
-        }
-
+        struct wl_array ids;
+        wl_array_init(&ids);
+        uint32_t *pids = wl_array_add(&ids, number * sizeof *pids);
+        t_ilm_uint i;
+        for (i = 0; i < number; i++) pids[i] = (uint32_t)pLayerId[i];
+        ivi_controller_screen_set_render_order(ctx_scrn->controller, &ids);
+        wl_array_release(&ids);
         returnValue = ILM_SUCCESS;
     }
 
