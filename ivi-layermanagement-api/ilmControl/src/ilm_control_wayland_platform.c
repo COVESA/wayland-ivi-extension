@@ -1365,7 +1365,11 @@ init_control(void)
         return -1;
     }
 
+    // first level objects; ivi_controller
     display_roundtrip_queue(wl->display, wl->queue);
+    // second level object: ivi_controller_surfaces/layers
+    display_roundtrip_queue(wl->display, wl->queue);
+    // third level objects: ivi_controller_surfaces/layers properties
     display_roundtrip_queue(wl->display, wl->queue);
 
     ret = pthread_create(&ctx->thread, NULL, control_thread, NULL);
