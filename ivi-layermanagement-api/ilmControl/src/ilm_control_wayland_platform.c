@@ -304,7 +304,7 @@ struct layer_context {
         struct wl_list link;
     } order;
 
-    struct ilm_control_context *ctx;
+    struct wayland_context *ctx;
 };
 
 struct screen_context {
@@ -596,14 +596,7 @@ controller_layer_listener_visibility_child(void *data,
                             struct ivi_controller_layer *controller,
                             int32_t visibility)
 {
-    struct wayland_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = get_layer_context_by_controller(ctx, controller);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
-        return;
-    }
+    struct layer_context *ctx_layer = data;
 
     ctx_layer->prop.visibility = (t_ilm_bool)visibility;
 
@@ -619,14 +612,7 @@ controller_layer_listener_opacity_child(void *data,
                        struct ivi_controller_layer *controller,
                        wl_fixed_t opacity)
 {
-    struct wayland_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = get_layer_context_by_controller(ctx, controller);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
-        return;
-    }
+    struct layer_context *ctx_layer = data;
 
     ctx_layer->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
 
@@ -645,14 +631,7 @@ controller_layer_listener_source_rectangle_child(void *data,
                                 int32_t width,
                                 int32_t height)
 {
-    struct wayland_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = get_layer_context_by_controller(ctx, controller);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
-        return;
-    }
+    struct layer_context *ctx_layer = data;
 
     ctx_layer->prop.sourceX = (t_ilm_uint)x;
     ctx_layer->prop.sourceY = (t_ilm_uint)y;
@@ -680,14 +659,7 @@ controller_layer_listener_destination_rectangle_child(void *data,
                                      int32_t width,
                                      int32_t height)
 {
-    struct wayland_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = get_layer_context_by_controller(ctx, controller);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
-        return;
-    }
+    struct layer_context *ctx_layer = data;
 
     ctx_layer->prop.destX = (t_ilm_uint)x;
     ctx_layer->prop.destY = (t_ilm_uint)y;
@@ -707,14 +679,7 @@ controller_layer_listener_configuration_child(void *data,
                           int32_t width,
                           int32_t height)
 {
-    struct wayland_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = get_layer_context_by_controller(ctx, controller);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
-        return;
-    }
+    struct layer_context *ctx_layer = data;
 
     ctx_layer->prop.sourceWidth = (t_ilm_uint)width;
     ctx_layer->prop.sourceHeight = (t_ilm_uint)height;
@@ -726,14 +691,7 @@ controller_layer_listener_orientation_child(void *data,
                              int32_t orientation)
 {
     ilmOrientation ilmorientation = ILM_ZERO;
-    struct wayland_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = get_layer_context_by_controller(ctx, controller);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
-        return;
-    }
+    struct layer_context *ctx_layer = data;
 
     switch(orientation) {
     case IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES:
@@ -766,19 +724,12 @@ controller_layer_listener_screen_child(void *data,
                                  struct ivi_controller_layer *controller,
                                  struct wl_output *output)
 {
-    struct wayland_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = get_layer_context_by_controller(ctx, controller);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
-        return;
-    }
+    struct layer_context *ctx_layer = data;
 
     if (output == NULL) {
-        remove_orderlayer_from_screen(ctx, ctx_layer);
+        remove_orderlayer_from_screen(ctx_layer->ctx, ctx_layer);
     } else {
-        add_orderlayer_to_screen(ctx, ctx_layer, output);
+        add_orderlayer_to_screen(ctx_layer->ctx, ctx_layer, output);
     }
 }
 
@@ -786,15 +737,7 @@ static void
 controller_layer_listener_destroyed_child(void *data,
                                     struct ivi_controller_layer *controller)
 {
-    struct wayland_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = get_layer_context_by_controller(ctx, controller);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
-        return;
-    }
-
+    struct layer_context *ctx_layer = data;
     wl_list_remove(&ctx_layer->link);
     free(ctx_layer);
 }
@@ -1033,11 +976,7 @@ add_ordersurface_to_layer(struct wayland_context *ctx,
     struct surface_context *link = NULL;
     int found = 0;
 
-    ctx_layer = get_layer_context(ctx, layer);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "failed to add_ordersurface_to_layer\n");
-        return;
-    }
+    ctx_layer = ivi_controller_layer_get_user_data(layer);
 
     wl_list_for_each(link, &ctx_layer->order.list_surface, order.link) {
         if (link == ctx_surf) {
@@ -2430,7 +2369,7 @@ static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width
      wl_list_init(&ctx_layer->order.list_surface);
 
      ivi_controller_layer_add_listener(ctx_layer->controller,
-                                   &controller_layer_listener_child, ctx);
+                                   &controller_layer_listener_child, ctx_layer);
 
      return 0;
 }
