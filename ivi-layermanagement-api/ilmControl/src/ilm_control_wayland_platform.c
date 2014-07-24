@@ -711,8 +711,7 @@ static struct ivi_controller_layer_listener controller_layer_listener =
 };
 
 static void
-add_ordersurface_to_layer(struct wayland_context *ctx,
-                          struct surface_context *ctx_surf,
+add_ordersurface_to_layer(struct surface_context *ctx_surf,
                           struct ivi_controller_layer *layer)
 {
     struct layer_context *ctx_layer = NULL;
@@ -735,26 +734,10 @@ add_ordersurface_to_layer(struct wayland_context *ctx,
 }
 
 static void
-remove_ordersurface_from_layer(struct wayland_context *ctx,
-                               struct surface_context *ctx_surf)
+remove_ordersurface_from_layer(struct surface_context *ctx_surf)
 {
-    struct layer_context *ctx_layer = NULL;
-    struct surface_context *ctx_ordersurf = NULL;
-    struct surface_context *next = NULL;
-    struct wl_proxy *pxy_surf = NULL;
-    struct wl_proxy *pxy_ordersurf = NULL;
-    uint32_t id_surf = 0;
-    uint32_t id_ordersurf = 0;
-
-    wl_list_for_each(ctx_layer, &ctx->list_layer, link) {
-        wl_list_for_each_safe(ctx_ordersurf, next,
-                         &ctx_layer->order.list_surface,
-                         order.link) {
-            if (ctx_surf->id_surface == ctx_ordersurf->id_surface) {
-                wl_list_remove(&ctx_ordersurf->order.link);
-            }
-        }
-    }
+    wl_list_remove(&ctx_surf->order.link);
+    wl_list_init(&ctx_surf->order.link);
 }
 
 static void
@@ -907,9 +890,9 @@ controller_surface_listener_layer_child(void *data,
     struct surface_context *ctx_surf = data;
 
     if (layer == NULL) {
-        remove_ordersurface_from_layer(ctx_surf->ctx, ctx_surf);
+        remove_ordersurface_from_layer(ctx_surf);
     } else {
-        add_ordersurface_to_layer(ctx_surf->ctx, ctx_surf, layer);
+        add_ordersurface_to_layer(ctx_surf, layer);
     }
 }
 
@@ -1079,9 +1062,9 @@ controller_surface_listener_layer_main(void *data,
     struct surface_context *ctx_surf = data;
 
     if (layer == NULL) {
-        remove_ordersurface_from_layer(ctx_surf->ctx, ctx_surf);
+        remove_ordersurface_from_layer(ctx_surf);
     } else {
-        add_ordersurface_to_layer(ctx_surf->ctx, ctx_surf, layer);
+        add_ordersurface_to_layer(ctx_surf, layer);
     }
 }
 
