@@ -1062,6 +1062,7 @@ controller_listener_surface(void *data,
 
     wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
+    wl_list_init(&ctx_surf->order.link);
     ivi_controller_surface_add_listener(ctx_surf->controller,
                                         &controller_surface_listener, ctx_surf);
 }
@@ -1159,13 +1160,8 @@ registry_handle_control(void *data,
         ctx_scrn->id_from_server = wl_proxy_get_id(pxy);
         ctx_scrn->id_screen = ctx->num_screen;
         ctx->num_screen++;
-        ctx_scrn->controller = NULL;
-        ctx_scrn->prop.layerCount = 0;
-        ctx_scrn->prop.layerIds = NULL;
-        ctx_scrn->prop.harwareLayerCount = 0;
-        ctx_scrn->prop.screenWidth = 0;
-        ctx_scrn->prop.screenHeight = 0;
         wl_list_init(&ctx_scrn->order.list_layer);
+        wl_list_init(&ctx_scrn->order.link);
         wl_list_insert(&ctx->list_screen, &ctx_scrn->link);
     }
 }
