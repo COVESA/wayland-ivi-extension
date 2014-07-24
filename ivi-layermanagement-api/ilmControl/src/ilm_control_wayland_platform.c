@@ -359,6 +359,8 @@ struct ilm_control_context {
     uint32_t internal_id_surface;
 };
 
+static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
+
 static int32_t
 wayland_controller_is_inside_surface_list(struct wl_list *list,
                                           uint32_t id_surface)
@@ -1607,42 +1609,7 @@ controller_listener_layer_for_child(void *data,
                           struct ivi_controller *controller,
                           uint32_t id_layer)
 {
-    (void)controller;
-
-    do {
-        struct wayland_context *ctx = data;
-        struct layer_context *ctx_layer_child = NULL;
-
-        // For child context
-        ctx_layer_child = calloc(1, sizeof *ctx_layer_child);
-        if (ctx_layer_child == NULL) {
-            fprintf(stderr, "Failed to allocate memory for layer_context\n");
-            break;
-        }
-
-        /* width and height are dummy because of just creating controller_layer */
-        ctx_layer_child->controller = ivi_controller_layer_create(
-                ctx->controller,
-                id_layer,
-                1,
-                1);
-
-        if (ctx_layer_child->controller == NULL) {
-            fprintf(stderr, "Failed to create layer\n");
-            free(ctx_layer_child);
-            break;
-        }
-
-        ctx_layer_child->id_layer = id_layer;
-
-        wl_list_init(&ctx_layer_child->link);
-        wl_list_insert(&ctx->list_layer, &ctx_layer_child->link);
-        wl_list_init(&ctx_layer_child->order.link);
-        wl_list_init(&ctx_layer_child->order.list_surface);
-
-        ivi_controller_layer_add_listener(ctx_layer_child->controller,
-                                      &controller_layer_listener_child, ctx);
-    } while (0);
+    create_controller_layer(data, 0, 0, id_layer);
 }
 
 static void
@@ -1730,50 +1697,7 @@ controller_listener_layer_for_main(void *data,
                           struct ivi_controller *controller,
                           uint32_t id_layer)
 {
-    (void)controller;
-
-    struct ilm_control_context *ctx = data;
-    struct layer_context *ctx_layer = NULL;
-    struct layer_context *layer_link = NULL;
-    int found = 0;
-
-    wl_list_for_each(layer_link, &ctx->main_ctx.list_layer, link) {
-        if (layer_link->id_layer == id_layer) {
-            found = 1;
-            break;
-        }
-    }
-
-    if (found != 0) {
-        return;
-    }
-
-    // For main context
-    ctx_layer = calloc(1, sizeof *ctx_layer);
-    if (ctx_layer == NULL) {
-        fprintf(stderr, "Failed to allocate memory for layer_context\n");
-        return;
-    }
-
-    /* width and height are dummy because of just creating controller_layer */
-    ctx_layer->controller = ivi_controller_layer_create(
-                                ctx->main_ctx.controller,
-                                id_layer, 1, 1);
-    if (ctx_layer->controller == NULL) {
-        fprintf(stderr, "Failed to create layer\n");
-        free(ctx_layer);
-        return;
-    }
-
-    ctx_layer->id_layer = id_layer;
-
-    wl_list_init(&ctx_layer->link);
-    wl_list_insert(&ctx->main_ctx.list_layer, &ctx_layer->link);
-    wl_list_init(&ctx_layer->order.link);
-    wl_list_init(&ctx_layer->order.list_surface);
-
-    ivi_controller_layer_add_listener(ctx_layer->controller,
-                                  &controller_layer_listener_main, ctx);
+    create_controller_layer(data, 0, 0, id_layer);
 }
 
 static void
@@ -2476,6 +2400,41 @@ wayland_getSurfaceIDsOnLayer(t_ilm_layer layer,
     return ILM_SUCCESS;
 }
 
+static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid)
+{
+     if (wayland_controller_get_layer_context(ctx, layerid))
+     {
+         return -1;
+     }
+
+     struct layer_context *ctx_layer = calloc(1, sizeof *ctx_layer);
+     if (ctx_layer == NULL) {
+         fprintf(stderr, "Failed to allocate memory for layer_context\n");
+         return -1;
+     }
+
+     ctx_layer->controller = ivi_controller_layer_create(
+                                 ctx->controller,
+                                 layerid, width, height);
+     if (ctx_layer->controller == NULL) {
+         fprintf(stderr, "Failed to create layer\n");
+         free(ctx_layer);
+         return -1;
+     }
+     ctx_layer->id_layer = layerid;
+     ctx_layer->ctx = ctx;
+
+     wl_list_init(&ctx_layer->link);
+     wl_list_insert(&ctx->list_layer, &ctx_layer->link);
+     wl_list_init(&ctx_layer->order.link);
+     wl_list_init(&ctx_layer->order.list_surface);
+
+     ivi_controller_layer_add_listener(ctx_layer->controller,
+                                   &controller_layer_listener_child, ctx);
+
+     return 0;
+}
+
 static ilmErrorTypes
 wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
                                  t_ilm_uint width,
@@ -2484,7 +2443,6 @@ wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
     uint32_t layerid = 0;
-    struct layer_context *ctx_layer_main = NULL;
     int32_t is_inside = 0;
 
     do {
@@ -2508,35 +2466,10 @@ wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
             *pLayerId = layerid;
         }
 
-        // For main context
-        ctx_layer_main = calloc(1, sizeof *ctx_layer_main);
-        if (ctx_layer_main == NULL) {
-            fprintf(stderr, "Failed to allocate memory for layer_context\n");
-            break;
+        if (create_controller_layer(&ctx->main_ctx, width, height, layerid) == 0)
+        {
+           returnValue = ILM_SUCCESS;
         }
-
-        ctx_layer_main->controller = ivi_controller_layer_create(
-                                    ctx->main_ctx.controller,
-                                    layerid, width, height);
-
-        if (ctx_layer_main->controller == NULL) {
-            fprintf(stderr, "Failed to create layer\n");
-            free(ctx_layer_main);
-            break;
-        }
-        ctx_layer_main->id_layer = layerid;
-
-        wl_list_init(&ctx_layer_main->link);
-        wl_list_insert(&ctx->main_ctx.list_layer, &ctx_layer_main->link);
-        wl_list_init(&ctx_layer_main->order.link);
-        wl_list_init(&ctx_layer_main->order.list_surface);
-
-        ivi_controller_layer_add_listener(ctx_layer_main->controller,
-                                      &controller_layer_listener_main, ctx);
-
-        wl_display_roundtrip(ctx->main_ctx.display);
-
-        returnValue = ILM_SUCCESS;
     } while(0);
 
     return returnValue;
