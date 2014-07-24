@@ -361,6 +361,8 @@ struct ilm_control_context {
 
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
+static struct layer_context* get_layer_context(struct wayland_context *ctx, struct ivi_controller_layer *ivi_layer);
+
 static int32_t
 wayland_controller_is_inside_surface_list(struct wl_list *list,
                                           uint32_t id_surface)
@@ -569,28 +571,6 @@ remove_orderlayer_from_screen(struct wayland_context *ctx,
     }
 }
 
-static struct layer_context*
-get_layer_context_by_controller(struct wayland_context *ctx,
-                                struct ivi_controller_layer *controller)
-{
-    struct layer_context *ctx_layer = NULL;
-    struct wl_proxy *pxy_layer = NULL;
-    struct wl_proxy *pxy_addlayer = NULL;
-    uint32_t id_layer = 0;
-    uint32_t id_addlayer = 0;
-
-    wl_list_for_each(ctx_layer, &ctx->list_layer, link) {
-        pxy_layer = (struct wl_proxy*)ctx_layer->controller;
-        pxy_addlayer = (struct wl_proxy*)controller;
-        id_layer = wl_proxy_get_id(pxy_layer);
-        id_addlayer = wl_proxy_get_id(pxy_addlayer);
-        if (id_layer == id_addlayer) {
-            return ctx_layer;
-        }
-    }
-    return NULL;
-}
-
 static void
 controller_layer_listener_visibility_child(void *data,
                             struct ivi_controller_layer *controller,
@@ -762,7 +742,7 @@ controller_layer_listener_visibility_main(void *data,
     struct ilm_control_context *ctx = data;
     struct layer_context *ctx_layer = NULL;
 
-    ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
+    ctx_layer = get_layer_context(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
         fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
@@ -779,7 +759,7 @@ controller_layer_listener_opacity_main(void *data,
     struct ilm_control_context *ctx = data;
     struct layer_context *ctx_layer = NULL;
 
-    ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
+    ctx_layer = get_layer_context(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
         fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
@@ -799,7 +779,7 @@ controller_layer_listener_source_rectangle_main(void *data,
     struct ilm_control_context *ctx = data;
     struct layer_context *ctx_layer = NULL;
 
-    ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
+    ctx_layer = get_layer_context(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
         fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
@@ -828,7 +808,7 @@ controller_layer_listener_destination_rectangle_main(void *data,
     struct ilm_control_context *ctx = data;
     struct layer_context *ctx_layer = NULL;
 
-    ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
+    ctx_layer = get_layer_context(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
         fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
@@ -849,7 +829,7 @@ controller_layer_listener_configuration_main(void *data,
     struct ilm_control_context *ctx = data;
     struct layer_context *ctx_layer = NULL;
 
-    ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
+    ctx_layer = get_layer_context(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
         fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
@@ -868,7 +848,7 @@ controller_layer_listener_orientation_main(void *data,
     struct ilm_control_context *ctx = data;
     struct layer_context *ctx_layer = NULL;
 
-    ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
+    ctx_layer = get_layer_context(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
         fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
@@ -902,7 +882,7 @@ controller_layer_listener_screen_main(void *data,
     struct ilm_control_context *ctx = data;
     struct layer_context *ctx_layer = NULL;
 
-    ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
+    ctx_layer = get_layer_context(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
         fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
@@ -922,7 +902,7 @@ controller_layer_listener_destroyed_main(void *data,
     struct ilm_control_context *ctx = data;
     struct layer_context *ctx_layer = NULL;
 
-    ctx_layer = get_layer_context_by_controller(&ctx->main_ctx, controller);
+    ctx_layer = get_layer_context(&ctx->main_ctx, controller);
     if (ctx_layer == NULL) {
         fprintf(stderr, "Invalid controller_layer in %s\n", __FUNCTION__);
         return;
