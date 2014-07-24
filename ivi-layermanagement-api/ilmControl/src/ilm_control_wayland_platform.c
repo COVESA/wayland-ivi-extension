@@ -361,8 +361,6 @@ struct ilm_control_context {
 
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
-static struct layer_context* get_layer_context(struct wayland_context *ctx, struct ivi_controller_layer *ivi_layer);
-
 static int32_t
 wayland_controller_is_inside_surface_list(struct wl_list *list,
                                           uint32_t id_surface)
@@ -711,28 +709,6 @@ static struct ivi_controller_layer_listener controller_layer_listener =
     controller_layer_listener_screen_child,
     controller_layer_listener_destroyed_child
 };
-
-static struct layer_context*
-get_layer_context(struct wayland_context *ctx,
-                         struct ivi_controller_layer *ivi_layer)
-{
-    struct layer_context *ctx_layer = NULL;
-    struct wl_proxy *pxy_layer = NULL;
-    struct wl_proxy *pxy_addlayer = NULL;
-    uint32_t id_layer = 0;
-    uint32_t id_addlayer = 0;
-
-    wl_list_for_each(ctx_layer, &ctx->list_layer, link) {
-        pxy_layer = (struct wl_proxy*)ctx_layer->controller;
-        pxy_addlayer = (struct wl_proxy*)ivi_layer;
-        id_layer = wl_proxy_get_id(pxy_layer);
-        id_addlayer = wl_proxy_get_id(pxy_addlayer);
-        if (id_layer == id_addlayer) {
-            return ctx_layer;
-        }
-    }
-    return NULL;
-}
 
 static void
 add_ordersurface_to_layer(struct wayland_context *ctx,
