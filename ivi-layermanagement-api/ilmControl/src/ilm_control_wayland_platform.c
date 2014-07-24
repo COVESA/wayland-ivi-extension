@@ -287,7 +287,7 @@ struct surface_context {
         struct wl_list link;
     } order;
 
-    struct ilm_control_context *ctx;
+    struct wayland_context *ctx;
 };
 
 struct layer_context {
@@ -757,34 +757,12 @@ remove_ordersurface_from_layer(struct wayland_context *ctx,
     }
 }
 
-static struct surface_context*
-get_surface_context_by_controller(struct wayland_context *ctx,
-                                  struct ivi_controller_surface *controller)
-{
-    struct surface_context *ctx_surf = NULL;
-    wl_list_for_each(ctx_surf, &ctx->list_surface, link) {
-        if (ctx_surf->controller == controller) {
-            return ctx_surf;
-        }
-    }
-
-    fprintf(stderr, "failed to get surface context in %s\n", __FUNCTION__);
-    return NULL;
-}
-
 static void
 controller_surface_listener_visibility_child(void *data,
                             struct ivi_controller_surface *controller,
                             int32_t visibility)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     ctx_surf->prop.visibility = (t_ilm_bool)visibility;
 
@@ -800,14 +778,7 @@ controller_surface_listener_opacity_child(void *data,
                          struct ivi_controller_surface *controller,
                          wl_fixed_t opacity)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     ctx_surf->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
 
@@ -824,14 +795,7 @@ controller_surface_listener_configuration_child(void *data,
                            int32_t width,
                            int32_t height)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     if (ctx_surf != NULL) {
         ctx_surf->prop.sourceWidth = (t_ilm_uint)width;
@@ -847,14 +811,7 @@ controller_surface_listener_source_rectangle_child(void *data,
                                   int32_t width,
                                   int32_t height)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     ctx_surf->prop.sourceX = (t_ilm_uint)x;
     ctx_surf->prop.sourceY = (t_ilm_uint)y;
@@ -882,14 +839,7 @@ controller_surface_listener_destination_rectangle_child(void *data,
                    int32_t width,
                    int32_t height)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     ctx_surf->prop.destX = (t_ilm_uint)x;
     ctx_surf->prop.destY = (t_ilm_uint)y;
@@ -908,15 +858,8 @@ controller_surface_listener_orientation_child(void *data,
                              struct ivi_controller_surface *controller,
                              int32_t orientation)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
+    struct surface_context *ctx_surf = data;
     ilmOrientation ilmorientation = ILM_ZERO;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
 
     switch (orientation) {
     case IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES:
@@ -949,14 +892,7 @@ controller_surface_listener_pixelformat_child(void *data,
                              struct ivi_controller_surface *controller,
                              int32_t pixelformat)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     if (ctx_surf != NULL) {
         ctx_surf->prop.pixelformat = (t_ilm_uint)pixelformat;
@@ -968,19 +904,12 @@ controller_surface_listener_layer_child(void *data,
                                   struct ivi_controller_surface *controller,
                                   struct ivi_controller_layer *layer)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     if (layer == NULL) {
-        remove_ordersurface_from_layer(ctx, ctx_surf);
+        remove_ordersurface_from_layer(ctx_surf->ctx, ctx_surf);
     } else {
-        add_ordersurface_to_layer(ctx, ctx_surf, layer);
+        add_ordersurface_to_layer(ctx_surf->ctx, ctx_surf, layer);
     }
 }
 
@@ -993,36 +922,20 @@ controller_surface_listener_stats_child(void *data,
                                   uint32_t pid,
                                   const char *process_name)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
+    struct surface_context *ctx_surf = data;
     (void)process_name;
 
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-
-    }
-
-    if (ctx_surf != NULL) {
-        ctx_surf->prop.drawCounter = (t_ilm_uint)redraw_count;
-        ctx_surf->prop.frameCounter = (t_ilm_uint)frame_count;
-        ctx_surf->prop.updateCounter = (t_ilm_uint)update_count;
-        ctx_surf->prop.creatorPid = (t_ilm_uint)pid;
-    }
+    ctx_surf->prop.drawCounter = (t_ilm_uint)redraw_count;
+    ctx_surf->prop.frameCounter = (t_ilm_uint)frame_count;
+    ctx_surf->prop.updateCounter = (t_ilm_uint)update_count;
+    ctx_surf->prop.creatorPid = (t_ilm_uint)pid;
 }
 
 static void
 controller_surface_listener_destroyed_child(void *data,
                   struct ivi_controller_surface *controller)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     wl_list_remove(&ctx_surf->link);
     free(ctx_surf);
@@ -1039,14 +952,7 @@ controller_surface_listener_content_child(void *data,
     // from scene, too.
     if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_REMOVED == content_state)
     {
-        struct wayland_context *ctx = data;
-        struct surface_context *ctx_surf = NULL;
-
-        ctx_surf = get_surface_context_by_controller(ctx, controller);
-        if (ctx_surf == NULL) {
-            fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-            return;
-        }
+        struct surface_context *ctx_surf = data;
 
         ivi_controller_surface_destroy(controller, 1);
 
@@ -1170,19 +1076,12 @@ controller_surface_listener_layer_main(void *data,
                                   struct ivi_controller_surface *controller,
                                   struct ivi_controller_layer *layer)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     if (layer == NULL) {
-        remove_ordersurface_from_layer(ctx, ctx_surf);
+        remove_ordersurface_from_layer(ctx_surf->ctx, ctx_surf);
     } else {
-        add_ordersurface_to_layer(ctx, ctx_surf, layer);
+        add_ordersurface_to_layer(ctx_surf->ctx, ctx_surf, layer);
     }
 }
 
@@ -1208,14 +1107,7 @@ static void
 controller_surface_listener_destroyed_main(void *data,
                   struct ivi_controller_surface *controller)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_controller(ctx, controller);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-        return;
-    }
+    struct surface_context *ctx_surf = data;
 
     wl_list_remove(&ctx_surf->link);
     free(ctx_surf);
@@ -1232,14 +1124,7 @@ controller_surface_listener_content_main(void *data,
     // from scene, too.
     if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_REMOVED == content_state)
     {
-        struct wayland_context *ctx = data;
-        struct surface_context *ctx_surf = NULL;
-
-        ctx_surf = get_surface_context_by_controller(ctx, controller);
-        if (ctx_surf == NULL) {
-            fprintf(stderr, "Invalid controller_surface in %s\n", __FUNCTION__);
-            return;
-        }
+        struct surface_context *ctx_surf = data;
 
         ivi_controller_surface_destroy(controller, 1);
 
@@ -1332,12 +1217,12 @@ controller_listener_surface_for_child(void *data,
     }
     ctx_surf->id_surface = id_surface;
     ctx_surf->prop.inputDevicesAcceptance = ILM_INPUT_DEVICE_ALL;
+    ctx_surf->ctx = ctx;
 
     wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
     ivi_controller_surface_add_listener(ctx_surf->controller,
-                                        &controller_surface_listener_child, ctx);
-    wl_display_roundtrip(ctx->display);
+                                        &controller_surface_listener_child, ctx_surf);
 }
 
 static void
@@ -1369,11 +1254,11 @@ controller_listener_screen_for_main(void *data,
                            uint32_t id_screen,
                            struct ivi_controller_screen *controller_screen)
 {
-    struct ilm_control_context *ctx = data;
+    struct wayland_context *ctx = data;
     struct screen_context *ctx_screen;
     (void)ivi_controller;
 
-    ctx_screen = get_screen_context_by_serverid(&ctx->main_ctx, id_screen);
+    ctx_screen = get_screen_context_by_serverid(ctx, id_screen);
     if (ctx_screen == NULL) {
         fprintf(stderr, "Failed to allocate memory for screen_context\n");
         return;
@@ -1464,7 +1349,7 @@ registry_handle_control_for_main(void *data,
         }
         if (ivi_controller_add_listener(ctx->main_ctx.controller,
                                        &controller_listener_for_main,
-                                       ctx)) {
+                                       &ctx->main_ctx)) {
             fprintf(stderr, "Failed to add ivi_controller listener\n");
             return;
         }
