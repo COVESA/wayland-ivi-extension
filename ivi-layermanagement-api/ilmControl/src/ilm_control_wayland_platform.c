@@ -390,6 +390,16 @@ int display_roundtrip_queue(struct wl_display *display,
     return ret;
 }
 
+static inline void lock_context(struct ilm_control_context *ctx)
+{
+   pthread_mutex_lock(&ctx->mutex);
+}
+
+static inline void unlock_context(struct ilm_control_context *ctx)
+{
+   pthread_mutex_unlock(&ctx->mutex);
+}
+
 static int init_control(void);
 
 static struct ilm_control_context* get_instance(void);
@@ -1436,7 +1446,6 @@ destroy_control_resources(void)
     wl_display_flush(ctx->child_ctx.display);
 
     if (ctx->child_ctx.display != NULL) {
-        wl_display_disconnect(ctx->child_ctx.display);
         ctx->child_ctx.display = NULL;
     }
 
@@ -1449,7 +1458,9 @@ static void
 wayland_destroy(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
+    lock_context(ctx);
     ctx->valid = 0;
+    unlock_context(ctx);
     void* threadRetVal = NULL;
     pthread_cancel(ctx->thread);
     if (0 != pthread_join(ctx->thread, &threadRetVal)) {
@@ -1514,38 +1525,56 @@ static void*
 control_thread(void *p_ret)
 {
     struct ilm_control_context *ctx = &ilm_context;
-    struct wayland_context *child_ctx = &ctx->child_ctx;
-    (void)p_ret;
+    struct wayland_context *main_ctx = &ctx->main_ctx;
 
-    ctx->num_screen = 0;
-    wl_list_init(&child_ctx->list_screen);
-    wl_list_init(&child_ctx->list_layer);
-    wl_list_init(&child_ctx->list_surface);
+    (void) p_ret;
 
-    child_ctx->display = wl_display_connect(NULL);
-    if (child_ctx->display == NULL) {
-        fprintf(stderr, "Failed to connect display in libilmCommon\n");
-        return NULL;
-    }
-
-    child_ctx->registry = wl_display_get_registry(child_ctx->display);
-    if (child_ctx->registry == NULL) {
-        fprintf(stderr, "Failed to get registry\n");
-        return NULL;
-    }
-    if (wl_registry_add_listener(child_ctx->registry,
-            &registry_control_listener_for_child, &ctx->child_ctx)) {
-        fprintf(stderr, "Failed to add registry listener\n");
-        return NULL;
-    }
-
-    wl_display_dispatch(child_ctx->display);
-    wl_display_roundtrip(child_ctx->display);
-
-    ctx->valid = 1;
-    while (0 < ctx->valid)
+    while (1)
     {
-        wl_display_dispatch(child_ctx->display);
+        lock_context(ctx);
+        int valid = ctx->valid;
+        unlock_context(ctx);
+
+        if (valid != 1)
+        {
+            break;
+        }
+
+        lock_context(ctx);
+        while (wl_display_prepare_read_queue(main_ctx->display, main_ctx->queue) != 0)
+        {
+            wl_display_dispatch_queue_pending(main_ctx->display, main_ctx->queue);
+        }
+        unlock_context(ctx);
+
+        if (wl_display_flush(main_ctx->display) == -1)
+        {
+            break;
+        }
+
+        struct pollfd pfd;
+
+        pfd.fd = wl_display_get_fd(main_ctx->display);
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+
+        if (poll(&pfd, 1, -1) != -1 && (pfd.revents & POLLIN))
+        {
+            wl_display_read_events(main_ctx->display);
+
+            lock_context(ctx);
+            int ret = wl_display_dispatch_queue_pending(main_ctx->display, main_ctx->queue);
+            unlock_context(ctx);
+
+            if (ret == -1)
+            {
+                break;
+            }
+        }
+        else
+        {
+            wl_display_cancel_read(main_ctx->display);
+        }
     }
 
     return NULL;
