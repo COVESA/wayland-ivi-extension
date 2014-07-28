@@ -188,9 +188,6 @@ destroy_ivicontroller_surface(struct wl_resource *resource)
         if (ivisurf->can_be_removed) {
             free(ivisurf);
         }
-        else {
-            ivisurf->can_be_removed = 1;
-        }
     }
 }
 
