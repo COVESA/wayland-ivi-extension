@@ -441,7 +441,7 @@ TEST_F(NotificationTest, NotifyOnLayerMultipleValues1)
     ilm_commitChanges();
 
     // expect callback to have been called
-    assertCallbackcalled();
+    assertCallbackcalled(2);
 
     EXPECT_EQ(layer,callbackLayerId);
     EXPECT_EQ(33u,LayerProperties.sourceX);
@@ -465,7 +465,7 @@ TEST_F(NotificationTest, NotifyOnLayerMultipleValues2)
     ilm_commitChanges();
 
     // expect callback to have been called
-    assertCallbackcalled();
+    assertCallbackcalled(3);
 
     EXPECT_EQ(layer,callbackLayerId);
     EXPECT_TRUE(LayerProperties.visibility);
@@ -492,7 +492,7 @@ TEST_F(NotificationTest, NotifyOnLayerAllValues)
     ilm_commitChanges();
 
     // expect callback to have been called
-    assertCallbackcalled();
+    assertCallbackcalled(5);
 
     EXPECT_EQ(layer,callbackLayerId);
     EXPECT_EQ(33u,LayerProperties.sourceX);
@@ -729,7 +729,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceMultipleValues1)
     ilm_commitChanges();
 
     // expect callback to have been called
-    assertCallbackcalled();
+    assertCallbackcalled(2);
 
     EXPECT_EQ(surface,callbackSurfaceId);
     EXPECT_EQ(33u,SurfaceProperties.sourceX);
@@ -753,7 +753,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceMultipleValues2)
     ilm_commitChanges();
 
     // expect callback to have been called
-    assertCallbackcalled();
+    assertCallbackcalled(3);
 
     EXPECT_EQ(surface,callbackSurfaceId);
     EXPECT_TRUE(SurfaceProperties.visibility);
@@ -780,7 +780,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceAllValues)
     ilm_commitChanges();
 
     // expect callback to have been called
-    assertCallbackcalled();
+    assertCallbackcalled(5);
 
     EXPECT_EQ(surface,callbackSurfaceId);
     EXPECT_EQ(33u,SurfaceProperties.sourceX);
