@@ -359,6 +359,36 @@ struct ilm_control_context {
     uint32_t internal_id_surface;
 };
 
+static void roundtrip_done(void *data, struct wl_callback *callback,
+                           uint32_t serial)
+{
+    (void) callback;
+    (void) serial;
+
+    *(int *)data = 1;
+}
+
+static struct wl_callback_listener roundtrip_listener = {roundtrip_done};
+
+int display_roundtrip_queue(struct wl_display *display,
+                            struct wl_event_queue *queue)
+{
+    int done = 0;
+    int ret = 0;
+    struct wl_callback *callback = wl_display_sync(display);
+    wl_proxy_set_queue((void *)callback, queue);
+    wl_callback_add_listener(callback, &roundtrip_listener, &done);
+
+    while (ret != -1 && !done)
+    {
+        ret = wl_display_dispatch_queue(display, queue);
+    }
+
+    wl_callback_destroy(callback);
+
+    return ret;
+}
+
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
 static int32_t
