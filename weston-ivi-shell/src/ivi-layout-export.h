@@ -81,6 +81,10 @@ enum ivi_layout_transition_type{
     IVI_LAYOUT_TRANSITION_MAX,
 };
 
+typedef void(*shellWarningNotificationFunc)(uint32_t id_surface,
+                                            enum ivi_layout_warning_flag warn,
+                                            void *userdata);
+
 typedef void(*layerPropertyNotificationFunc)(struct ivi_layout_layer *ivilayer,
                                             struct ivi_layout_LayerProperties*,
                                             enum ivi_layout_notification_mask mask,
@@ -109,6 +113,14 @@ typedef void(*surfaceConfigureNotificationFunc)(struct ivi_layout_surface *ivisu
 typedef void(*ivi_controller_surface_content_callback)(struct ivi_layout_surface *ivisurf,
                                             int32_t content,
                                             void *userdata);
+
+int32_t
+ivi_layout_addNotificationShellWarning(shellWarningNotificationFunc callback,
+                                       void *userdata);
+
+void
+ivi_layout_removeNotificationShellWarning(shellWarningNotificationFunc callback,
+                                          void *userdata);
 
 /**
  * \brief to be called by ivi-shell in order to set initail view of
@@ -895,6 +907,12 @@ ivi_layout_surfaceSetSourceRectangle(struct ivi_layout_surface *ivisurf,
  */
 struct weston_output *
 ivi_layout_screenGetOutput(struct ivi_layout_screen *);
+
+struct weston_surface *
+ivi_layout_surfaceGetWestonSurface(struct ivi_layout_surface *ivisurf);
+
+int32_t
+ivi_layout_surfaceGetSize(struct ivi_layout_surface *ivisurf, int32_t *width, int32_t *height, int32_t *stride);
 
 int32_t
 ivi_layout_layerSetTransition(struct ivi_layout_layer *ivilayer,

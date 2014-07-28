@@ -27,10 +27,12 @@
 #include <string.h>
 #include <linux/input.h>
 #include <cairo.h>
+#include <GLES2/gl2.h>
 
 #include "weston/compositor.h"
 #include "ivi-controller-server-protocol.h"
 #include "ivi-layout-export.h"
+#include "bitmap.h"
 
 struct ivishell;
 struct ivilayer;
@@ -776,15 +778,242 @@ controller_surface_set_orientation(struct wl_client *client,
     ivi_layout_surfaceSetOrientation(ivisurf->layout_surface, (uint32_t)orientation);
 }
 
+static int
+shm_surface_screenshot(struct weston_surface *surface,
+                       int32_t width,
+                       int32_t height,
+                       int32_t stride,
+                       const char *filename)
+{
+    struct weston_buffer *weston_buffer = NULL;
+    struct wl_shm_buffer *shm_buffer = NULL;
+    cairo_surface_t *cairo_surf = NULL;
+    uint8_t *source_buffer = NULL;
+    uint8_t *dest_buffer = NULL;
+
+    weston_buffer = surface->buffer_ref.buffer;
+    if (weston_buffer == NULL) {
+        fprintf(stderr, "Failed to get weston buffer.\n");
+        return -1;
+    }
+
+    shm_buffer = wl_shm_buffer_get(weston_buffer->resource);
+    if (shm_buffer == NULL) {
+        return -1;
+    }
+
+    source_buffer = wl_shm_buffer_get_data(shm_buffer);
+    if (source_buffer == NULL) {
+        fprintf(stderr, "Failed to get data from shm buffer.\n");
+        return -1;
+    }
+
+    dest_buffer = malloc(stride * height);
+    if (dest_buffer == NULL) {
+        fprintf(stderr, "Failed to allocate memory.\n");
+        return -1;
+    }
+
+    memcpy(dest_buffer, source_buffer, stride * height);
+
+    cairo_surf = cairo_image_surface_create_for_data(
+            dest_buffer,
+            CAIRO_FORMAT_RGB24,
+            width,
+            height,
+            stride);
+
+    cairo_surface_write_to_png(cairo_surf, filename);
+    cairo_surface_destroy(cairo_surf);
+    free(dest_buffer);
+
+    return 0;
+}
+
+static void
+bind_framebuffer(GLuint *fbo_id, GLuint *tex_id, GLsizei width, GLsizei height)
+{
+    glGenTextures(1, tex_id);
+    glGenFramebuffers(1, fbo_id);
+    glBindTexture(GL_TEXTURE_2D, *tex_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, *fbo_id);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *tex_id, 0);
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+static void
+unbind_framebuffer(GLuint fbo_id, GLuint tex_id)
+{
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &tex_id);
+    glDeleteFramebuffers(1, &fbo_id);
+}
+
+static void
+dump_surface(struct weston_output *output,
+             struct weston_compositor *compositor,
+             const char *filename,
+             int32_t x,
+             int32_t y,
+             int32_t width,
+             int32_t height)
+{
+    struct weston_renderer *renderer = compositor->renderer;
+    pixman_region32_t region;
+    uint8_t *readpixs = NULL;
+    int32_t stride = width * (PIXMAN_FORMAT_BPP(compositor->read_format) / 8);
+    GLuint fbo_id, tex_id;
+
+    readpixs = malloc(stride * height);
+    if (readpixs == NULL) {
+        fprintf(stderr, "Failed to allocate memory.\n");
+        return;
+    }
+
+    pixman_region32_init_rect(&region, x, y, width, height);
+    bind_framebuffer(&fbo_id, &tex_id, output->current_mode->width, output->current_mode->height);
+    renderer->repaint_output(output, &region);
+    glFinish();
+
+    y = output->current_mode->height - (y + height);
+    int result = renderer->read_pixels(output,
+                                       compositor->read_format,
+                                       readpixs,
+                                       x,
+                                       y,
+                                       width,
+                                       height);
+    unbind_framebuffer(fbo_id, tex_id);
+
+    save_as_bitmap(filename, readpixs, stride * height, width, height, PIXMAN_FORMAT_BPP(compositor->read_format));
+    free(readpixs);
+}
+
+static void
+clear_viewlist_but_specified_surface(struct weston_compositor *compositor,
+                                     struct weston_surface *surface)
+{
+    struct weston_view *view = NULL;
+    wl_list_init(&compositor->view_list);
+
+    wl_list_for_each(view, &surface->views, surface_link) {
+        if (view == NULL) {
+            continue;
+        }
+
+        wl_list_insert(compositor->view_list.prev, &view->link);
+    }
+}
+
+static void
+get_gl_surface_rectangle(struct ivi_layout_SurfaceProperties *prop,
+                         int32_t *x,
+                         int32_t *y,
+                         int32_t *width,
+                         int32_t *height)
+{
+    if (prop == NULL) {
+        return;
+    }
+
+    if ((prop->destX == 0) &&
+        (prop->destY == 0) &&
+        (prop->destWidth == 0) &&
+        (prop->destHeight == 0)) {
+        *x = prop->sourceX;
+        *y = prop->sourceY;
+        *width = prop->sourceWidth;
+        *height = prop->sourceHeight;
+    }
+    else {
+        *x = prop->destX;
+        *y = prop->destY;
+        *width = prop->destWidth;
+        *height = prop->destHeight;
+    }
+}
+
+static int
+gl_surface_screenshot(struct ivisurface *ivisurf,
+                      struct weston_surface *surface,
+                      const char *filename)
+{
+    struct weston_compositor *compositor = surface->compositor;
+    struct link_layer *link_layer = NULL;
+    struct link_screen *link_scrn = NULL;
+    struct ivi_layout_SurfaceProperties prop = {};
+    int32_t x = 0;
+    int32_t y = 0;
+    int32_t width = 0;
+    int32_t height = 0;
+
+    wl_list_for_each(link_layer, &ivisurf->list_layer, link) {
+        if (link_layer == NULL) {
+            continue;
+        }
+
+        wl_list_for_each(link_scrn, &link_layer->layer->list_screen, link) {
+            if (link_scrn != NULL) {
+                break;
+            }
+        }
+    }
+
+    if (link_scrn == NULL) {
+        fprintf(stderr, "Failed to get iviscreen\n");
+        return -1;
+    }
+
+    if (ivi_layout_getPropertiesOfSurface(ivisurf->layout_surface, &prop) != 0) {
+        fprintf(stderr, "Failed to get surface properties.");
+        return -1;
+    }
+
+    get_gl_surface_rectangle(&prop, &x, &y, &width, &height);
+    clear_viewlist_but_specified_surface(compositor, surface);
+    dump_surface(link_scrn->screen->output,
+                 compositor,
+                 filename,
+                 x,
+                 y,
+                 width,
+                 height);
+
+    return 0;
+}
+
 static void
 controller_surface_screenshot(struct wl_client *client,
                   struct wl_resource *resource,
                   const char *filename)
 {
-    (void)client;
-    (void)resource;
-    (void)filename;
+    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    struct weston_surface *weston_surface = NULL;
+    int32_t width = 0;
+    int32_t height = 0;
+    int32_t stride = 0;
+
+    weston_surface = ivi_layout_surfaceGetWestonSurface(ivisurf->layout_surface);
+    if (weston_surface == NULL) {
+        fprintf(stderr, "Failed to get weston surface.\n");
+        return;
+    }
+
+    if (ivi_layout_surfaceGetSize(ivisurf->layout_surface, &width, &height, &stride) != 0) {
+        fprintf(stderr, "Failed to get surface size.\n");
+        return;
+    }
+
+    if (shm_surface_screenshot(weston_surface, width, height, stride, filename) != 0) {
+        if (gl_surface_screenshot(ivisurf, weston_surface, filename) != 0) {
+            fprintf(stderr, "Failed to capture surface.\n");
+        }
+    }
 }
+
 
 static void
 controller_surface_send_stats(struct wl_client *client,
@@ -1078,9 +1307,6 @@ controller_screen_screenshot(struct wl_client *client,
     int32_t height = 0;
     int32_t stride = 0;
     uint8_t *readpixs = NULL;
-    uint8_t *writepixs = NULL;
-    uint8_t *d = NULL;
-    uint8_t *s = NULL;
 
     output = ivi_layout_screenGetOutput(iviscrn->layout_screen);
     --output->disable_planes;
@@ -1095,12 +1321,6 @@ controller_screen_screenshot(struct wl_client *client,
         return;
     }
 
-    writepixs = malloc(stride * height);
-    if (writepixs == NULL) {
-        weston_log("fails to allocate memory\n");
-        return;
-    }
-
     output->compositor->renderer->read_pixels(
             output,
             output->compositor->read_format,
@@ -1110,24 +1330,7 @@ controller_screen_screenshot(struct wl_client *client,
             width,
             height);
 
-    s = readpixs;
-    d = writepixs + stride * (height - 1);
-
-    for (i = 0; i < height; ++i) {
-        memcpy(d, s, stride);
-        d -= stride;
-        s += stride;
-    }
-
-    cairo_surf = cairo_image_surface_create_for_data(
-            writepixs,
-            CAIRO_FORMAT_ARGB32,
-            width,
-            height,
-            stride);
-    cairo_surface_write_to_png(cairo_surf, filename);
-    cairo_surface_destroy(cairo_surf);
-    free(writepixs);
+    save_as_bitmap(filename, readpixs, stride * height, width, height, PIXMAN_FORMAT_BPP(output->compositor->read_format));
     free(readpixs);
 }
 
