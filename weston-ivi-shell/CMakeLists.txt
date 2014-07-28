@@ -57,6 +57,7 @@ link_directories(
 
 add_library(${PROJECT_NAME} MODULE
     src/ivi-controller.c
+    src/bitmap.c
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
