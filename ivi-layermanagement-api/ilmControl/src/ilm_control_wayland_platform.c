@@ -334,6 +334,7 @@ struct nativehandle_context {
 struct wayland_context {
     struct wl_display *display;
     struct wl_registry *registry;
+    struct wl_event_queue *queue;
     struct wl_compositor *compositor;
     struct ivi_controller *controller;
     uint32_t num_screen;
@@ -389,6 +390,10 @@ int display_roundtrip_queue(struct wl_display *display,
     return ret;
 }
 
+static int init_control(void);
+
+static struct ilm_control_context* get_instance(void);
+
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
 static int32_t
@@ -439,8 +444,6 @@ wayland_controller_get_layer_context(struct wayland_context *ctx,
     fprintf(stderr, "failed to get layer context in ilmControl\n");
     return NULL;
 }
-
-static struct ilm_control_context* get_instance(void);
 
 static void
 output_listener_geometry(void *data,
@@ -1412,18 +1415,6 @@ registry_control_listener_for_main = {
 static struct ilm_control_context ilm_context = {0};
 
 static void
-wayland_destroy(void)
-{
-    struct ilm_control_context *ctx = &ilm_context;
-    ctx->valid = 0;
-    void* threadRetVal = NULL;
-    pthread_cancel(ctx->thread);
-    if (0 != pthread_join(ctx->thread, &threadRetVal)) {
-        fprintf(stderr, "failed to join control thread\n");
-    }
-}
-
-static void
 destroy_control_resources(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
@@ -1455,17 +1446,28 @@ destroy_control_resources(void)
 }
 
 static void
-wayland_context_init(struct wayland_context *ctx)
+wayland_destroy(void)
 {
-    wl_list_init(&ctx->list_screen);
-    wl_list_init(&ctx->list_layer);
-    wl_list_init(&ctx->list_surface);
+    struct ilm_control_context *ctx = &ilm_context;
+    ctx->valid = 0;
+    void* threadRetVal = NULL;
+    pthread_cancel(ctx->thread);
+    if (0 != pthread_join(ctx->thread, &threadRetVal)) {
+        fprintf(stderr, "failed to join control thread\n");
+    }
+    destroy_control_resources();
 }
 
 static ilmErrorTypes
 wayland_init(t_ilm_nativedisplay nativedisplay)
 {
     struct ilm_control_context *ctx = &ilm_context;
+
+    if (ctx->valid != 0)
+    {
+        fprintf(stderr, "Already initialized!\n");
+        return ILM_FAILED;
+    }
 
     if (nativedisplay == 0) {
         return ILM_ERROR_INVALID_ARGUMENTS;
@@ -1475,19 +1477,37 @@ wayland_init(t_ilm_nativedisplay nativedisplay)
 
     ctx->main_ctx.display = (struct wl_display*)nativedisplay;
 
-    int ans = 0;
-    ans = pthread_mutex_init(&ctx->mutex, NULL);
-    if (ans != 0) {
-        fprintf(stderr, "failed to initialize pthread_mutex\n");
+    wl_list_init(&ctx->main_ctx.list_screen);
+    wl_list_init(&ctx->main_ctx.list_layer);
+    wl_list_init(&ctx->main_ctx.list_surface);
+
+    {
+       pthread_mutexattr_t a;
+       if (pthread_mutexattr_init(&a) != 0)
+       {
+          return ILM_FAILED;
+       }
+
+       if (pthread_mutexattr_settype(&a, PTHREAD_MUTEX_RECURSIVE) != 0)
+       {
+          pthread_mutexattr_destroy(&a);
+          return ILM_FAILED;
+       }
+
+       if (pthread_mutex_init(&ctx->mutex, &a) != 0)
+       {
+           pthread_mutexattr_destroy(&a);
+           fprintf(stderr, "failed to initialize pthread_mutex\n");
+           return ILM_FAILED;
+       }
+
+       pthread_mutexattr_destroy(&a);
     }
 
     ctx->internal_id_surface = 0;
     ctx->num_screen = 0;
 
-    wayland_context_init(&ctx->main_ctx);
-    wayland_context_init(&ctx->child_ctx);
-
-    return ILM_SUCCESS;
+    return init_control() == 0 ? ILM_SUCCESS : ILM_FAILED;
 }
 
 static void*
@@ -1528,76 +1548,55 @@ control_thread(void *p_ret)
         wl_display_dispatch(child_ctx->display);
     }
 
-    destroy_control_resources();
-
     return NULL;
 }
 
-static void
+static int
 init_control(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     struct wayland_context *main_ctx = &ctx->main_ctx;
     int wait_count = 0;
     int ret = 0;
-    pthread_attr_t thread_attrs;
 
     wl_list_init(&ctx->list_nativehandle);
 
-    pthread_attr_init(&thread_attrs);
-    pthread_attr_setdetachstate(&thread_attrs, PTHREAD_CREATE_JOINABLE);
-    ret = pthread_create(&ctx->thread, &thread_attrs,
-                         control_thread, NULL);
-    if (ret != 0) {
-        fprintf(stderr, "Failed to start internal receive \
-                thread. returned %d\n", ret);
-        return;
-    }
+    main_ctx->queue = wl_display_create_queue(main_ctx->display);
 
     /* registry_add_listener for request by ivi-controller */
     main_ctx->registry = wl_display_get_registry(main_ctx->display);
     if (main_ctx->registry == NULL) {
         fprintf(stderr, "Failed to get registry\n");
-        return;
+        return -1;
     }
+    wl_proxy_set_queue((void*)main_ctx->registry, main_ctx->queue);
+
     if (wl_registry_add_listener(main_ctx->registry,
                              &registry_control_listener_for_main, ctx)) {
         fprintf(stderr, "Failed to add registry listener\n");
-        return;
+        return -1;
     }
 
-    wl_display_dispatch(main_ctx->display);
-    wl_display_roundtrip(main_ctx->display);
+    display_roundtrip_queue(main_ctx->display, main_ctx->queue);
+    display_roundtrip_queue(main_ctx->display, main_ctx->queue);
 
     ctx->valid = 1;
 
-    /* Wait for bind to wayland interface */
-    do {
-        if (ctx->child_ctx.controller != NULL) {
-            break;
-        }
-        usleep(10000);
-    } while (++wait_count <= 1000); /* wait until 10sec */
+    ret = pthread_create(&ctx->thread, NULL, control_thread, NULL);
 
-    if ((ctx->child_ctx.display == NULL) || (ctx->child_ctx.controller == NULL)) {
-        fprintf(stderr, "Failed to connect display\n");
-        return;
+    if (ret != 0) {
+        fprintf(stderr, "Failed to start internal receive thread. returned %d\n", ret);
+        return -1;
     }
+
+    return 0;
 }
 
 static struct ilm_control_context*
 get_instance(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
-    if (ctx->valid == 0) {
-        init_control();
-    }
-
-    if (ctx->valid < 0) {
-        exit(0);
-    }
-
-    wl_display_roundtrip(ctx->main_ctx.display);
+    display_roundtrip_queue(ctx->main_ctx.display, ctx->main_ctx.queue);
     return ctx;
 }
 
@@ -2954,7 +2953,7 @@ wayland_commitChanges(void)
     if (ctx->main_ctx.controller != NULL) {
         ivi_controller_commit_changes(ctx->main_ctx.controller);
 
-        wl_display_roundtrip(ctx->main_ctx.display);
+        display_roundtrip_queue(ctx->main_ctx.display, ctx->main_ctx.queue);
         returnValue = ILM_SUCCESS;
     }
 
