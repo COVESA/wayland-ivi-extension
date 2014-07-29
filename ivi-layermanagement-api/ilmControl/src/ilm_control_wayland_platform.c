@@ -1104,7 +1104,7 @@ static struct ivi_controller_listener controller_listener= {
 };
 
 static void
-registry_handle_control_for_child(void *data,
+registry_handle_control(void *data,
                        struct wl_registry *registry,
                        uint32_t name, const char *interface,
                        uint32_t version)
@@ -1122,64 +1122,6 @@ registry_handle_control_for_child(void *data,
         if (ivi_controller_add_listener(ctx->controller,
                                        &controller_listener,
                                        ctx)) {
-            fprintf(stderr, "Failed to add ivi_controller listener\n");
-            return;
-        }
-    } else if (strcmp(interface, "wl_output") == 0) {
-        struct screen_context *ctx_scrn = calloc(1, sizeof *ctx_scrn);
-        if (ctx_scrn == NULL) {
-            fprintf(stderr, "Failed to allocate memory for screen_context\n");
-            return;
-        }
-        wl_list_init(&ctx_scrn->link);
-        ctx_scrn->output = wl_registry_bind(registry, name,
-                                           &wl_output_interface, 1);
-        if (ctx_scrn->output == NULL) {
-            free(ctx_scrn);
-            fprintf(stderr, "Failed to registry bind wl_output\n");
-            return;
-        }
-
-        if (wl_output_add_listener(ctx_scrn->output,
-                                   &output_listener,
-                                   ctx_scrn)) {
-            free(ctx_scrn);
-            fprintf(stderr, "Failed to add wl_output listener\n");
-            return;
-        }
-
-        ctx_scrn->id_screen = ctx->num_screen;
-        ctx->num_screen++;
-        wl_list_init(&ctx_scrn->order.list_layer);
-        wl_list_insert(&ctx->list_screen, &ctx_scrn->link);
-    }
-}
-
-static const struct wl_registry_listener
-registry_control_listener_for_child = {
-    registry_handle_control_for_child,
-    NULL
-};
-
-static void
-registry_handle_control_for_main(void *data,
-                       struct wl_registry *registry,
-                       uint32_t name, const char *interface,
-                       uint32_t version)
-{
-    struct ilm_control_context *ctx = data;
-    (void)version;
-
-    if (strcmp(interface, "ivi_controller") == 0) {
-        ctx->main_ctx.controller = wl_registry_bind(registry, name,
-                                           &ivi_controller_interface, 1);
-        if (ctx->main_ctx.controller == NULL) {
-            fprintf(stderr, "Failed to registry bind ivi_controller\n");
-            return;
-        }
-        if (ivi_controller_add_listener(ctx->main_ctx.controller,
-                                       &controller_listener_for_main,
-                                       &ctx->main_ctx)) {
             fprintf(stderr, "Failed to add ivi_controller listener\n");
             return;
         }
@@ -1220,13 +1162,13 @@ registry_handle_control_for_main(void *data,
         ctx_scrn->prop.screenWidth = 0;
         ctx_scrn->prop.screenHeight = 0;
         wl_list_init(&ctx_scrn->order.list_layer);
-        wl_list_insert(&ctx->main_ctx.list_screen, &ctx_scrn->link);
+        wl_list_insert(&ctx->list_screen, &ctx_scrn->link);
     }
 }
 
 static const struct wl_registry_listener
-registry_control_listener_for_main = {
-    registry_handle_control_for_main,
+registry_control_listener= {
+    registry_handle_control,
     NULL
 };
 
@@ -1408,7 +1350,7 @@ init_control(void)
     wl_proxy_set_queue((void*)main_ctx->registry, main_ctx->queue);
 
     if (wl_registry_add_listener(main_ctx->registry,
-                             &registry_control_listener_for_main, ctx)) {
+                             &registry_control_listener, ctx)) {
         fprintf(stderr, "Failed to add registry listener\n");
         return -1;
     }
