@@ -346,7 +346,6 @@ struct wayland_context {
 
 struct ilm_control_context {
     struct wayland_context main_ctx;
-    struct wayland_context child_ctx;
     int32_t valid;
 
     uint32_t num_screen;
@@ -1431,23 +1430,22 @@ destroy_control_resources(void)
     struct screen_context *ctx_scrn;
     struct screen_context *next;
 
-    wl_list_for_each_safe(ctx_scrn, next, &ctx->child_ctx.list_screen, link) {
+    wl_list_for_each_safe(ctx_scrn, next, &ctx->main_ctx.list_screen, link) {
         if (ctx_scrn->output != NULL) {
             wl_list_remove(&ctx_scrn->link);
             wl_output_destroy(ctx_scrn->output);
             free(ctx_scrn);
         }
     }
-    if (ctx->child_ctx.controller != NULL) {
-        ivi_controller_destroy(ctx->child_ctx.controller);
-        ctx->child_ctx.controller = NULL;
+    if (ctx->main_ctx.controller != NULL) {
+        ivi_controller_destroy(ctx->main_ctx.controller);
+        ctx->main_ctx.controller = NULL;
     }
 
-    wl_display_flush(ctx->child_ctx.display);
+    wl_display_flush(ctx->main_ctx.display);
 
-    if (ctx->child_ctx.display != NULL) {
-        ctx->child_ctx.display = NULL;
-    }
+    wl_event_queue_destroy(ctx->main_ctx.queue);
+    ctx->main_ctx.queue = NULL;
 
     if (0 != pthread_mutex_destroy(&ctx->mutex)) {
         fprintf(stderr, "failed to destroy pthread_mutex\n");
@@ -2514,7 +2512,7 @@ wayland_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
 
     if (pOpacity != NULL) {
         struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->child_ctx, surfaceId);
+        ctx_surf = get_surface_context(&ctx->main_ctx, surfaceId);
         if (ctx_surf) {
             *pOpacity = ctx_surf->prop.opacity;
             returnValue = ILM_SUCCESS;
@@ -2598,7 +2596,7 @@ wayland_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
 
     if (pPosition != NULL) {
         struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->child_ctx, surfaceId);
+        ctx_surf = get_surface_context(&ctx->main_ctx, surfaceId);
         if (ctx_surf) {
             *pPosition = ctx_surf->prop.destX;
             *(pPosition + 1) = ctx_surf->prop.destY;
@@ -2689,7 +2687,7 @@ wayland_surfaceGetOrientation(t_ilm_surface surfaceId,
 
     if (pOrientation != NULL) {
         struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->child_ctx, surfaceId);
+        ctx_surf = get_surface_context(&ctx->main_ctx, surfaceId);
         if (ctx_surf) {
             *pOrientation = ctx_surf->prop.orientation;
             returnValue = ILM_SUCCESS;
@@ -2710,7 +2708,7 @@ wayland_surfaceGetPixelformat(t_ilm_layer surfaceId,
 
     if (pPixelformat != NULL) {
         struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->child_ctx, surfaceId);
+        ctx_surf = get_surface_context(&ctx->main_ctx, surfaceId);
         if (ctx_surf) {
             *pPixelformat = ctx_surf->prop.pixelformat;
             returnValue = ILM_SUCCESS;
@@ -2855,7 +2853,7 @@ wayland_layerAddNotification(t_ilm_layer layer,
     struct layer_context *ctx_layer = NULL;
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->child_ctx, (uint32_t)layer);
+                    &ctx->main_ctx, (uint32_t)layer);
     if (ctx_layer == NULL) {
         returnValue = ILM_ERROR_INVALID_ARGUMENTS;
     } else {
@@ -2886,7 +2884,7 @@ wayland_surfaceAddNotification(t_ilm_surface surface,
     struct surface_context *ctx_surf = NULL;
 
     ctx_surf = (struct surface_context*)get_surface_context(
-                    &ctx->child_ctx, (uint32_t)surface);
+                    &ctx->main_ctx, (uint32_t)surface);
     if (ctx_surf == NULL) {
         returnValue = ILM_ERROR_INVALID_ARGUMENTS;
     } else {
@@ -2944,7 +2942,7 @@ wayland_getPropertiesOfSurface(t_ilm_uint surfaceID,
     if (pSurfaceProperties != NULL) {
         struct surface_context *ctx_surf = NULL;
 
-        ctx_surf = get_surface_context(&ctx->child_ctx, (uint32_t)surfaceID);
+        ctx_surf = get_surface_context(&ctx->main_ctx, (uint32_t)surfaceID);
         if (ctx_surf != NULL) {
 
             *pSurfaceProperties = ctx_surf->prop;
@@ -3013,7 +3011,7 @@ wayland_surfaceGetDimension(t_ilm_surface surfaceId,
     if (pDimension != NULL) {
         struct surface_context *ctx_surf = NULL;
 
-        ctx_surf = get_surface_context(&ctx->child_ctx, (uint32_t)surfaceId);
+        ctx_surf = get_surface_context(&ctx->main_ctx, (uint32_t)surfaceId);
         if (ctx_surf != NULL) {
             *pDimension = (t_ilm_uint)ctx_surf->prop.destWidth;
             *(pDimension + 1) = (t_ilm_uint)ctx_surf->prop.destHeight;
@@ -3035,7 +3033,7 @@ wayland_surfaceGetVisibility(t_ilm_surface surfaceId,
     struct surface_context *ctx_surf = NULL;
 
     if (pVisibility != NULL) {
-        ctx_surf = get_surface_context(&ctx->child_ctx, (uint32_t)surfaceId);
+        ctx_surf = get_surface_context(&ctx->main_ctx, (uint32_t)surfaceId);
         if (ctx_surf != NULL) {
             *pVisibility = (t_ilm_bool)ctx_surf->prop.visibility;
             returnValue = ILM_SUCCESS;
