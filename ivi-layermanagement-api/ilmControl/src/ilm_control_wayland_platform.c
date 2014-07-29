@@ -1625,7 +1625,9 @@ static struct ilm_control_context*
 get_instance(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
+    lock_context(ctx);
     display_roundtrip_queue(ctx->main_ctx.display, ctx->main_ctx.queue);
+    unlock_context(ctx);
     return ctx;
 }
 
@@ -1698,6 +1700,7 @@ wayland_getPropertiesOfLayer(t_ilm_uint layerID,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     if (pLayerProperties != NULL) {
@@ -1712,6 +1715,7 @@ wayland_getPropertiesOfLayer(t_ilm_uint layerID,
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -1748,6 +1752,7 @@ wayland_getPropertiesOfScreen(t_ilm_display screenID,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pScreenProperties != NULL) {
         struct screen_context *ctx_screen = NULL;
@@ -1767,6 +1772,7 @@ wayland_getPropertiesOfScreen(t_ilm_display screenID,
         pScreenProperties->screenHeight = 0;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -1789,6 +1795,7 @@ wayland_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if ((pNumberOfIDs != NULL) && (ppIDs != NULL)) {
         struct screen_context *ctx_scrn = NULL;
@@ -1808,6 +1815,7 @@ wayland_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -1816,6 +1824,7 @@ wayland_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if ((pLength != NULL) && (ppArray != NULL)) {
         struct layer_context *ctx_layer = NULL;
@@ -1838,6 +1847,7 @@ wayland_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -1848,6 +1858,7 @@ wayland_getLayerIDsOnScreen(t_ilm_uint screenId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if ((pLength != NULL) && (ppArray != NULL)) {
         struct screen_context *ctx_screen = NULL;
@@ -1881,6 +1892,7 @@ wayland_getLayerIDsOnScreen(t_ilm_uint screenId,
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -1889,6 +1901,7 @@ wayland_getSurfaceIDs(t_ilm_int* pLength, t_ilm_surface** ppArray)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if ((pLength != NULL) && (ppArray != NULL)) {
         struct surface_context *ctx_surf = NULL;
@@ -1908,6 +1921,7 @@ wayland_getSurfaceIDs(t_ilm_int* pLength, t_ilm_surface** ppArray)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -1917,12 +1931,14 @@ wayland_getSurfaceIDsOnLayer(t_ilm_layer layer,
                              t_ilm_surface** ppArray)
 {
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
     struct surface_context *ctx_surf = NULL;
     t_ilm_uint length = 0;
     t_ilm_surface* ids = NULL;
 
     if ((pLength == NULL) || (ppArray == NULL)) {
+        unlock_context(ctx);
         return ILM_FAILED;
     }
 
@@ -1930,12 +1946,14 @@ wayland_getSurfaceIDsOnLayer(t_ilm_layer layer,
                     &ctx->main_ctx, (uint32_t)layer);
 
     if (ctx_layer == NULL) {
+        unlock_context(ctx);
         return ILM_FAILED;
     }
 
     length = wl_list_length(&ctx_layer->order.list_surface);
     *ppArray = (t_ilm_surface*)malloc(length * sizeof *ppArray);
     if (*ppArray == NULL) {
+        unlock_context(ctx);
         return ILM_FAILED;
     }
 
@@ -1946,6 +1964,7 @@ wayland_getSurfaceIDsOnLayer(t_ilm_layer layer,
     }
     *pLength = length;
 
+    unlock_context(ctx);
     return ILM_SUCCESS;
 }
 
@@ -1986,6 +2005,7 @@ wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     uint32_t layerid = 0;
     int32_t is_inside = 0;
 
@@ -2016,6 +2036,7 @@ wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
         }
     } while(0);
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2024,6 +2045,7 @@ wayland_layerRemove(t_ilm_layer layerId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
     struct layer_context *ctx_next = NULL;
 
@@ -2040,6 +2062,7 @@ wayland_layerRemove(t_ilm_layer layerId)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2052,11 +2075,13 @@ wayland_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType)
     }
 
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     *pLayerType = wayland_controller_is_inside_layer_list(&ctx->main_ctx.list_layer, layerId) ?
        ILM_LAYERTYPE_SOFTWARE2D :
        ILM_LAYERTYPE_UNKNOWN;
 
+    unlock_context(ctx);
     return ILM_SUCCESS; // even if non existent?
 }
 
@@ -2065,6 +2090,7 @@ wayland_layerSetVisibility(t_ilm_layer layerId, t_ilm_bool newVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
@@ -2080,6 +2106,7 @@ wayland_layerSetVisibility(t_ilm_layer layerId, t_ilm_bool newVisibility)
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2088,6 +2115,7 @@ wayland_layerGetVisibility(t_ilm_layer layerId, t_ilm_bool *pVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pVisibility != NULL) {
         struct layer_context *ctx_layer = NULL;
@@ -2102,6 +2130,7 @@ wayland_layerGetVisibility(t_ilm_layer layerId, t_ilm_bool *pVisibility)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2110,6 +2139,7 @@ wayland_layerSetOpacity(t_ilm_layer layerId, t_ilm_float opacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
@@ -2122,6 +2152,7 @@ wayland_layerSetOpacity(t_ilm_layer layerId, t_ilm_float opacity)
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2130,6 +2161,7 @@ wayland_layerGetOpacity(t_ilm_layer layerId, t_ilm_float *pOpacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pOpacity != NULL) {
         struct layer_context *ctx_layer = NULL;
@@ -2144,6 +2176,7 @@ wayland_layerGetOpacity(t_ilm_layer layerId, t_ilm_float *pOpacity)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2154,6 +2187,7 @@ wayland_layerSetSourceRectangle(t_ilm_layer layerId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
@@ -2168,6 +2202,7 @@ wayland_layerSetSourceRectangle(t_ilm_layer layerId,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2178,6 +2213,7 @@ wayland_layerSetDestinationRectangle(t_ilm_layer layerId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
@@ -2191,6 +2227,7 @@ wayland_layerSetDestinationRectangle(t_ilm_layer layerId,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2199,6 +2236,7 @@ wayland_layerGetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     if (pDimension != NULL) {
@@ -2212,6 +2250,7 @@ wayland_layerGetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2220,6 +2259,7 @@ wayland_layerSetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     if (pDimension != NULL) {
@@ -2235,6 +2275,7 @@ wayland_layerSetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2243,6 +2284,7 @@ wayland_layerGetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     if (pPosition != NULL) {
@@ -2256,6 +2298,7 @@ wayland_layerGetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2264,6 +2307,7 @@ wayland_layerSetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     if (pPosition != NULL) {
@@ -2279,6 +2323,7 @@ wayland_layerSetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2287,6 +2332,7 @@ wayland_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
     int32_t iviorientation = 0;
 
@@ -2322,6 +2368,7 @@ wayland_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
         returnValue = ILM_SUCCESS;
     } while(0);
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2330,6 +2377,7 @@ wayland_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     if (pOrientation != NULL) {
@@ -2342,6 +2390,7 @@ wayland_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2361,6 +2410,7 @@ wayland_layerSetRenderOrder(t_ilm_layer layerId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
@@ -2387,6 +2437,7 @@ wayland_layerSetRenderOrder(t_ilm_layer layerId,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2415,6 +2466,7 @@ wayland_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct surface_context *ctx_surf = NULL;
     uint32_t visibility = 0;
 
@@ -2428,6 +2480,7 @@ wayland_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility)
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2436,6 +2489,7 @@ wayland_surfaceSetOpacity(t_ilm_surface surfaceId, t_ilm_float opacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct surface_context *ctx_surf = NULL;
     wl_fixed_t opacity_fixed = 0;
 
@@ -2447,6 +2501,7 @@ wayland_surfaceSetOpacity(t_ilm_surface surfaceId, t_ilm_float opacity)
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2455,6 +2510,7 @@ wayland_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pOpacity != NULL) {
         struct surface_context *ctx_surf = NULL;
@@ -2465,6 +2521,7 @@ wayland_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2493,6 +2550,7 @@ wayland_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct surface_context *ctx_surf = NULL;
 
     ctx_surf = get_surface_context(&ctx->main_ctx, surfaceId);
@@ -2503,6 +2561,7 @@ wayland_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2511,6 +2570,7 @@ wayland_surfaceSetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pDimension != NULL) {
         struct surface_context *ctx_surf = NULL;
@@ -2525,6 +2585,7 @@ wayland_surfaceSetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2533,6 +2594,7 @@ wayland_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pPosition != NULL) {
         struct surface_context *ctx_surf = NULL;
@@ -2544,6 +2606,7 @@ wayland_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2552,6 +2615,7 @@ wayland_surfaceSetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pPosition != NULL) {
         struct surface_context *ctx_surf = NULL;
@@ -2566,6 +2630,7 @@ wayland_surfaceSetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2575,6 +2640,7 @@ wayland_surfaceSetOrientation(t_ilm_surface surfaceId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct surface_context *ctx_surf = NULL;
     int32_t iviorientation = 0;
 
@@ -2609,6 +2675,7 @@ wayland_surfaceSetOrientation(t_ilm_surface surfaceId,
         returnValue = ILM_SUCCESS;
     } while(0);
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2618,6 +2685,7 @@ wayland_surfaceGetOrientation(t_ilm_surface surfaceId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pOrientation != NULL) {
         struct surface_context *ctx_surf = NULL;
@@ -2628,6 +2696,7 @@ wayland_surfaceGetOrientation(t_ilm_surface surfaceId,
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2637,6 +2706,7 @@ wayland_surfaceGetPixelformat(t_ilm_layer surfaceId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pPixelformat != NULL) {
         struct surface_context *ctx_surf = NULL;
@@ -2647,6 +2717,7 @@ wayland_surfaceGetPixelformat(t_ilm_layer surfaceId,
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2665,6 +2736,7 @@ wayland_displaySetRenderOrder(t_ilm_display display,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct screen_context *ctx_scrn = NULL;
 
     ctx_scrn = get_screen_context_by_id(&ctx->main_ctx, (uint32_t)display);
@@ -2689,6 +2761,7 @@ wayland_displaySetRenderOrder(t_ilm_display display,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2697,6 +2770,7 @@ wayland_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct screen_context *ctx_scrn = NULL;
 
     ctx_scrn = get_screen_context_by_id(&ctx->main_ctx, (uint32_t)screen);
@@ -2707,6 +2781,7 @@ wayland_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2715,6 +2790,7 @@ wayland_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
@@ -2725,6 +2801,7 @@ wayland_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2734,6 +2811,7 @@ wayland_takeSurfaceScreenshot(t_ilm_const_string filename,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct surface_context *ctx_surf = NULL;
 
     ctx_surf = get_surface_context(&ctx->main_ctx, (uint32_t)surfaceid);
@@ -2744,6 +2822,7 @@ wayland_takeSurfaceScreenshot(t_ilm_const_string filename,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2772,6 +2851,7 @@ wayland_layerAddNotification(t_ilm_layer layer,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
 
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
@@ -2784,6 +2864,7 @@ wayland_layerAddNotification(t_ilm_layer layer,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2801,6 +2882,7 @@ wayland_surfaceAddNotification(t_ilm_surface surface,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct surface_context *ctx_surf = NULL;
 
     ctx_surf = (struct surface_context*)get_surface_context(
@@ -2813,6 +2895,7 @@ wayland_surfaceAddNotification(t_ilm_surface surface,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2828,6 +2911,7 @@ wayland_getNativeHandle(t_ilm_uint pid, t_ilm_int *n_handle,
                         t_ilm_nativehandle **p_handles)
 {
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct nativehandle_context *p_nh_ctx = NULL;
 
     *n_handle = 0;
@@ -2845,6 +2929,7 @@ wayland_getNativeHandle(t_ilm_uint pid, t_ilm_int *n_handle,
         }
     }
 
+    unlock_context(ctx);
     return (*n_handle > 0) ? ILM_SUCCESS : ILM_FAILED;
 }
 
@@ -2854,6 +2939,7 @@ wayland_getPropertiesOfSurface(t_ilm_uint surfaceID,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pSurfaceProperties != NULL) {
         struct surface_context *ctx_surf = NULL;
@@ -2866,6 +2952,7 @@ wayland_getPropertiesOfSurface(t_ilm_uint surfaceID,
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2875,6 +2962,7 @@ wayland_layerAddSurface(t_ilm_layer layerId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
     struct surface_context *ctx_surf = NULL;
 
@@ -2887,6 +2975,7 @@ wayland_layerAddSurface(t_ilm_layer layerId,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2896,6 +2985,7 @@ wayland_layerRemoveSurface(t_ilm_layer layerId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct layer_context *ctx_layer = NULL;
     struct surface_context *ctx_surf = NULL;
 
@@ -2908,6 +2998,7 @@ wayland_layerRemoveSurface(t_ilm_layer layerId,
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2917,6 +3008,7 @@ wayland_surfaceGetDimension(t_ilm_surface surfaceId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (pDimension != NULL) {
         struct surface_context *ctx_surf = NULL;
@@ -2929,6 +3021,7 @@ wayland_surfaceGetDimension(t_ilm_surface surfaceId,
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2938,6 +3031,7 @@ wayland_surfaceGetVisibility(t_ilm_surface surfaceId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct surface_context *ctx_surf = NULL;
 
     if (pVisibility != NULL) {
@@ -2948,6 +3042,7 @@ wayland_surfaceGetVisibility(t_ilm_surface surfaceId,
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2958,6 +3053,7 @@ wayland_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
     struct surface_context *ctx_surf = NULL;
 
     ctx_surf = get_surface_context(&ctx->main_ctx, (uint32_t)surfaceId);
@@ -2970,6 +3066,7 @@ wayland_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
         }
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -2978,6 +3075,7 @@ wayland_commitChanges(void)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = get_instance();
+    lock_context(ctx);
 
     if (ctx->main_ctx.controller != NULL) {
         ivi_controller_commit_changes(ctx->main_ctx.controller);
@@ -2986,5 +3084,6 @@ wayland_commitChanges(void)
         returnValue = ILM_SUCCESS;
     }
 
+    unlock_context(ctx);
     return returnValue;
 }
