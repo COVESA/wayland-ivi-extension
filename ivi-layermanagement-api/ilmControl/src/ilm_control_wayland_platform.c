@@ -731,6 +731,12 @@ controller_surface_listener_destroyed(void *data,
 {
     struct surface_context *ctx_surf = data;
 
+    if (ctx_surf->notification != NULL) {
+        ctx_surf->notification(ctx_surf->id_surface,
+                               &ctx_surf->prop,
+                               ILM_NOTIFICATION_CONTENT_REMOVED);
+    }
+
     wl_list_remove(&ctx_surf->link);
     free(ctx_surf);
 }
@@ -740,18 +746,32 @@ controller_surface_listener_content(void *data,
                    struct ivi_controller_surface *controller,
                    int32_t content_state)
 {
+    struct surface_context *ctx_surf = data;
+
     // if client surface (=content) was removed with ilm_surfaceDestroy()
     // the expected behavior within ILM API mandates a full removal
     // of the surface from the scene. We must remove the controller
     // from scene, too.
     if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_REMOVED == content_state)
     {
-        struct surface_context *ctx_surf = data;
+        if (ctx_surf->notification != NULL) {
+            ctx_surf->notification(ctx_surf->id_surface,
+                                   &ctx_surf->prop,
+                                   ILM_NOTIFICATION_CONTENT_REMOVED);
+        }
 
         ivi_controller_surface_destroy(controller, 1);
 
         wl_list_remove(&ctx_surf->link);
         free(ctx_surf);
+    }
+    else if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_AVAILABLE == content_state)
+    {
+        if (ctx_surf->notification != NULL) {
+            ctx_surf->notification(ctx_surf->id_surface,
+                                    &ctx_surf->prop,
+                                    ILM_NOTIFICATION_CONTENT_AVAILABLE);
+        }
     }
 }
 
@@ -811,7 +831,7 @@ controller_listener_surface(void *data,
         if (ctx_surf-> notification != NULL) {
             ctx_surf->notification(ctx_surf->id_surface,
                                    &ctx_surf->prop,
-                                   ILM_NOTIFICATION_ALL);
+                                   ILM_NOTIFICATION_CONTENT_AVAILABLE);
         }
         fprintf(stderr, "invalid id_surface in controller_listener_surface\n");
         return;
