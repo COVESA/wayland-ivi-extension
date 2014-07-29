@@ -590,7 +590,7 @@ remove_orderlayer_from_screen(struct layer_context *ctx_layer)
 }
 
 static void
-controller_layer_listener_visibility_child(void *data,
+controller_layer_listener_visibility(void *data,
                             struct ivi_controller_layer *controller,
                             int32_t visibility)
 {
@@ -606,7 +606,7 @@ controller_layer_listener_visibility_child(void *data,
 }
 
 static void
-controller_layer_listener_opacity_child(void *data,
+controller_layer_listener_opacity(void *data,
                        struct ivi_controller_layer *controller,
                        wl_fixed_t opacity)
 {
@@ -622,7 +622,7 @@ controller_layer_listener_opacity_child(void *data,
 }
 
 static void
-controller_layer_listener_source_rectangle_child(void *data,
+controller_layer_listener_source_rectangle(void *data,
                                 struct ivi_controller_layer *controller,
                                 int32_t x,
                                 int32_t y,
@@ -650,7 +650,7 @@ controller_layer_listener_source_rectangle_child(void *data,
 }
 
 static void
-controller_layer_listener_destination_rectangle_child(void *data,
+controller_layer_listener_destination_rectangle(void *data,
                                      struct ivi_controller_layer *controller,
                                      int32_t x,
                                      int32_t y,
@@ -672,7 +672,7 @@ controller_layer_listener_destination_rectangle_child(void *data,
 }
 
 static void
-controller_layer_listener_configuration_child(void *data,
+controller_layer_listener_configuration(void *data,
                           struct ivi_controller_layer *controller,
                           int32_t width,
                           int32_t height)
@@ -684,7 +684,7 @@ controller_layer_listener_configuration_child(void *data,
 }
 
 static void
-controller_layer_listener_orientation_child(void *data,
+controller_layer_listener_orientation(void *data,
                              struct ivi_controller_layer *controller,
                              int32_t orientation)
 {
@@ -718,7 +718,7 @@ controller_layer_listener_orientation_child(void *data,
 }
 
 static void
-controller_layer_listener_screen_child(void *data,
+controller_layer_listener_screen(void *data,
                                  struct ivi_controller_layer *controller,
                                  struct wl_output *output)
 {
@@ -732,7 +732,7 @@ controller_layer_listener_screen_child(void *data,
 }
 
 static void
-controller_layer_listener_destroyed_child(void *data,
+controller_layer_listener_destroyed(void *data,
                                     struct ivi_controller_layer *controller)
 {
     struct layer_context *ctx_layer = data;
@@ -742,14 +742,14 @@ controller_layer_listener_destroyed_child(void *data,
 
 static struct ivi_controller_layer_listener controller_layer_listener =
 {
-    controller_layer_listener_visibility_child,
-    controller_layer_listener_opacity_child,
-    controller_layer_listener_source_rectangle_child,
-    controller_layer_listener_destination_rectangle_child,
-    controller_layer_listener_configuration_child,
-    controller_layer_listener_orientation_child,
-    controller_layer_listener_screen_child,
-    controller_layer_listener_destroyed_child
+    controller_layer_listener_visibility,
+    controller_layer_listener_opacity,
+    controller_layer_listener_source_rectangle,
+    controller_layer_listener_destination_rectangle,
+    controller_layer_listener_configuration,
+    controller_layer_listener_orientation,
+    controller_layer_listener_screen,
+    controller_layer_listener_destroyed
 };
 
 static void
