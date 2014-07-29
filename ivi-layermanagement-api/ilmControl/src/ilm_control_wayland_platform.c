@@ -2771,8 +2771,10 @@ wayland_commitChanges(void)
     if (ctx->wl.controller != NULL) {
         ivi_controller_commit_changes(ctx->wl.controller);
 
-        display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
-        returnValue = ILM_SUCCESS;
+        if (display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1)
+        {
+            returnValue = ILM_SUCCESS;
+        }
     }
 
     release_instance();
