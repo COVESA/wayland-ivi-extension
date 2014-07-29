@@ -2547,6 +2547,7 @@ wayland_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
     if (ctx_layer != NULL) {
         ivi_controller_layer_screenshot(ctx_layer->controller,
                                         filename);
+        wl_display_flush(ctx->main_ctx.display);
         returnValue = ILM_SUCCESS;
     }
 
