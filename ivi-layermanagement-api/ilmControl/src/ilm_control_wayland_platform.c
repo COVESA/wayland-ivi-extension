@@ -19,10 +19,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <memory.h>
-#include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdbool.h>
+
+#include <unistd.h>
 #include <poll.h>
+
 #include "ilm_common.h"
 #include "ilm_control_platform.h"
 #include "wayland-util.h"
@@ -346,7 +349,7 @@ struct wayland_context {
 
 struct ilm_control_context {
     struct wayland_context wl;
-    int32_t valid;
+    bool initialized;
 
     uint32_t num_screen;
 
@@ -402,6 +405,8 @@ static inline void unlock_context(struct ilm_control_context *ctx)
 static int init_control(void);
 
 static struct ilm_control_context* sync_and_acquire_instance(void);
+
+static void release_instance(void);
 
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
@@ -1207,15 +1212,12 @@ static void
 wayland_destroy(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
-    lock_context(ctx);
-    ctx->valid = 0;
-    unlock_context(ctx);
-    void* threadRetVal = NULL;
     pthread_cancel(ctx->thread);
-    if (0 != pthread_join(ctx->thread, &threadRetVal)) {
+    if (0 != pthread_join(ctx->thread, NULL)) {
         fprintf(stderr, "failed to join control thread\n");
     }
     destroy_control_resources();
+    memset(ctx, 0, sizeof *ctx);
 }
 
 static ilmErrorTypes
@@ -1223,7 +1225,7 @@ wayland_init(t_ilm_nativedisplay nativedisplay)
 {
     struct ilm_control_context *ctx = &ilm_context;
 
-    if (ctx->valid != 0)
+    if (ctx->initialized)
     {
         fprintf(stderr, "Already initialized!\n");
         return ILM_FAILED;
@@ -1288,15 +1290,6 @@ control_thread(void *p_ret)
 
     while (1)
     {
-        lock_context(ctx);
-        int valid = ctx->valid;
-        unlock_context(ctx);
-
-        if (valid != 1)
-        {
-            break;
-        }
-
         if (wl_display_prepare_read_queue(display, queue) != 0)
         {
             lock_context(ctx);
@@ -1374,14 +1367,14 @@ init_control(void)
     display_roundtrip_queue(wl->display, wl->queue);
     display_roundtrip_queue(wl->display, wl->queue);
 
-    ctx->valid = 1;
-
     ret = pthread_create(&ctx->thread, NULL, control_thread, NULL);
 
     if (ret != 0) {
         fprintf(stderr, "Failed to start internal receive thread. returned %d\n", ret);
         return -1;
     }
+
+    ctx->initialized = true;
 
     return 0;
 }
