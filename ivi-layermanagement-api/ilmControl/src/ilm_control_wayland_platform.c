@@ -783,7 +783,7 @@ remove_ordersurface_from_layer(struct surface_context *ctx_surf)
 }
 
 static void
-controller_surface_listener_visibility_child(void *data,
+controller_surface_listener_visibility(void *data,
                             struct ivi_controller_surface *controller,
                             int32_t visibility)
 {
@@ -799,7 +799,7 @@ controller_surface_listener_visibility_child(void *data,
 }
 
 static void
-controller_surface_listener_opacity_child(void *data,
+controller_surface_listener_opacity(void *data,
                          struct ivi_controller_surface *controller,
                          wl_fixed_t opacity)
 {
@@ -815,7 +815,7 @@ controller_surface_listener_opacity_child(void *data,
 }
 
 static void
-controller_surface_listener_configuration_child(void *data,
+controller_surface_listener_configuration(void *data,
                            struct ivi_controller_surface *controller,
                            int32_t width,
                            int32_t height)
@@ -827,7 +827,7 @@ controller_surface_listener_configuration_child(void *data,
 }
 
 static void
-controller_surface_listener_source_rectangle_child(void *data,
+controller_surface_listener_source_rectangle(void *data,
                                   struct ivi_controller_surface *controller,
                                   int32_t x,
                                   int32_t y,
@@ -855,7 +855,7 @@ controller_surface_listener_source_rectangle_child(void *data,
 }
 
 static void
-controller_surface_listener_destination_rectangle_child(void *data,
+controller_surface_listener_destination_rectangle(void *data,
                    struct ivi_controller_surface *controller,
                    int32_t x,
                    int32_t y,
@@ -877,7 +877,7 @@ controller_surface_listener_destination_rectangle_child(void *data,
 }
 
 static void
-controller_surface_listener_orientation_child(void *data,
+controller_surface_listener_orientation(void *data,
                              struct ivi_controller_surface *controller,
                              int32_t orientation)
 {
@@ -911,7 +911,7 @@ controller_surface_listener_orientation_child(void *data,
 }
 
 static void
-controller_surface_listener_pixelformat_child(void *data,
+controller_surface_listener_pixelformat(void *data,
                              struct ivi_controller_surface *controller,
                              int32_t pixelformat)
 {
@@ -921,7 +921,7 @@ controller_surface_listener_pixelformat_child(void *data,
 }
 
 static void
-controller_surface_listener_layer_child(void *data,
+controller_surface_listener_layer(void *data,
                                   struct ivi_controller_surface *controller,
                                   struct ivi_controller_layer *layer)
 {
@@ -935,7 +935,7 @@ controller_surface_listener_layer_child(void *data,
 }
 
 static void
-controller_surface_listener_stats_child(void *data,
+controller_surface_listener_stats(void *data,
                                   struct ivi_controller_surface *controller,
                                   uint32_t redraw_count,
                                   uint32_t frame_count,
@@ -953,7 +953,7 @@ controller_surface_listener_stats_child(void *data,
 }
 
 static void
-controller_surface_listener_destroyed_child(void *data,
+controller_surface_listener_destroyed(void *data,
                   struct ivi_controller_surface *controller)
 {
     struct surface_context *ctx_surf = data;
@@ -963,7 +963,7 @@ controller_surface_listener_destroyed_child(void *data,
 }
 
 static void
-controller_surface_listener_content_child(void *data,
+controller_surface_listener_content(void *data,
                    struct ivi_controller_surface *controller,
                    int32_t content_state)
 {
@@ -983,7 +983,7 @@ controller_surface_listener_content_child(void *data,
 }
 
 static void
-controller_surface_listener_input_focus_child(void *data,
+controller_surface_listener_input_focus(void *data,
                    struct ivi_controller_surface *controller,
                    int32_t enabled)
 {
@@ -992,20 +992,20 @@ controller_surface_listener_input_focus_child(void *data,
     (void)enabled;
 }
 
-static struct ivi_controller_surface_listener controller_surface_listener_child =
+static struct ivi_controller_surface_listener controller_surface_listener=
 {
-    controller_surface_listener_visibility_child,
-    controller_surface_listener_opacity_child,
-    controller_surface_listener_source_rectangle_child,
-    controller_surface_listener_destination_rectangle_child,
-    controller_surface_listener_configuration_child,
-    controller_surface_listener_orientation_child,
-    controller_surface_listener_pixelformat_child,
-    controller_surface_listener_layer_child,
-    controller_surface_listener_stats_child,
-    controller_surface_listener_destroyed_child,
-    controller_surface_listener_content_child,
-    controller_surface_listener_input_focus_child
+    controller_surface_listener_visibility,
+    controller_surface_listener_opacity,
+    controller_surface_listener_source_rectangle,
+    controller_surface_listener_destination_rectangle,
+    controller_surface_listener_configuration,
+    controller_surface_listener_orientation,
+    controller_surface_listener_pixelformat,
+    controller_surface_listener_layer,
+    controller_surface_listener_stats,
+    controller_surface_listener_destroyed,
+    controller_surface_listener_content,
+    controller_surface_listener_input_focus
 };
 
 static void
@@ -1243,7 +1243,7 @@ controller_listener_surface_for_child(void *data,
     wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
     ivi_controller_surface_add_listener(ctx_surf->controller,
-                                        &controller_surface_listener_child, ctx_surf);
+                                        &controller_surface_listener, ctx_surf);
 }
 
 static void
