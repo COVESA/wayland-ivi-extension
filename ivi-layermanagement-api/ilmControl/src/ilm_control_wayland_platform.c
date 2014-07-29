@@ -2423,6 +2423,9 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
     ctx_surf = (struct surface_context*)get_surface_context(
                     &ctx->wl, (uint32_t)surface);
     if (ctx_surf == NULL) {
+        if (callback != NULL) {
+            callback((uint32_t)surface, NULL, ILM_NOTIFICATION_CONTENT_REMOVED);
+        }
         controller_listener_surface(ctx, ctx->wl.controller, (uint32_t)surface);
         ctx_surf = (struct surface_context*)get_surface_context(
                         &ctx->wl, (uint32_t)surface);
