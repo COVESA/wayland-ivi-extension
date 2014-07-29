@@ -1009,19 +1009,7 @@ static struct ivi_controller_surface_listener controller_surface_listener=
 };
 
 static void
-controller_listener_screen_for_child(void *data,
-                           struct ivi_controller *ivi_controller,
-                           uint32_t id_screen,
-                           struct ivi_controller_screen *controller_screen)
-{
-    (void)data;
-    (void)ivi_controller;
-    (void)id_screen;
-    (void)controller_screen;
-}
-
-static void
-controller_listener_layer_for_child(void *data,
+controller_listener_layer(void *data,
                           struct ivi_controller *controller,
                           uint32_t id_layer)
 {
@@ -1036,7 +1024,7 @@ controller_listener_layer_for_child(void *data,
 }
 
 static void
-controller_listener_surface_for_child(void *data,
+controller_listener_surface(void *data,
                             struct ivi_controller *controller,
                             uint32_t id_surface)
 {
@@ -1075,7 +1063,7 @@ controller_listener_surface_for_child(void *data,
 }
 
 static void
-controller_listener_error_for_child(void *data,
+controller_listener_error(void *data,
                           struct ivi_controller *ivi_controller,
 	                  int32_t object_id,
 	                  int32_t object_type,
@@ -1090,15 +1078,8 @@ controller_listener_error_for_child(void *data,
     (void)error_text;
 }
 
-static struct ivi_controller_listener controller_listener_for_child = {
-    controller_listener_screen_for_child,
-    controller_listener_layer_for_child,
-    controller_listener_surface_for_child,
-    controller_listener_error_for_child
-};
-
 static void
-controller_listener_screen_for_main(void *data,
+controller_listener_screen(void *data,
                            struct ivi_controller *ivi_controller,
                            uint32_t id_screen,
                            struct ivi_controller_screen *controller_screen)
@@ -1115,11 +1096,11 @@ controller_listener_screen_for_main(void *data,
     ctx_screen->controller = controller_screen;
 }
 
-static struct ivi_controller_listener controller_listener_for_main = {
-    controller_listener_screen_for_main,
-    controller_listener_layer_for_child,
-    controller_listener_surface_for_child,
-    controller_listener_error_for_child
+static struct ivi_controller_listener controller_listener= {
+    controller_listener_screen,
+    controller_listener_layer,
+    controller_listener_surface,
+    controller_listener_error
 };
 
 static void
@@ -1139,7 +1120,7 @@ registry_handle_control_for_child(void *data,
             return;
         }
         if (ivi_controller_add_listener(ctx->controller,
-                                       &controller_listener_for_child,
+                                       &controller_listener,
                                        ctx)) {
             fprintf(stderr, "Failed to add ivi_controller listener\n");
             return;
