@@ -81,6 +81,7 @@ struct ivicontroller_surface {
     struct wl_client *client;
     struct wl_list link;
     struct ivishell *shell;
+    int implementation_set;
 };
 
 struct ivicontroller_layer {
@@ -1277,6 +1278,7 @@ controller_surface_create(struct wl_client *client,
     struct ivicontroller_surface *ctrlsurf = NULL;
     struct ivi_layout_SurfaceProperties prop;
     struct ivisurface *ivisurf = NULL;
+    struct ivicontroller_surface *ctrl_link = NULL;
 
     ctrlsurf = calloc(1, sizeof *ctrlsurf);
     if (!ctrlsurf) {
@@ -1303,11 +1305,26 @@ controller_surface_create(struct wl_client *client,
         return;
     }
 
+    wl_list_for_each(ctrl_link, &shell->list_controller_surface, link) {
+        if ((ctrl_link->implementation_set == 0) &&
+            (ctrl_link->id_surface == id_surface) &&
+            (ctrl_link->shell == shell) &&
+            (ctrl_link->client != client)) {
+            ++ivisurf->controller_surface_count;
+            wl_resource_set_implementation(ctrl_link->resource,
+                                           &controller_surface_implementation,
+                                           ivisurf, destroy_ivicontroller_surface);
+            ctrl_link->implementation_set = 1;
+        }
+    }
+
     ++ivisurf->controller_surface_count;
 
     wl_resource_set_implementation(ctrlsurf->resource,
                                    &controller_surface_implementation,
                                    ivisurf, destroy_ivicontroller_surface);
+
+    ctrlsurf->implementation_set = 1;
 
     memset(&prop, 0, sizeof prop);
 

@@ -2505,6 +2505,11 @@ ilm_layerRemoveSurface(t_ilm_layer layerId,
         returnValue = ILM_SUCCESS;
     }
 
+    if ((ctx_surf != NULL) && (ctx_surf->notification != NULL)) {
+        ctx_surf->notification = NULL;
+        returnValue = ILM_SUCCESS;
+    }
+
     release_instance();
     return returnValue;
 }
