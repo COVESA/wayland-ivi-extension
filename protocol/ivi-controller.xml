@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.2" encoding="UTF-8"?>
 <protocol name="ivi_controller">
 
     <copyright>
@@ -270,6 +270,7 @@
                 surface will have input focus.
                 If argument enabled is not 0, input focus for this surface is enabled.
             </description>
+            <arg name="device" type="uint"/>
             <arg name="enabled" type="int"/>
         </request>
 
@@ -279,8 +280,18 @@
                 this surface has no longer the input focus. If enbaled is not 0, this surface
                 now has input focus enabled.
             </description>
+            <arg name="device" type="uint"/>
             <arg name="enabled" type="int"/>
         </event>
+
+        <enum name="input_device">
+            <description summary="brief Identifier of different input device types. Can be used as a bitmask.">
+            </description>
+            <entry name="keyboard" value="0x1"/>
+            <entry name="pointer" value="0x2"/>
+            <entry name="touch" value="0x4"/>
+            <entry name="all" value="~0x0"/>
+        </enum>
 
     </interface>
 

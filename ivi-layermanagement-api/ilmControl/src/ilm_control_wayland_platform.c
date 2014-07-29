@@ -757,10 +757,12 @@ controller_surface_listener_content(void *data,
 static void
 controller_surface_listener_input_focus(void *data,
                    struct ivi_controller_surface *controller,
+                   uint32_t device,
                    int32_t enabled)
 {
     (void)data;
     (void)controller;
+    (void)device;
     (void)enabled;
 }
 

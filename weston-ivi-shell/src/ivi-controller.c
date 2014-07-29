@@ -809,10 +809,12 @@ controller_surface_destroy(struct wl_client *client,
 static void
 controller_surface_set_input_focus(struct wl_client *client,
               struct wl_resource *resource,
+              uint32_t device,
               int32_t enabled)
 {
     (void)client;
     (void)resource;
+    (void)device;
     (void)enabled;
 }
 
