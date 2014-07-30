@@ -1377,6 +1377,8 @@ init_control(void)
     /* registry_add_listener for request by ivi-controller */
     wl->registry = wl_display_get_registry(wl->display);
     if (wl->registry == NULL) {
+        wl_event_queue_destroy(wl->queue);
+        wl->queue = NULL;
         fprintf(stderr, "Failed to get registry\n");
         return -1;
     }
