@@ -492,9 +492,13 @@ output_listener_mode(void *data,
     (void)width;
     (void)height;
     (void)refresh;
-    struct screen_context *ctx_scrn = data;
-    ctx_scrn->prop.screenWidth = width;
-    ctx_scrn->prop.screenHeight = height;
+
+    if (flags & WL_OUTPUT_MODE_CURRENT)
+    {
+        struct screen_context *ctx_scrn = data;
+        ctx_scrn->prop.screenWidth = width;
+        ctx_scrn->prop.screenHeight = height;
+    }
 }
 
 static void
