@@ -1406,14 +1406,16 @@ init_control(void)
     return 0;
 }
 
-static struct ilm_control_context*
-sync_and_acquire_instance(void)
-{
-    struct ilm_control_context *ctx = &ilm_context;
-    lock_context(ctx);
-    display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
-    return ctx;
-}
+#define sync_and_acquire_instance() ({ \
+    struct ilm_control_context *ctx = &ilm_context; \
+    if (! ctx->initialized) { \
+        fputs("Not initialized\n", stderr); \
+        return ILM_FAILED; \
+    } \
+    lock_context(ctx); \
+    display_roundtrip_queue(ctx->wl.display, ctx->wl.queue); \
+    ctx; \
+})
 
 static void release_instance(void)
 {
