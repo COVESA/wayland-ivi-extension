@@ -365,18 +365,12 @@ get_surface_context_by_id(struct ilm_client_context *ctx,
 {
     struct surface_context *ctx_surf = NULL;
 
-    /* At first, search cached list */
     wl_list_for_each(ctx_surf, &ctx->list_surface, link) {
         if (ctx_surf->id_surface == id_surface) {
             return ctx_surf;
         }
     }
 
-    wl_list_for_each(ctx_surf, &ctx->list_surface, link) {
-        if (ctx_surf->id_surface == id_surface) {
-            return ctx_surf;
-        }
-    }
     return NULL;
 }
 
