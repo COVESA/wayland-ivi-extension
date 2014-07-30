@@ -1174,23 +1174,50 @@ registry_control_listener= {
     NULL
 };
 
-static struct ilm_control_context ilm_context = {0};
+static struct ilm_control_context ilm_context;
 
-static void
-destroy_control_resources(void)
+static void destroy_control_resources(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
-    struct screen_context *ctx_scrn;
-    struct screen_context *next;
 
-    wl_list_for_each_safe(ctx_scrn, next, &ctx->wl.list_screen, link) {
-        if (ctx_scrn->output != NULL) {
-            wl_list_remove(&ctx_scrn->link);
-            wl_output_destroy(ctx_scrn->output);
-            free(ctx_scrn);
-        }
-    }
     if (ctx->wl.controller != NULL) {
+        {
+            struct surface_context *l;
+            struct surface_context *n;
+            wl_list_for_each_safe(l, n, &ctx->wl.list_surface, link) {
+                wl_list_remove(&l->link);
+                wl_list_remove(&l->order.link);
+                ivi_controller_surface_destroy(l->controller, 0);
+                free(l);
+            }
+        }
+
+        {
+            struct layer_context *l;
+            struct layer_context *n;
+            wl_list_for_each_safe(l, n, &ctx->wl.list_layer, link) {
+                wl_list_remove(&l->link);
+                wl_list_remove(&l->order.link);
+                ivi_controller_layer_destroy(l->controller, 0);
+                free(l);
+            }
+        }
+
+        {
+            struct screen_context *ctx_scrn;
+            struct screen_context *next;
+
+            wl_list_for_each_safe(ctx_scrn, next, &ctx->wl.list_screen, link) {
+                if (ctx_scrn->output != NULL) {
+                    wl_output_destroy(ctx_scrn->output);
+                }
+
+                wl_list_remove(&ctx_scrn->link);
+                ivi_controller_screen_destroy(ctx_scrn->controller);
+                free(ctx_scrn);
+            }
+        }
+
         ivi_controller_destroy(ctx->wl.controller);
         ctx->wl.controller = NULL;
     }
@@ -1199,6 +1226,9 @@ destroy_control_resources(void)
 
     wl_event_queue_destroy(ctx->wl.queue);
     ctx->wl.queue = NULL;
+
+    wl_registry_destroy(ctx->wl.registry);
+    ctx->wl.registry = NULL;
 
     if (0 != pthread_mutex_destroy(&ctx->mutex)) {
         fprintf(stderr, "failed to destroy pthread_mutex\n");
