@@ -31,250 +31,12 @@
 #include "wayland-util.h"
 #include "ivi-controller-client-protocol.h"
 
-static ilmErrorTypes wayland_getPropertiesOfLayer(t_ilm_uint layerID,
-                         struct ilmLayerProperties* pLayerProperties);
-static ilmErrorTypes wayland_getPropertiesOfScreen(t_ilm_display screenID,
-                         struct ilmScreenProperties* pScreenProperties);
-static ilmErrorTypes wayland_getNumberOfHardwareLayers(t_ilm_uint screenID,
-                         t_ilm_uint* pNumberOfHardwareLayers);
-static ilmErrorTypes wayland_getScreenIDs(t_ilm_uint* pNumberOfIDs,
-                         t_ilm_uint** ppIDs);
-static ilmErrorTypes wayland_getLayerIDs(t_ilm_int* pLength,
-                         t_ilm_layer** ppArray);
-static ilmErrorTypes wayland_getLayerIDsOnScreen(t_ilm_uint screenId,
-                         t_ilm_int* pLength, t_ilm_layer** ppArray);
-static ilmErrorTypes wayland_getSurfaceIDs(t_ilm_int* pLength,
-                         t_ilm_surface** ppArray);
-static ilmErrorTypes wayland_getSurfaceIDsOnLayer(t_ilm_layer layer,
-                         t_ilm_int* pLength, t_ilm_surface** ppArray);
-static ilmErrorTypes wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
-                         t_ilm_uint width, t_ilm_uint height);
-static ilmErrorTypes wayland_layerRemove(t_ilm_layer layerId);
-static ilmErrorTypes wayland_layerGetType(t_ilm_layer layerId,
-                         ilmLayerType* pLayerType);
-static ilmErrorTypes wayland_layerSetVisibility(t_ilm_layer layerId,
-                         t_ilm_bool newVisibility);
-static ilmErrorTypes wayland_layerGetVisibility(t_ilm_layer layerId,
-                         t_ilm_bool *pVisibility);
-static ilmErrorTypes wayland_layerSetOpacity(t_ilm_layer layerId,
-                         t_ilm_float opacity);
-static ilmErrorTypes wayland_layerGetOpacity(t_ilm_layer layerId,
-                         t_ilm_float *pOpacity);
-static ilmErrorTypes wayland_layerSetSourceRectangle(t_ilm_layer layerId,
-                         t_ilm_uint x, t_ilm_uint y,
-                         t_ilm_uint width, t_ilm_uint height);
-static ilmErrorTypes wayland_layerSetDestinationRectangle(t_ilm_layer layerId,
-                         t_ilm_int x, t_ilm_int y,
-                         t_ilm_int width, t_ilm_int height);
-static ilmErrorTypes wayland_layerGetDimension(t_ilm_layer layerId,
-                         t_ilm_uint *pDimension);
-static ilmErrorTypes wayland_layerSetDimension(t_ilm_layer layerId,
-                         t_ilm_uint *pDimension);
-static ilmErrorTypes wayland_layerGetPosition(t_ilm_layer layerId,
-                         t_ilm_uint *pPosition);
-static ilmErrorTypes wayland_layerSetPosition(t_ilm_layer layerId,
-                         t_ilm_uint *pPosition);
-static ilmErrorTypes wayland_layerSetOrientation(t_ilm_layer layerId,
-                         ilmOrientation orientation);
-static ilmErrorTypes wayland_layerGetOrientation(t_ilm_layer layerId,
-                         ilmOrientation *pOrientation);
-static ilmErrorTypes wayland_layerSetChromaKey(t_ilm_layer layerId,
-                         t_ilm_int* pColor);
-static ilmErrorTypes wayland_layerSetRenderOrder(t_ilm_layer layerId,
-                         t_ilm_layer *pSurfaceId,
-                         t_ilm_int number);
-static ilmErrorTypes wayland_layerGetCapabilities(t_ilm_layer layerId,
-                         t_ilm_layercapabilities *pCapabilities);
-static ilmErrorTypes wayland_layerTypeGetCapabilities(ilmLayerType layerType,
-                         t_ilm_layercapabilities *pCapabilities);
-static ilmErrorTypes wayland_surfaceSetVisibility(t_ilm_surface surfaceId,
-                         t_ilm_bool newVisibility);
-static ilmErrorTypes wayland_surfaceSetOpacity(t_ilm_surface surfaceId,
-                         t_ilm_float opacity);
-static ilmErrorTypes wayland_surfaceGetOpacity(t_ilm_surface surfaceId,
-                         t_ilm_float *pOpacity);
-static ilmErrorTypes wayland_SetKeyboardFocusOn(t_ilm_surface surfaceId);
-static ilmErrorTypes wayland_GetKeyboardFocusSurfaceId(
-                         t_ilm_surface* pSurfaceId);
-static ilmErrorTypes wayland_surfaceSetDestinationRectangle(
-                         t_ilm_surface surfaceId,
-                         t_ilm_int x, t_ilm_int y,
-                         t_ilm_int width, t_ilm_int height);
-static ilmErrorTypes wayland_surfaceSetDimension(t_ilm_surface surfaceId,
-                         t_ilm_uint *pDimension);
-static ilmErrorTypes wayland_surfaceGetPosition(t_ilm_surface surfaceId,
-                         t_ilm_uint *pPosition);
-static ilmErrorTypes wayland_surfaceSetPosition(t_ilm_surface surfaceId,
-                         t_ilm_uint *pPosition);
-static ilmErrorTypes wayland_surfaceSetOrientation(t_ilm_surface surfaceId,
-                         ilmOrientation orientation);
-static ilmErrorTypes wayland_surfaceGetOrientation(t_ilm_surface surfaceId,
-                         ilmOrientation *pOrientation);
-static ilmErrorTypes wayland_surfaceGetPixelformat(t_ilm_layer surfaceId,
-                         ilmPixelFormat *pPixelformat);
-static ilmErrorTypes wayland_surfaceSetChromaKey(t_ilm_surface surfaceId,
-                         t_ilm_int* pColor);
-static ilmErrorTypes wayland_displaySetRenderOrder(t_ilm_display display,
-                         t_ilm_layer *pLayerId, const t_ilm_uint number);
-static ilmErrorTypes wayland_takeScreenshot(t_ilm_uint screen,
-                         t_ilm_const_string filename);
-static ilmErrorTypes wayland_takeLayerScreenshot(t_ilm_const_string filename,
-                         t_ilm_layer layerid);
-static ilmErrorTypes wayland_takeSurfaceScreenshot(t_ilm_const_string filename,
-                         t_ilm_surface surfaceid);
-static ilmErrorTypes wayland_SetOptimizationMode(ilmOptimization id,
-                         ilmOptimizationMode mode);
-static ilmErrorTypes wayland_GetOptimizationMode(ilmOptimization id,
-                         ilmOptimizationMode* pMode);
-static ilmErrorTypes wayland_layerAddNotification(t_ilm_layer layer,
-                         layerNotificationFunc callback);
-static ilmErrorTypes wayland_layerRemoveNotification(t_ilm_layer layer);
-static ilmErrorTypes wayland_surfaceAddNotification(t_ilm_surface surface,
-                         surfaceNotificationFunc callback);
-static ilmErrorTypes wayland_surfaceRemoveNotification(t_ilm_surface surface);
-static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
-static void wayland_destroy(void);
-static ilmErrorTypes wayland_getNativeHandle(t_ilm_uint pid,
-                         t_ilm_int *n_handle,
-                         t_ilm_nativehandle **p_handles);
-static ilmErrorTypes wayland_getPropertiesOfSurface(t_ilm_uint surfaceID,
-                         struct ilmSurfaceProperties* pSurfaceProperties);
-static ilmErrorTypes wayland_layerAddSurface(t_ilm_layer layerId,
-                         t_ilm_surface surfaceId);
-static ilmErrorTypes wayland_layerRemoveSurface(t_ilm_layer layerId,
-                         t_ilm_surface surfaceId);
-static ilmErrorTypes wayland_surfaceGetDimension(t_ilm_surface surfaceId,
-                         t_ilm_uint *pDimension);
-static ilmErrorTypes wayland_surfaceGetVisibility(t_ilm_surface surfaceId,
-                         t_ilm_bool *pVisibility);
-static ilmErrorTypes wayland_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
-                         t_ilm_int x, t_ilm_int y,
-                         t_ilm_int width, t_ilm_int height);
-static ilmErrorTypes wayland_commitChanges(void);
-
-void init_ilmControlPlatformTable(void)
-{
-    gIlmControlPlatformFunc.getPropertiesOfLayer =
-        wayland_getPropertiesOfLayer;
-    gIlmControlPlatformFunc.getPropertiesOfScreen =
-        wayland_getPropertiesOfScreen;
-    gIlmControlPlatformFunc.getNumberOfHardwareLayers =
-        wayland_getNumberOfHardwareLayers;
-    gIlmControlPlatformFunc.getScreenIDs =
-        wayland_getScreenIDs;
-    gIlmControlPlatformFunc.getLayerIDs =
-        wayland_getLayerIDs;
-    gIlmControlPlatformFunc.getLayerIDsOnScreen =
-        wayland_getLayerIDsOnScreen;
-    gIlmControlPlatformFunc.getSurfaceIDs =
-        wayland_getSurfaceIDs;
-    gIlmControlPlatformFunc.getSurfaceIDsOnLayer =
-        wayland_getSurfaceIDsOnLayer;
-    gIlmControlPlatformFunc.layerCreateWithDimension =
-        wayland_layerCreateWithDimension;
-    gIlmControlPlatformFunc.layerRemove =
-        wayland_layerRemove;
-    gIlmControlPlatformFunc.layerGetType =
-        wayland_layerGetType;
-    gIlmControlPlatformFunc.layerSetVisibility =
-        wayland_layerSetVisibility;
-    gIlmControlPlatformFunc.layerGetVisibility =
-        wayland_layerGetVisibility;
-    gIlmControlPlatformFunc.layerSetOpacity =
-        wayland_layerSetOpacity;
-    gIlmControlPlatformFunc.layerGetOpacity =
-        wayland_layerGetOpacity;
-    gIlmControlPlatformFunc.layerSetSourceRectangle =
-        wayland_layerSetSourceRectangle;
-    gIlmControlPlatformFunc.layerSetDestinationRectangle =
-        wayland_layerSetDestinationRectangle;
-    gIlmControlPlatformFunc.layerGetDimension =
-        wayland_layerGetDimension;
-    gIlmControlPlatformFunc.layerSetDimension =
-        wayland_layerSetDimension;
-    gIlmControlPlatformFunc.layerGetPosition =
-        wayland_layerGetPosition;
-    gIlmControlPlatformFunc.layerSetPosition =
-        wayland_layerSetPosition;
-    gIlmControlPlatformFunc.layerSetOrientation =
-        wayland_layerSetOrientation;
-    gIlmControlPlatformFunc.layerGetOrientation =
-        wayland_layerGetOrientation;
-    gIlmControlPlatformFunc.layerSetChromaKey =
-        wayland_layerSetChromaKey;
-    gIlmControlPlatformFunc.layerSetRenderOrder =
-        wayland_layerSetRenderOrder;
-    gIlmControlPlatformFunc.layerGetCapabilities =
-        wayland_layerGetCapabilities;
-    gIlmControlPlatformFunc.layerTypeGetCapabilities =
-        wayland_layerTypeGetCapabilities;
-    gIlmControlPlatformFunc.surfaceSetVisibility =
-        wayland_surfaceSetVisibility;
-    gIlmControlPlatformFunc.surfaceSetOpacity =
-        wayland_surfaceSetOpacity;
-    gIlmControlPlatformFunc.surfaceGetOpacity =
-        wayland_surfaceGetOpacity;
-    gIlmControlPlatformFunc.SetKeyboardFocusOn =
-        wayland_SetKeyboardFocusOn;
-    gIlmControlPlatformFunc.GetKeyboardFocusSurfaceId =
-        wayland_GetKeyboardFocusSurfaceId;
-    gIlmControlPlatformFunc.surfaceSetDestinationRectangle =
-        wayland_surfaceSetDestinationRectangle;
-    gIlmControlPlatformFunc.surfaceSetDimension =
-        wayland_surfaceSetDimension;
-    gIlmControlPlatformFunc.surfaceGetPosition =
-        wayland_surfaceGetPosition;
-    gIlmControlPlatformFunc.surfaceSetPosition =
-        wayland_surfaceSetPosition;
-    gIlmControlPlatformFunc.surfaceSetOrientation =
-        wayland_surfaceSetOrientation;
-    gIlmControlPlatformFunc.surfaceGetOrientation =
-        wayland_surfaceGetOrientation;
-    gIlmControlPlatformFunc.surfaceGetPixelformat =
-        wayland_surfaceGetPixelformat;
-    gIlmControlPlatformFunc.surfaceSetChromaKey =
-        wayland_surfaceSetChromaKey;
-    gIlmControlPlatformFunc.displaySetRenderOrder =
-        wayland_displaySetRenderOrder;
-    gIlmControlPlatformFunc.takeScreenshot =
-        wayland_takeScreenshot;
-    gIlmControlPlatformFunc.takeLayerScreenshot =
-        wayland_takeLayerScreenshot;
-    gIlmControlPlatformFunc.takeSurfaceScreenshot =
-        wayland_takeSurfaceScreenshot;
-    gIlmControlPlatformFunc.SetOptimizationMode =
-        wayland_SetOptimizationMode;
-    gIlmControlPlatformFunc.GetOptimizationMode =
-        wayland_GetOptimizationMode;
-    gIlmControlPlatformFunc.layerAddNotification =
-        wayland_layerAddNotification;
-    gIlmControlPlatformFunc.layerRemoveNotification =
-        wayland_layerRemoveNotification;
-    gIlmControlPlatformFunc.surfaceAddNotification =
-        wayland_surfaceAddNotification;
-    gIlmControlPlatformFunc.surfaceRemoveNotification =
-        wayland_surfaceRemoveNotification;
-    gIlmControlPlatformFunc.init =
-        wayland_init;
-    gIlmControlPlatformFunc.destroy =
-        wayland_destroy;
-    gIlmControlPlatformFunc.getNativeHandle =
-        wayland_getNativeHandle;
-    gIlmControlPlatformFunc.getPropertiesOfSurface =
-        wayland_getPropertiesOfSurface;
-    gIlmControlPlatformFunc.layerAddSurface =
-        wayland_layerAddSurface;
-    gIlmControlPlatformFunc.layerRemoveSurface =
-        wayland_layerRemoveSurface;
-    gIlmControlPlatformFunc.surfaceGetDimension =
-        wayland_surfaceGetDimension;
-    gIlmControlPlatformFunc.surfaceGetVisibility =
-        wayland_surfaceGetVisibility;
-    gIlmControlPlatformFunc.surfaceSetSourceRectangle =
-        wayland_surfaceSetSourceRectangle;
-    gIlmControlPlatformFunc.commitChanges =
-        wayland_commitChanges;
-}
+/* GCC visibility */
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define ILM_EXPORT __attribute__ ((visibility("default")))
+#else
+#define ILM_EXPORT
+#endif
 
 struct surface_context {
     struct wl_list link;
@@ -1235,8 +997,8 @@ static void destroy_control_resources(void)
     }
 }
 
-static void
-wayland_destroy(void)
+ILM_EXPORT void
+ilmControl_destroy(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     pthread_cancel(ctx->thread);
@@ -1247,8 +1009,8 @@ wayland_destroy(void)
     memset(ctx, 0, sizeof *ctx);
 }
 
-static ilmErrorTypes
-wayland_init(t_ilm_nativedisplay nativedisplay)
+ILM_EXPORT ilmErrorTypes
+ilmControl_init(t_ilm_nativedisplay nativedisplay)
 {
     struct ilm_control_context *ctx = &ilm_context;
 
@@ -1486,8 +1248,8 @@ get_screen_context_by_id(struct wayland_context *ctx, uint32_t id_screen)
     return NULL;
 }
 
-static ilmErrorTypes
-wayland_getPropertiesOfLayer(t_ilm_uint layerID,
+ILM_EXPORT ilmErrorTypes
+ilm_getPropertiesOfLayer(t_ilm_uint layerID,
                          struct ilmLayerProperties* pLayerProperties)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -1537,8 +1299,8 @@ create_layerids(struct screen_context *ctx_screen,
     }
 }
 
-static ilmErrorTypes
-wayland_getPropertiesOfScreen(t_ilm_display screenID,
+ILM_EXPORT ilmErrorTypes
+ilm_getPropertiesOfScreen(t_ilm_display screenID,
                               struct ilmScreenProperties* pScreenProperties)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -1563,8 +1325,8 @@ wayland_getPropertiesOfScreen(t_ilm_display screenID,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_getNumberOfHardwareLayers(t_ilm_uint screenID,
+ILM_EXPORT ilmErrorTypes
+ilm_getNumberOfHardwareLayers(t_ilm_uint screenID,
                                   t_ilm_uint* pNumberOfHardwareLayers)
 {
     (void)screenID;
@@ -1577,8 +1339,8 @@ wayland_getNumberOfHardwareLayers(t_ilm_uint screenID,
     }
 }
 
-static ilmErrorTypes
-wayland_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
+ILM_EXPORT ilmErrorTypes
+ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -1605,8 +1367,8 @@ wayland_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray)
+ILM_EXPORT ilmErrorTypes
+ilm_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -1636,8 +1398,8 @@ wayland_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_getLayerIDsOnScreen(t_ilm_uint screenId,
+ILM_EXPORT ilmErrorTypes
+ilm_getLayerIDsOnScreen(t_ilm_uint screenId,
                             t_ilm_int* pLength,
                             t_ilm_layer** ppArray)
 {
@@ -1680,8 +1442,8 @@ wayland_getLayerIDsOnScreen(t_ilm_uint screenId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_getSurfaceIDs(t_ilm_int* pLength, t_ilm_surface** ppArray)
+ILM_EXPORT ilmErrorTypes
+ilm_getSurfaceIDs(t_ilm_int* pLength, t_ilm_surface** ppArray)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -1708,8 +1470,8 @@ wayland_getSurfaceIDs(t_ilm_int* pLength, t_ilm_surface** ppArray)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_getSurfaceIDsOnLayer(t_ilm_layer layer,
+ILM_EXPORT ilmErrorTypes
+ilm_getSurfaceIDsOnLayer(t_ilm_layer layer,
                              t_ilm_int* pLength,
                              t_ilm_surface** ppArray)
 {
@@ -1780,8 +1542,8 @@ static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width
      return 0;
 }
 
-static ilmErrorTypes
-wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
+ILM_EXPORT ilmErrorTypes
+ilm_layerCreateWithDimension(t_ilm_layer* pLayerId,
                                  t_ilm_uint width,
                                  t_ilm_uint height)
 {
@@ -1821,8 +1583,8 @@ wayland_layerCreateWithDimension(t_ilm_layer* pLayerId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerRemove(t_ilm_layer layerId)
+ILM_EXPORT ilmErrorTypes
+ilm_layerRemove(t_ilm_layer layerId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -1846,8 +1608,8 @@ wayland_layerRemove(t_ilm_layer layerId)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType)
+ILM_EXPORT ilmErrorTypes
+ilm_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType)
 {
     if (!pLayerType)
     {
@@ -1864,8 +1626,8 @@ wayland_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType)
     return ILM_SUCCESS; // even if non existent?
 }
 
-static ilmErrorTypes
-wayland_layerSetVisibility(t_ilm_layer layerId, t_ilm_bool newVisibility)
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetVisibility(t_ilm_layer layerId, t_ilm_bool newVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -1888,8 +1650,8 @@ wayland_layerSetVisibility(t_ilm_layer layerId, t_ilm_bool newVisibility)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerGetVisibility(t_ilm_layer layerId, t_ilm_bool *pVisibility)
+ILM_EXPORT ilmErrorTypes
+ilm_layerGetVisibility(t_ilm_layer layerId, t_ilm_bool *pVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -1911,8 +1673,8 @@ wayland_layerGetVisibility(t_ilm_layer layerId, t_ilm_bool *pVisibility)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerSetOpacity(t_ilm_layer layerId, t_ilm_float opacity)
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetOpacity(t_ilm_layer layerId, t_ilm_float opacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -1932,8 +1694,8 @@ wayland_layerSetOpacity(t_ilm_layer layerId, t_ilm_float opacity)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerGetOpacity(t_ilm_layer layerId, t_ilm_float *pOpacity)
+ILM_EXPORT ilmErrorTypes
+ilm_layerGetOpacity(t_ilm_layer layerId, t_ilm_float *pOpacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -1955,8 +1717,8 @@ wayland_layerGetOpacity(t_ilm_layer layerId, t_ilm_float *pOpacity)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerSetSourceRectangle(t_ilm_layer layerId,
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetSourceRectangle(t_ilm_layer layerId,
                                 t_ilm_uint x, t_ilm_uint y,
                                 t_ilm_uint width, t_ilm_uint height)
 {
@@ -1980,8 +1742,8 @@ wayland_layerSetSourceRectangle(t_ilm_layer layerId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerSetDestinationRectangle(t_ilm_layer layerId,
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetDestinationRectangle(t_ilm_layer layerId,
                                  t_ilm_int x, t_ilm_int y,
                                  t_ilm_int width, t_ilm_int height)
 {
@@ -2004,8 +1766,8 @@ wayland_layerSetDestinationRectangle(t_ilm_layer layerId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerGetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
+ILM_EXPORT ilmErrorTypes
+ilm_layerGetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2026,8 +1788,8 @@ wayland_layerGetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerSetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2050,8 +1812,8 @@ wayland_layerSetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerGetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
+ILM_EXPORT ilmErrorTypes
+ilm_layerGetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2072,8 +1834,8 @@ wayland_layerGetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerSetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2096,8 +1858,8 @@ wayland_layerSetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2140,8 +1902,8 @@ wayland_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
+ILM_EXPORT ilmErrorTypes
+ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2161,8 +1923,8 @@ wayland_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor)
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor)
 {
     (void)layerId;
     (void)pColor;
@@ -2170,8 +1932,8 @@ wayland_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor)
     return ILM_FAILED;
 }
 
-static ilmErrorTypes
-wayland_layerSetRenderOrder(t_ilm_layer layerId,
+ILM_EXPORT ilmErrorTypes
+ilm_layerSetRenderOrder(t_ilm_layer layerId,
                         t_ilm_surface *pSurfaceId,
                         t_ilm_int number)
 {
@@ -2198,8 +1960,8 @@ wayland_layerSetRenderOrder(t_ilm_layer layerId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerGetCapabilities(t_ilm_layer layerId,
+ILM_EXPORT ilmErrorTypes
+ilm_layerGetCapabilities(t_ilm_layer layerId,
                          t_ilm_layercapabilities *pCapabilities)
 {
     (void)layerId;
@@ -2208,8 +1970,8 @@ wayland_layerGetCapabilities(t_ilm_layer layerId,
     return ILM_FAILED;
 }
 
-static ilmErrorTypes
-wayland_layerTypeGetCapabilities(ilmLayerType layerType,
+ILM_EXPORT ilmErrorTypes
+ilm_layerTypeGetCapabilities(ilmLayerType layerType,
                              t_ilm_layercapabilities *pCapabilities)
 {
     (void)layerType;
@@ -2218,8 +1980,8 @@ wayland_layerTypeGetCapabilities(ilmLayerType layerType,
     return ILM_FAILED;
 }
 
-static ilmErrorTypes
-wayland_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility)
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2240,8 +2002,8 @@ wayland_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceSetOpacity(t_ilm_surface surfaceId, t_ilm_float opacity)
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetOpacity(t_ilm_surface surfaceId, t_ilm_float opacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2260,8 +2022,8 @@ wayland_surfaceSetOpacity(t_ilm_surface surfaceId, t_ilm_float opacity)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2279,8 +2041,8 @@ wayland_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_SetKeyboardFocusOn(t_ilm_surface surfaceId)
+ILM_EXPORT ilmErrorTypes
+ilm_SetKeyboardFocusOn(t_ilm_surface surfaceId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     (void)surfaceId;
@@ -2288,8 +2050,8 @@ wayland_SetKeyboardFocusOn(t_ilm_surface surfaceId)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_GetKeyboardFocusSurfaceId(t_ilm_surface* pSurfaceId)
+ILM_EXPORT ilmErrorTypes
+ilm_GetKeyboardFocusSurfaceId(t_ilm_surface* pSurfaceId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     (void)pSurfaceId;
@@ -2297,8 +2059,8 @@ wayland_GetKeyboardFocusSurfaceId(t_ilm_surface* pSurfaceId)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
                                    t_ilm_int x, t_ilm_int y,
                                    t_ilm_int width, t_ilm_int height)
 {
@@ -2318,8 +2080,8 @@ wayland_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceSetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension)
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2341,8 +2103,8 @@ wayland_surfaceSetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2361,8 +2123,8 @@ wayland_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceSetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2384,8 +2146,8 @@ wayland_surfaceSetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceSetOrientation(t_ilm_surface surfaceId,
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetOrientation(t_ilm_surface surfaceId,
                               ilmOrientation orientation)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2428,8 +2190,8 @@ wayland_surfaceSetOrientation(t_ilm_surface surfaceId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceGetOrientation(t_ilm_surface surfaceId,
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceGetOrientation(t_ilm_surface surfaceId,
                               ilmOrientation *pOrientation)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2448,8 +2210,8 @@ wayland_surfaceGetOrientation(t_ilm_surface surfaceId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceGetPixelformat(t_ilm_layer surfaceId,
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceGetPixelformat(t_ilm_layer surfaceId,
                               ilmPixelFormat *pPixelformat)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2468,8 +2230,8 @@ wayland_surfaceGetPixelformat(t_ilm_layer surfaceId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceSetChromaKey(t_ilm_surface surfaceId, t_ilm_int* pColor)
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetChromaKey(t_ilm_surface surfaceId, t_ilm_int* pColor)
 {
     (void)surfaceId;
     (void)pColor;
@@ -2477,8 +2239,8 @@ wayland_surfaceSetChromaKey(t_ilm_surface surfaceId, t_ilm_int* pColor)
     return ILM_FAILED;
 }
 
-static ilmErrorTypes
-wayland_displaySetRenderOrder(t_ilm_display display,
+ILM_EXPORT ilmErrorTypes
+ilm_displaySetRenderOrder(t_ilm_display display,
                           t_ilm_layer *pLayerId, const t_ilm_uint number)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2501,8 +2263,8 @@ wayland_displaySetRenderOrder(t_ilm_display display,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
+ILM_EXPORT ilmErrorTypes
+ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2520,8 +2282,8 @@ wayland_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
+ILM_EXPORT ilmErrorTypes
+ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2540,8 +2302,8 @@ wayland_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_takeSurfaceScreenshot(t_ilm_const_string filename,
+ILM_EXPORT ilmErrorTypes
+ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
                               t_ilm_surface surfaceid)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2560,8 +2322,8 @@ wayland_takeSurfaceScreenshot(t_ilm_const_string filename,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_SetOptimizationMode(ilmOptimization id, ilmOptimizationMode mode)
+ILM_EXPORT ilmErrorTypes
+ilm_SetOptimizationMode(ilmOptimization id, ilmOptimizationMode mode)
 {
     (void)id;
     (void)mode;
@@ -2569,8 +2331,8 @@ wayland_SetOptimizationMode(ilmOptimization id, ilmOptimizationMode mode)
     return ILM_FAILED;
 }
 
-static ilmErrorTypes
-wayland_GetOptimizationMode(ilmOptimization id, ilmOptimizationMode* pMode)
+ILM_EXPORT ilmErrorTypes
+ilm_GetOptimizationMode(ilmOptimization id, ilmOptimizationMode* pMode)
 {
     (void)id;
     (void)pMode;
@@ -2579,8 +2341,8 @@ wayland_GetOptimizationMode(ilmOptimization id, ilmOptimizationMode* pMode)
 }
 
 // TODO
-static ilmErrorTypes
-wayland_layerAddNotification(t_ilm_layer layer,
+ILM_EXPORT ilmErrorTypes
+ilm_layerAddNotification(t_ilm_layer layer,
                              layerNotificationFunc callback)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2602,15 +2364,15 @@ wayland_layerAddNotification(t_ilm_layer layer,
 }
 
 // TODO
-static ilmErrorTypes
-wayland_layerRemoveNotification(t_ilm_layer layer)
+ILM_EXPORT ilmErrorTypes
+ilm_layerRemoveNotification(t_ilm_layer layer)
 {
-   return wayland_layerAddNotification(layer, NULL);
+   return ilm_layerAddNotification(layer, NULL);
 }
 
 // TODO
-static ilmErrorTypes
-wayland_surfaceAddNotification(t_ilm_surface surface,
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceAddNotification(t_ilm_surface surface,
                              surfaceNotificationFunc callback)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2632,14 +2394,14 @@ wayland_surfaceAddNotification(t_ilm_surface surface,
 }
 
 // TODO
-static ilmErrorTypes
-wayland_surfaceRemoveNotification(t_ilm_surface surface)
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceRemoveNotification(t_ilm_surface surface)
 {
-    return wayland_surfaceAddNotification(surface, NULL);
+    return ilm_surfaceAddNotification(surface, NULL);
 }
 
-static ilmErrorTypes
-wayland_getNativeHandle(t_ilm_uint pid, t_ilm_int *n_handle,
+ILM_EXPORT ilmErrorTypes
+ilm_getNativeHandle(t_ilm_uint pid, t_ilm_int *n_handle,
                         t_ilm_nativehandle **p_handles)
 {
     struct ilm_control_context *ctx = sync_and_acquire_instance();
@@ -2664,8 +2426,8 @@ wayland_getNativeHandle(t_ilm_uint pid, t_ilm_int *n_handle,
     return (*n_handle > 0) ? ILM_SUCCESS : ILM_FAILED;
 }
 
-static ilmErrorTypes
-wayland_getPropertiesOfSurface(t_ilm_uint surfaceID,
+ILM_EXPORT ilmErrorTypes
+ilm_getPropertiesOfSurface(t_ilm_uint surfaceID,
                         struct ilmSurfaceProperties* pSurfaceProperties)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2686,8 +2448,8 @@ wayland_getPropertiesOfSurface(t_ilm_uint surfaceID,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerAddSurface(t_ilm_layer layerId,
+ILM_EXPORT ilmErrorTypes
+ilm_layerAddSurface(t_ilm_layer layerId,
                         t_ilm_surface surfaceId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2708,8 +2470,8 @@ wayland_layerAddSurface(t_ilm_layer layerId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_layerRemoveSurface(t_ilm_layer layerId,
+ILM_EXPORT ilmErrorTypes
+ilm_layerRemoveSurface(t_ilm_layer layerId,
                            t_ilm_surface surfaceId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2730,8 +2492,8 @@ wayland_layerRemoveSurface(t_ilm_layer layerId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceGetDimension(t_ilm_surface surfaceId,
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceGetDimension(t_ilm_surface surfaceId,
                             t_ilm_uint *pDimension)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2752,8 +2514,8 @@ wayland_surfaceGetDimension(t_ilm_surface surfaceId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceGetVisibility(t_ilm_surface surfaceId,
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceGetVisibility(t_ilm_surface surfaceId,
                              t_ilm_bool *pVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2772,8 +2534,8 @@ wayland_surfaceGetVisibility(t_ilm_surface surfaceId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
                                   t_ilm_int x, t_ilm_int y,
                                   t_ilm_int width, t_ilm_int height)
 {
@@ -2795,8 +2557,8 @@ wayland_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
     return returnValue;
 }
 
-static ilmErrorTypes
-wayland_commitChanges(void)
+ILM_EXPORT ilmErrorTypes
+ilm_commitChanges(void)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();

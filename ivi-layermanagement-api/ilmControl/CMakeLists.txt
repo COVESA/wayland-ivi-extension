@@ -39,7 +39,6 @@ link_directories(
 )
 
 add_library(${PROJECT_NAME} SHARED
-    src/ilm_control.c
     src/ilm_control_wayland_platform.c
 )
 
