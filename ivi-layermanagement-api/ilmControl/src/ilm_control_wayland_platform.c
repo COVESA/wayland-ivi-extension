@@ -2360,7 +2360,6 @@ ilm_GetOptimizationMode(ilmOptimization id, ilmOptimizationMode* pMode)
     return ILM_FAILED;
 }
 
-// TODO
 ILM_EXPORT ilmErrorTypes
 ilm_layerAddNotification(t_ilm_layer layer,
                              layerNotificationFunc callback)
@@ -2383,14 +2382,12 @@ ilm_layerAddNotification(t_ilm_layer layer,
     return returnValue;
 }
 
-// TODO
 ILM_EXPORT ilmErrorTypes
 ilm_layerRemoveNotification(t_ilm_layer layer)
 {
    return ilm_layerAddNotification(layer, NULL);
 }
 
-// TODO
 ILM_EXPORT ilmErrorTypes
 ilm_surfaceAddNotification(t_ilm_surface surface,
                              surfaceNotificationFunc callback)
@@ -2413,7 +2410,6 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
     return returnValue;
 }
 
-// TODO
 ILM_EXPORT ilmErrorTypes
 ilm_surfaceRemoveNotification(t_ilm_surface surface)
 {
