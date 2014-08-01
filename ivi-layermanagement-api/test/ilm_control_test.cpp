@@ -403,7 +403,6 @@ TEST_F(IlmCommandTest, ilm_getLayerIDs) {
     EXPECT_EQ(layer1, IDs[0]);
     EXPECT_EQ(layer2, IDs[1]);
     free(IDs);
-
 }
 
 TEST_F(IlmCommandTest, ilm_getLayerIDsOfScreen) {
@@ -451,7 +450,6 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
         EXPECT_TRUE(contains(IDs+old_length, 2, surface2));
     }
     free(IDs);
-
 }
 
 TEST_F(IlmCommandTest, ilm_surfaceCreate_Remove) {
@@ -535,7 +533,6 @@ TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
     t_ilm_uint* IDs;
     t_ilm_int orig_length;
     t_ilm_int length;
-    t_ilm_int new_length;
 
     // get the initial number of layers
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&orig_length, &IDs));
@@ -568,7 +565,6 @@ TEST_F(IlmCommandTest, ilm_layerGetType) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetType(layer, &type));
     ASSERT_EQ(ILM_LAYERTYPE_SOFTWARE2D, type);
-
 }
 
 TEST_F(IlmCommandTest, ilm_layerGetType_InvalidInput) {
@@ -590,7 +586,6 @@ TEST_F(IlmCommandTest, ilm_layerGetCapabilities) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetCapabilities(layer, &caps));
     ASSERT_EQ(exp_caps, caps);
-
 }
 
 TEST_F(IlmCommandTest, ilm_layerTypeGetCapabilities) {
@@ -719,7 +714,6 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidResources) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ASSERT_NE(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, NULL));
-
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_ilm_surfaceSetDestinationRectangle) {
@@ -768,7 +762,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_
     ASSERT_EQ(4316u, surfaceProperties2.destHeight);
     ASSERT_EQ(ILM_TWOHUNDREDSEVENTY, surfaceProperties2.orientation);
     ASSERT_FALSE(surfaceProperties2.visibility);
-
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_layerSetDestinationRectangle) {
@@ -817,7 +810,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_
     ASSERT_EQ(4316u, layerProperties2.destHeight);
     ASSERT_EQ(ILM_TWOHUNDREDSEVENTY, layerProperties2.orientation);
     ASSERT_FALSE(layerProperties2.visibility);
-
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_InvalidInput) {
@@ -973,7 +965,6 @@ TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat) {
     ASSERT_EQ(ILM_PIXELFORMAT_RGB_565, p5);
     ASSERT_EQ(ILM_PIXELFORMAT_RGB_888, p6);
     ASSERT_EQ(ILM_PIXELFORMAT_R_8, p7);
-
 }
 
 TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
@@ -995,7 +986,6 @@ TEST_F(IlmCommandTest, ilm_keyboard_focus) {
     ASSERT_EQ(ILM_SUCCESS, ilm_SetKeyboardFocusOn(surface1));
     ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
     EXPECT_EQ(surface1, surface);
-
 }
 
 TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
@@ -1022,7 +1012,6 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     ASSERT_EQ(ILM_SUCCESS, ilm_SetKeyboardFocusOn(surface1));
     ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
     EXPECT_NE(surface1, surface);
-
 }
 
 TEST_F(IlmCommandTest, SetGetOptimizationMode) {
@@ -1319,7 +1308,6 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
     free(layerSurfaceIDs);
 
     ASSERT_EQ(2, layerSurfaceCount);
-
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
@@ -1356,5 +1344,4 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
     free(layerSurfaceIDs);
 
     ASSERT_EQ(0, layerSurfaceCount);
-
 }
