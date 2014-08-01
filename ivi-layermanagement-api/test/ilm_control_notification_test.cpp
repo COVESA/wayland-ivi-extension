@@ -300,9 +300,7 @@ TEST_F(NotificationTest, NotifyOnLayerSetPosition)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
     // change something
-    t_ilm_uint* pos = new t_ilm_uint[2];
-    pos[0] = 7;
-    pos[1] = 2;
+    t_ilm_uint pos[] = { 7, 2 };
     ilm_layerSetPosition(layer,pos);
     ilm_commitChanges();
 
@@ -321,9 +319,7 @@ TEST_F(NotificationTest, NotifyOnLayerSetDimension)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
     // change something
-    t_ilm_uint* pos = new t_ilm_uint[2];
-    pos[0] = 70;
-    pos[1] = 22;
+    t_ilm_uint pos[] = { 70, 22 };
     ilm_layerSetDimension(layer,pos);
     ilm_commitChanges();
 
