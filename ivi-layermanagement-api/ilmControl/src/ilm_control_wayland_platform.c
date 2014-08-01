@@ -1370,7 +1370,7 @@ ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
         t_ilm_uint length = wl_list_length(&ctx->wl.list_screen);
         *pNumberOfIDs = 0;
 
-        *ppIDs = (t_ilm_uint*)malloc(length * sizeof *ppIDs);
+        *ppIDs = (t_ilm_uint*)malloc(length * sizeof **ppIDs);
         if (*ppIDs != NULL) {
             t_ilm_uint* ids = *ppIDs;
             wl_list_for_each(ctx_scrn, &ctx->wl.list_screen, link) {
@@ -1398,7 +1398,7 @@ ilm_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray)
         t_ilm_uint length = wl_list_length(&ctx->wl.list_layer);
         *pLength = 0;
 
-        *ppArray = (t_ilm_layer*)malloc(length * sizeof *ppArray);
+        *ppArray = (t_ilm_layer*)malloc(length * sizeof **ppArray);
         if (*ppArray != NULL) {
             // compositor sends layers in opposite order
             // write ids from back to front to turn them around
@@ -1435,7 +1435,7 @@ ilm_getLayerIDsOnScreen(t_ilm_uint screenId,
 
             if (0 < length)
             {
-                *ppArray = (t_ilm_layer*)malloc(length * sizeof *ppArray);
+                *ppArray = (t_ilm_layer*)malloc(length * sizeof **ppArray);
                 if (*ppArray != NULL) {
                     // compositor sends layers in opposite order
                     // write ids from back to front to turn them around
@@ -1473,7 +1473,7 @@ ilm_getSurfaceIDs(t_ilm_int* pLength, t_ilm_surface** ppArray)
         t_ilm_uint length = wl_list_length(&ctx->wl.list_surface);
         *pLength = 0;
 
-        *ppArray = (t_ilm_surface*)malloc(length * sizeof *ppArray);
+        *ppArray = (t_ilm_surface*)malloc(length * sizeof **ppArray);
         if (*ppArray != NULL) {
             t_ilm_surface* ids = *ppArray;
             wl_list_for_each_reverse(ctx_surf, &ctx->wl.list_surface, link) {
@@ -1515,7 +1515,7 @@ ilm_getSurfaceIDsOnLayer(t_ilm_layer layer,
     }
 
     length = wl_list_length(&ctx_layer->order.list_surface);
-    *ppArray = (t_ilm_surface*)malloc(length * sizeof *ppArray);
+    *ppArray = (t_ilm_surface*)malloc(length * sizeof **ppArray);
     if (*ppArray == NULL) {
         release_instance();
         return ILM_FAILED;
