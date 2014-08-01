@@ -1066,36 +1066,44 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
-    ASSERT_TRUE(numberOfScreens>0);
+    EXPECT_TRUE(numberOfScreens>0);
 
-    t_ilm_display screen = screenIDs[0];
-    ilmScreenProperties screenProperties;
+    if (numberOfScreens > 0)
+    {
+        t_ilm_display screen = screenIDs[0];
+        ilmScreenProperties screenProperties;
 
-    t_ilm_layer layerIds[3] = {100, 200, 300};//t_ilm_layer layerIds[3] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(layerIds, 800, 480));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(layerIds + 1, 800, 480));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(layerIds + 2, 800, 480));
+        t_ilm_layer layerIds[3] = {100, 200, 300};//t_ilm_layer layerIds[3] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+        EXPECT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(layerIds, 800, 480));
+        EXPECT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(layerIds + 1, 800, 480));
+        EXPECT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(layerIds + 2, 800, 480));
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+        EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_displaySetRenderOrder(screen, layerIds, 3));
+        EXPECT_EQ(ILM_SUCCESS, ilm_displaySetRenderOrder(screen, layerIds, 3));
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+        EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfScreen(screen, &screenProperties));
-    ASSERT_EQ(3, screenProperties.layerCount);
-    ASSERT_EQ(layerIds[0], screenProperties.layerIds[0]);
-    ASSERT_EQ(layerIds[1], screenProperties.layerIds[1]);
-    ASSERT_EQ(layerIds[2], screenProperties.layerIds[2]);
+        EXPECT_EQ(ILM_SUCCESS, ilm_getPropertiesOfScreen(screen, &screenProperties));
+        EXPECT_EQ(3, screenProperties.layerCount);
+        if (screenProperties.layerCount == 3)
+        {
+            EXPECT_EQ(layerIds[0], screenProperties.layerIds[0]);
+            EXPECT_EQ(layerIds[1], screenProperties.layerIds[1]);
+            EXPECT_EQ(layerIds[2], screenProperties.layerIds[2]);
+        }
+        free(screenProperties.layerIds);
 
-    ASSERT_GT(screenProperties.screenWidth, 0u);
-    ASSERT_GT(screenProperties.screenHeight, 0u);
+        EXPECT_GT(screenProperties.screenWidth, 0u);
+        EXPECT_GT(screenProperties.screenHeight, 0u);
 
-    t_ilm_uint numberOfHardwareLayers;
-    ASSERT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
-    ASSERT_EQ(numberOfHardwareLayers, screenProperties.harwareLayerCount);
+        t_ilm_uint numberOfHardwareLayers;
+        EXPECT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
+        EXPECT_EQ(numberOfHardwareLayers, screenProperties.harwareLayerCount);
+    }
 
+    free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, DisplaySetRenderOrder_growing) {
