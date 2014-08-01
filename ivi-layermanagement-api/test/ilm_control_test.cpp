@@ -1279,22 +1279,25 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_shrinking) {
         for (unsigned int j = 0; j < layerCount; ++j)
         {
             //put them from end to beginning, so that in each loop iteration the order of surafces change
-            ASSERT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, renderOrder + j, surfaceCount - j));
-            ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-            ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &layerSurfaceCount, &layerSurfaceIDs));
+            EXPECT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, renderOrder + j, surfaceCount - j));
+            EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
+            EXPECT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &layerSurfaceCount, &layerSurfaceIDs));
 
-            ASSERT_EQ(surfaceCount - j, layerSurfaceCount);
-            for(unsigned int k = 0; k < surfaceCount - j; ++k)
-            {
-                ASSERT_EQ(renderOrder[j + k], layerSurfaceIDs[k]);
-            }
+            EXPECT_EQ(surfaceCount - j, layerSurfaceCount);
+            if (surfaceCount - j == (unsigned int)layerSurfaceCount)
+                for(unsigned int k = 0; k < surfaceCount - j; ++k)
+                {
+                    EXPECT_EQ(renderOrder[j + k], layerSurfaceIDs[k]);
+                }
+            free(layerSurfaceIDs);
         }
 
         //set empty render order again
-        ASSERT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, renderOrder, 0));
-        ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+        EXPECT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, renderOrder, 0));
+        EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 
+    free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
