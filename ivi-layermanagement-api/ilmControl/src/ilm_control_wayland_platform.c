@@ -19,12 +19,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <memory.h>
+#include <errno.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 
 #include <unistd.h>
 #include <poll.h>
+
+#include <sys/eventfd.h>
 
 #include "ilm_common.h"
 #include "ilm_control_platform.h"
@@ -118,6 +121,7 @@ struct ilm_control_context {
 
     pthread_t thread;
     pthread_mutex_t mutex;
+    int shutdown_fd;
     uint32_t internal_id_surface;
 };
 
@@ -997,15 +1001,28 @@ static void destroy_control_resources(void)
     }
 }
 
+static void send_shutdown_event(struct ilm_control_context *ctx)
+{
+    uint64_t buf = 1;
+    while (write(ctx->shutdown_fd, &buf, sizeof buf) == -1 && errno == EINTR)
+       ;
+}
+
 ILM_EXPORT void
 ilmControl_destroy(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
-    pthread_cancel(ctx->thread);
+
+    send_shutdown_event(ctx);
+
     if (0 != pthread_join(ctx->thread, NULL)) {
         fprintf(stderr, "failed to join control thread\n");
     }
+
     destroy_control_resources();
+
+    close(ctx->shutdown_fd);
+
     memset(ctx, 0, sizeof *ctx);
 }
 
@@ -1055,12 +1072,15 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
        pthread_mutexattr_destroy(&a);
     }
 
-    return init_control() == 0 ? ILM_SUCCESS : ILM_FAILED;
-}
+    ctx->shutdown_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 
-static void cancel_read(void *d)
-{
-    wl_display_cancel_read(d);
+    if (ctx->shutdown_fd == -1)
+    {
+        fprintf(stderr, "Could not setup shutdown-fd: %s\n", strerror(errno));
+        return ILM_FAILED;
+    }
+
+    return init_control() == 0 ? ILM_SUCCESS : ILM_FAILED;
 }
 
 static void*
@@ -1071,6 +1091,7 @@ control_thread(void *p_ret)
     struct wl_display *const display = wl->display;
     struct wl_event_queue *const queue = wl->queue;
     int const fd = wl_display_get_fd(display);
+    int const shutdown_fd = ctx->shutdown_fd;
     (void) p_ret;
 
     while (1)
@@ -1087,19 +1108,13 @@ control_thread(void *p_ret)
             break;
         }
 
-        struct pollfd pfd;
+        struct pollfd pfd[2] = {
+           { .fd = fd,          .events = POLLIN },
+           { .fd = shutdown_fd, .events = POLLIN }
+        };
 
-        pfd.fd = fd;
-        pfd.events = POLLIN;
-        pfd.revents = 0;
-
-        int pollret = -1;
-
-        pthread_cleanup_push(cancel_read, display);
-        pollret = poll(&pfd, 1, -1);
-        pthread_cleanup_pop(0);
-
-        if (pollret != -1 && (pfd.revents & POLLIN))
+        int pollret = poll(pfd, 2, -1);
+        if (pollret != -1 && (pfd[0].revents & POLLIN))
         {
             wl_display_read_events(display);
 
@@ -1115,6 +1130,11 @@ control_thread(void *p_ret)
         else
         {
             wl_display_cancel_read(display);
+
+            if (pollret == -1 || (pfd[1].revents & POLLIN))
+            {
+                break;
+            }
         }
     }
 
