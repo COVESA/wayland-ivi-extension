@@ -1045,16 +1045,21 @@ TEST_F(IlmCommandTest, ilm_getNumberOfHardwareLayers) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
-    ASSERT_TRUE(numberOfScreens>0);
+    EXPECT_TRUE(numberOfScreens>0);
 
-    t_ilm_display screen = screenIDs[0];
-    t_ilm_uint numberOfHardwareLayers;
+    if (numberOfScreens > 0)
+    {
+       t_ilm_display screen = screenIDs[0];
+       t_ilm_uint numberOfHardwareLayers;
 
-    // Depends on the platform the test is executed on - just check if the
-    // function doesn't fail. The ilm_getPropertiesOfScreen test does a more
-    // comprehensive verification.
-    ASSERT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
-    ASSERT_GT(numberOfHardwareLayers, 0u);
+       // Depends on the platform the test is executed on - just check if the
+       // function doesn't fail. The ilm_getPropertiesOfScreen test does a more
+       // comprehensive verification.
+       EXPECT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
+       EXPECT_GT(numberOfHardwareLayers, 0u);
+    }
+
+    free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
