@@ -322,7 +322,6 @@ struct screen_context {
 
     struct {
         struct wl_list list_layer;
-        struct wl_list link;
     } order;
 
     struct ilm_control_context *ctx;
@@ -1165,7 +1164,6 @@ registry_handle_control(void *data,
         ctx_scrn->id_screen = ctx->num_screen;
         ctx->num_screen++;
         wl_list_init(&ctx_scrn->order.list_layer);
-        wl_list_init(&ctx_scrn->order.link);
         wl_list_insert(&ctx->list_screen, &ctx_scrn->link);
     }
 }
