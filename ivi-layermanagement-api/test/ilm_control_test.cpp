@@ -1171,18 +1171,21 @@ TEST_F(IlmCommandTest, DisplaySetRenderOrder_shrinking) {
         for (unsigned int j = 0; j < layerCount; ++j)
         {
             //put them from end to beginning, so that in each loop iteration the order of layers change
-            ASSERT_EQ(ILM_SUCCESS, ilm_displaySetRenderOrder(screen, renderOrder + j, layerCount - j));
-            ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-            ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfScreen(screen, &screenProps));
+            EXPECT_EQ(ILM_SUCCESS, ilm_displaySetRenderOrder(screen, renderOrder + j, layerCount - j));
+            EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
+            EXPECT_EQ(ILM_SUCCESS, ilm_getPropertiesOfScreen(screen, &screenProps));
 
-            ASSERT_EQ(layerCount - j, screenProps.layerCount);
-            for(unsigned int k = 0; k < layerCount - j; ++k)
-            {
-                ASSERT_EQ(renderOrder[j + k], screenProps.layerIds[k]);
-            }
+            EXPECT_EQ(layerCount - j, screenProps.layerCount);
+            if (layerCount - j == screenProps.layerCount)
+                for(unsigned int k = 0; k < layerCount - j; ++k)
+                {
+                    ASSERT_EQ(renderOrder[j + k], screenProps.layerIds[k]);
+                }
+            free(screenProps.layerIds);
         }
     }
 
+    free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_growing) {
