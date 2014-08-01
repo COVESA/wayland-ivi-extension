@@ -82,9 +82,6 @@ TEST_F(IlmCommandTest, SetGetSurfaceDimension) {
     EXPECT_EQ(ILM_SUCCESS, ilm_surfaceGetDimension(surface, dimreturned));
     EXPECT_EQ(dim[0], dimreturned[0]);
     EXPECT_EQ(dim[1], dimreturned[1]);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceDimension_InvalidInput) {
@@ -108,9 +105,6 @@ TEST_F(IlmCommandTest, SetGetLayerDimension) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetDimension(layer, dimreturned));
     EXPECT_EQ(dim[0], dimreturned[0]);
     EXPECT_EQ(dim[1], dimreturned[1]);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, SetGetLayerDimension_InvalidInput) {
@@ -134,9 +128,6 @@ TEST_F(IlmCommandTest, SetGetSurfacePosition) {
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPosition(surface, posreturned));
     EXPECT_EQ(pos[0], posreturned[0]);
     EXPECT_EQ(pos[1], posreturned[1]);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
 TEST_F(IlmCommandTest, SetGetSurfacePosition_InvalidInput) {
@@ -159,9 +150,6 @@ TEST_F(IlmCommandTest, SetGetLayerPosition) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetPosition(layer, posreturned));
     ASSERT_EQ(pos[0], posreturned[0]);
     ASSERT_EQ(pos[1], posreturned[1]);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, SetGetLayerPosition_InvalidInput) {
@@ -195,9 +183,6 @@ TEST_F(IlmCommandTest, SetGetSurfaceOrientation) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetOrientation(surface, &returned));
     ASSERT_EQ(ILM_ZERO, returned);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
 TEST_F(IlmCommandTest, SetGetLayerOrientation) {
@@ -225,9 +210,6 @@ TEST_F(IlmCommandTest, SetGetLayerOrientation) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetOrientation(layer, &returned));
     ASSERT_EQ(ILM_ZERO, returned);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceOpacity) {
@@ -247,10 +229,6 @@ TEST_F(IlmCommandTest, SetGetSurfaceOpacity) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetOpacity(surface2, &opacity));
     EXPECT_NEAR(0.001, opacity, 0.01);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceOpacity_InvalidInput) {
@@ -278,10 +256,6 @@ TEST_F(IlmCommandTest, SetGetLayerOpacity) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetOpacity(layer2, &opacity));
     EXPECT_NEAR(0.001, opacity, 0.01);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer2));
 }
 
 TEST_F(IlmCommandTest, SetGetLayerOpacity_InvalidInput) {
@@ -312,9 +286,6 @@ TEST_F(IlmCommandTest, SetGetSurfaceVisibility) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(surface, &visibility));
     ASSERT_EQ(ILM_TRUE, visibility);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceVisibility_InvalidInput) {
@@ -346,9 +317,6 @@ TEST_F(IlmCommandTest, SetGetLayerVisibility) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetVisibility(layer, &visibility));
     ASSERT_EQ(ILM_TRUE, visibility);
-
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, SetGetLayerVisibility_InvalidInput) {
@@ -375,8 +343,6 @@ TEST_F(IlmCommandTest, SetSurfaceSourceRectangle) {
     ASSERT_EQ(638u, surfaceProperties.sourceWidth);
     ASSERT_EQ(4u, surfaceProperties.sourceHeight);
 
-    // cleaning
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
 TEST_F(IlmCommandTest, SetSurfaceSourceRectangle_InvalidInput) {
@@ -435,9 +401,6 @@ TEST_F(IlmCommandTest, ilm_getLayerIDs) {
     ASSERT_EQ(layer2, IDs[1]);
     free(IDs);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer2));
 }
 
 TEST_F(IlmCommandTest, ilm_getLayerIDsOfScreen) {
@@ -458,9 +421,6 @@ TEST_F(IlmCommandTest, ilm_getLayerIDsOfScreen) {
     EXPECT_EQ(layer1, IDs[0]);
     EXPECT_EQ(layer2, IDs[1]);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer2));
 }
 
 TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
@@ -483,9 +443,6 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
     EXPECT_TRUE(contains(IDs+old_length, 2, surface2));
     free(IDs);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
 }
 
 TEST_F(IlmCommandTest, ilm_surfaceCreate_Remove) {
@@ -588,8 +545,6 @@ TEST_F(IlmCommandTest, ilm_layerGetType) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetType(layer, &type));
     ASSERT_EQ(ILM_LAYERTYPE_SOFTWARE2D, type);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(0xbeef));
 }
 
 TEST_F(IlmCommandTest, ilm_layerGetType_InvalidInput) {
@@ -612,8 +567,6 @@ TEST_F(IlmCommandTest, ilm_layerGetCapabilities) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetCapabilities(layer, &caps));
     ASSERT_EQ(exp_caps, caps);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(0xbeef));
 }
 
 TEST_F(IlmCommandTest, ilm_layerTypeGetCapabilities) {
@@ -700,10 +653,6 @@ TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurface
     ASSERT_EQ(length, 0);
     free(IDs);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidInput) {
@@ -735,11 +684,6 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidResources) {
 
     ASSERT_NE(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, NULL));
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface3));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_ilm_surfaceSetDestinationRectangle) {
@@ -789,8 +733,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_
     ASSERT_EQ(ILM_TWOHUNDREDSEVENTY, surfaceProperties2.orientation);
     ASSERT_FALSE(surfaceProperties2.visibility);
 
-    // cleaning
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_layerSetDestinationRectangle) {
@@ -840,8 +782,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_
     ASSERT_EQ(ILM_TWOHUNDREDSEVENTY, layerProperties2.orientation);
     ASSERT_FALSE(layerProperties2.visibility);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_InvalidInput) {
@@ -998,14 +938,6 @@ TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat) {
     ASSERT_EQ(ILM_PIXELFORMAT_RGB_888, p6);
     ASSERT_EQ(ILM_PIXELFORMAT_R_8, p7);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface3));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface4));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface5));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface6));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface7));
 }
 
 TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
@@ -1028,9 +960,6 @@ TEST_F(IlmCommandTest, ilm_keyboard_focus) {
     ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
     EXPECT_EQ(surface1, surface);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
 }
 
 TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
@@ -1058,9 +987,6 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
     EXPECT_NE(surface1, surface);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
 }
 
 TEST_F(IlmCommandTest, SetGetOptimizationMode) {
@@ -1140,10 +1066,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
     ASSERT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
     ASSERT_EQ(numberOfHardwareLayers, screenProperties.harwareLayerCount);
 
-    // cleanup
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layerIds[0]));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layerIds[1]));
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layerIds[2]));
 }
 
 TEST_F(IlmCommandTest, DisplaySetRenderOrder_growing) {
@@ -1182,11 +1104,6 @@ TEST_F(IlmCommandTest, DisplaySetRenderOrder_growing) {
         }
     }
 
-    // cleanup
-    for (unsigned int i = 0; i < layerCount; ++i)
-    {
-        ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(renderOrder[i]));
-    }
 }
 
 TEST_F(IlmCommandTest, DisplaySetRenderOrder_shrinking) {
@@ -1225,11 +1142,6 @@ TEST_F(IlmCommandTest, DisplaySetRenderOrder_shrinking) {
         }
     }
 
-    // cleanup
-    for (unsigned int i = 0; i < layerCount; ++i)
-    {
-        ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(renderOrder[i]));
-    }
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_growing) {
@@ -1283,15 +1195,6 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_growing) {
         ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 
-    // cleanup
-    for (unsigned int i = 0; i < surfaceCount; ++i)
-    {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(renderOrder[i]));
-    }
-    for (unsigned int i = 0; i < layerCount; ++i)
-    {
-        ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layerIDs[i]));
-    }
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_shrinking) {
@@ -1345,15 +1248,6 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_shrinking) {
         ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 
-    // cleanup
-    for (unsigned int i = 0; i < surfaceCount; ++i)
-    {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(renderOrder[i]));
-    }
-    for (unsigned int i = 0; i < layerCount; ++i)
-    {
-        ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layerIDs[i]));
-    }
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
@@ -1388,12 +1282,6 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
 
     ASSERT_EQ(2, layerSurfaceCount);
 
-    // cleanup
-    for (unsigned int i = 0; i < surfaceCount; ++i)
-    {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(renderOrder[i]));
-    }
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
@@ -1430,10 +1318,4 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
 
     ASSERT_EQ(0, layerSurfaceCount);
 
-    // cleanup
-    for (unsigned int i = 0; i < surfaceCount; ++i)
-    {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(renderOrder[i]));
-    }
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
 }
