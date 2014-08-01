@@ -353,13 +353,15 @@ TEST_F(IlmCommandTest, ilm_getScreenIDs) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
-    ASSERT_GT(numberOfScreens, 0u);
+    EXPECT_GT(numberOfScreens, 0u);
+    free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenResolution_SingleScreen) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
+    free(screenIDs);
     ASSERT_TRUE(numberOfScreens>0);
 
     uint firstScreen = screenIDs[0];
@@ -373,6 +375,7 @@ TEST_F(IlmCommandTest, ilm_getScreenResolution_MultiScreen) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
+    free(screenIDs);
     ASSERT_TRUE(numberOfScreens>0);
 
     for (uint screenIndex = 0; screenIndex < numberOfScreens; ++screenIndex)
@@ -397,8 +400,8 @@ TEST_F(IlmCommandTest, ilm_getLayerIDs) {
     t_ilm_uint* IDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
 
-    ASSERT_EQ(layer1, IDs[0]);
-    ASSERT_EQ(layer2, IDs[1]);
+    EXPECT_EQ(layer1, IDs[0]);
+    EXPECT_EQ(layer2, IDs[1]);
     free(IDs);
 
 }
@@ -417,10 +420,13 @@ TEST_F(IlmCommandTest, ilm_getLayerIDsOfScreen) {
     t_ilm_layer* IDs = 0;
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDsOnScreen(0, &length, &IDs));
 
-    ASSERT_EQ(2, length);
-    EXPECT_EQ(layer1, IDs[0]);
-    EXPECT_EQ(layer2, IDs[1]);
-
+    EXPECT_EQ(2, length);
+    if (length == 2)
+    {
+        EXPECT_EQ(layer1, IDs[0]);
+        EXPECT_EQ(layer2, IDs[1]);
+    }
+    free(IDs);
 }
 
 TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
@@ -438,9 +444,12 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
     t_ilm_int length;
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
 
-    ASSERT_EQ(old_length+2, length);
-    EXPECT_TRUE(contains(IDs+old_length, 2, surface1));
-    EXPECT_TRUE(contains(IDs+old_length, 2, surface2));
+    EXPECT_EQ(old_length+2, length);
+    if (length == old_length+2)
+    {
+        EXPECT_TRUE(contains(IDs+old_length, 2, surface1));
+        EXPECT_TRUE(contains(IDs+old_length, 2, surface2));
+    }
     free(IDs);
 
 }
@@ -456,20 +465,29 @@ TEST_F(IlmCommandTest, ilm_surfaceCreate_Remove) {
     t_ilm_uint* IDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
 
-    ASSERT_EQ(length, 2);
-    EXPECT_TRUE(contains(IDs, 2, surface1));
-    EXPECT_TRUE(contains(IDs, 2, surface2));
+    EXPECT_EQ(length, 2);
+    if (length == 2)
+    {
+        EXPECT_TRUE(contains(IDs, 2, surface1));
+        EXPECT_TRUE(contains(IDs, 2, surface2));
+    }
+    free(IDs);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
-    ASSERT_EQ(length, 1);
-    ASSERT_EQ(surface2, IDs[0]);
+    EXPECT_EQ(length, 1);
+    if (length == 1)
+    {
+        EXPECT_EQ(surface2, IDs[0]);
+    }
+    free(IDs);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
-    ASSERT_EQ(length, 0);
+    EXPECT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
+    EXPECT_EQ(length, 0);
+    free(IDs);
 }
 
 TEST_F(IlmCommandTest, ilm_layerCreate_Remove) {
@@ -483,22 +501,28 @@ TEST_F(IlmCommandTest, ilm_layerCreate_Remove) {
     t_ilm_uint* IDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
 
-    ASSERT_EQ(length, 2);
-    ASSERT_EQ(layer1, IDs[0]);
-    ASSERT_EQ(layer2, IDs[1]);
+    EXPECT_EQ(length, 2);
+    if (length == 2)
+    {
+        EXPECT_EQ(layer1, IDs[0]);
+        EXPECT_EQ(layer2, IDs[1]);
+    }
     free(IDs);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer1));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
-    ASSERT_EQ(length, 1);
-    ASSERT_EQ(layer2, IDs[0]);
+    EXPECT_EQ(length, 1);
+    if (length == 1)
+    {
+        EXPECT_EQ(layer2, IDs[0]);
+    }
     free(IDs);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer2));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
-    ASSERT_EQ(length, 0);
+    EXPECT_EQ(length, 0);
     free(IDs);
 }
 
@@ -521,15 +545,15 @@ TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
-    ASSERT_EQ(length, orig_length+1);
     free(IDs);
+    ASSERT_EQ(length, orig_length+1);
 
     // remove the new layer
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&length, &IDs));
-    ASSERT_EQ(length, orig_length);
     free(IDs);
+    ASSERT_EQ(length, orig_length);
 
     // try to remove the same layer once more
     ASSERT_NE(ILM_SUCCESS, ilm_layerRemove(layer));
@@ -605,9 +629,13 @@ TEST_F(IlmCommandTest, ilm_surface_initialize) {
     t_ilm_uint* IDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
 
-    ASSERT_EQ(length, 2);
-    ASSERT_EQ(surface_10, IDs[0]);
-    ASSERT_EQ(surface_20, IDs[1]);
+    EXPECT_EQ(length, 2);
+    if (length == 2)
+    {
+        EXPECT_EQ(surface_10, IDs[0]);
+        EXPECT_EQ(surface_20, IDs[1]);
+    }
+    free(IDs);
 }
 
 TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurfaceIDsOnLayer) {
@@ -622,37 +650,45 @@ TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurface
     t_ilm_int length;
     t_ilm_uint* IDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, &IDs));
-    ASSERT_EQ(length, 0);
     free(IDs);
+    ASSERT_EQ(length, 0);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerAddSurface(layer, surface1));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, &IDs));
-    ASSERT_EQ(length, 1);
-    ASSERT_EQ(surface1, IDs[0]);
+    EXPECT_EQ(length, 1);
+    if (length == 1)
+    {
+        EXPECT_EQ(surface1, IDs[0]);
+    }
     free(IDs);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerAddSurface(layer, surface2));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, &IDs));
-    ASSERT_EQ(length, 2);
-    EXPECT_EQ(surface1, IDs[0]);
-    EXPECT_EQ(surface2, IDs[1]);
+    EXPECT_EQ(length, 2);
+    if (length == 2)
+    {
+       EXPECT_EQ(surface1, IDs[0]);
+       EXPECT_EQ(surface2, IDs[1]);
+    }
     free(IDs);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemoveSurface(layer, surface1));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, &IDs));
-    ASSERT_EQ(length, 1);
-    ASSERT_EQ(surface2, IDs[0]);
+    EXPECT_EQ(length, 1);
+    if (length == 1)
+    {
+        EXPECT_EQ(surface2, IDs[0]);
+    }
     free(IDs);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemoveSurface(layer, surface2));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, &IDs));
-    ASSERT_EQ(length, 0);
     free(IDs);
-
+    ASSERT_EQ(length, 0);
 }
 
 TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidInput) {
@@ -1271,6 +1307,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
     t_ilm_display* screenIDs;
     t_ilm_uint screenCount;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&screenCount, &screenIDs));
+    free(screenIDs);
 
     t_ilm_int layerSurfaceCount;
     t_ilm_surface* layerSurfaceIDs;
@@ -1279,6 +1316,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, duplicateRenderOrder, duplicateSurfaceCount));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &layerSurfaceCount, &layerSurfaceIDs));
+    free(layerSurfaceIDs);
 
     ASSERT_EQ(2, layerSurfaceCount);
 
@@ -1299,10 +1337,10 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 300, 300));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
-
     t_ilm_display* screenIDs;
     t_ilm_uint screenCount;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&screenCount, &screenIDs));
+    free(screenIDs);
 
     t_ilm_int layerSurfaceCount;
     t_ilm_surface* layerSurfaceIDs;
@@ -1315,6 +1353,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, renderOrder, 0));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &layerSurfaceCount, &layerSurfaceIDs));
+    free(layerSurfaceIDs);
 
     ASSERT_EQ(0, layerSurfaceCount);
 
