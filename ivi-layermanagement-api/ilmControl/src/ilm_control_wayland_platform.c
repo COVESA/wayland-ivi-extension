@@ -56,6 +56,7 @@ struct surface_context {
     } order;
 
     struct wayland_context *ctx;
+    bool is_surface_creation_noticed;
 };
 
 struct layer_context {
@@ -828,12 +829,19 @@ controller_listener_surface(void *data,
 
     ctx_surf = get_surface_context(ctx, id_surface);
     if (ctx_surf != NULL) {
-        if (ctx_surf-> notification != NULL) {
-            ctx_surf->notification(ctx_surf->id_surface,
-                                   &ctx_surf->prop,
-                                   ILM_NOTIFICATION_CONTENT_AVAILABLE);
+        if (!ctx_surf->is_surface_creation_noticed) {
+            if (ctx_surf->notification != NULL) {
+                ctx_surf->notification(ctx_surf->id_surface,
+                                       &ctx_surf->prop,
+                                       ILM_NOTIFICATION_CONTENT_AVAILABLE);
+                ctx_surf->is_surface_creation_noticed = true;
+            }
+            ctx_surf->controller = ivi_controller_surface_create(
+                                       controller, id_surface);
         }
-        fprintf(stderr, "invalid id_surface in controller_listener_surface\n");
+        else {
+            fprintf(stderr, "invalid id_surface in controller_listener_surface\n");
+        }
         return;
     }
 
@@ -853,6 +861,7 @@ controller_listener_surface(void *data,
     ctx_surf->id_surface = id_surface;
     ctx_surf->prop.inputDevicesAcceptance = ILM_INPUT_DEVICE_ALL;
     ctx_surf->ctx = ctx;
+    ctx_surf->is_surface_creation_noticed = true;
 
     wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
@@ -2425,10 +2434,11 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
     if (ctx_surf == NULL) {
         if (callback != NULL) {
             callback((uint32_t)surface, NULL, ILM_NOTIFICATION_CONTENT_REMOVED);
-        }
-        controller_listener_surface(ctx, ctx->wl.controller, (uint32_t)surface);
-        ctx_surf = (struct surface_context*)get_surface_context(
+            controller_listener_surface(ctx, ctx->wl.controller, (uint32_t)surface);
+            ctx_surf = (struct surface_context*)get_surface_context(
                         &ctx->wl, (uint32_t)surface);
+            ctx_surf->is_surface_creation_noticed = false;
+        }
     }
 
     if (ctx_surf == NULL) {
