@@ -1280,6 +1280,11 @@ controller_surface_create(struct wl_client *client,
     struct ivisurface *ivisurf = NULL;
     struct ivicontroller_surface *ctrl_link = NULL;
 
+    ivisurf = get_surface(&shell->list_surface, id_surface);
+    if (ivisurf == NULL) {
+        return;
+    }
+
     ctrlsurf = calloc(1, sizeof *ctrlsurf);
     if (!ctrlsurf) {
         weston_log("no memory to allocate controller surface\n");
@@ -1297,11 +1302,6 @@ controller_surface_create(struct wl_client *client,
                                &ivi_controller_surface_interface, 1, id);
     if (ctrlsurf->resource == NULL) {
         weston_log("couldn't surface object");
-        return;
-    }
-
-    ivisurf = get_surface(&shell->list_surface, id_surface);
-    if (ivisurf == NULL) {
         return;
     }
 
