@@ -1201,12 +1201,17 @@ init_control(void)
         return -1;
     }
 
-    // first level objects; ivi_controller
-    display_roundtrip_queue(wl->display, wl->queue);
-    // second level object: ivi_controller_surfaces/layers
-    display_roundtrip_queue(wl->display, wl->queue);
-    // third level objects: ivi_controller_surfaces/layers properties
-    display_roundtrip_queue(wl->display, wl->queue);
+    if (
+       // first level objects; ivi_controller
+       display_roundtrip_queue(wl->display, wl->queue) == -1 ||
+       // second level object: ivi_controller_surfaces/layers
+       display_roundtrip_queue(wl->display, wl->queue) == -1 ||
+       // third level objects: ivi_controller_surfaces/layers properties
+       display_roundtrip_queue(wl->display, wl->queue) == -1)
+    {
+        fprintf(stderr, "Failed to initialize wayland connection: %s\n", strerror(errno));
+        return -1;
+    }
 
     if (! wl->controller)
     {
