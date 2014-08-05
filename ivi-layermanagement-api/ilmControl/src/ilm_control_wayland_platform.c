@@ -1097,14 +1097,6 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
        pthread_mutexattr_destroy(&a);
     }
 
-    ctx->shutdown_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-
-    if (ctx->shutdown_fd == -1)
-    {
-        fprintf(stderr, "Could not setup shutdown-fd: %s\n", strerror(errno));
-        return ILM_FAILED;
-    }
-
     return init_control() == 0 ? ILM_SUCCESS : ILM_FAILED;
 }
 
@@ -1205,6 +1197,14 @@ init_control(void)
     {
         fputs("ivi_controller not available\n", stderr);
         return -1;
+    }
+
+    ctx->shutdown_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+
+    if (ctx->shutdown_fd == -1)
+    {
+        fprintf(stderr, "Could not setup shutdown-fd: %s\n", strerror(errno));
+        return ILM_FAILED;
     }
 
     ret = pthread_create(&ctx->thread, NULL, control_thread, NULL);
