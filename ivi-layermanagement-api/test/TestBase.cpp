@@ -28,8 +28,11 @@ TestBase::TestBase()
     };
 
     wl_registry_add_listener(wlRegistry, &registry_listener, &wlCompositor);
-    wl_display_dispatch(wlDisplay);
-    wl_display_roundtrip(wlDisplay);
+
+    if (wl_display_roundtrip(wlDisplay) == -1 || wl_display_roundtrip(wlDisplay) == -1)
+    {
+        throw std::runtime_error("wl_display error");
+    }
 
     wlSurfaces.reserve(10);
     for (int i = 0; i < wlSurfaces.capacity(); ++i)
