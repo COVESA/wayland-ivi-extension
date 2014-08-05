@@ -1170,6 +1170,10 @@ init_control(void)
     wl_list_init(&ctx->list_nativehandle);
 
     wl->queue = wl_display_create_queue(wl->display);
+    if (! wl->queue) {
+        fprintf(stderr, "Could not create wayland event queue\n");
+        return -1;
+    }
 
     /* registry_add_listener for request by ivi-controller */
     wl->registry = wl_display_get_registry(wl->display);
