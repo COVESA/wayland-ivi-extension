@@ -168,7 +168,8 @@ static inline void unlock_context(struct ilm_control_context *ctx)
 
 static int init_control(void);
 
-static struct ilm_control_context* sync_and_acquire_instance(void);
+static ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx);
+
 static struct surface_context* get_surface_context(struct wayland_context *, uint32_t);
 
 static void release_instance(void);
@@ -1195,7 +1196,7 @@ init_control(void)
 
     if (! wl->controller)
     {
-        fputs("ivi_controller not available\n", stderr);
+        fprintf(stderr, "ivi_controller not available\n");
         return -1;
     }
 
@@ -1219,14 +1220,33 @@ init_control(void)
     return 0;
 }
 
+static ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx)
+{
+    if (! ctx->initialized) {
+        fprintf(stderr, "Not initialized\n");
+        return ILM_FAILED;
+    }
+
+    lock_context(ctx);
+
+    if (display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1) {
+        int err = wl_display_get_error(ctx->wl.display);
+        fprintf(stderr, "Error communicating with wayland: %s\n", strerror(err));
+        unlock_context(ctx);
+        return ILM_FAILED;
+    }
+
+    return ILM_SUCCESS;
+}
+
 #define sync_and_acquire_instance() ({ \
     struct ilm_control_context *ctx = &ilm_context; \
-    if (! ctx->initialized) { \
-        fputs("Not initialized\n", stderr); \
-        return ILM_FAILED; \
+    { \
+        ilmErrorTypes status = impl_sync_and_acquire_instance(ctx); \
+        if (status != ILM_SUCCESS) { \
+            return status; \
+        } \
     } \
-    lock_context(ctx); \
-    display_roundtrip_queue(ctx->wl.display, ctx->wl.queue); \
     ctx; \
 })
 
