@@ -22,6 +22,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <getopt.h>
 #include "WLContext.h"
 #include "WLEGLSurface.h"
 #include "WLEyes.h"
@@ -48,6 +49,29 @@ int main(int argc, char **argv)
 
     argc = argc; // avoid warning
     argv = argv;
+
+
+    // Get command-line options
+    while (true){
+        int c;
+        static struct option opts[] = {
+            {"surface", required_argument, NULL, 's'},
+            {0, 0, 0, 0}
+        };
+
+        c = getopt_long(argc, argv, "s:", opts, NULL);
+
+        if (c == -1)
+            break;
+
+        switch(c){
+        case 's':
+            surfaceId = strtol(optarg, NULL, 0);
+            break;
+        default:
+            fprintf(stderr, "Unrecognized option '%s'\n", optarg);
+        }
+    }
 
     // signal handling
     signal(SIGINT,SigFunc);
