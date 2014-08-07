@@ -1071,9 +1071,13 @@ controller_surface_set_input_focus(struct wl_client *client,
               int32_t enabled)
 {
     (void)client;
-    (void)resource;
-    (void)device;
-    (void)enabled;
+    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+
+    if (device & IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD) {
+        if (enabled) {
+            ivi_layout_SetKeyboardFocusOn(ivisurf->layout_surface);
+        }
+    }
 }
 
 static const

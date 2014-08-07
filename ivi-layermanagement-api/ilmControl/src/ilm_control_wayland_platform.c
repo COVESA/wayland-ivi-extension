@@ -2135,8 +2135,18 @@ ILM_EXPORT ilmErrorTypes
 ilm_SetKeyboardFocusOn(t_ilm_surface surfaceId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    (void)surfaceId;
-    returnValue = ILM_SUCCESS;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct surface_context *ctx_surf =
+        get_surface_context(&ctx->wl, (uint32_t)surfaceId);
+
+    if (ctx_surf != NULL
+        && ctx_surf->prop.inputDevicesAcceptance & ILM_INPUT_DEVICE_KEYBOARD)
+    {
+        ivi_controller_surface_set_input_focus(ctx_surf->controller,
+                        IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD, 1);
+        returnValue = ILM_SUCCESS;
+    }
+    release_instance();
     return returnValue;
 }
 
