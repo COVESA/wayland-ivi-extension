@@ -1092,7 +1092,7 @@ controller_screen_set_render_order(struct wl_client *client,
     }
 
     ivi_layout_screenSetRenderOrder(iviscrn->layout_screen,
-                                    layoutlayer_array, id_layers->size);
+                                    layoutlayer_array, i);
     free(layoutlayer_array);
 }
 
