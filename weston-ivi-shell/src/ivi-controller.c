@@ -955,6 +955,9 @@ controller_layer_set_render_order(struct wl_client *client,
     int i = 0;
     (void)client;
 
+    layoutsurf_array = (struct ivi_layout_surface**)calloc(
+                           id_surfaces->size, sizeof(void*));
+
     wl_array_for_each(id_surface, id_surfaces) {
         wl_list_for_each(ivisurf, &ivilayer->shell->list_surface, link) {
             id_layout_surface = ivi_layout_getIdOfSurface(ivisurf->layout_surface);
