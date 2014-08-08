@@ -964,7 +964,6 @@ static void destroy_control_resources(void)
             wl_list_for_each_safe(l, n, &ctx->wl.list_layer, link) {
                 wl_list_remove(&l->link);
                 wl_list_remove(&l->order.link);
-                ivi_controller_layer_destroy(l->controller, 0);
                 free(l);
             }
         }
