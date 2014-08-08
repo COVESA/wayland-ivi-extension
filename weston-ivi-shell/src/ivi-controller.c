@@ -970,7 +970,7 @@ controller_layer_set_render_order(struct wl_client *client,
     }
 
     ivi_layout_layerSetRenderOrder(ivilayer->layout_layer,
-                                   layoutsurf_array, id_surfaces->size);
+                                   layoutsurf_array, i);
     free(layoutsurf_array);
 }
 
