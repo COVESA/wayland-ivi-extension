@@ -1027,9 +1027,9 @@ controller_screen_destroy(struct wl_client *client,
         }
 
         wl_list_remove(&ctrlscrn->link);
+        wl_resource_destroy(ctrlscrn->resource);
         free(ctrlscrn);
         ctrlscrn = NULL;
-        wl_resource_destroy(ctrlscrn->resource);
         break;
     }
 }
