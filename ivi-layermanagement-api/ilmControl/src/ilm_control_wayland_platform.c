@@ -168,6 +168,7 @@ static inline void unlock_context(struct ilm_control_context *ctx)
 static int init_control(void);
 
 static struct ilm_control_context* sync_and_acquire_instance(void);
+static struct surface_context* get_surface_context(struct wayland_context *, uint32_t);
 
 static void release_instance(void);
 
@@ -804,12 +805,14 @@ controller_listener_surface(void *data,
 {
     struct wayland_context *ctx = data;
     struct surface_context *ctx_surf = NULL;
-    int32_t is_inside = 0;
 
-    is_inside = wayland_controller_is_inside_surface_list(
-                    &ctx->list_surface, id_surface);
-
-    if (is_inside != 0) {
+    ctx_surf = get_surface_context(ctx, id_surface);
+    if (ctx_surf != NULL) {
+        if (ctx_surf-> notification != NULL) {
+            ctx_surf->notification(ctx_surf->id_surface,
+                                   &ctx_surf->prop,
+                                   ILM_NOTIFICATION_ALL);
+        }
         fprintf(stderr, "invalid id_surface in controller_listener_surface\n");
         return;
     }
@@ -2400,8 +2403,15 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
     ctx_surf = (struct surface_context*)get_surface_context(
                     &ctx->wl, (uint32_t)surface);
     if (ctx_surf == NULL) {
+        controller_listener_surface(ctx, ctx->wl.controller, (uint32_t)surface);
+        ctx_surf = (struct surface_context*)get_surface_context(
+                        &ctx->wl, (uint32_t)surface);
+    }
+
+    if (ctx_surf == NULL) {
         returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-    } else {
+    }
+    else {
         ctx_surf->notification = callback;
 
         returnValue = ILM_SUCCESS;
@@ -2502,11 +2512,6 @@ ilm_layerRemoveSurface(t_ilm_layer layerId,
     if ((ctx_layer != NULL) && (ctx_surf != NULL)) {
         ivi_controller_layer_remove_surface(ctx_layer->controller,
                                             ctx_surf->controller);
-        returnValue = ILM_SUCCESS;
-    }
-
-    if ((ctx_surf != NULL) && (ctx_surf->notification != NULL)) {
-        ctx_surf->notification = NULL;
         returnValue = ILM_SUCCESS;
     }
 
