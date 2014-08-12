@@ -1314,13 +1314,11 @@ control_thread(void *p_ret)
 
     while (1)
     {
-        if (wl_display_prepare_read_queue(display, queue) != 0)
+        while (wl_display_prepare_read_queue(display, queue) != 0)
         {
             lock_context(ctx);
             wl_display_dispatch_queue_pending(display, queue);
             unlock_context(ctx);
-
-            continue;
         }
 
         if (wl_display_flush(display) == -1)
