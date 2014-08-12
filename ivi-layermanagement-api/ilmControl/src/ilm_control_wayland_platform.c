@@ -765,10 +765,15 @@ controller_surface_listener_input_focus(void *data,
                    uint32_t device,
                    int32_t enabled)
 {
-    (void)data;
-    (void)controller;
-    (void)device;
-    (void)enabled;
+    struct surface_context *ctx_surf = data;
+
+    if (ctx_surf == NULL) {
+        fprintf(stderr, "%s: Invalid surface context\n", __FUNCTION__);
+        return;
+    }
+    if (device & IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD) {
+        ctx_surf->prop.hasKeyboardFocus = enabled;
+    }
 }
 
 static struct ivi_controller_surface_listener controller_surface_listener=
@@ -2153,10 +2158,18 @@ ilm_SetKeyboardFocusOn(t_ilm_surface surfaceId)
 ILM_EXPORT ilmErrorTypes
 ilm_GetKeyboardFocusSurfaceId(t_ilm_surface* pSurfaceId)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    (void)pSurfaceId;
-    returnValue = ILM_SUCCESS;
-    return returnValue;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct surface_context *ctx_surf = NULL;
+
+    wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
+        if (ctx_surf->prop.hasKeyboardFocus) {
+            *pSurfaceId = ctx_surf->id_surface;
+            break;
+        }
+    }
+
+    release_instance();
+    return ILM_SUCCESS;
 }
 
 ILM_EXPORT ilmErrorTypes
