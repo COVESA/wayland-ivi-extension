@@ -294,28 +294,6 @@ static struct wl_output_listener output_listener = {
 };
 
 static struct screen_context*
-get_screen_context_by_output(struct wayland_context *ctx,
-                             struct wl_output *output)
-{
-    struct screen_context *ctx_scrn = NULL;
-    struct wl_proxy *pxy_out = NULL;
-    struct wl_proxy *pxy_out_in_scrn = NULL;
-    uint32_t pxy_id = 0;
-    uint32_t pxy_id_in_scrn = 0;
-
-    wl_list_for_each(ctx_scrn, &ctx->list_screen, link) {
-        pxy_out = (struct wl_proxy*)output;
-        pxy_out_in_scrn = (struct wl_proxy*)ctx_scrn->output;
-        pxy_id = wl_proxy_get_id(pxy_out);
-        pxy_id_in_scrn = wl_proxy_get_id(pxy_out_in_scrn);
-        if (pxy_id == pxy_id_in_scrn) {
-            return ctx_scrn;
-        }
-    }
-    return NULL;
-}
-
-static struct screen_context*
 get_screen_context_by_serverid(struct wayland_context *ctx,
                                uint32_t id_screen)
 {
@@ -333,13 +311,7 @@ static void
 add_orderlayer_to_screen(struct layer_context *ctx_layer,
                          struct wl_output* output)
 {
-    struct screen_context *ctx_scrn = NULL;
-
-    ctx_scrn = get_screen_context_by_output(ctx_layer->ctx, output);
-    if (ctx_scrn == NULL) {
-        fprintf(stderr, "failed to add_orderlayer_to_screen\n");
-        return;
-    }
+    struct screen_context *ctx_scrn = wl_output_get_user_data(output);
 
     int found = 0;
     struct layer_context *layer_link;
