@@ -906,7 +906,6 @@ registry_handle_control(void *data,
             return;
         }
     } else if (strcmp(interface, "wl_output") == 0) {
-
         struct screen_context *ctx_scrn = calloc(1, sizeof *ctx_scrn);
         struct wl_proxy *pxy = NULL;
 
@@ -1052,7 +1051,7 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
         return ILM_ERROR_INVALID_ARGUMENTS;
     }
 
-    memset(ctx, 0, sizeof *ctx);
+    ctx->shutdown_fd = -1;
 
     ctx->wl.display = (struct wl_display*)nativedisplay;
 
