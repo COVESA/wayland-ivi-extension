@@ -356,6 +356,7 @@ create_client_surface(struct ilm_client_context *ctx,
 
     ctx_surf->surface = surface;
     ctx_surf->id_surface = id_surface;
+    wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
 }
 
@@ -501,6 +502,7 @@ wayland_UpdateInputEventAcceptanceOn(t_ilm_surface surfaceId,
     struct surface_context *ctx_surf = NULL;
 
     ctx_surf = get_surface_context_by_id(ctx, (uint32_t)surfaceId);
+
     if (ctx_surf != NULL) {
         if (acceptance == ILM_TRUE) {
             ctx_surf->prop.inputDevicesAcceptance = devices;
