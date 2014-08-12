@@ -1304,12 +1304,11 @@ static void cancel_read(void *d)
 static void*
 control_thread(void *p_ret)
 {
-    struct ilm_control_context *ctx = &ilm_context;
-    struct wayland_context *wl = &ctx->wl;
-    struct wl_display *display = wl->display;
-    struct wl_event_queue *queue = wl->queue;
-    int fd = wl_display_get_fd(display);
-
+    struct ilm_control_context *const ctx = &ilm_context;
+    struct wayland_context *const wl = &ctx->wl;
+    struct wl_display *const display = wl->display;
+    struct wl_event_queue *const queue = wl->queue;
+    int const fd = wl_display_get_fd(display);
     (void) p_ret;
 
     while (1)
