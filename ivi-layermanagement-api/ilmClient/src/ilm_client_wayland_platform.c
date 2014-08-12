@@ -253,28 +253,56 @@ static const struct wl_registry_listener registry_client_listener = {
 static struct ilm_client_context ilm_context = {0};
 
 static void
+destroy_client_resouses(void);
+
+static void
 wayland_destroy(void)
 {
     struct ilm_client_context *ctx = &ilm_context;
-    ctx->valid = 0;
+    if (ctx->valid)
+    {
+        destroy_client_resouses();
+        ctx->valid = 0;
+    }
 }
 
 static void
 destroy_client_resouses(void)
 {
     struct ilm_client_context *ctx = &ilm_context;
-    struct screen_context *ctx_scrn = NULL;
-    struct screen_context *next = NULL;
-    wl_list_for_each_safe(ctx_scrn, next, &ctx->list_screen, link) {
-        if (ctx_scrn->output != NULL) {
+
+    {
+        struct surface_context *c = NULL;
+        struct surface_context *n = NULL;
+        wl_list_for_each_safe(c, n, &ctx->list_surface, link) {
+            wl_list_remove(&c->link);
+            ivi_surface_destroy(c->surface);
+            free(c);
+        }
+    }
+
+    {
+        struct screen_context *ctx_scrn = NULL;
+        struct screen_context *next = NULL;
+        wl_list_for_each_safe(ctx_scrn, next, &ctx->list_screen, link) {
+            if (ctx_scrn->output != NULL) {
+                wl_output_destroy(ctx_scrn->output);
+            }
+
             wl_list_remove(&ctx_scrn->link);
-            wl_output_destroy(ctx_scrn->output);
             free(ctx_scrn);
         }
     }
+
     if (ctx->ivi_application != NULL) {
         ivi_application_destroy(ctx->ivi_application);
         ctx->ivi_application = NULL;
+    }
+
+    if (ctx->registry)
+    {
+        wl_registry_destroy(ctx->registry);
+        ctx->registry = NULL;
     }
 }
 
