@@ -993,13 +993,19 @@ static void destroy_control_resources(void)
         ctx->wl.controller = NULL;
     }
 
-    wl_display_flush(ctx->wl.display);
+    if (ctx->wl.display) {
+        wl_display_flush(ctx->wl.display);
+    }
 
-    wl_event_queue_destroy(ctx->wl.queue);
-    ctx->wl.queue = NULL;
+    if (ctx->wl.registry) {
+        wl_registry_destroy(ctx->wl.registry);
+        ctx->wl.registry = NULL;
+    }
 
-    wl_registry_destroy(ctx->wl.registry);
-    ctx->wl.registry = NULL;
+    if (ctx->wl.queue) {
+        wl_event_queue_destroy(ctx->wl.queue);
+        ctx->wl.queue = NULL;
+    }
 
     if (0 != pthread_mutex_destroy(&ctx->mutex)) {
         fprintf(stderr, "failed to destroy pthread_mutex\n");
