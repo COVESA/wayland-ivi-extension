@@ -129,10 +129,11 @@ struct ilm_control_context {
 static void roundtrip_done(void *data, struct wl_callback *callback,
                            uint32_t serial)
 {
-    (void) callback;
     (void) serial;
 
     *(int *)data = 1;
+
+    wl_callback_destroy(callback);
 }
 
 static struct wl_callback_listener roundtrip_listener = {roundtrip_done};
@@ -143,6 +144,12 @@ int display_roundtrip_queue(struct wl_display *display,
     int done = 0;
     int ret = 0;
     struct wl_callback *callback = wl_display_sync(display);
+
+    if (! callback)
+    {
+        return -1;
+    }
+
     wl_proxy_set_queue((void *)callback, queue);
     wl_callback_add_listener(callback, &roundtrip_listener, &done);
 
@@ -151,7 +158,10 @@ int display_roundtrip_queue(struct wl_display *display,
         ret = wl_display_dispatch_queue(display, queue);
     }
 
-    wl_callback_destroy(callback);
+    if (ret == -1 && !done)
+    {
+        wl_callback_destroy(callback);
+    }
 
     return ret;
 }
