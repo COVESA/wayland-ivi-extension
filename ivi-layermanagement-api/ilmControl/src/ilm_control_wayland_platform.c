@@ -1187,6 +1187,12 @@ init_control(void)
     // third level objects: ivi_controller_surfaces/layers properties
     display_roundtrip_queue(wl->display, wl->queue);
 
+    if (! wl->controller)
+    {
+        fputs("ivi_controller not available\n", stderr);
+        return -1;
+    }
+
     ret = pthread_create(&ctx->thread, NULL, control_thread, NULL);
 
     if (ret != 0) {
