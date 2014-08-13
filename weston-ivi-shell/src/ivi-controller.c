@@ -856,6 +856,7 @@ static void
 dump_surface(struct weston_output *output,
              struct weston_compositor *compositor,
              const char *filename,
+             struct weston_view *view,
              int32_t x,
              int32_t y,
              int32_t width,
@@ -863,6 +864,9 @@ dump_surface(struct weston_output *output,
 {
     struct weston_renderer *renderer = compositor->renderer;
     pixman_region32_t region;
+    struct wl_list backup_transformation_list;
+    struct weston_transform *link = NULL;
+    struct weston_transform *next = NULL;
     uint8_t *readpixs = NULL;
     int32_t stride = width * (PIXMAN_FORMAT_BPP(compositor->read_format) / 8);
     GLuint fbo_id, tex_id;
@@ -875,6 +879,17 @@ dump_surface(struct weston_output *output,
 
     pixman_region32_init_rect(&region, x, y, width, height);
     bind_framebuffer(&fbo_id, &tex_id, output->current_mode->width, output->current_mode->height);
+
+    wl_list_init(&backup_transformation_list);
+    wl_list_for_each_safe(link, next, &view->geometry.transformation_list, link) {
+        wl_list_remove(&link->link);
+        wl_list_insert(&backup_transformation_list, &link->link);
+    }
+
+    wl_list_init(&view->geometry.transformation_list);
+    weston_view_geometry_dirty(view);
+    weston_view_update_transform(view);
+
     renderer->repaint_output(output, &region);
     glFinish();
 
@@ -886,13 +901,22 @@ dump_surface(struct weston_output *output,
                                        y,
                                        width,
                                        height);
+
+    wl_list_for_each_safe(link, next, &backup_transformation_list, link) {
+        wl_list_remove(&link->link);
+        wl_list_insert(&view->geometry.transformation_list, &link->link);
+    }
+
+    weston_view_geometry_dirty(view);
+    weston_view_update_transform(view);
+
     unbind_framebuffer(fbo_id, tex_id);
 
     save_as_bitmap(filename, readpixs, stride * height, width, height, PIXMAN_FORMAT_BPP(compositor->read_format));
     free(readpixs);
 }
 
-static void
+static struct weston_view *
 clear_viewlist_but_specified_surface(struct weston_compositor *compositor,
                                      struct weston_surface *surface)
 {
@@ -905,7 +929,10 @@ clear_viewlist_but_specified_surface(struct weston_compositor *compositor,
         }
 
         wl_list_insert(compositor->view_list.prev, &view->link);
+        break;
     }
+
+    return view;
 }
 
 static void
@@ -919,21 +946,10 @@ get_gl_surface_rectangle(struct ivi_layout_SurfaceProperties *prop,
         return;
     }
 
-    if ((prop->destX == 0) &&
-        (prop->destY == 0) &&
-        (prop->destWidth == 0) &&
-        (prop->destHeight == 0)) {
-        *x = prop->sourceX;
-        *y = prop->sourceY;
-        *width = prop->sourceWidth;
-        *height = prop->sourceHeight;
-    }
-    else {
-        *x = prop->destX;
-        *y = prop->destY;
-        *width = prop->destWidth;
-        *height = prop->destHeight;
-    }
+    *x = prop->sourceX;
+    *y = prop->sourceY;
+    *width = prop->sourceWidth;
+    *height = prop->sourceHeight;
 }
 
 static int
@@ -942,23 +958,19 @@ gl_surface_screenshot(struct ivisurface *ivisurf,
                       const char *filename)
 {
     struct weston_compositor *compositor = surface->compositor;
-    struct link_layer *link_layer = NULL;
-    struct link_screen *link_scrn = NULL;
+    struct ivishell *shell = ivisurf->shell;
+    struct weston_view *view = NULL;
+    struct weston_output *output = NULL;
+    struct iviscreen *link_scrn = NULL;
     struct ivi_layout_SurfaceProperties prop = {};
     int32_t x = 0;
     int32_t y = 0;
     int32_t width = 0;
     int32_t height = 0;
 
-    wl_list_for_each(link_layer, &ivisurf->list_layer, link) {
-        if (link_layer == NULL) {
-            continue;
-        }
-
-        wl_list_for_each(link_scrn, &link_layer->layer->list_screen, link) {
-            if (link_scrn != NULL) {
-                break;
-            }
+    wl_list_for_each(link_scrn, &shell->list_screen, link) {
+        if (link_scrn != NULL) {
+            break;
         }
     }
 
@@ -972,15 +984,28 @@ gl_surface_screenshot(struct ivisurface *ivisurf,
         return -1;
     }
 
-    get_gl_surface_rectangle(&prop, &x, &y, &width, &height);
-    clear_viewlist_but_specified_surface(compositor, surface);
-    dump_surface(link_scrn->screen->output,
-                 compositor,
-                 filename,
-                 x,
-                 y,
-                 width,
-                 height);
+    view = clear_viewlist_but_specified_surface(compositor, surface);
+    if (view != NULL) {
+        int32_t plane_is_null = 0;
+        if (view->plane == NULL) {
+            plane_is_null = 1;
+            view->plane = &compositor->primary_plane;
+        }
+
+        get_gl_surface_rectangle(&prop, &x, &y, &width, &height);
+        dump_surface(link_scrn->output,
+                     compositor,
+                     filename,
+                     view,
+                     x,
+                     y,
+                     width,
+                     height);
+
+        if (plane_is_null) {
+            view->plane = NULL;
+        }
+    }
 
     return 0;
 }
