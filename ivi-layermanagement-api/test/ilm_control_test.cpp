@@ -983,7 +983,7 @@ TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
 }
 
 TEST_F(IlmCommandTest, ilm_keyboard_focus) {
-    uint surface;
+    uint surface = 0xFFFFFFFF;
     uint surface1 = 36;
     uint surface2 = 44;
 
