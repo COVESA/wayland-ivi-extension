@@ -20,6 +20,10 @@
 
 #include <gtest/gtest.h>
 #include <stdio.h>
+
+#include <unistd.h>
+#include <sys/types.h>
+
 #include "TestBase.h"
 
 extern "C" {
@@ -746,6 +750,7 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_
     ASSERT_EQ(9u, surfaceProperties.destHeight);
     ASSERT_EQ(ILM_NINETY, surfaceProperties.orientation);
     ASSERT_TRUE( surfaceProperties.visibility);
+    ASSERT_EQ(getpid(), surfaceProperties.creatorPid);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.436));
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(surface, 784, 546, 235, 78));
