@@ -2535,9 +2535,19 @@ ilm_getPropertiesOfSurface(t_ilm_uint surfaceID,
 
         ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceID);
         if (ctx_surf != NULL) {
+            // request statistics for surface
+            ivi_controller_surface_send_stats(ctx_surf->controller);
+            // force submission
+            int ret = display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
 
-            *pSurfaceProperties = ctx_surf->prop;
-            returnValue = ILM_SUCCESS;
+            // If we got an error here, there is really no sense
+            // in returning the properties as something is fundamentally
+            // broken.
+            if (ret != -1)
+            {
+               *pSurfaceProperties = ctx_surf->prop;
+               returnValue = ILM_SUCCESS;
+            }
         }
     }
 
