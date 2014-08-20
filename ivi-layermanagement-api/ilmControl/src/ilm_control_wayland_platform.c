@@ -951,6 +951,21 @@ static void destroy_control_resources(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
 
+    // free resources of output objects
+    if (! ctx->wl.controller) {
+        struct screen_context *ctx_scrn;
+        struct screen_context *next;
+
+        wl_list_for_each_safe(ctx_scrn, next, &ctx->wl.list_screen, link) {
+            if (ctx_scrn->output != NULL) {
+                wl_output_destroy(ctx_scrn->output);
+            }
+
+            wl_list_remove(&ctx_scrn->link);
+            free(ctx_scrn);
+        }
+    }
+
     if (ctx->wl.controller != NULL) {
         {
             struct surface_context *l;
