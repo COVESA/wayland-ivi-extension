@@ -102,6 +102,9 @@ struct ilm_client_context {
 
     uint32_t internal_id_surface;
     uint32_t name_controller;
+
+    struct wl_registry *registry_for_output;
+    struct wl_display *display_for_output;
 };
 
 static void
@@ -216,7 +219,23 @@ registry_handle_client(void *data, struct wl_registry *registry,
             fprintf(stderr, "Failed to registry bind ivi_application\n");
             return;
         }
-    } else if (strcmp(interface, "wl_output") == 0) {
+    }
+}
+
+static const struct wl_registry_listener registry_client_listener = {
+    registry_handle_client,
+    NULL
+};
+
+static void
+registry_handle_client_for_output(void *data, struct wl_registry *registry,
+                                  uint32_t name, const char *interface,
+                                  uint32_t version)
+{
+    struct ilm_client_context *ctx = data;
+    (void)version;
+
+    if (strcmp(interface, "wl_output") == 0) {
         struct screen_context *ctx_scrn = calloc(1, sizeof *ctx_scrn);
         if (ctx_scrn == NULL) {
             fprintf(stderr, "Failed to allocate memory for screen_context\n");
@@ -245,8 +264,8 @@ registry_handle_client(void *data, struct wl_registry *registry,
     }
 }
 
-static const struct wl_registry_listener registry_client_listener = {
-    registry_handle_client,
+static const struct wl_registry_listener registry_client_listener_for_output = {
+    registry_handle_client_for_output,
     NULL
 };
 
@@ -304,6 +323,11 @@ destroy_client_resouses(void)
         wl_registry_destroy(ctx->registry);
         ctx->registry = NULL;
     }
+
+    if (ctx->registry_for_output) {
+        wl_registry_destroy(ctx->registry_for_output);
+        ctx->registry_for_output = NULL;
+    }
 }
 
 static ilmErrorTypes
@@ -349,6 +373,32 @@ init_client(void)
         fprintf(stderr, "Failed to connect display at ilm_client\n");
         return;
     }
+
+    {
+        /* For output, use independent display connection.
+           Because threre are duplicate wl_output bindings in a client,
+           when using a display connection that is shared
+           between ilmClient and ilmContol. */
+        ctx->display_for_output = wl_display_connect(NULL);
+        if (ctx->display_for_output == NULL) {
+            fprintf(stderr, "Failed to connect display for output at ilm_client\n");
+            return;
+        }
+
+        ctx->registry_for_output = wl_display_get_registry(ctx->display_for_output);
+        if (ctx->registry_for_output == NULL) {
+            fprintf(stderr, "Failed to get registry for output\n");
+            return;
+        }
+        if (wl_registry_add_listener(ctx->registry_for_output,
+                                     &registry_client_listener_for_output, ctx)) {
+            fprintf(stderr, "Failed to add registry listener\n");
+            return;
+        }
+        wl_display_dispatch(ctx->display_for_output);
+        wl_display_roundtrip(ctx->display_for_output);
+    }
+
     ctx->valid = 1;
 }
 
