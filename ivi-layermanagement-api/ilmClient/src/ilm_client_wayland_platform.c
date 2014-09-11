@@ -327,6 +327,8 @@ destroy_client_resouses(void)
     if (ctx->registry_for_output) {
         wl_registry_destroy(ctx->registry_for_output);
         ctx->registry_for_output = NULL;
+        wl_display_disconnect(ctx->display_for_output);
+        ctx->display_for_output = NULL;
     }
 }
 
