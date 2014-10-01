@@ -1,0 +1,2 @@
+This directory contains the implementation of the IVI LayerManagement API.
+It consists of ilmClient & ilmController API as defined by GENIVI compliance.

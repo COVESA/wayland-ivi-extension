@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="ivi_application">
+
+    <copyright>
+    Copyright (C) 2013 DENSO CORPORATION
+    Copyright (c) 2013 BMW Car IT GmbH
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.
+    </copyright>
+
+    <interface name="ivi_surface" version="1">
+        <description summary="application interface to surface in ivi compositor"/>
+
+        <request name="destroy" type="destructor">
+            <description summary="destroy ivi_surface">
+                This removes link from ivi_id to wl_surface and destroys ivi_surface.
+            </description>
+        </request>
+
+        <event name="visibility">
+            <description summary="visibility of surface in ivi compositor has changed">
+                The new visibility state is provided in argument visibility.
+                If visibility is 0, the surface has become invisible.
+                If visibility is not 0, the surface has become visible.
+            </description>
+            <arg name="visibility" type="int"/>
+        </event>
+
+        <event name="configure">
+            <arg name="width" type="int"/>
+            <arg name="height" type="int"/>
+        </event>
+
+    </interface>
+
+    <interface name="ivi_application" version="1">
+        <description summary="create ivi-style surfaces">
+	    This interface is implemented by servers that provide desktop-style user interfaces.
+	    It allows clients to associate a ivi_surface with a basic surface.
+	</description>
+
+        <request name="surface_create">
+            <description summary="create ivi_surface with numeric ID in ivi compositor">
+                surface_create will create a interface:ivi_surface with numeric ID; ivi_id in
+                ivi compositor. These ivi_ids are defined as unique in the system to identify
+                it inside of ivi compositor. The ivi compositor implements business logic how to
+                set properties of the surface with ivi_id according to status of the system.
+                E.g. a unique ID for Car Navigation application is used for implementing special
+                logic of the application about where it shall be located.
+		if a wl_surface which already has another role is set, the server regards this as
+		error and disconnects the client.
+            </description>
+            <arg name="ivi_id" type="uint"/>
+            <arg name="surface" type="object" interface="wl_surface"/>
+            <arg name="id" type="new_id" interface="ivi_surface"/>
+        </request>
+
+    </interface>
+
+</protocol>
