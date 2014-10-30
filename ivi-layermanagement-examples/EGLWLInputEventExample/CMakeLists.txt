@@ -41,6 +41,12 @@ include_directories(
     "include"
 )
 
+link_directories(
+    ${GLESv2_LIBRARY_DIRS}
+    ${EGL_LIBRARY_DIRS}
+    ${WAYLAND_CLIENT_LIBRARY_DIRS}
+)
+
 set (HEADER_FILES
     include/transform.h
     include/WaylandServerinfoClientProtocol.h
@@ -71,6 +77,7 @@ add_dependencies(EGLWLInputEventExample
     wayland-egl
     ilmClient
     ilmControl
+    ${LIBS}
 )
 
 set(LIBS
