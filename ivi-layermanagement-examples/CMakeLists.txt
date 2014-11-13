@@ -25,3 +25,4 @@ project (ivi-layermanagement-examples)
 #===========================================================================================================
 add_subdirectory(LayerManagerControl)
 add_subdirectory(EGLWLMockNavigation)
+add_subdirectory(EGLWLInputEventExample)
