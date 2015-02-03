@@ -2019,15 +2019,6 @@ ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor)
-{
-    (void)layerId;
-    (void)pColor;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_layerSetRenderOrder(t_ilm_layer layerId,
                         t_ilm_surface *pSurfaceId,
                         t_ilm_int number)
@@ -2324,15 +2315,6 @@ ilm_surfaceGetPixelformat(t_ilm_layer surfaceId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceSetChromaKey(t_ilm_surface surfaceId, t_ilm_int* pColor)
-{
-    (void)surfaceId;
-    (void)pColor;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_displaySetRenderOrder(t_ilm_display display,
                           t_ilm_layer *pLayerId, const t_ilm_uint number)
 {
@@ -2413,24 +2395,6 @@ ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
 
     release_instance();
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_SetOptimizationMode(ilmOptimization id, ilmOptimizationMode mode)
-{
-    (void)id;
-    (void)mode;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_GetOptimizationMode(ilmOptimization id, ilmOptimizationMode* pMode)
-{
-    (void)id;
-    (void)pMode;
-    /* Not supported */
-    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes

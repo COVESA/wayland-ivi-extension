@@ -985,33 +985,6 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     EXPECT_NE(surface1, surface);
 }
 
-TEST_F(IlmCommandTest, SetGetOptimizationMode) {
-    ilmOptimization id;
-    ilmOptimizationMode mode;
-    ilmOptimizationMode retmode;
-
-    id = ILM_OPT_MULTITEXTURE;
-    mode = ILM_OPT_MODE_FORCE_OFF;
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetOptimizationMode(id, mode));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetOptimizationMode(id, &retmode));
-    ASSERT_EQ(mode, retmode);
-
-    id = ILM_OPT_SKIP_CLEAR;
-    mode = ILM_OPT_MODE_TOGGLE;
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetOptimizationMode(id, mode));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetOptimizationMode(id, &retmode));
-    ASSERT_EQ(mode, retmode);
-
-    id = ILM_OPT_MULTITEXTURE;
-    mode = ILM_OPT_MODE_HEURISTIC;
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetOptimizationMode(id, mode));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetOptimizationMode(id, &retmode));
-    ASSERT_EQ(mode, retmode);
-}
-
 TEST_F(IlmCommandTest, ilm_getNumberOfHardwareLayers) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;

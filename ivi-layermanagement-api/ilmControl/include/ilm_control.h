@@ -287,16 +287,6 @@ ilmErrorTypes ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orient
 ilmErrorTypes ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation);
 
 /**
- * \brief Sets the color value which defines the transparency value.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[in] pColor array of the color value which is defined in red,green, blue
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor);
-
-/**
  * \brief Sets render order of surfaces within one layer
  * \ingroup ilmControl
  * \param[in] layerId Id of layer.
@@ -453,16 +443,6 @@ ilmErrorTypes ilm_surfaceGetOrientation(t_ilm_surface surfaceId, ilmOrientation 
 ilmErrorTypes ilm_surfaceGetPixelformat(t_ilm_layer surfaceId, ilmPixelFormat *pPixelformat);
 
 /**
- * \brief Sets the color value which defines the transparency value of a surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of the surface to set the chromakey of.
- * \param[in] pColor array of the color value which is defined in red, green, blue
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceSetChromaKey(t_ilm_surface surfaceId, t_ilm_int* pColor);
-
-/**
  * \brief Sets render order of layers on a display
  * \ingroup ilmControl
  * \param[in] display Id of display to set the given order of layers.
@@ -505,28 +485,6 @@ ilmErrorTypes ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer l
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_takeSurfaceScreenshot(t_ilm_const_string filename, t_ilm_surface surfaceid);
-
-/**
- * \brief Enable or disable a rendering optimization
- *
- * \ingroup ilmControl
- * \param[in] id which optimization to change
- * \param[in] mode the mode to set on the optimzation (e.g. ON, OFF, AUTO)
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_SetOptimizationMode(ilmOptimization id, ilmOptimizationMode mode);
-
-/**
- * \brief Get the current enablement for an optimization
- *
- * \ingroup ilmControl
- * \param[in] id which optimization to query
- * \param[out] mode current optimization mode
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_GetOptimizationMode(ilmOptimization id, ilmOptimizationMode* mode);
 
 /**
  * \brief register for notification on property changes of layer
