@@ -584,19 +584,6 @@ TEST_F(IlmCommandTest, ilm_layerGetType_InvalidInput) {
     ASSERT_EQ(ILM_LAYERTYPE_UNKNOWN, type);
 }
 
-TEST_F(IlmCommandTest, ilm_layerGetCapabilities) {
-    t_ilm_uint layer = 0xbeef;
-    t_ilm_layercapabilities caps;
-    // TODO: unsupported
-    t_ilm_layercapabilities exp_caps = 0;
-
-    // add a layer and check its capabilities
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetCapabilities(layer, &caps));
-    ASSERT_EQ(exp_caps, caps);
-}
-
 TEST_F(IlmCommandTest, ilm_layerTypeGetCapabilities) {
     t_ilm_layercapabilities caps;
     // TODO: unsupported

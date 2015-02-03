@@ -2056,16 +2056,6 @@ ilm_layerSetRenderOrder(t_ilm_layer layerId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerGetCapabilities(t_ilm_layer layerId,
-                         t_ilm_layercapabilities *pCapabilities)
-{
-    (void)layerId;
-    (void)pCapabilities;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_layerTypeGetCapabilities(ilmLayerType layerType,
                              t_ilm_layercapabilities *pCapabilities)
 {

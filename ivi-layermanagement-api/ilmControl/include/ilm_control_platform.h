@@ -77,8 +77,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
                    t_ilm_int* pColor);
     ilmErrorTypes (*layerSetRenderOrder)(t_ilm_layer layerId,
                    t_ilm_layer *pSurfaceId, t_ilm_int number);
-    ilmErrorTypes (*layerGetCapabilities)(t_ilm_layer layerId,
-                   t_ilm_layercapabilities *pCapabilities);
     ilmErrorTypes (*layerTypeGetCapabilities)(ilmLayerType layerType,
                    t_ilm_layercapabilities *pCapabilities);
     ilmErrorTypes (*surfaceSetVisibility)(t_ilm_surface surfaceId,
