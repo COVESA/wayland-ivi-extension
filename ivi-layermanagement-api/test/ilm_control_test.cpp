@@ -966,27 +966,6 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     EXPECT_NE(surface1, surface);
 }
 
-TEST_F(IlmCommandTest, ilm_getNumberOfHardwareLayers) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
-    ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
-    EXPECT_TRUE(numberOfScreens>0);
-
-    if (numberOfScreens > 0)
-    {
-       t_ilm_display screen = screenIDs[0];
-       t_ilm_uint numberOfHardwareLayers;
-
-       // Depends on the platform the test is executed on - just check if the
-       // function doesn't fail. The ilm_getPropertiesOfScreen test does a more
-       // comprehensive verification.
-       EXPECT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
-       EXPECT_GT(numberOfHardwareLayers, 0u);
-    }
-
-    free(screenIDs);
-}
-
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
@@ -1022,10 +1001,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
 
         EXPECT_GT(screenProperties.screenWidth, 0u);
         EXPECT_GT(screenProperties.screenHeight, 0u);
-
-        t_ilm_uint numberOfHardwareLayers;
-        EXPECT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
-        EXPECT_EQ(numberOfHardwareLayers, screenProperties.harwareLayerCount);
     }
 
     free(screenIDs);

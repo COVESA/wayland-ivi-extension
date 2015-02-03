@@ -30,8 +30,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
                    struct ilmLayerProperties* pLayerProperties);
     ilmErrorTypes (*getPropertiesOfScreen)(t_ilm_display screenID,
                    struct ilmScreenProperties* pScreenProperties);
-    ilmErrorTypes (*getNumberOfHardwareLayers)(t_ilm_uint screenID,
-                   t_ilm_uint* pNumberOfHardwareLayers);
     ilmErrorTypes (*getScreenIDs)(t_ilm_uint* pNumberOfIDs,
                    t_ilm_uint** ppIDs);
     ilmErrorTypes (*getLayerIDs)(t_ilm_int* pLength,

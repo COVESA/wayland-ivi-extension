@@ -1421,20 +1421,6 @@ ilm_getPropertiesOfScreen(t_ilm_display screenID,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_getNumberOfHardwareLayers(t_ilm_uint screenID,
-                                  t_ilm_uint* pNumberOfHardwareLayers)
-{
-    (void)screenID;
-    /* Not supported */
-    if (pNumberOfHardwareLayers != NULL) {
-        *pNumberOfHardwareLayers = 0;
-        return ILM_SUCCESS;
-    } else {
-        return ILM_FAILED;
-    }
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
 {
     ilmErrorTypes returnValue = ILM_FAILED;

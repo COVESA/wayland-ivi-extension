@@ -47,16 +47,6 @@ ilmErrorTypes ilm_getPropertiesOfLayer(t_ilm_uint layerID, struct ilmLayerProper
 ilmErrorTypes ilm_getPropertiesOfScreen(t_ilm_display screenID, struct ilmScreenProperties* pScreenProperties);
 
 /**
- * \brief  Get the number of hardware layers of a screen
- * \ingroup ilmControl
- * \param[in] screenID id of the screen, where the number of Hardware Layers should be returned
- * \param[out] pNumberOfHardwareLayers pointer where the number of hardware layers should be stored
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not get the resolution.
- */
-ilmErrorTypes ilm_getNumberOfHardwareLayers(t_ilm_uint screenID, t_ilm_uint* pNumberOfHardwareLayers);
-
-/**
  * \brief Get the screen Ids
  * \ingroup ilmControl
  * \param[out] pNumberOfIDs pointer where the number of Screen Ids should be returned

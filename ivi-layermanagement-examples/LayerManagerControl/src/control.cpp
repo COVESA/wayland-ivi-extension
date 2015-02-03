@@ -53,7 +53,7 @@ void getCommunicatorPerformance()
 {
     int runs = 0;
     int runtimeInSec = 5;
-    unsigned int hwLayerCnt = 0;
+    ilmScreenProperties screenProperties;
     cout << "running performance test for " << runtimeInSec << " seconds... ";
     flush(cout);
 
@@ -67,11 +67,11 @@ void getCommunicatorPerformance()
     {
         t_ilm_uint screenid = 0;
 
-        ilmErrorTypes callResult = ilm_getNumberOfHardwareLayers(screenid, &hwLayerCnt);
+        ilmErrorTypes callResult = ilm_getPropertiesOfScreen(screenid, &screenProperties);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to get number of hardware layers for screen with ID " << screenid << "\n";
+            cout << "Failed to get properties for screen with ID " << screenid << "\n";
             return;
         }
 
