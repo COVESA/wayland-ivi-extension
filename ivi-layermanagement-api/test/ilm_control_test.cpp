@@ -584,32 +584,6 @@ TEST_F(IlmCommandTest, ilm_layerGetType_InvalidInput) {
     ASSERT_EQ(ILM_LAYERTYPE_UNKNOWN, type);
 }
 
-TEST_F(IlmCommandTest, ilm_layerTypeGetCapabilities) {
-    t_ilm_layercapabilities caps;
-    // TODO: unsupported
-    t_ilm_layercapabilities exp_caps = 0;
-
-    // check ILM_LAYERTYPE_UNKNOWN
-    exp_caps = 0;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerTypeGetCapabilities(ILM_LAYERTYPE_UNKNOWN, &caps));
-    ASSERT_EQ(exp_caps, caps);
-
-    // check ILM_LAYERTYPE_HARDWARE
-    exp_caps = 0;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerTypeGetCapabilities(ILM_LAYERTYPE_HARDWARE, &caps));
-    ASSERT_EQ(exp_caps, caps);
-
-    // check ILM_LAYERTYPE_SOFTWARE2D
-    exp_caps = 0;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerTypeGetCapabilities(ILM_LAYERTYPE_SOFTWARE2D, &caps));
-    ASSERT_EQ(exp_caps, caps);
-
-    // check ILM_LAYERTYPE_SOFTWARE2_5D
-    exp_caps = 1;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerTypeGetCapabilities(ILM_LAYERTYPE_SOFTWARE2_5D, &caps));
-    ASSERT_EQ(exp_caps, caps);
-}
-
 TEST_F(IlmCommandTest, ilm_surface_initialize) {
     uint surface_10 = 10;
     uint surface_20 = 20;

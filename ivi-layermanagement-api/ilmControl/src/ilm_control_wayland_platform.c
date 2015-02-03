@@ -2056,16 +2056,6 @@ ilm_layerSetRenderOrder(t_ilm_layer layerId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerTypeGetCapabilities(ilmLayerType layerType,
-                             t_ilm_layercapabilities *pCapabilities)
-{
-    (void)layerType;
-    (void)pCapabilities;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;

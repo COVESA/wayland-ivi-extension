@@ -308,16 +308,6 @@ ilmErrorTypes ilm_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor);
 ilmErrorTypes ilm_layerSetRenderOrder(t_ilm_layer layerId, t_ilm_layer *pSurfaceId, t_ilm_int number);
 
 /**
- * \brief Get the possible capabilities of a layertype
- * \ingroup ilmControl
- * \param[in] layerType The layertype to obtain the capabilities of
- * \param[out] pCapabilities The address where the capabilites are returned
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerTypeGetCapabilities(ilmLayerType layerType, t_ilm_layercapabilities *pCapabilities);
-
-/**
  * \brief Create the logical surface, which has no native buffer associated
  * \ingroup ilmControl
  * \param[in] pSurfaceId The value pSurfaceId points to is used as ID for new surface;
