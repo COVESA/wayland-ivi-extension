@@ -88,15 +88,6 @@ ilm_surfaceSetNativeContent(t_ilm_nativehandle nativehandle,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_UpdateInputEventAcceptanceOn(t_ilm_surface surfaceId,
-                                 ilmInputDevice devices,
-                                 t_ilm_bool acceptance)
-{
-    return gIlmClientPlatformFunc.UpdateInputEventAcceptanceOn(
-               surfaceId, devices, acceptance);
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceInitialize(t_ilm_surface *pSurfaceId)
 {
     return gIlmClientPlatformFunc.surfaceInitialize(pSurfaceId);

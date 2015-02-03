@@ -847,7 +847,6 @@ controller_listener_surface(void *data,
         return;
     }
     ctx_surf->id_surface = id_surface;
-    ctx_surf->prop.inputDevicesAcceptance = ILM_INPUT_DEVICE_ALL;
     ctx_surf->ctx = ctx;
     ctx_surf->is_surface_creation_noticed = true;
 
@@ -2083,8 +2082,7 @@ ilm_SetKeyboardFocusOn(t_ilm_surface surfaceId)
     struct surface_context *ctx_surf =
         get_surface_context(&ctx->wl, (uint32_t)surfaceId);
 
-    if (ctx_surf != NULL
-        && ctx_surf->prop.inputDevicesAcceptance & ILM_INPUT_DEVICE_KEYBOARD)
+    if (ctx_surf != NULL)
     {
         ivi_controller_surface_set_input_focus(ctx_surf->controller,
                         IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD, 1);

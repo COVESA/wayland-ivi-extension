@@ -574,7 +574,6 @@ OBJECT(IlmSurface)
     PROPERTY(t_ilm_uint, updateCounter)
     PROPERTY(t_ilm_uint, pixelformat)
     PROPERTY(t_ilm_uint, nativeSurface)
-    PROPERTY(ilmInputDevice, inputDevicesAcceptance)
     /***/
 OBJECTEND
 

@@ -84,11 +84,7 @@ WLSurface::CreateIlmSurface(t_ilm_surface* surfaceId,
     rtnv = ilm_surfaceSetVisibility(*surfaceId, ILM_TRUE);
     rtnv = ilm_surfaceSetOpacity(*surfaceId, 1.0f);
 
-    rtnv = ilm_UpdateInputEventAcceptanceOn(*surfaceId,
-                                            ILM_INPUT_DEVICE_POINTER |
-                                            ILM_INPUT_DEVICE_TOUCH |
-                                            ILM_INPUT_DEVICE_KEYBOARD,
-                                            ILM_TRUE);
+    /* TODO: Set input acceptance using new API */
     rtnv = ilm_SetKeyboardFocusOn(*surfaceId);
 
     rtnv = ilm_commitChanges();
@@ -102,11 +98,7 @@ void
 WLSurface::DestroyIlmSurface()
 {
     if (m_ilmSurfaceId > 0){
-        ilm_UpdateInputEventAcceptanceOn(m_ilmSurfaceId,
-                                         ILM_INPUT_DEVICE_POINTER |
-                                         ILM_INPUT_DEVICE_TOUCH |
-                                         ILM_INPUT_DEVICE_KEYBOARD,
-                                         ILM_FALSE);
+        /* TODO: Set input acceptance using new API */
         ilm_SetKeyboardFocusOn(m_ilmSurfaceId);
         ilm_commitChanges();
         ilm_surfaceRemove(m_ilmSurfaceId);

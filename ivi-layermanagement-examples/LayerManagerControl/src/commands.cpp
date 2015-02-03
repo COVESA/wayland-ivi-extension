@@ -668,17 +668,6 @@ COMMAND("get keyboard focus")
 }
 
 //=============================================================================
-COMMAND("set surface <surfaceid> accept <acceptance> input events from devices <kbd:pointer:touch>")
-//=============================================================================
-{
-    t_ilm_surface surfaceId = input->getUint("surfaceid");
-    t_ilm_bool acceptance = input->getBool("acceptance");
-    string kbdPointerTouch = input->getString("kbd:pointer:touch");
-
-    setSurfaceAcceptsInput(surfaceId, kbdPointerTouch, acceptance);
-}
-
-//=============================================================================
 COMMAND("test notification layer <layerid>")
 //=============================================================================
 {

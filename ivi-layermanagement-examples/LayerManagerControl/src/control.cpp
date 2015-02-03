@@ -111,52 +111,6 @@ void getKeyboardFocus()
     }
 }
 
-void setSurfaceAcceptsInput(t_ilm_surface surfaceId, string kbdPointerTouch, t_ilm_bool acceptance)
-{
-    char* str;
-    char* tok;
-
-    ilmInputDevice devices = (ilmInputDevice)0;
-
-    str = new char [kbdPointerTouch.size()+1];
-    strcpy(str, kbdPointerTouch.c_str());
-    tok = strtok(str, ":");
-    while (tok != NULL)
-    {
-        if (!strcmp(tok, "kbd"))
-        {
-            devices |= ILM_INPUT_DEVICE_KEYBOARD;
-        }
-        else if (!strcmp(tok, "pointer"))
-        {
-            devices |= ILM_INPUT_DEVICE_POINTER;
-        }
-        else if (!strcmp(tok, "touch"))
-        {
-            devices |= ILM_INPUT_DEVICE_TOUCH;
-        }
-        else
-        {
-            cerr << "Unknown devices specified." << endl;
-        }
-
-        tok = strtok(NULL, ":");
-    }
-
-    ilmErrorTypes callResult = ilm_UpdateInputEventAcceptanceOn(surfaceId, devices, acceptance);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to update input event acceptance on surface with ID " << surfaceId << "\n";
-        delete[] str;
-        return;
-    }
-
-    ilm_commitChanges();
-
-    delete[] str;
-}
-
 void layerNotificationCallback(t_ilm_layer layer, struct ilmLayerProperties* properties, t_ilm_notification_mask mask)
 {
     cout << "\nNotification: layer " << layer << " updated properties:\n";

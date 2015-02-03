@@ -941,29 +941,7 @@ TEST_F(IlmCommandTest, ilm_keyboard_focus) {
 }
 
 TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
-    uint surface;
-    uint surface1 = 36;
-    uint surface2 = 44;
-    ilmSurfaceProperties surfaceProperties;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface1, &surfaceProperties));
-    EXPECT_EQ(ILM_INPUT_DEVICE_ALL, surfaceProperties.inputDevicesAcceptance);
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_UpdateInputEventAcceptanceOn(surface1, (ilmInputDevice) (ILM_INPUT_DEVICE_KEYBOARD | ILM_INPUT_DEVICE_POINTER), false));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface1, &surfaceProperties));
-    EXPECT_FALSE(surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_KEYBOARD);
-    EXPECT_FALSE(surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_POINTER);
-    EXPECT_TRUE(surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_TOUCH);
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetKeyboardFocusOn(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
-    EXPECT_NE(surface1, surface);
+    ASSERT_EQ(ILM_SUCCESS, ILM_FAILED); /* Input acceptance tests need to be reworked under the new API */
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {

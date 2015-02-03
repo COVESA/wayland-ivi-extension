@@ -244,10 +244,6 @@ void scatterHandleUserInput(t_scene_data* pOriginalScene, t_scene_data* pScatter
             pixelFormats[ILM_PIXELFORMAT_RGBA_4444] = "RGBA_4444";
             pixelFormats[ILM_PIXEL_FORMAT_UNKNOWN] = "FORMAT_UNKNOWN";
 
-            string inputDeviceAcceptance = (surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_KEYBOARD ? "Keyboard " : "");
-            inputDeviceAcceptance +=(surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_POINTER ? "Pointer " : "");
-            inputDeviceAcceptance += (surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_TOUCH ? "Touch " : "");
-
             stringstream tempStream;
             char fillChar = '-';
             int width = 20;
@@ -258,7 +254,6 @@ void scatterHandleUserInput(t_scene_data* pOriginalScene, t_scene_data* pScatter
             tempStream << std::setw(width) << std::left << std::setfill(fillChar) << "Original Dimensions" << ":" << "[w:" << surfaceProperties.origSourceWidth << ", h:" << surfaceProperties.origSourceHeight << "]\n";
             tempStream << std::setw(width) << std::left << std::setfill(fillChar) << "Opacity" << ":" << surfaceProperties.opacity << "\n";
             tempStream << std::setw(width) << std::left << std::setfill(fillChar) << "Visibility" << ":" << surfaceProperties.visibility << "\n";
-            tempStream << std::setw(width) << std::left << std::setfill(fillChar) << "Input Devices" << ":" << surfaceProperties.inputDevicesAcceptance << " [" << inputDeviceAcceptance << "]\n";
             tempStream << std::setw(width) << std::left << std::setfill(fillChar) << "Native Surface" << ":" << surfaceProperties.nativeSurface << "\n";
             tempStream << std::setw(width) << std::left << std::setfill(fillChar) << "Orientation" << ":" << surfaceProperties.orientation << " [" << orientations[surfaceProperties.orientation] << "]\n";
             tempStream << std::setw(width) << std::left << std::setfill(fillChar) << "Pixel Format" << ":" << surfaceProperties.pixelformat << " [" << pixelFormats[surfaceProperties.pixelformat] << "]\n";
