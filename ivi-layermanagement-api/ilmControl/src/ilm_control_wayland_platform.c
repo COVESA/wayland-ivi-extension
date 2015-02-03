@@ -1704,24 +1704,6 @@ ilm_layerRemove(t_ilm_layer layerId)
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType)
-{
-    if (!pLayerType)
-    {
-       return ILM_ERROR_INVALID_ARGUMENTS;
-    }
-
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    *pLayerType = wayland_controller_is_inside_layer_list(&ctx->wl.list_layer, layerId) ?
-       ILM_LAYERTYPE_SOFTWARE2D :
-       ILM_LAYERTYPE_UNKNOWN;
-
-    release_instance();
-    return ILM_SUCCESS; // even if non existent?
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_layerSetVisibility(t_ilm_layer layerId, t_ilm_bool newVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;

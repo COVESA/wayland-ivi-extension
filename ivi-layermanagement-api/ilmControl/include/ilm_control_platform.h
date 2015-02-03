@@ -45,8 +45,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
     ilmErrorTypes (*layerCreateWithDimension)(t_ilm_layer* pLayerId,
                    t_ilm_uint width, t_ilm_uint height);
     ilmErrorTypes (*layerRemove)(t_ilm_layer layerId);
-    ilmErrorTypes (*layerGetType)(t_ilm_layer layerId,
-                   ilmLayerType* pLayerType);
     ilmErrorTypes (*layerSetVisibility)(t_ilm_layer layerId,
                    t_ilm_bool newVisibility);
     ilmErrorTypes (*layerGetVisibility)(t_ilm_layer layerId,

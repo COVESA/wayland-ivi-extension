@@ -137,17 +137,6 @@ ilmErrorTypes ilm_layerCreateWithDimension(t_ilm_layer* pLayerId, t_ilm_uint wid
 ilmErrorTypes ilm_layerRemove(t_ilm_layer layerId);
 
 /**
- * \brief Get the current type of the layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of the layer.
- * \param[out] pLayerType pointer to the layerType where the result should be stored.
- * \note ilmLayerType for information on supported types
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType);
-
-/**
  * \brief Set the visibility of a layer. If a layer is not visible, the layer and its
  * surfaces will not be rendered.
  * \ingroup ilmControl
