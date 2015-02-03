@@ -320,29 +320,6 @@ ilmErrorTypes ilm_surfaceSetOpacity(const t_ilm_surface surfaceId, t_ilm_float o
 ilmErrorTypes ilm_surfaceGetOpacity(const t_ilm_surface surfaceId, t_ilm_float *pOpacity);
 
 /**
- * \brief Set the keyboard focus on a certain surface
- * To receive keyboard events, 2 conditions must be fulfilled:
- *  1- The surface must accept events from keyboard. See ilm_UpdateInputEventAcceptanceOn
- *  2- The keyboard focus must be set on that surface
- *
- * \ingroup ilmControl
- * \param[in] surfaceId Identifier of the surface to set the keyboard focus on.
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_SetKeyboardFocusOn(t_ilm_surface surfaceId);
-
-/**
- * \brief Get the indentifier of the surface which hold the keyboard focus
- *
- * \ingroup ilmControl
- * \param[out] pSurfaceId Pointer on the a surface identifier
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_GetKeyboardFocusSurfaceId(t_ilm_surface* pSurfaceId);
-
-/**
  * \brief Set the destination area of a surface within a layer for rendering. The surface will be scaled to this rectangle for rendering.
  * \ingroup ilmControl
  * \param[in] surfaceId Id of surface.

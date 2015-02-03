@@ -83,34 +83,6 @@ void getCommunicatorPerformance()
     cout << (runs / runtimeInSec) << " transactions/second\n";
 }
 
-void setSurfaceKeyboardFocus(t_ilm_surface surface)
-{
-    ilmErrorTypes callResult = ilm_SetKeyboardFocusOn(surface);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to set keyboard focus at surface with ID " << surface << "\n";
-        return;
-    }
-}
-
-void getKeyboardFocus()
-{
-    t_ilm_surface surfaceId;
-
-    ilmErrorTypes callResult = ilm_GetKeyboardFocusSurfaceId(&surfaceId);
-    if (ILM_SUCCESS == callResult)
-    {
-        cout << "keyboardFocusSurfaceId == " << surfaceId << endl;
-    }
-    else
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to get keyboard focus surface ID\n";
-        return;
-    }
-}
-
 void layerNotificationCallback(t_ilm_layer layer, struct ilmLayerProperties* properties, t_ilm_notification_mask mask)
 {
     cout << "\nNotification: layer " << layer << " updated properties:\n";

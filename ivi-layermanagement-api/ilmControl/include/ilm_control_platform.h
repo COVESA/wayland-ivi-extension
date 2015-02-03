@@ -79,8 +79,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
                    t_ilm_float opacity);
     ilmErrorTypes (*surfaceGetOpacity)(t_ilm_surface surfaceId,
                    t_ilm_float *pOpacity);
-    ilmErrorTypes (*SetKeyboardFocusOn)(t_ilm_surface surfaceId);
-    ilmErrorTypes (*GetKeyboardFocusSurfaceId)(t_ilm_surface* pSurfaceId);
     ilmErrorTypes (*surfaceSetDestinationRectangle)(t_ilm_surface surfaceId,
                    t_ilm_int x, t_ilm_int y,
                    t_ilm_int width, t_ilm_int height);

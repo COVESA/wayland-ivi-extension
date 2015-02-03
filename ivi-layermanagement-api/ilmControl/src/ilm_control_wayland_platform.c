@@ -771,9 +771,7 @@ controller_surface_listener_input_focus(void *data,
         fprintf(stderr, "%s: Invalid surface context\n", __FUNCTION__);
         return;
     }
-    if (device & IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD) {
-        ctx_surf->prop.hasKeyboardFocus = enabled;
-    }
+    /* TODO: Update this to new input focus API */
 }
 
 static struct ivi_controller_surface_listener controller_surface_listener=
@@ -2072,41 +2070,6 @@ ilm_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
 
     release_instance();
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_SetKeyboardFocusOn(t_ilm_surface surfaceId)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf =
-        get_surface_context(&ctx->wl, (uint32_t)surfaceId);
-
-    if (ctx_surf != NULL)
-    {
-        ivi_controller_surface_set_input_focus(ctx_surf->controller,
-                        IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD, 1);
-        returnValue = ILM_SUCCESS;
-    }
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_GetKeyboardFocusSurfaceId(t_ilm_surface* pSurfaceId)
-{
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
-
-    wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
-        if (ctx_surf->prop.hasKeyboardFocus) {
-            *pSurfaceId = ctx_surf->id_surface;
-            break;
-        }
-    }
-
-    release_instance();
-    return ILM_SUCCESS;
 }
 
 ILM_EXPORT ilmErrorTypes

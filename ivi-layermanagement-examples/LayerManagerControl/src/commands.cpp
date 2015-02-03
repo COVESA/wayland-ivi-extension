@@ -651,23 +651,6 @@ COMMAND("get communicator performance")
 }
 
 //=============================================================================
-COMMAND("set surface <surfaceid> keyboard focus")
-//=============================================================================
-{
-    t_ilm_surface surface = input->getUint("surfaceid");
-
-    setSurfaceKeyboardFocus(surface);
-}
-
-//=============================================================================
-COMMAND("get keyboard focus")
-//=============================================================================
-{
-    (void) input; //suppress warning: unused parameter
-    getKeyboardFocus();
-}
-
-//=============================================================================
 COMMAND("test notification layer <layerid>")
 //=============================================================================
 {

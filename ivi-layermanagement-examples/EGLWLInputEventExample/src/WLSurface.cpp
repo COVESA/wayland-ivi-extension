@@ -85,7 +85,7 @@ WLSurface::CreateIlmSurface(t_ilm_surface* surfaceId,
     rtnv = ilm_surfaceSetOpacity(*surfaceId, 1.0f);
 
     /* TODO: Set input acceptance using new API */
-    rtnv = ilm_SetKeyboardFocusOn(*surfaceId);
+    /* TODO: Set keyboard focus using new API */
 
     rtnv = ilm_commitChanges();
 
@@ -99,7 +99,7 @@ WLSurface::DestroyIlmSurface()
 {
     if (m_ilmSurfaceId > 0){
         /* TODO: Set input acceptance using new API */
-        ilm_SetKeyboardFocusOn(m_ilmSurfaceId);
+	/* TODO: Set input focus using the new API */
         ilm_commitChanges();
         ilm_surfaceRemove(m_ilmSurfaceId);
     }

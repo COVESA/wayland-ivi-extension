@@ -211,7 +211,6 @@ struct ilmSurfaceProperties
     t_ilm_uint pixelformat;                 /*!< pixel format of surface */
     t_ilm_uint nativeSurface;               /*!< native surface handle of surface */
     t_ilm_int  creatorPid;                  /*!< process id of application that created this surface */
-    t_ilm_bool hasKeyboardFocus;            /*!< whether this surface has keyboard focus */
 };
 
 /**

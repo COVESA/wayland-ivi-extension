@@ -925,19 +925,7 @@ TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
 }
 
 TEST_F(IlmCommandTest, ilm_keyboard_focus) {
-    uint surface = 0xFFFFFFFF;
-    uint surface1 = 36;
-    uint surface2 = 44;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
-    EXPECT_EQ(0xFFFFFFFF, surface);
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetKeyboardFocusOn(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
-    EXPECT_EQ(surface1, surface);
+    ASSERT_EQ(ILM_SUCCESS, ILM_FAILED); /* Keyboard focus tests need to be reworked under the new API */
 }
 
 TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
