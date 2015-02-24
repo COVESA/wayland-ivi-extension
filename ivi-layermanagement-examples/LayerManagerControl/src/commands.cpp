@@ -651,89 +651,6 @@ COMMAND("get communicator performance")
 }
 
 //=============================================================================
-COMMAND("set surface <surfaceid> keyboard focus")
-//=============================================================================
-{
-    t_ilm_surface surface = input->getUint("surfaceid");
-
-    setSurfaceKeyboardFocus(surface);
-}
-
-//=============================================================================
-COMMAND("get keyboard focus")
-//=============================================================================
-{
-    (void) input; //suppress warning: unused parameter
-    getKeyboardFocus();
-}
-
-//=============================================================================
-COMMAND("set surface <surfaceid> accept <acceptance> input events from devices <kbd:pointer:touch>")
-//=============================================================================
-{
-    t_ilm_surface surfaceId = input->getUint("surfaceid");
-    t_ilm_bool acceptance = input->getBool("acceptance");
-    string kbdPointerTouch = input->getString("kbd:pointer:touch");
-
-    setSurfaceAcceptsInput(surfaceId, kbdPointerTouch, acceptance);
-}
-
-//=============================================================================
-COMMAND("set layer|surface <id> chromakey <red> <green> <blue>")
-//=============================================================================
-{
-    t_ilm_layer id = input->getUint("id");
-    t_ilm_int color[3] =
-    {
-        input->getInt("red"),
-        input->getInt("green"),
-        input->getInt("blue")
-    };
-
-    if (input->contains("layer"))
-    {
-        ilmErrorTypes callResult = ilm_layerSetChromaKey(id, color);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to set chroma key (" << color[0] << ", " << color[1] << ", " << color[2] << ") for layer with ID " << id << "\n";
-            return;
-        }
-
-        ilm_commitChanges();
-    }
-    else if (input->contains("surface"))
-    {
-        ilmErrorTypes callResult = ilm_surfaceSetChromaKey(id, color);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to set chroma key (" << color[0] << ", " << color[1] << ", " << color[2] << ") for surface with ID " << id << "\n";
-            return;
-        }
-
-        ilm_commitChanges();
-    }
-}
-
-//=============================================================================
-COMMAND("set surface <surfaceid> chromakey disabled")
-//=============================================================================
-{
-    t_ilm_surface surface = input->getUint("surfaceid");
-
-    ilmErrorTypes callResult = ilm_surfaceSetChromaKey(surface, NULL);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to disable chroma key for surface with ID " << surface << "\n";
-        return;
-    }
-
-    ilm_commitChanges();
-}
-
-//=============================================================================
 COMMAND("test notification layer <layerid>")
 //=============================================================================
 {
@@ -762,23 +679,6 @@ COMMAND("watch layer|surface <idarray>")
 
         watchSurface(surfaceids, surfaceidCount);
     }
-}
-
-//=============================================================================
-COMMAND("set optimization <id> mode <mode>")
-//=============================================================================
-{
-    t_ilm_uint id = input->getUint("id");
-    t_ilm_uint mode = input->getUint("mode");
-    setOptimization(id, mode);
-}
-
-//=============================================================================
-COMMAND("get optimization <id>")
-//=============================================================================
-{
-    t_ilm_uint id = input->getUint("id");
-    getOptimization(id);
 }
 
 //=============================================================================

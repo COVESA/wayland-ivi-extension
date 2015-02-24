@@ -110,9 +110,7 @@ int main(int argc, char **argv)
 
     TerminateRenderer();
     ilm_surfaceRemove(surfaceId);
-    ilm_UpdateInputEventAcceptanceOn(surfaceId,
-                                    ILM_INPUT_DEVICE_POINTER | ILM_INPUT_DEVICE_TOUCH,
-                                    ILM_FALSE);
+    /* TODO: Update input acceptance to new API */
     ilm_commitChanges();
     eglSurface->DestroyIlmSurface();
     ilm_commitChanges();

@@ -47,16 +47,6 @@ ilmErrorTypes ilm_getPropertiesOfLayer(t_ilm_uint layerID, struct ilmLayerProper
 ilmErrorTypes ilm_getPropertiesOfScreen(t_ilm_display screenID, struct ilmScreenProperties* pScreenProperties);
 
 /**
- * \brief  Get the number of hardware layers of a screen
- * \ingroup ilmControl
- * \param[in] screenID id of the screen, where the number of Hardware Layers should be returned
- * \param[out] pNumberOfHardwareLayers pointer where the number of hardware layers should be stored
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not get the resolution.
- */
-ilmErrorTypes ilm_getNumberOfHardwareLayers(t_ilm_uint screenID, t_ilm_uint* pNumberOfHardwareLayers);
-
-/**
  * \brief Get the screen Ids
  * \ingroup ilmControl
  * \param[out] pNumberOfIDs pointer where the number of Screen Ids should be returned
@@ -135,17 +125,6 @@ ilmErrorTypes ilm_layerCreateWithDimension(t_ilm_layer* pLayerId, t_ilm_uint wid
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_layerRemove(t_ilm_layer layerId);
-
-/**
- * \brief Get the current type of the layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of the layer.
- * \param[out] pLayerType pointer to the layerType where the result should be stored.
- * \note ilmLayerType for information on supported types
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType);
 
 /**
  * \brief Set the visibility of a layer. If a layer is not visible, the layer and its
@@ -287,16 +266,6 @@ ilmErrorTypes ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orient
 ilmErrorTypes ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation);
 
 /**
- * \brief Sets the color value which defines the transparency value.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[in] pColor array of the color value which is defined in red,green, blue
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor);
-
-/**
  * \brief Sets render order of surfaces within one layer
  * \ingroup ilmControl
  * \param[in] layerId Id of layer.
@@ -306,26 +275,6 @@ ilmErrorTypes ilm_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor);
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_layerSetRenderOrder(t_ilm_layer layerId, t_ilm_layer *pSurfaceId, t_ilm_int number);
-
-/**
- * \brief Get the capabilities of a layer
- * \ingroup ilmControl
- * \param[in] layerId Id of the layer to obtain the capabilities of
- * \param[out] pCapabilities The address where the capabilites are returned
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerGetCapabilities(t_ilm_layer layerId, t_ilm_layercapabilities *pCapabilities);
-
-/**
- * \brief Get the possible capabilities of a layertype
- * \ingroup ilmControl
- * \param[in] layerType The layertype to obtain the capabilities of
- * \param[out] pCapabilities The address where the capabilites are returned
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerTypeGetCapabilities(ilmLayerType layerType, t_ilm_layercapabilities *pCapabilities);
 
 /**
  * \brief Create the logical surface, which has no native buffer associated
@@ -369,29 +318,6 @@ ilmErrorTypes ilm_surfaceSetOpacity(const t_ilm_surface surfaceId, t_ilm_float o
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_surfaceGetOpacity(const t_ilm_surface surfaceId, t_ilm_float *pOpacity);
-
-/**
- * \brief Set the keyboard focus on a certain surface
- * To receive keyboard events, 2 conditions must be fulfilled:
- *  1- The surface must accept events from keyboard. See ilm_UpdateInputEventAcceptanceOn
- *  2- The keyboard focus must be set on that surface
- *
- * \ingroup ilmControl
- * \param[in] surfaceId Identifier of the surface to set the keyboard focus on.
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_SetKeyboardFocusOn(t_ilm_surface surfaceId);
-
-/**
- * \brief Get the indentifier of the surface which hold the keyboard focus
- *
- * \ingroup ilmControl
- * \param[out] pSurfaceId Pointer on the a surface identifier
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_GetKeyboardFocusSurfaceId(t_ilm_surface* pSurfaceId);
 
 /**
  * \brief Set the destination area of a surface within a layer for rendering. The surface will be scaled to this rectangle for rendering.
@@ -473,16 +399,6 @@ ilmErrorTypes ilm_surfaceGetOrientation(t_ilm_surface surfaceId, ilmOrientation 
 ilmErrorTypes ilm_surfaceGetPixelformat(t_ilm_layer surfaceId, ilmPixelFormat *pPixelformat);
 
 /**
- * \brief Sets the color value which defines the transparency value of a surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of the surface to set the chromakey of.
- * \param[in] pColor array of the color value which is defined in red, green, blue
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceSetChromaKey(t_ilm_surface surfaceId, t_ilm_int* pColor);
-
-/**
  * \brief Sets render order of layers on a display
  * \ingroup ilmControl
  * \param[in] display Id of display to set the given order of layers.
@@ -525,28 +441,6 @@ ilmErrorTypes ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer l
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_takeSurfaceScreenshot(t_ilm_const_string filename, t_ilm_surface surfaceid);
-
-/**
- * \brief Enable or disable a rendering optimization
- *
- * \ingroup ilmControl
- * \param[in] id which optimization to change
- * \param[in] mode the mode to set on the optimzation (e.g. ON, OFF, AUTO)
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_SetOptimizationMode(ilmOptimization id, ilmOptimizationMode mode);
-
-/**
- * \brief Get the current enablement for an optimization
- *
- * \ingroup ilmControl
- * \param[in] id which optimization to query
- * \param[out] mode current optimization mode
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_GetOptimizationMode(ilmOptimization id, ilmOptimizationMode* mode);
 
 /**
  * \brief register for notification on property changes of layer

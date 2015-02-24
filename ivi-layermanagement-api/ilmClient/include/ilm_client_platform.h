@@ -37,8 +37,6 @@ typedef struct _ILM_CLIENT_PLATFORM_FUNC
     ilmErrorTypes (*surfaceSetNativeContent)(t_ilm_nativehandle nativehandle,
                    t_ilm_int width, t_ilm_int height,
                    ilmPixelFormat pixelFormat, t_ilm_surface surfaceId);
-    ilmErrorTypes (*UpdateInputEventAcceptanceOn)(t_ilm_surface surfaceId,
-                   ilmInputDevice devices, t_ilm_bool acceptance);
     ilmErrorTypes (*init)(t_ilm_nativedisplay nativedisplay);
     void (*destroy)();
     ilmErrorTypes (*surfaceInitialize)(t_ilm_surface *pSurfaceId);

@@ -53,7 +53,7 @@ void getCommunicatorPerformance()
 {
     int runs = 0;
     int runtimeInSec = 5;
-    unsigned int hwLayerCnt = 0;
+    ilmScreenProperties screenProperties;
     cout << "running performance test for " << runtimeInSec << " seconds... ";
     flush(cout);
 
@@ -67,11 +67,11 @@ void getCommunicatorPerformance()
     {
         t_ilm_uint screenid = 0;
 
-        ilmErrorTypes callResult = ilm_getNumberOfHardwareLayers(screenid, &hwLayerCnt);
+        ilmErrorTypes callResult = ilm_getPropertiesOfScreen(screenid, &screenProperties);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to get number of hardware layers for screen with ID " << screenid << "\n";
+            cout << "Failed to get properties for screen with ID " << screenid << "\n";
             return;
         }
 
@@ -81,80 +81,6 @@ void getCommunicatorPerformance()
     signal(SIGALRM, SIG_DFL);
 
     cout << (runs / runtimeInSec) << " transactions/second\n";
-}
-
-void setSurfaceKeyboardFocus(t_ilm_surface surface)
-{
-    ilmErrorTypes callResult = ilm_SetKeyboardFocusOn(surface);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to set keyboard focus at surface with ID " << surface << "\n";
-        return;
-    }
-}
-
-void getKeyboardFocus()
-{
-    t_ilm_surface surfaceId;
-
-    ilmErrorTypes callResult = ilm_GetKeyboardFocusSurfaceId(&surfaceId);
-    if (ILM_SUCCESS == callResult)
-    {
-        cout << "keyboardFocusSurfaceId == " << surfaceId << endl;
-    }
-    else
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to get keyboard focus surface ID\n";
-        return;
-    }
-}
-
-void setSurfaceAcceptsInput(t_ilm_surface surfaceId, string kbdPointerTouch, t_ilm_bool acceptance)
-{
-    char* str;
-    char* tok;
-
-    ilmInputDevice devices = (ilmInputDevice)0;
-
-    str = new char [kbdPointerTouch.size()+1];
-    strcpy(str, kbdPointerTouch.c_str());
-    tok = strtok(str, ":");
-    while (tok != NULL)
-    {
-        if (!strcmp(tok, "kbd"))
-        {
-            devices |= ILM_INPUT_DEVICE_KEYBOARD;
-        }
-        else if (!strcmp(tok, "pointer"))
-        {
-            devices |= ILM_INPUT_DEVICE_POINTER;
-        }
-        else if (!strcmp(tok, "touch"))
-        {
-            devices |= ILM_INPUT_DEVICE_TOUCH;
-        }
-        else
-        {
-            cerr << "Unknown devices specified." << endl;
-        }
-
-        tok = strtok(NULL, ":");
-    }
-
-    ilmErrorTypes callResult = ilm_UpdateInputEventAcceptanceOn(surfaceId, devices, acceptance);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to update input event acceptance on surface with ID " << surfaceId << "\n";
-        delete[] str;
-        return;
-    }
-
-    ilm_commitChanges();
-
-    delete[] str;
 }
 
 void layerNotificationCallback(t_ilm_layer layer, struct ilmLayerProperties* properties, t_ilm_notification_mask mask)
@@ -347,71 +273,4 @@ void watchSurface(unsigned int* surfaceids, unsigned int surfaceidCount)
     {
         delete[] surfaceids;
     }
-}
-
-void setOptimization(t_ilm_uint id, t_ilm_uint mode)
-{
-    ilmErrorTypes callResult = ilm_SetOptimizationMode((ilmOptimization)id,
-                                    (ilmOptimizationMode)mode);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to set optimization with ID " << id << " mode " << mode << "\n";
-        return;
-    }
-
-    ilm_commitChanges();
-}
-
-void getOptimization(t_ilm_uint id)
-{
-    ilmOptimization optimizationId = (ilmOptimization)id;
-    ilmOptimizationMode optimizationMode;
-
-    ilmErrorTypes callResult = ilm_GetOptimizationMode(optimizationId, &optimizationMode);
-    if (callResult == ILM_SUCCESS)
-    {
-        switch (optimizationId)
-        {
-        case ILM_OPT_MULTITEXTURE :
-            cout << "Optimization " << (int)optimizationId << " (Multitexture Optimization)" << endl;
-            break;
-
-        case ILM_OPT_SKIP_CLEAR :
-            cout << "Optimization " << (int)optimizationId << " (Skip Clear)" << endl;
-            break;
-        default:
-            cout << "Optimization " << "unknown" << endl;
-            break;
-        }
-
-        switch (optimizationMode)
-        {
-        case ILM_OPT_MODE_FORCE_OFF :
-            cout << "Mode " << (int)optimizationMode << " (forced off)" << endl;
-            break;
-
-        case ILM_OPT_MODE_FORCE_ON :
-            cout << "Mode " << (int)optimizationMode << " (forced on)" << endl;
-            break;
-        case ILM_OPT_MODE_HEURISTIC :
-            cout << "Mode " << (int)optimizationMode << " (Heuristic / Render choose the optimization)" << endl;
-            break;
-        case ILM_OPT_MODE_TOGGLE :
-            cout << "Mode " << (int)optimizationMode << " (Toggle on/and off rapidly for debugging)" << endl;
-            break;
-
-        default:
-            cout << "Mode " << "unknown" << endl;
-            break;
-        }
-    }
-    else
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to get mode for optimization with ID " << optimizationId << "\n";
-        return;
-    }
-
-    ilm_commitChanges();
 }

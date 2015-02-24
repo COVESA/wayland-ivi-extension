@@ -441,11 +441,6 @@ send_surface_event(struct wl_resource *resource,
         ivi_controller_surface_send_pixelformat(resource,
                                                 prop->pixelformat);
     }
-    if (mask & IVI_NOTIFICATION_KEYBOARD_FOCUS) {
-        ivi_controller_surface_send_input_focus(resource,
-                        IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD,
-                        prop->hasKeyboardFocus);
-    }
     if (mask & IVI_NOTIFICATION_REMOVE) {
         send_surface_add_event(ivisurf, resource, IVI_NOTIFICATION_REMOVE);
     }
@@ -1069,28 +1064,6 @@ controller_surface_destroy(struct wl_client *client,
     wl_resource_destroy(resource);
 }
 
-static void send_all_keyboard_focus(struct ivishell *shell)
-{
-    struct ivi_layout_SurfaceProperties props;
-    struct ivicontroller_surface *ctrlsurf;
-    struct ivisurface *current_surf;
-    uint32_t id_surface;
-
-    wl_list_for_each(current_surf, &shell->list_surface, link) {
-        ivi_layout_getPropertiesOfSurface(current_surf->layout_surface,
-                                          &props);
-        id_surface = ivi_layout_getIdOfSurface(current_surf->layout_surface);
-        wl_list_for_each(ctrlsurf, &shell->list_controller_surface, link) {
-            if (id_surface != ctrlsurf->id_surface) {
-                    continue;
-            }
-            ivi_controller_surface_send_input_focus(ctrlsurf->resource,
-                            IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD,
-                            props.hasKeyboardFocus);
-        }
-    }
-}
-
 static void
 controller_surface_set_input_focus(struct wl_client *client,
               struct wl_resource *resource,
@@ -1100,12 +1073,7 @@ controller_surface_set_input_focus(struct wl_client *client,
     (void)client;
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
 
-    if (device & IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD) {
-        if (enabled) {
-            ivi_layout_SetKeyboardFocusOn(ivisurf->layout_surface);
-            send_all_keyboard_focus(ivisurf->shell);
-        }
-    }
+    /* TODO: Update this for the new input focus API */
 }
 
 static const

@@ -116,28 +116,6 @@ typedef enum e_ilmObjectType
 } ilmObjectType;
 
 /**
- * \brief Enumeration of renderer optimizations
- * \ingroup ilmControl
- **/
-typedef enum e_ilmOptimization
-{
-    ILM_OPT_MULTITEXTURE = 0,          /*!< Multi-texture optimization */
-    ILM_OPT_SKIP_CLEAR = 1             /*!< Skip clearing the screen */
-} ilmOptimization;
-
-/**
- * \brief Enablement states for individual optimizations
- * \ingroup ilmControl
- **/
-typedef enum e_ilmOptimizationMode
-{
-    ILM_OPT_MODE_FORCE_OFF = 0,        /*!< Disable optimization */
-    ILM_OPT_MODE_FORCE_ON = 1,         /*!< Enable optimization */
-    ILM_OPT_MODE_HEURISTIC = 2,        /*!< Let renderer choose enablement */
-    ILM_OPT_MODE_TOGGLE = 3            /*!< Toggle on/and off rapidly for debugging */
-} ilmOptimizationMode;
-
-/**
  * \brief Enumeration for supported orientations of booth, surface and layer
  * \ingroup ilmControl
  **/
@@ -232,13 +210,7 @@ struct ilmSurfaceProperties
     t_ilm_uint updateCounter;               /*!< content updates of surface */
     t_ilm_uint pixelformat;                 /*!< pixel format of surface */
     t_ilm_uint nativeSurface;               /*!< native surface handle of surface */
-    ilmInputDevice inputDevicesAcceptance;  /*!< bitmask of ilmInputDevice from which the surface can accept input events */
-    t_ilm_bool chromaKeyEnabled;            /*!< chromakey validness of the surface */
-    t_ilm_uint chromaKeyRed;                /*!< chromakey's red value of the surface */
-    t_ilm_uint chromaKeyGreen;              /*!< chromakey's green value of the surface */
-    t_ilm_uint chromaKeyBlue;               /*!< chromakey's blue value of the surface */
     t_ilm_int  creatorPid;                  /*!< process id of application that created this surface */
-    t_ilm_bool hasKeyboardFocus;            /*!< whether this surface has keyboard focus */
 };
 
 /**
@@ -261,10 +233,6 @@ struct ilmLayerProperties
     ilmOrientation orientation;  /*!< orientation value of the layer */
     t_ilm_bool visibility;       /*!< visibility value of the layer */
     t_ilm_uint type;             /*!< type of layer */
-    t_ilm_bool chromaKeyEnabled; /*!< chromakey validness of the layer */
-    t_ilm_uint chromaKeyRed;     /*!< chromakey's red value of the layer */
-    t_ilm_uint chromaKeyGreen;   /*!< chromakey's green value of the layer */
-    t_ilm_uint chromaKeyBlue;    /*!< chromakey's blue value of the layer */
     t_ilm_int  creatorPid;       /*!< process id of application that created this layer */
 };
 

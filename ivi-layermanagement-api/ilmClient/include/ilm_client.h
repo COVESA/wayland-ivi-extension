@@ -161,27 +161,6 @@ ilmErrorTypes ilm_surfaceSetNativeContent(t_ilm_nativehandle nativehandle,
  */
 ilmErrorTypes ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
-/**
- * \brief Set from which kind of devices the surface can accept input events.
- * By default, a surface accept input events from all kind of devices (keyboards, pointer, ...)
- * By calling this function, you can adjust surface preferences. Note that this function only
- * adjust the acceptance for the specified devices. Non specified are keept untouched.
- *
- * Typicall use case for this function is when dealing with pointer or touch events.
- * Those are normally dispatched to the first visible surface below the coordinate.
- * If you want a different behavior (i.e. forward events to an other surface below the coordinate,
- * you can set all above surfaces to refuse input events)
- *
- * \ingroup ilmClient
- * \param[in] surfaceId Identifier of the surface to set the keyboard focus on.
- * \param[in] devices Bitmask of ilmInputDevice
- * \param[in] acceptance Indicate if the surface accept or reject input events from the specified devices
- *
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_UpdateInputEventAcceptanceOn(t_ilm_surface surfaceId, ilmInputDevice devices, t_ilm_bool acceptance);
-
 #ifdef __cplusplus
 } /**/
 #endif /* __cplusplus */

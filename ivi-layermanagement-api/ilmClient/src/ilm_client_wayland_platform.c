@@ -41,10 +41,6 @@ static ilmErrorTypes wayland_surfaceSetNativeContent(
                          t_ilm_int width, t_ilm_int height,
                          ilmPixelFormat pixelFormat,
                          t_ilm_surface surfaceId);
-static ilmErrorTypes wayland_UpdateInputEventAcceptanceOn(
-                         t_ilm_surface surfaceId,
-                         ilmInputDevice devices,
-                         t_ilm_bool acceptance);
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
 static void wayland_destroy(void);
 static ilmErrorTypes wayland_surfaceInitialize(t_ilm_surface *pSurfaceId);
@@ -61,8 +57,6 @@ void init_ilmClientPlatformTable(void)
         wayland_surfaceRemoveNativeContent;
     gIlmClientPlatformFunc.surfaceSetNativeContent =
         wayland_surfaceSetNativeContent;
-    gIlmClientPlatformFunc.UpdateInputEventAcceptanceOn =
-        wayland_UpdateInputEventAcceptanceOn;
     gIlmClientPlatformFunc.init =
         wayland_init;
     gIlmClientPlatformFunc.destroy =
@@ -570,29 +564,6 @@ wayland_surfaceSetNativeContent(t_ilm_nativehandle nativehandle,
     /* There is no API to set native content
         as such ivi_surface_set_native. */
     return ILM_FAILED;
-}
-
-static ilmErrorTypes
-wayland_UpdateInputEventAcceptanceOn(t_ilm_surface surfaceId,
-                                     ilmInputDevice devices,
-                                     t_ilm_bool acceptance)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_client_context *ctx = get_client_instance();
-    struct surface_context *ctx_surf = NULL;
-
-    ctx_surf = get_surface_context_by_id(ctx, (uint32_t)surfaceId);
-
-    if (ctx_surf != NULL) {
-        if (acceptance == ILM_TRUE) {
-            ctx_surf->prop.inputDevicesAcceptance = devices;
-        } else {
-            ctx_surf->prop.inputDevicesAcceptance &= ~devices;
-        }
-        returnValue = ILM_SUCCESS;
-    }
-
-    return returnValue;
 }
 
 static ilmErrorTypes

@@ -52,7 +52,6 @@ void captureSceneDataHelper(t_ilm_surface surfaceId, t_scene_data* pSceneData, I
     pSurface->set("destY", props.destY);
     pSurface->set("drawCounter", props.drawCounter);
     pSurface->set("frameCounter", props.frameCounter);
-    pSurface->set("inputDevicesAcceptance", props.inputDevicesAcceptance);
     pSurface->set("nativeSurface", props.nativeSurface);
     pSurface->set("opacity", props.opacity);
     pSurface->set("orientation", props.orientation);
@@ -314,7 +313,6 @@ ilmSurfaceProperties getSurfaceProperties(IlmSurface* pIlmsurface)
     pIlmsurface->get("destY", &(props.destY));
     pIlmsurface->get("drawCounter", &(props.drawCounter));
     pIlmsurface->get("frameCounter", &(props.frameCounter));
-    pIlmsurface->get("inputDevicesAcceptance", &(props.inputDevicesAcceptance));
     pIlmsurface->get("nativeSurface", &(props.nativeSurface));
     pIlmsurface->get("opacity", &(props.opacity));
     pIlmsurface->get("orientation", &(props.orientation));

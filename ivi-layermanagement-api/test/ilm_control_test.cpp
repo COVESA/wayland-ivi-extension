@@ -565,64 +565,6 @@ TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
     ASSERT_NE(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
-TEST_F(IlmCommandTest, ilm_layerGetType) {
-    t_ilm_uint layer = 0xbeef;
-    ilmLayerType type;
-
-    // add a layer and check its type
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetType(layer, &type));
-    ASSERT_EQ(ILM_LAYERTYPE_SOFTWARE2D, type);
-}
-
-TEST_F(IlmCommandTest, ilm_layerGetType_InvalidInput) {
-    ilmLayerType type;
-
-    // check type of a non-existing layer
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetType(0xdeadbeef, &type));
-    ASSERT_EQ(ILM_LAYERTYPE_UNKNOWN, type);
-}
-
-TEST_F(IlmCommandTest, ilm_layerGetCapabilities) {
-    t_ilm_uint layer = 0xbeef;
-    t_ilm_layercapabilities caps;
-    // TODO: unsupported
-    t_ilm_layercapabilities exp_caps = 0;
-
-    // add a layer and check its capabilities
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerGetCapabilities(layer, &caps));
-    ASSERT_EQ(exp_caps, caps);
-}
-
-TEST_F(IlmCommandTest, ilm_layerTypeGetCapabilities) {
-    t_ilm_layercapabilities caps;
-    // TODO: unsupported
-    t_ilm_layercapabilities exp_caps = 0;
-
-    // check ILM_LAYERTYPE_UNKNOWN
-    exp_caps = 0;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerTypeGetCapabilities(ILM_LAYERTYPE_UNKNOWN, &caps));
-    ASSERT_EQ(exp_caps, caps);
-
-    // check ILM_LAYERTYPE_HARDWARE
-    exp_caps = 0;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerTypeGetCapabilities(ILM_LAYERTYPE_HARDWARE, &caps));
-    ASSERT_EQ(exp_caps, caps);
-
-    // check ILM_LAYERTYPE_SOFTWARE2D
-    exp_caps = 0;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerTypeGetCapabilities(ILM_LAYERTYPE_SOFTWARE2D, &caps));
-    ASSERT_EQ(exp_caps, caps);
-
-    // check ILM_LAYERTYPE_SOFTWARE2_5D
-    exp_caps = 1;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerTypeGetCapabilities(ILM_LAYERTYPE_SOFTWARE2_5D, &caps));
-    ASSERT_EQ(exp_caps, caps);
-}
-
 TEST_F(IlmCommandTest, ilm_surface_initialize) {
     uint surface_10 = 10;
     uint surface_20 = 20;
@@ -983,93 +925,11 @@ TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
 }
 
 TEST_F(IlmCommandTest, ilm_keyboard_focus) {
-    uint surface = 0xFFFFFFFF;
-    uint surface1 = 36;
-    uint surface2 = 44;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
-    EXPECT_EQ(0xFFFFFFFF, surface);
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetKeyboardFocusOn(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
-    EXPECT_EQ(surface1, surface);
+    ASSERT_EQ(ILM_SUCCESS, ILM_FAILED); /* Keyboard focus tests need to be reworked under the new API */
 }
 
 TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
-    uint surface;
-    uint surface1 = 36;
-    uint surface2 = 44;
-    ilmSurfaceProperties surfaceProperties;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface1, &surfaceProperties));
-    EXPECT_EQ(ILM_INPUT_DEVICE_ALL, surfaceProperties.inputDevicesAcceptance);
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_UpdateInputEventAcceptanceOn(surface1, (ilmInputDevice) (ILM_INPUT_DEVICE_KEYBOARD | ILM_INPUT_DEVICE_POINTER), false));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(surface1, &surfaceProperties));
-    EXPECT_FALSE(surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_KEYBOARD);
-    EXPECT_FALSE(surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_POINTER);
-    EXPECT_TRUE(surfaceProperties.inputDevicesAcceptance & ILM_INPUT_DEVICE_TOUCH);
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetKeyboardFocusOn(surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetKeyboardFocusSurfaceId(&surface));
-    EXPECT_NE(surface1, surface);
-}
-
-TEST_F(IlmCommandTest, SetGetOptimizationMode) {
-    ilmOptimization id;
-    ilmOptimizationMode mode;
-    ilmOptimizationMode retmode;
-
-    id = ILM_OPT_MULTITEXTURE;
-    mode = ILM_OPT_MODE_FORCE_OFF;
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetOptimizationMode(id, mode));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetOptimizationMode(id, &retmode));
-    ASSERT_EQ(mode, retmode);
-
-    id = ILM_OPT_SKIP_CLEAR;
-    mode = ILM_OPT_MODE_TOGGLE;
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetOptimizationMode(id, mode));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetOptimizationMode(id, &retmode));
-    ASSERT_EQ(mode, retmode);
-
-    id = ILM_OPT_MULTITEXTURE;
-    mode = ILM_OPT_MODE_HEURISTIC;
-    ASSERT_EQ(ILM_SUCCESS, ilm_SetOptimizationMode(id, mode));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-    ASSERT_EQ(ILM_SUCCESS, ilm_GetOptimizationMode(id, &retmode));
-    ASSERT_EQ(mode, retmode);
-}
-
-TEST_F(IlmCommandTest, ilm_getNumberOfHardwareLayers) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
-    ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
-    EXPECT_TRUE(numberOfScreens>0);
-
-    if (numberOfScreens > 0)
-    {
-       t_ilm_display screen = screenIDs[0];
-       t_ilm_uint numberOfHardwareLayers;
-
-       // Depends on the platform the test is executed on - just check if the
-       // function doesn't fail. The ilm_getPropertiesOfScreen test does a more
-       // comprehensive verification.
-       EXPECT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
-       EXPECT_GT(numberOfHardwareLayers, 0u);
-    }
-
-    free(screenIDs);
+    ASSERT_EQ(ILM_SUCCESS, ILM_FAILED); /* Input acceptance tests need to be reworked under the new API */
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
@@ -1107,10 +967,6 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
 
         EXPECT_GT(screenProperties.screenWidth, 0u);
         EXPECT_GT(screenProperties.screenHeight, 0u);
-
-        t_ilm_uint numberOfHardwareLayers;
-        EXPECT_EQ(ILM_SUCCESS, ilm_getNumberOfHardwareLayers(screen, &numberOfHardwareLayers));
-        EXPECT_EQ(numberOfHardwareLayers, screenProperties.harwareLayerCount);
     }
 
     free(screenIDs);

@@ -251,14 +251,9 @@ void printScene();
 //control.cpp
 //=============================================================================
 void getCommunicatorPerformance();
-void setSurfaceKeyboardFocus(t_ilm_surface surface);
-void getKeyboardFocus();
-void setSurfaceAcceptsInput(t_ilm_surface surfaceId, string kbdPointerTouch, t_ilm_bool acceptance);
 void testNotificationLayer(t_ilm_layer layerid);
 void watchLayer(unsigned int* layerids, unsigned int layeridCount);
 void watchSurface(unsigned int* surfaceids, unsigned int surfaceidCount);
-void setOptimization(t_ilm_uint id, t_ilm_uint mode);
-void getOptimization(t_ilm_uint id);
 
 
 //=============================================================================

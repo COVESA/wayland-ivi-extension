@@ -30,8 +30,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
                    struct ilmLayerProperties* pLayerProperties);
     ilmErrorTypes (*getPropertiesOfScreen)(t_ilm_display screenID,
                    struct ilmScreenProperties* pScreenProperties);
-    ilmErrorTypes (*getNumberOfHardwareLayers)(t_ilm_uint screenID,
-                   t_ilm_uint* pNumberOfHardwareLayers);
     ilmErrorTypes (*getScreenIDs)(t_ilm_uint* pNumberOfIDs,
                    t_ilm_uint** ppIDs);
     ilmErrorTypes (*getLayerIDs)(t_ilm_int* pLength,
@@ -45,8 +43,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
     ilmErrorTypes (*layerCreateWithDimension)(t_ilm_layer* pLayerId,
                    t_ilm_uint width, t_ilm_uint height);
     ilmErrorTypes (*layerRemove)(t_ilm_layer layerId);
-    ilmErrorTypes (*layerGetType)(t_ilm_layer layerId,
-                   ilmLayerType* pLayerType);
     ilmErrorTypes (*layerSetVisibility)(t_ilm_layer layerId,
                    t_ilm_bool newVisibility);
     ilmErrorTypes (*layerGetVisibility)(t_ilm_layer layerId,
@@ -73,12 +69,8 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
                    ilmOrientation orientation);
     ilmErrorTypes (*layerGetOrientation)(t_ilm_layer layerId,
                    ilmOrientation *pOrientation);
-    ilmErrorTypes (*layerSetChromaKey)(t_ilm_layer layerId,
-                   t_ilm_int* pColor);
     ilmErrorTypes (*layerSetRenderOrder)(t_ilm_layer layerId,
                    t_ilm_layer *pSurfaceId, t_ilm_int number);
-    ilmErrorTypes (*layerGetCapabilities)(t_ilm_layer layerId,
-                   t_ilm_layercapabilities *pCapabilities);
     ilmErrorTypes (*layerTypeGetCapabilities)(ilmLayerType layerType,
                    t_ilm_layercapabilities *pCapabilities);
     ilmErrorTypes (*surfaceSetVisibility)(t_ilm_surface surfaceId,
@@ -87,8 +79,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
                    t_ilm_float opacity);
     ilmErrorTypes (*surfaceGetOpacity)(t_ilm_surface surfaceId,
                    t_ilm_float *pOpacity);
-    ilmErrorTypes (*SetKeyboardFocusOn)(t_ilm_surface surfaceId);
-    ilmErrorTypes (*GetKeyboardFocusSurfaceId)(t_ilm_surface* pSurfaceId);
     ilmErrorTypes (*surfaceSetDestinationRectangle)(t_ilm_surface surfaceId,
                    t_ilm_int x, t_ilm_int y,
                    t_ilm_int width, t_ilm_int height);
@@ -104,8 +94,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
                    ilmOrientation *pOrientation);
     ilmErrorTypes (*surfaceGetPixelformat)(t_ilm_layer surfaceId,
                    ilmPixelFormat *pPixelformat);
-    ilmErrorTypes (*surfaceSetChromaKey)(t_ilm_surface surfaceId,
-                   t_ilm_int* pColor);
     ilmErrorTypes (*displaySetRenderOrder)(t_ilm_display display,
                    t_ilm_layer *pLayerId, const t_ilm_uint number);
     ilmErrorTypes (*takeScreenshot)(t_ilm_uint screen,
@@ -114,10 +102,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
                    t_ilm_layer layerid);
     ilmErrorTypes (*takeSurfaceScreenshot)(t_ilm_const_string filename,
                    t_ilm_surface surfaceid);
-    ilmErrorTypes (*SetOptimizationMode)(ilmOptimization id,
-                   ilmOptimizationMode mode);
-    ilmErrorTypes (*GetOptimizationMode)(ilmOptimization id,
-                   ilmOptimizationMode* pMode);
     ilmErrorTypes (*layerAddNotification)(t_ilm_layer layer,
                    layerNotificationFunc callback);
     ilmErrorTypes (*layerRemoveNotification)(t_ilm_layer layer);

@@ -771,9 +771,7 @@ controller_surface_listener_input_focus(void *data,
         fprintf(stderr, "%s: Invalid surface context\n", __FUNCTION__);
         return;
     }
-    if (device & IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD) {
-        ctx_surf->prop.hasKeyboardFocus = enabled;
-    }
+    /* TODO: Update this to new input focus API */
 }
 
 static struct ivi_controller_surface_listener controller_surface_listener=
@@ -847,7 +845,6 @@ controller_listener_surface(void *data,
         return;
     }
     ctx_surf->id_surface = id_surface;
-    ctx_surf->prop.inputDevicesAcceptance = ILM_INPUT_DEVICE_ALL;
     ctx_surf->ctx = ctx;
     ctx_surf->is_surface_creation_noticed = true;
 
@@ -1421,20 +1418,6 @@ ilm_getPropertiesOfScreen(t_ilm_display screenID,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_getNumberOfHardwareLayers(t_ilm_uint screenID,
-                                  t_ilm_uint* pNumberOfHardwareLayers)
-{
-    (void)screenID;
-    /* Not supported */
-    if (pNumberOfHardwareLayers != NULL) {
-        *pNumberOfHardwareLayers = 0;
-        return ILM_SUCCESS;
-    } else {
-        return ILM_FAILED;
-    }
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -1701,24 +1684,6 @@ ilm_layerRemove(t_ilm_layer layerId)
 
     release_instance();
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_layerGetType(t_ilm_layer layerId, ilmLayerType* pLayerType)
-{
-    if (!pLayerType)
-    {
-       return ILM_ERROR_INVALID_ARGUMENTS;
-    }
-
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    *pLayerType = wayland_controller_is_inside_layer_list(&ctx->wl.list_layer, layerId) ?
-       ILM_LAYERTYPE_SOFTWARE2D :
-       ILM_LAYERTYPE_UNKNOWN;
-
-    release_instance();
-    return ILM_SUCCESS; // even if non existent?
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2019,15 +1984,6 @@ ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerSetChromaKey(t_ilm_layer layerId, t_ilm_int* pColor)
-{
-    (void)layerId;
-    (void)pColor;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_layerSetRenderOrder(t_ilm_layer layerId,
                         t_ilm_surface *pSurfaceId,
                         t_ilm_int number)
@@ -2053,26 +2009,6 @@ ilm_layerSetRenderOrder(t_ilm_layer layerId,
 
     release_instance();
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_layerGetCapabilities(t_ilm_layer layerId,
-                         t_ilm_layercapabilities *pCapabilities)
-{
-    (void)layerId;
-    (void)pCapabilities;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_layerTypeGetCapabilities(ilmLayerType layerType,
-                             t_ilm_layercapabilities *pCapabilities)
-{
-    (void)layerType;
-    (void)pCapabilities;
-    /* Not supported */
-    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2134,42 +2070,6 @@ ilm_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
 
     release_instance();
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_SetKeyboardFocusOn(t_ilm_surface surfaceId)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf =
-        get_surface_context(&ctx->wl, (uint32_t)surfaceId);
-
-    if (ctx_surf != NULL
-        && ctx_surf->prop.inputDevicesAcceptance & ILM_INPUT_DEVICE_KEYBOARD)
-    {
-        ivi_controller_surface_set_input_focus(ctx_surf->controller,
-                        IVI_CONTROLLER_SURFACE_INPUT_DEVICE_KEYBOARD, 1);
-        returnValue = ILM_SUCCESS;
-    }
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_GetKeyboardFocusSurfaceId(t_ilm_surface* pSurfaceId)
-{
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
-
-    wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
-        if (ctx_surf->prop.hasKeyboardFocus) {
-            *pSurfaceId = ctx_surf->id_surface;
-            break;
-        }
-    }
-
-    release_instance();
-    return ILM_SUCCESS;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2344,15 +2244,6 @@ ilm_surfaceGetPixelformat(t_ilm_layer surfaceId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceSetChromaKey(t_ilm_surface surfaceId, t_ilm_int* pColor)
-{
-    (void)surfaceId;
-    (void)pColor;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_displaySetRenderOrder(t_ilm_display display,
                           t_ilm_layer *pLayerId, const t_ilm_uint number)
 {
@@ -2433,24 +2324,6 @@ ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
 
     release_instance();
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_SetOptimizationMode(ilmOptimization id, ilmOptimizationMode mode)
-{
-    (void)id;
-    (void)mode;
-    /* Not supported */
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_GetOptimizationMode(ilmOptimization id, ilmOptimizationMode* pMode)
-{
-    (void)id;
-    (void)pMode;
-    /* Not supported */
-    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
