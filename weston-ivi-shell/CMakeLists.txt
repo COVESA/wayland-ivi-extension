@@ -56,7 +56,7 @@ link_directories(
 
 
 add_library(${PROJECT_NAME} MODULE
-    src/ivi-controller.c
+    src/ivi-extension.c src/ivi-controller-impl.c
     src/bitmap.c
 )
 
