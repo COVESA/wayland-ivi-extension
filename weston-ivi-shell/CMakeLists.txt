@@ -23,9 +23,9 @@ cmake_minimum_required (VERSION 2.6)
 project(ivi-controller)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
+pkg_check_modules(WAYLAND_SERVER wayland-server>=1.7.0 REQUIRED)
 pkg_check_modules(CAIRO cairo REQUIRED)
-pkg_check_modules(WESTON weston REQUIRED)
+pkg_check_modules(WESTON weston>=1.7.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 pkg_check_modules(EGL egl REQUIRED)
 pkg_check_modules(GLES glesv2 REQUIRED)
@@ -56,7 +56,7 @@ link_directories(
 
 
 add_library(${PROJECT_NAME} MODULE
-    src/ivi-controller.c
+    src/ivi-extension.c src/ivi-controller-impl.c
     src/bitmap.c
 )
 

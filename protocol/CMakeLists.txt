@@ -22,8 +22,8 @@ cmake_minimum_required (VERSION 2.6)
 project(ivi-extension-protocol)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
-pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
+pkg_check_modules(WAYLAND_CLIENT wayland-client>=1.7.0 REQUIRED)
+pkg_check_modules(WAYLAND_SERVER wayland-server>=1.7.0 REQUIRED)
 
 find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
 
