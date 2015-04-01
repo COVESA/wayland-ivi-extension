@@ -432,6 +432,7 @@ controller_layer_listener_destroyed(void *data,
                                     struct ivi_controller_layer *controller)
 {
     struct layer_context *ctx_layer = data;
+    wl_list_remove(&ctx_layer->order.link);
     wl_list_remove(&ctx_layer->link);
     free(ctx_layer);
 }
@@ -660,6 +661,7 @@ controller_surface_listener_destroyed(void *data,
                                ILM_NOTIFICATION_CONTENT_REMOVED);
     }
 
+    wl_list_remove(&ctx_surf->order.link);
     wl_list_remove(&ctx_surf->link);
     free(ctx_surf);
 }
@@ -685,6 +687,7 @@ controller_surface_listener_content(void *data,
 
         ivi_controller_surface_destroy(controller, 1);
 
+        wl_list_remove(&ctx_surf->order.link);
         wl_list_remove(&ctx_surf->link);
         free(ctx_surf);
     }
@@ -1753,6 +1756,7 @@ ilm_layerRemove(t_ilm_layer layerId)
         if (ctx_layer->id_layer == layerId) {
             ivi_controller_layer_destroy(ctx_layer->controller, 1);
 
+            wl_list_remove(&ctx_layer->order.link);
             wl_list_remove(&ctx_layer->link);
             free(ctx_layer);
 
