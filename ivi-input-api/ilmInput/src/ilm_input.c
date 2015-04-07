@@ -238,7 +238,44 @@ ILM_EXPORT ilmErrorTypes
 ilm_setInputFocus(t_ilm_surface *surfaceIDs, t_ilm_uint num_surfaces,
                   ilmInputDevice bitmask, t_ilm_bool is_set)
 {
-    return ILM_FAILED;
+    struct ilm_control_context *ctx;
+    int i;
+
+    if (surfaceIDs == NULL) {
+        fprintf(stderr, "Invalid Argument\n");
+        return ILM_FAILED;
+    }
+
+    if (bitmask & (ILM_INPUT_DEVICE_POINTER | ILM_INPUT_DEVICE_TOUCH)
+        && num_surfaces > 1 && is_set == ILM_TRUE) {
+        fprintf(stderr,
+                "Cannot set pointer or touch focus for multiple surfaces\n");
+        release_instance();
+        return ILM_FAILED;
+    }
+
+    ctx = sync_and_acquire_instance();
+    for (i = 0; i < num_surfaces; i++) {
+        struct surface_context *ctx_surf;
+        int found_surface = 0;
+        wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
+            if (ctx_surf->id_surface == surfaceIDs[i]) {
+                found_surface = 1;
+                break;
+            }
+        }
+
+        if (!found_surface) {
+            fprintf(stderr, "Surface %d was not found\n", surfaceIDs[i]);
+            continue;
+        }
+
+        ivi_input_set_input_focus(ctx->wl.input_controller,
+                                             ctx_surf->id_surface,
+                                             bitmask, is_set);
+    }
+    release_instance();
+    return ILM_SUCCESS;
 }
 
 ILM_EXPORT ilmErrorTypes
