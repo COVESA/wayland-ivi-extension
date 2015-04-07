@@ -33,7 +33,7 @@ pkg_check_modules(GLES glesv2 REQUIRED)
 GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
 
 include_directories(
-    include
+    src
     ${IVI_EXTENSION_INCLUDE_DIRS}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
