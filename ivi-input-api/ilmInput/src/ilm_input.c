@@ -282,5 +282,41 @@ ILM_EXPORT ilmErrorTypes
 ilm_getInputFocus(t_ilm_surface **surfaceIDs, ilmInputDevice **bitmasks,
                   t_ilm_uint *num_ids)
 {
-    return ILM_FAILED;
+    struct ilm_control_context *ctx;
+    int i = 0;
+    struct surface_context *ctx_surf;
+
+    if ((surfaceIDs == NULL) || (bitmasks == NULL)
+         ||(num_ids == NULL)) {
+        fprintf(stderr, "Invalid Argument\n");
+        return ILM_FAILED;
+    }
+
+    ctx = sync_and_acquire_instance();
+    *num_ids = wl_list_length(&ctx->wl.list_surface);
+    *surfaceIDs = calloc(*num_ids, sizeof **surfaceIDs);
+
+    if (*surfaceIDs == NULL) {
+        fprintf(stderr, "Failed to allocate memory for surface ID list\n");
+        release_instance();
+        return ILM_FAILED;
+    }
+
+    *bitmasks = calloc(*num_ids, sizeof **bitmasks);
+    if (*bitmasks == NULL) {
+        fprintf(stderr, "Failed to allocate memory for bitmask list\n");
+        free(*surfaceIDs);
+        release_instance();
+        return ILM_FAILED;
+    }
+
+    wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
+        (*surfaceIDs)[i] = ctx_surf->id_surface;
+        (*bitmasks)[i] = ctx_surf->prop.focus;
+        i++;
+    }
+
+    release_instance();
+    return ILM_SUCCESS;
+
 }
