@@ -38,6 +38,7 @@ add_subdirectory(ivi-layermanagement-examples)
 
 if(WITH_ILM_INPUT)
     add_subdirectory(ivi-input-api/ilmInput)
+    add_subdirectory(ivi-input-controller)
 endif()
 
 
