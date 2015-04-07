@@ -213,7 +213,25 @@ ilm_getInputDevices(ilmInputDevice bitmask, t_ilm_uint *num_seats,
 ILM_EXPORT ilmErrorTypes
 ilm_getInputDeviceCapabilities(t_ilm_string seat_name, ilmInputDevice *bitmask)
 {
-    return ILM_FAILED;
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx;
+    struct seat_context *seat;
+
+    if ((seat_name == NULL) || (bitmask == NULL)) {
+        fprintf(stderr, "Invalid Argument\n");
+        return ILM_FAILED;
+    }
+
+    ctx = sync_and_acquire_instance();
+    wl_list_for_each(seat, &ctx->wl.list_seat, link) {
+        if (strcmp(seat_name, seat->seat_name) == 0) {
+            *bitmask = seat->capabilities;
+            returnValue = ILM_SUCCESS;
+        }
+    }
+
+    release_instance();
+    return returnValue;
 }
 
 ILM_EXPORT ilmErrorTypes
