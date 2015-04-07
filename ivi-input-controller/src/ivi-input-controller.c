@@ -180,12 +180,125 @@ static void
 pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
                     wl_fixed_t x, wl_fixed_t y)
 {
+    struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
+    struct surface_ctx *surf_ctx;
+    const struct ivi_controller_interface *interface =
+        seat->input_ctx->ivi_controller_interface;
+
+    weston_pointer_move(grab->pointer, x, y);
+
+    /* Get coordinates relative to the surface the pointer is in.
+     * This might cause weirdness if there are multiple surfaces
+     * that are accepted by this pointer's seat and have focus */
+
+    /* For each surface_ctx, check for focus and send */
+    wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
+        struct weston_surface *surf;
+        struct wl_resource *resource;
+        struct wl_client *surface_client;
+        struct weston_view *view;
+        wl_fixed_t sx, sy;
+
+        if (!(surf_ctx->focus & ILM_INPUT_DEVICE_POINTER))
+            continue;
+
+        if (get_accepted_seat(surf_ctx, grab->pointer->seat->seat_name) < 0)
+            continue;
+
+        /* Assume one view per surface */
+        surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
+        view = wl_container_of(surf->views.next, view, surface_link);
+
+        /* Do not send motion events for coordinates outside the surface */
+        weston_view_from_global_fixed(view, x, y, &sx, &sy);
+        if (!pixman_region32_contains_point(&surf->input, wl_fixed_to_int(sx),
+                                            wl_fixed_to_int(sy), NULL))
+            continue;
+
+        surface_client = wl_resource_get_client(surf->resource);
+        wl_resource_for_each(resource, &grab->pointer->resource_list) {
+            if (wl_resource_get_client(resource) != surface_client)
+                continue;
+
+            wl_pointer_send_motion(resource, time, sx, sy);
+        }
+
+        wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
+            if (wl_resource_get_client(resource) != surface_client)
+                continue;
+
+            wl_pointer_send_motion(resource, time, sx, sy);
+        }
+    }
 }
 
 static void
 pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
                     uint32_t button, uint32_t state)
 {
+    struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
+    struct weston_pointer *pointer = grab->pointer;
+    struct weston_compositor *compositor = pointer->seat->compositor;
+    struct wl_display *display = compositor->wl_display;
+    struct surface_ctx *surf_ctx;
+    wl_fixed_t sx, sy;
+    struct weston_view *view;
+    const struct ivi_controller_interface *interface =
+        seat->input_ctx->ivi_controller_interface;
+
+    view = weston_compositor_pick_view(compositor, pointer->x, pointer->y,
+                                       &sx, &sy);
+    if (view == NULL)
+        return;
+
+    /* For each surface_ctx, check for focus and send */
+    wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
+        struct weston_surface *surf;
+        struct wl_resource *resource;
+        struct wl_client *surface_client;
+        uint32_t serial;
+
+        surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
+
+        if (get_accepted_seat(surf_ctx, grab->pointer->seat->seat_name) < 0)
+            continue;
+
+        /* Send to surfaces that have pointer focus */
+        if (surf_ctx->focus & ILM_INPUT_DEVICE_POINTER) {
+
+            surface_client = wl_resource_get_client(surf->resource);
+            serial = wl_display_next_serial(display);
+            wl_resource_for_each(resource, &grab->pointer->resource_list) {
+                if (wl_resource_get_client(resource) != surface_client)
+                    continue;
+
+                wl_pointer_send_button(resource, serial, time, button, state);
+            }
+
+            wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
+                if (wl_resource_get_client(resource) != surface_client)
+                    continue;
+
+                wl_pointer_send_button(resource, serial, time, button, state);
+            }
+        }
+
+        /* If a button release, set pointer focus to this surface */
+        if (pointer->button_count == 0
+            && state == WL_POINTER_BUTTON_STATE_RELEASED) {
+            if (view->surface == surf) {
+                surf_ctx->focus |= ILM_INPUT_DEVICE_POINTER;
+                send_input_focus(seat->input_ctx,
+                                 interface->get_id_of_surface(surf_ctx->layout_surface),
+                                 ILM_INPUT_DEVICE_POINTER, ILM_TRUE);
+            } else {
+                surf_ctx->focus &= ~ILM_INPUT_DEVICE_POINTER;
+                send_input_focus(seat->input_ctx,
+                                 interface->get_id_of_surface(surf_ctx->layout_surface),
+                                 ILM_INPUT_DEVICE_POINTER, ILM_FALSE);
+            }
+        }
+    }
 }
 
 static void
