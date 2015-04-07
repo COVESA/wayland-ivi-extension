@@ -103,7 +103,60 @@ ILM_EXPORT ilmErrorTypes
 ilm_getInputAcceptanceOn(t_ilm_surface surfaceID, t_ilm_uint *num_seats,
                          t_ilm_string **seats)
 {
-    return ILM_FAILED;
+    struct ilm_control_context *ctx;
+    struct surface_context *surface_ctx;
+    struct accepted_seat *accepted_seat;
+    int surface_found = 0;
+    int i;
+
+    if ((seats == NULL) || (num_seats == NULL)) {
+        fprintf(stderr, "Invalid Argument\n");
+        return ILM_FAILED;
+    }
+
+    ctx = sync_and_acquire_instance();
+
+    wl_list_for_each(surface_ctx, &ctx->wl.list_surface, link) {
+        if (surface_ctx->id_surface == surfaceID) {
+            surface_found = 1;
+            break;
+        }
+    }
+
+    if (!surface_found) {
+        fprintf(stderr, "Surface ID %d not found\n", surfaceID);
+        release_instance();
+        return ILM_FAILED;
+    }
+
+    *num_seats = wl_list_length(&surface_ctx->list_accepted_seats);
+    *seats = calloc(*num_seats, sizeof *seats);
+    if (*seats == NULL) {
+        fprintf(stderr, "Failed to allocate memory for seat array\n");
+        release_instance();
+        return ILM_FAILED;
+    }
+
+    i = 0;
+    wl_list_for_each(accepted_seat, &surface_ctx->list_accepted_seats, link) {
+        (*seats)[i] = strdup(accepted_seat->seat_name);
+        if ((*seats)[i] == NULL) {
+            int j;
+            fprintf(stderr, "Failed to copy seat name %s\n",
+                    accepted_seat->seat_name);
+            release_instance();
+            for (j = 0; j < i; j++)
+                free((*seats)[j]);
+            free(*seats);
+            *seats = NULL;
+            *num_seats = 0;
+            return ILM_FAILED;
+        }
+        i++;
+    }
+
+    release_instance();
+    return ILM_SUCCESS;
 }
 
 ILM_EXPORT ilmErrorTypes
