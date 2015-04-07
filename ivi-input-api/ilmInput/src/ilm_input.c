@@ -38,7 +38,65 @@ ILM_EXPORT ilmErrorTypes
 ilm_setInputAcceptanceOn(t_ilm_surface surfaceID, t_ilm_uint num_seats,
                          t_ilm_string *seats)
 {
-    return ILM_FAILED;
+    struct ilm_control_context *ctx;
+    int i;
+    struct surface_context *surface_ctx = NULL;
+    struct accepted_seat *accepted_seat;
+    int surface_found = 0;
+
+    if ((seats == NULL) && (num_seats != 0)) {
+        fprintf(stderr, "Invalid Argument\n");
+        return ILM_FAILED;
+    }
+
+    ctx = sync_and_acquire_instance();
+
+    wl_list_for_each(surface_ctx, &ctx->wl.list_surface, link) {
+        if (surface_ctx->id_surface == surfaceID) {
+            surface_found = 1;
+            break;
+        }
+    }
+
+    if (!surface_found) {
+        fprintf(stderr, "surface ID %d not found\n", surfaceID);
+        release_instance();
+        return ILM_FAILED;
+    }
+    /* Send events to add input acceptance for every seat in 'seats', but
+     * not on the surface's list */
+    for(i = 0; i < num_seats; i++) {
+        int seat_found = 0;
+
+        wl_list_for_each(accepted_seat, &surface_ctx->list_accepted_seats,
+                         link) {
+            if (strcmp(accepted_seat->seat_name, seats[i]) == 0)
+                seat_found = 1;
+        }
+        if (!seat_found) {
+            ivi_input_set_input_acceptance(ctx->wl.input_controller,
+                                                      surfaceID, seats[i],
+                                                      ILM_TRUE);
+        }
+    }
+
+    /* Send events to remove input acceptance for every seat on the surface's
+     * list but not in 'seats' */
+    wl_list_for_each(accepted_seat, &surface_ctx->list_accepted_seats, link) {
+        int seat_found = 0;
+        for (i = 0; i < num_seats; i++) {
+            if (strcmp(accepted_seat->seat_name, seats[i]) == 0)
+                seat_found = 1;
+        }
+        if (!seat_found)
+            ivi_input_set_input_acceptance(ctx->wl.input_controller,
+                                                      surfaceID,
+                                                      accepted_seat->seat_name,
+                                                      ILM_FALSE);
+    }
+
+    release_instance();
+    return ILM_SUCCESS;
 }
 
 ILM_EXPORT ilmErrorTypes
