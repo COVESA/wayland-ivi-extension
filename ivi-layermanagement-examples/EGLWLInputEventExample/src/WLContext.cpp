@@ -48,9 +48,6 @@ WLContext::WLContext()
 : m_wlDisplay(NULL)
 , m_wlRegistry(NULL)
 , m_wlCompositor(NULL)
-, m_wlSeat(NULL)
-, m_wlPointer(NULL)
-, m_wlTouch(NULL)
 , m_wlServerInfo(NULL)
 , m_connectionId(0)
 , m_wlPointerListener(NULL)
@@ -98,10 +95,12 @@ WLContext::RegistryHandleGlobal(void* data,
         }
 
         if (!strcmp(interface, "wl_seat")){
-            struct wl_seat* wlSeat = (wl_seat*)wl_registry_bind(
-                registry, name, &wl_seat_interface, 1);
-            wl_seat_add_listener(wlSeat, &seatListener, data);
-            surface->SetWLSeat(wlSeat);
+            struct WLContext::seat_data *seat_data = (struct WLContext::seat_data *)calloc(1, sizeof *seat_data);
+            seat_data->ctx = surface;
+            seat_data->wlSeat = (wl_seat*)wl_registry_bind(
+                                 registry, name, &wl_seat_interface, 1);
+            wl_seat_add_listener(seat_data->wlSeat, &seatListener,
+                                 (void *)seat_data);
         }
     } while (0);
 }
@@ -122,50 +121,42 @@ WLContext::ServerInfoListener(void* data,
 void
 WLContext::SeatHandleCapabilities(void* data, struct wl_seat* seat, uint32_t caps)
 {
-    WL_UNUSED(seat);
-
-    WLContext* context = static_cast<WLContext*>(data);
+	struct WLContext::seat_data* context =
+			static_cast<struct WLContext::seat_data*>(data);
     assert(context);
 
-    struct wl_seat* wlSeat = context->GetWLSeat();
-    if (!wlSeat)
-        return;
-
-    struct wl_pointer* wlPointer = context->GetWLPointer();
-    if ((caps & WL_SEAT_CAPABILITY_POINTER) && !wlPointer){
-        wlPointer = wl_seat_get_pointer(wlSeat);
-        wl_pointer_set_user_data(wlPointer, data);
-        wl_pointer_add_listener(wlPointer, context->GetWLPointerListener(), data);
+    if ((caps & WL_SEAT_CAPABILITY_POINTER) && !context->wlPointer){
+        context->wlPointer = wl_seat_get_pointer(seat);
+        wl_pointer_set_user_data(context->wlPointer, data);
+        wl_pointer_add_listener(context->wlPointer,
+                                context->ctx->GetWLPointerListener(), data);
     } else
-    if (!(caps & WL_SEAT_CAPABILITY_POINTER) && wlPointer){
-        wl_pointer_destroy(wlPointer);
-        wlPointer = NULL;
+    if (!(caps & WL_SEAT_CAPABILITY_POINTER) && context->wlPointer){
+        wl_pointer_destroy(context->wlPointer);
+        context->wlPointer = NULL;
     }
-    context->SetWLPointer(wlPointer);
 
-    struct wl_keyboard* wlKeyboard = context->GetWLKeyboard();
-    if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !wlKeyboard){
-        wlKeyboard = wl_seat_get_keyboard(wlSeat);
-        wl_keyboard_set_user_data(wlKeyboard, data);
-        wl_keyboard_add_listener(wlKeyboard, context->GetWLKeyboardListener(), data);
+    if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !context->wlKeyboard){
+        context->wlKeyboard = wl_seat_get_keyboard(seat);
+        wl_keyboard_set_user_data(context->wlKeyboard, data);
+        wl_keyboard_add_listener(context->wlKeyboard,
+                                 context->ctx->GetWLKeyboardListener(), data);
     } else
-    if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD) && wlKeyboard){
-        wl_keyboard_destroy(wlKeyboard);
-        wlKeyboard = NULL;
+    if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD) && context->wlKeyboard){
+        wl_keyboard_destroy(context->wlKeyboard);
+        context->wlKeyboard = NULL;
     }
-    context->SetWLKeyboard(wlKeyboard);
 
-    struct wl_touch* wlTouch = context->GetWLTouch();
-    if ((caps & WL_SEAT_CAPABILITY_TOUCH) && !wlTouch){
-        wlTouch = wl_seat_get_touch(wlSeat);
-        wl_touch_set_user_data(wlTouch, data);
-        wl_touch_add_listener(wlTouch, context->GetWLTouchListener(), data);
+    if ((caps & WL_SEAT_CAPABILITY_TOUCH) && !context->wlTouch){
+        context->wlTouch = wl_seat_get_touch(seat);
+        wl_touch_set_user_data(context->wlTouch, data);
+        wl_touch_add_listener(context->wlTouch, context->ctx->GetWLTouchListener(), data);
     } else
-    if (!(caps & WL_SEAT_CAPABILITY_TOUCH) && wlTouch){
-        wl_touch_destroy(wlTouch);
-        wlTouch = NULL;
+    if (!(caps & WL_SEAT_CAPABILITY_TOUCH) && context->wlTouch){
+        wl_touch_destroy(context->wlTouch);
+        context->wlTouch = NULL;
     }
-    context->SetWLTouch(wlTouch);
+    wl_display_dispatch(context->ctx->GetWLDisplay());
 }
 
 //////////////////////////////////////////////////////////////////////////////
