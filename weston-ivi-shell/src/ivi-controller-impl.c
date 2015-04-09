@@ -1032,19 +1032,6 @@ controller_surface_destroy(struct wl_client *client,
     wl_resource_destroy(resource);
 }
 
-static void
-controller_surface_set_input_focus(struct wl_client *client,
-              struct wl_resource *resource,
-              uint32_t device,
-              int32_t enabled)
-{
-    /* This interface has been supported yet. */
-    (void)client;
-    (void)resource;
-    (void)device;
-    (void)enabled;
-}
-
 static const
 struct ivi_controller_surface_interface controller_surface_implementation = {
     controller_surface_set_visibility,
@@ -1055,8 +1042,7 @@ struct ivi_controller_surface_interface controller_surface_implementation = {
     controller_surface_set_orientation,
     controller_surface_screenshot,
     controller_surface_send_stats,
-    controller_surface_destroy,
-    controller_surface_set_input_focus
+    controller_surface_destroy
 };
 
 static void

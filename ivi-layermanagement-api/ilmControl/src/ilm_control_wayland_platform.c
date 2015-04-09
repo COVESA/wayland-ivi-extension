@@ -759,21 +759,6 @@ controller_surface_listener_content(void *data,
     }
 }
 
-static void
-controller_surface_listener_input_focus(void *data,
-                   struct ivi_controller_surface *controller,
-                   uint32_t device,
-                   int32_t enabled)
-{
-    struct surface_context *ctx_surf = data;
-
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "%s: Invalid surface context\n", __FUNCTION__);
-        return;
-    }
-    /* TODO: Update this to new input focus API */
-}
-
 static struct ivi_controller_surface_listener controller_surface_listener=
 {
     controller_surface_listener_visibility,
@@ -786,8 +771,7 @@ static struct ivi_controller_surface_listener controller_surface_listener=
     controller_surface_listener_layer,
     controller_surface_listener_stats,
     controller_surface_listener_destroyed,
-    controller_surface_listener_content,
-    controller_surface_listener_input_focus
+    controller_surface_listener_content
 };
 
 static void

@@ -259,40 +259,6 @@
             <arg name="content_state" type="int"/>
         </event>
 
-        <request name="set_input_focus">
-            <description summary="set input focus to this surface">
-                Set input focus state of surface in ivi compositor. If the surface has input
-                focus, all non-graphical inputs (e.g. keyboard) are directed to the application
-                providing the content for this surface.
-                Only one surface can have input focus at a time, so if input focus is enabled
-                for one surface, any other surface with input focus will loose focus.
-                If argument enabled is 0, the input focus from this surface is removed, no
-                surface will have input focus.
-                If argument enabled is not 0, input focus for this surface is enabled.
-            </description>
-            <arg name="device" type="uint"/>
-            <arg name="enabled" type="int"/>
-        </request>
-
-        <event name="input_focus">
-            <description summary="input focus of surface in ivi compositor has changed">
-                The new input focus state is provided in argument enabled: If enabled is 0,
-                this surface has no longer the input focus. If enbaled is not 0, this surface
-                now has input focus enabled.
-            </description>
-            <arg name="device" type="uint"/>
-            <arg name="enabled" type="int"/>
-        </event>
-
-        <enum name="input_device">
-            <description summary="brief Identifier of different input device types. Can be used as a bitmask.">
-            </description>
-            <entry name="keyboard" value="0x1"/>
-            <entry name="pointer" value="0x2"/>
-            <entry name="touch" value="0x4"/>
-            <entry name="all" value="~0x0"/>
-        </enum>
-
     </interface>
 
     <interface name="ivi_controller_layer" version="1">
