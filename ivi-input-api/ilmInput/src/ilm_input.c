@@ -163,7 +163,51 @@ ILM_EXPORT ilmErrorTypes
 ilm_getInputDevices(ilmInputDevice bitmask, t_ilm_uint *num_seats,
                     t_ilm_string **seats)
 {
-    return ILM_FAILED;
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx;
+    struct seat_context *seat;
+    int max_seats;
+    int seats_added = 0;
+
+    if ((seats == NULL) || (num_seats == NULL)) {
+        fprintf(stderr, "Invalid Argument\n");
+        return ILM_FAILED;
+    }
+
+    ctx = sync_and_acquire_instance();
+    max_seats = wl_list_length(&ctx->wl.list_seat);
+    *seats = calloc(max_seats, sizeof **seats);
+
+    if (*seats == NULL) {
+        fprintf(stderr, "Failed to allocate memory for input device list\n");
+        release_instance();
+        return ILM_FAILED;
+    }
+
+    wl_list_for_each(seat, &ctx->wl.list_seat, link) {
+        returnValue = ILM_SUCCESS;
+
+        if ((seat->capabilities & bitmask) == 0)
+            continue;
+
+        (*seats)[seats_added] = strdup(seat->seat_name);
+        if ((*seats)[seats_added] == NULL) {
+            int j;
+            fprintf(stderr, "Failed to duplicate seat name %s\n",
+                    seat->seat_name);
+            for (j = 0; j < seats_added; j++)
+                free((*seats)[j]);
+            free(*seats);
+            *seats = NULL;
+            returnValue = ILM_FAILED;
+            break;
+        }
+
+        seats_added++;
+    }
+    *num_seats = seats_added;
+    release_instance();
+    return returnValue;
 }
 
 ILM_EXPORT ilmErrorTypes
