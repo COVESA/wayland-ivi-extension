@@ -20,7 +20,6 @@
 #include <string.h>
 #include <memory.h>
 #include <errno.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 
@@ -40,24 +39,6 @@
 #else
 #define ILM_EXPORT
 #endif
-
-struct surface_context {
-    struct wl_list link;
-
-    struct ivi_surface *surface;
-    struct ivi_controller_surface *controller;
-
-    t_ilm_uint id_surface;
-    struct ilmSurfaceProperties prop;
-    surfaceNotificationFunc notification;
-
-    struct {
-        struct wl_list link;
-    } order;
-
-    struct wayland_context *ctx;
-    bool is_surface_creation_noticed;
-};
 
 struct layer_context {
     struct wl_list link;
@@ -97,33 +78,6 @@ struct nativehandle_context {
     uint32_t pid;
     uint32_t nativehandle;
     struct wl_list link;
-};
-
-struct wayland_context {
-    struct wl_display *display;
-    struct wl_registry *registry;
-    struct wl_event_queue *queue;
-    struct wl_compositor *compositor;
-    struct ivi_controller *controller;
-    uint32_t num_screen;
-
-    struct wl_list list_surface;
-    struct wl_list list_layer;
-    struct wl_list list_screen;
-};
-
-struct ilm_control_context {
-    struct wayland_context wl;
-    bool initialized;
-
-    uint32_t internal_id_layer;
-
-    struct wl_list list_nativehandle;
-
-    pthread_t thread;
-    pthread_mutex_t mutex;
-    int shutdown_fd;
-    uint32_t internal_id_surface;
 };
 
 static void roundtrip_done(void *data, struct wl_callback *callback,
@@ -178,11 +132,9 @@ static inline void unlock_context(struct ilm_control_context *ctx)
 
 static int init_control(void);
 
-static ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx);
-
 static struct surface_context* get_surface_context(struct wayland_context *, uint32_t);
 
-static void release_instance(void);
+void release_instance(void);
 
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
@@ -942,7 +894,7 @@ registry_control_listener= {
     NULL
 };
 
-static struct ilm_control_context ilm_context;
+struct ilm_control_context ilm_context;
 
 static void destroy_control_resources(void)
 {
@@ -1225,7 +1177,7 @@ init_control(void)
     return 0;
 }
 
-static ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx)
+ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx)
 {
     if (! ctx->initialized) {
         fprintf(stderr, "Not initialized\n");
@@ -1244,18 +1196,7 @@ static ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *
     return ILM_SUCCESS;
 }
 
-#define sync_and_acquire_instance() ({ \
-    struct ilm_control_context *ctx = &ilm_context; \
-    { \
-        ilmErrorTypes status = impl_sync_and_acquire_instance(ctx); \
-        if (status != ILM_SUCCESS) { \
-            return status; \
-        } \
-    } \
-    ctx; \
-})
-
-static void release_instance(void)
+void release_instance(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     unlock_context(ctx);
