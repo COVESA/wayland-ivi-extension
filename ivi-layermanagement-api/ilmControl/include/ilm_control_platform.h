@@ -147,6 +147,9 @@ struct wayland_context {
     struct wl_list list_surface;
     struct wl_list list_layer;
     struct wl_list list_screen;
+    struct wl_list list_seat;
+
+    struct ivi_input *input_controller;
 };
 
 struct ilm_control_context {
@@ -163,6 +166,17 @@ struct ilm_control_context {
     uint32_t internal_id_surface;
 };
 
+struct seat_context {
+    struct wl_list link;
+    char *seat_name;
+    ilmInputDevice capabilities;
+};
+
+struct accepted_seat {
+    struct wl_list link;
+    char *seat_name;
+};
+
 struct surface_context {
     struct wl_list link;
 
@@ -171,6 +185,7 @@ struct surface_context {
 
     t_ilm_uint id_surface;
     struct ilmSurfaceProperties prop;
+    struct wl_list list_accepted_seats;
     surfaceNotificationFunc notification;
 
     struct {
