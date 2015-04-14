@@ -204,6 +204,16 @@ ivi_extension_surface_set_transition_duration(struct ivishell *shell,
 					       uint32_t duration);
 
 int32_t
+ivi_extension_surface_dump(struct ivishell *ivishell,
+			   struct weston_surface *surface,
+			   void *target,
+			   size_t size,
+			   int32_t x,
+			   int32_t y,
+			   int32_t width,
+			   int32_t height);
+
+int32_t
 ivi_extension_surface_get_size(struct ivishell *shell,
 				struct ivi_layout_surface *ivisurf,
 				int32_t *width,
