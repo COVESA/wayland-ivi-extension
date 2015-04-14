@@ -982,29 +982,76 @@ controller_surface_screenshot(struct wl_client *client,
                   struct wl_resource *resource,
                   const char *filename)
 {
+    int32_t result = IVI_FAILED;
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
     struct weston_surface *weston_surface = NULL;
     int32_t width = 0;
     int32_t height = 0;
     int32_t stride = 0;
+    int32_t size = 0;
     struct ivishell *shell = ivisurf->shell;
+    char *buffer = NULL;
+    int32_t image_stride = 0;
+    int32_t image_size = 0;
+    char *image_buffer = NULL;
+    int32_t row = 0;
+    int32_t col = 0;
+    int32_t offset = 0;
+    int32_t image_offset = 0;
+    static const size_t bytespp = 4; /* PIXMAN_a8b8g8r8 */
 
-    weston_surface = ivi_extension_surface_get_weston_surface(shell, ivisurf->layout_surface);
-    if (weston_surface == NULL) {
-        fprintf(stderr, "Failed to get weston surface.\n");
+    result = ivi_extension_surface_get_size(
+        shell, ivisurf->layout_surface, &width, &height, &stride);
+    if (result != IVI_SUCCEEDED) {
+        weston_log("failed to get surface size\n");
         return;
     }
 
-    if (ivi_extension_surface_get_size(shell, ivisurf->layout_surface, &width, &height, &stride) != 0) {
-        fprintf(stderr, "Failed to get surface size.\n");
+    size = stride * height;
+    image_stride = (((width * 3) + 31) & ~31);
+    image_size = image_stride * height;
+
+    buffer = malloc(size);
+    image_buffer = malloc(image_size);
+    if (buffer == NULL || image_buffer == NULL) {
+        free(image_buffer);
+        free(buffer);
+        weston_log("failed to allocate memory\n");
         return;
     }
 
-    if (shm_surface_screenshot(weston_surface, width, height, stride, filename) != 0) {
-        if (gl_surface_screenshot(ivisurf, weston_surface, filename) != 0) {
-            fprintf(stderr, "Failed to capture surface.\n");
+    weston_surface = ivi_extension_surface_get_weston_surface(
+        shell, ivisurf->layout_surface);
+
+    result = ivi_extension_surface_dump(shell, weston_surface,
+        buffer, size, 0, 0, width, height);
+
+    if (result != IVI_SUCCEEDED) {
+        free(image_buffer);
+        free(buffer);
+        weston_log("failed to dump surface\n");
+        return;
+    }
+
+    for (row = 0; row < height; ++row) {
+        for (col = 0; col < width; ++col) {
+            offset = row * width + col;
+            image_offset = (height - row - 1) * width + col;
+
+            image_buffer[image_offset * 3] = buffer[offset * 4 + 2];
+            image_buffer[image_offset * 3 + 1] = buffer[offset * 4 + 1];
+            image_buffer[image_offset * 3 + 2] = buffer[offset * 4];
         }
     }
+
+    free(buffer);
+
+    if (save_as_bitmap(filename, image_buffer, size,
+                       width, height, 24) != 0) {
+        weston_log("failed to take screenshot\n");
+    }
+
+    free(image_buffer);
 }
 
 
