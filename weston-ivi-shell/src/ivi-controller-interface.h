@@ -298,12 +298,6 @@ struct ivi_controller_interface {
 		(*surface_get_weston_surface)(struct ivi_layout_surface *ivisurf);
 
 	/**
-	 * \brief get size and stride of ivi_surface
-	 */
-	int32_t (*surface_get_size)
-		(struct ivi_layout_surface *ivisurf, int32_t *width, int32_t *height, int32_t *stride);
-
-	/**
 	 * \brief set type of transition animation
 	 */
 	int32_t (*surface_set_transition)(struct ivi_layout_surface *ivisurf,
@@ -657,6 +651,18 @@ struct ivi_controller_interface {
 	int32_t (*layer_set_fade_info)(struct ivi_layout_layer* ivilayer,
 				       uint32_t is_fade_in,
 				       double start_alpha, double end_alpha);
+
+	/**
+	 * surface content dumping for debugging
+	 */
+	int32_t (*surface_get_size)(struct ivi_layout_surface *ivisurf,
+				    int32_t *width, int32_t *height,
+				    int32_t *stride);
+
+	int32_t (*surface_dump)(struct weston_surface *surface,
+				void *target, size_t size,
+				int32_t x, int32_t y,
+				int32_t width, int32_t height);
 
 };
 
