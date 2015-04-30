@@ -1359,6 +1359,7 @@ static struct iviscreen*
 create_screen(struct ivishell *shell, struct weston_output *output)
 {
     struct iviscreen *iviscrn;
+    static int id_counter = 0;
     iviscrn = calloc(1, sizeof *iviscrn);
     if (iviscrn == NULL) {
         weston_log("no memory to allocate client screen\n");
@@ -1368,8 +1369,7 @@ create_screen(struct ivishell *shell, struct weston_output *output)
     iviscrn->shell = shell;
     iviscrn->output = output;
 
-// TODO : Only Single display
-    iviscrn->layout_screen = ivi_extension_get_screen_from_id(shell, 0);
+    iviscrn->layout_screen = ivi_extension_get_screen_from_id(shell, id_counter++);
 
     wl_list_init(&iviscrn->link);
 
