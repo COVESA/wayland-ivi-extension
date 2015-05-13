@@ -27,8 +27,6 @@ pkg_check_modules(WAYLAND_SERVER wayland-server>=1.7.0 REQUIRED)
 pkg_check_modules(CAIRO cairo REQUIRED)
 pkg_check_modules(WESTON weston>=1.7.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
-pkg_check_modules(EGL egl REQUIRED)
-pkg_check_modules(GLES glesv2 REQUIRED)
 
 GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
 
@@ -40,18 +38,12 @@ include_directories(
     ${WESTON_INCLUDE_DIRS}
     ${PIXMAN_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}/weston
-    ${EGL_INCLUDE_DIRS}
-    ${GLES_INCLUDE_DIRS}
 )
 
 link_directories(
     ${WAYLAND_SERVER_LIBRARY_DIRS}
     ${CAIRO_LIBRARY_DIRS}
-    ${WESTON_LIBRARY_DIRS}
     ${PIXMAN_LIBRARY_DIRS}
-    ${WESTON_LIBDIR}/weston
-    ${EGL_LIBRARY_DIRS}
-    ${GLES_LIBRARY_DIRS}
 )
 
 
@@ -67,9 +59,6 @@ add_dependencies(${PROJECT_NAME}
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${PIXMAN_LIBRARIES}
-    ${WESTON_LIBRARIES}
-    ${EGL_LIBRARIES}
-    ${GLES_LIBRARIES}
 )
 
 set(LIBS
@@ -77,9 +66,6 @@ set(LIBS
     ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
     ${CAIRO_LIBRARIES}
-    ${WESTON_LIBRARIES}
-    ${EGL_LIBRARIES}
-    ${GLES_LIBRARIES}
 )
 
 set(CMAKE_C_LDFLAGS "-module -avoid-version")
