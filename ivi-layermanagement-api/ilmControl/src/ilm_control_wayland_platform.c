@@ -20,7 +20,6 @@
 #include <string.h>
 #include <memory.h>
 #include <errno.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 
@@ -33,6 +32,7 @@
 #include "ilm_control_platform.h"
 #include "wayland-util.h"
 #include "ivi-controller-client-protocol.h"
+#include "ivi-input-client-protocol.h"
 
 /* GCC visibility */
 #if defined(__GNUC__) && __GNUC__ >= 4
@@ -40,24 +40,6 @@
 #else
 #define ILM_EXPORT
 #endif
-
-struct surface_context {
-    struct wl_list link;
-
-    struct ivi_surface *surface;
-    struct ivi_controller_surface *controller;
-
-    t_ilm_uint id_surface;
-    struct ilmSurfaceProperties prop;
-    surfaceNotificationFunc notification;
-
-    struct {
-        struct wl_list link;
-    } order;
-
-    struct wayland_context *ctx;
-    bool is_surface_creation_noticed;
-};
 
 struct layer_context {
     struct wl_list link;
@@ -97,33 +79,6 @@ struct nativehandle_context {
     uint32_t pid;
     uint32_t nativehandle;
     struct wl_list link;
-};
-
-struct wayland_context {
-    struct wl_display *display;
-    struct wl_registry *registry;
-    struct wl_event_queue *queue;
-    struct wl_compositor *compositor;
-    struct ivi_controller *controller;
-    uint32_t num_screen;
-
-    struct wl_list list_surface;
-    struct wl_list list_layer;
-    struct wl_list list_screen;
-};
-
-struct ilm_control_context {
-    struct wayland_context wl;
-    bool initialized;
-
-    uint32_t internal_id_layer;
-
-    struct wl_list list_nativehandle;
-
-    pthread_t thread;
-    pthread_mutex_t mutex;
-    int shutdown_fd;
-    uint32_t internal_id_surface;
 };
 
 static void roundtrip_done(void *data, struct wl_callback *callback,
@@ -178,11 +133,9 @@ static inline void unlock_context(struct ilm_control_context *ctx)
 
 static int init_control(void);
 
-static ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx);
-
 static struct surface_context* get_surface_context(struct wayland_context *, uint32_t);
 
-static void release_instance(void);
+void release_instance(void);
 
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
@@ -835,6 +788,7 @@ controller_listener_surface(void *data,
     wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
     wl_list_init(&ctx_surf->order.link);
+    wl_list_init(&ctx_surf->list_accepted_seats);
     ivi_controller_surface_add_listener(ctx_surf->controller,
                                         &controller_surface_listener, ctx_surf);
 }
@@ -880,6 +834,158 @@ static struct ivi_controller_listener controller_listener= {
     controller_listener_error
 };
 
+static struct seat_context *
+find_seat(struct wl_list *list, const char *name)
+{
+    struct seat_context *seat;
+    wl_list_for_each(seat, list, link) {
+        if (strcmp(name, seat->seat_name) == 0)
+            return seat;
+    }
+    return NULL;
+}
+
+static void
+input_listener_seat_created(void *data,
+                            struct ivi_input *ivi_input,
+                            const char *name,
+                            uint32_t capabilities)
+{
+    struct wayland_context *ctx = data;
+    struct seat_context *seat;
+    seat = find_seat(&ctx->list_seat, name);
+    if (seat) {
+        fprintf(stderr, "Warning: seat context was created twice!\n");
+        seat->capabilities = capabilities;
+        return;
+    }
+    seat = calloc(1, sizeof *seat);
+    if (seat == NULL) {
+        fprintf(stderr, "Failed to allocate memory for seat context\n");
+        return;
+    }
+    seat->seat_name = strdup(name);
+    seat->capabilities = capabilities;
+    wl_list_insert(&ctx->list_seat, &seat->link);
+}
+
+static void
+input_listener_seat_capabilities(void *data,
+                                 struct ivi_input *ivi_input,
+                                 const char *name,
+                                 uint32_t capabilities)
+{
+    struct wayland_context *ctx = data;
+    struct seat_context *seat = find_seat(&ctx->list_seat, name);
+    if (seat == NULL) {
+        fprintf(stderr, "Warning: Cannot find seat for name %s\n", name);
+        return;
+    }
+    seat->capabilities = capabilities;
+}
+
+static void
+input_listener_seat_destroyed(void *data,
+                              struct ivi_input *ivi_input,
+                              const char *name)
+{
+    struct wayland_context *ctx = data;
+    struct seat_context *seat = find_seat(&ctx->list_seat, name);
+    if (seat == NULL) {
+        fprintf(stderr, "Warning: Cannot find seat %s to delete it\n", name);
+        return;
+    }
+    free(seat->seat_name);
+    wl_list_remove(&seat->link);
+    free(seat);
+}
+
+static void
+input_listener_input_focus(void *data,
+                           struct ivi_input *ivi_input,
+                           uint32_t surface, uint32_t device, int32_t enabled)
+{
+    struct wayland_context *ctx = data;
+    struct surface_context *surf_ctx;
+    wl_list_for_each(surf_ctx, &ctx->list_surface, link) {
+        if (surface != surf_ctx->id_surface)
+            continue;
+
+        if (enabled == ILM_TRUE)
+            surf_ctx->prop.focus |= device;
+        else
+            surf_ctx->prop.focus &= ~device;
+    }
+}
+
+static void
+input_listener_input_acceptance(void *data,
+                                struct ivi_input *ivi_input,
+                                uint32_t surface,
+                                const char *seat,
+                                int32_t accepted)
+{
+    struct accepted_seat *accepted_seat, *next;
+    struct wayland_context *ctx = data;
+    struct surface_context *surface_ctx = NULL;
+    int surface_found = 1;
+    int accepted_seat_found = 0;
+
+    wl_list_for_each(surface_ctx, &ctx->list_surface, link) {
+        if (surface_ctx->id_surface == surface) {
+            surface_found = 1;
+            break;
+        }
+    }
+
+    if (!surface_found) {
+        fprintf(stderr, "Warning: input acceptance event received for "
+                "nonexistent surface %d\n", surface);
+        return;
+    }
+
+    wl_list_for_each_safe(accepted_seat, next,
+                          &surface_ctx->list_accepted_seats, link) {
+        if (strcmp(accepted_seat->seat_name, seat) != 0)
+            continue;
+
+        if (accepted != ILM_TRUE) {
+            /* Remove this from the accepted seats */
+            free(accepted_seat->seat_name);
+            wl_list_remove(&accepted_seat->link);
+            return;
+        }
+        accepted_seat_found = 1;
+    }
+
+    if (accepted_seat_found && accepted == ILM_TRUE) {
+        fprintf(stderr, "Warning: input acceptance event trying to add seat "
+                "%s, that is already in surface %d\n", seat, surface);
+        return;
+    }
+    if (!accepted_seat_found && accepted != ILM_TRUE) {
+        fprintf(stderr, "Warning: input acceptance event trying to remove "
+                "seat %s, that is not in surface %d\n", seat, surface);
+        return;
+    }
+
+    accepted_seat = calloc(1, sizeof(accepted_seat));
+    if (accepted_seat == NULL) {
+        fprintf(stderr, "Failed to allocate memory for accepted seat\n");
+        return;
+    }
+    accepted_seat->seat_name = strdup(seat);
+    wl_list_insert(&surface_ctx->list_accepted_seats, &accepted_seat->link);
+}
+
+static struct ivi_input_listener input_listener = {
+    input_listener_seat_created,
+    input_listener_seat_capabilities,
+    input_listener_seat_destroyed,
+    input_listener_input_focus,
+    input_listener_input_acceptance
+};
+
 static void
 registry_handle_control(void *data,
                        struct wl_registry *registry,
@@ -900,6 +1006,19 @@ registry_handle_control(void *data,
                                        &controller_listener,
                                        ctx)) {
             fprintf(stderr, "Failed to add ivi_controller listener\n");
+            return;
+        }
+    } else if (strcmp(interface, "ivi_input") == 0) {
+        ctx->input_controller =
+            wl_registry_bind(registry, name, &ivi_input_interface, 1);
+
+        if (ctx->input_controller == NULL) {
+            fprintf(stderr, "Failed to registry bind input controller\n");
+            return;
+        }
+        if (ivi_input_add_listener(ctx->input_controller,
+                                              &input_listener, ctx)) {
+            fprintf(stderr, "Failed to add ivi_input listener\n");
             return;
         }
     } else if (strcmp(interface, "wl_output") == 0) {
@@ -942,7 +1061,7 @@ registry_control_listener= {
     NULL
 };
 
-static struct ilm_control_context ilm_context;
+struct ilm_control_context ilm_context;
 
 static void destroy_control_resources(void)
 {
@@ -1070,6 +1189,7 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
     wl_list_init(&ctx->wl.list_screen);
     wl_list_init(&ctx->wl.list_layer);
     wl_list_init(&ctx->wl.list_surface);
+    wl_list_init(&ctx->wl.list_seat);
 
     {
        pthread_mutexattr_t a;
@@ -1225,7 +1345,7 @@ init_control(void)
     return 0;
 }
 
-static ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx)
+ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx)
 {
     if (! ctx->initialized) {
         fprintf(stderr, "Not initialized\n");
@@ -1244,18 +1364,7 @@ static ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *
     return ILM_SUCCESS;
 }
 
-#define sync_and_acquire_instance() ({ \
-    struct ilm_control_context *ctx = &ilm_context; \
-    { \
-        ilmErrorTypes status = impl_sync_and_acquire_instance(ctx); \
-        if (status != ILM_SUCCESS) { \
-            return status; \
-        } \
-    } \
-    ctx; \
-})
-
-static void release_instance(void)
+void release_instance(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     unlock_context(ctx);

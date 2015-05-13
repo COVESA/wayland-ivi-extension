@@ -75,6 +75,30 @@ add_custom_command(
     DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml
 )
 
+add_custom_command(
+    OUTPUT  ivi-input-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-input-server-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-input-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+)
+
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
@@ -93,6 +117,9 @@ add_library(${PROJECT_NAME} STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-client-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-server-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client-protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server-protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
 )
 
 
@@ -152,3 +179,30 @@ add_custom_target(ivi-controller-doc
                   COMMENT "Generating ivi-controller-api-${IVI_EXTENSION_VERSION}.pdf"
 )
 
+#=============================================================================================
+# generate documentation ivi-input API
+#=============================================================================================
+SET(IVI_CTL_INP_XML      ${CMAKE_CURRENT_SOURCE_DIR}/ivi-input.xml)
+SET(IVI_CTL_INP_CLIENT_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client.h)
+SET(IVI_CTL_INP_SERVER_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server.h)
+
+add_custom_target(ivi-input-doc
+                  COMMAND wayland-scanner client-header < ${IVI_CTL_INP_XML} > ${IVI_CTL_INP_CLIENT_H}
+                  COMMAND wayland-scanner server-header < ${IVI_CTL_INP_XML} > ${IVI_CTL_INP_SERVER_H}
+
+                  COMMAND cat ${CMAKE_SOURCE_DIR}/doc/Doxyfile.template
+                          | sed 's!___DOC_NAME___!IVI Controller API!'
+                          | sed 's!___DOC_VERSION___!${IVI_EXTENSION_VERSION}!'
+                          | sed 's!___INPUT_FILE___!${IVI_CTL_INP_CLIENT_H} ${IVI_CTL_INP_SERVER_H}!'
+                          | sed 's!___OUTPUT_DIR___!ivi-input-tmp!'
+                          | doxygen -
+
+                  COMMAND make --silent -C ivi-input-tmp/latex
+
+                  COMMAND cp ivi-input-tmp/latex/refman.pdf
+                             ${CMAKE_BINARY_DIR}/ivi-input-api-${IVI_EXTENSION_VERSION}.pdf
+
+                  DEPENDS ${IVI_CTL_INP_XML}
+
+                  COMMENT "Generating ivi-input-api-${IVI_EXTENSION_VERSION}.pdf"
+)

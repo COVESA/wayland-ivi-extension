@@ -22,7 +22,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#include <pthread.h>
+#include <stdbool.h>
+
 #include "ilm_common.h"
+#include "wayland-util.h"
 
 typedef struct _ILM_CONTROL_PLATFORM_FUNC
 {
@@ -131,6 +135,81 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
 ILM_CONTROL_PLATFORM_FUNC gIlmControlPlatformFunc;
 
 void init_ilmControlPlatformTable();
+
+struct wayland_context {
+    struct wl_display *display;
+    struct wl_registry *registry;
+    struct wl_event_queue *queue;
+    struct wl_compositor *compositor;
+    struct ivi_controller *controller;
+    uint32_t num_screen;
+
+    struct wl_list list_surface;
+    struct wl_list list_layer;
+    struct wl_list list_screen;
+    struct wl_list list_seat;
+
+    struct ivi_input *input_controller;
+};
+
+struct ilm_control_context {
+    struct wayland_context wl;
+    bool initialized;
+
+    uint32_t internal_id_layer;
+
+    struct wl_list list_nativehandle;
+
+    pthread_t thread;
+    pthread_mutex_t mutex;
+    int shutdown_fd;
+    uint32_t internal_id_surface;
+};
+
+struct seat_context {
+    struct wl_list link;
+    char *seat_name;
+    ilmInputDevice capabilities;
+};
+
+struct accepted_seat {
+    struct wl_list link;
+    char *seat_name;
+};
+
+struct surface_context {
+    struct wl_list link;
+
+    struct ivi_surface *surface;
+    struct ivi_controller_surface *controller;
+
+    t_ilm_uint id_surface;
+    struct ilmSurfaceProperties prop;
+    struct wl_list list_accepted_seats;
+    surfaceNotificationFunc notification;
+
+    struct {
+        struct wl_list link;
+    } order;
+
+    struct wayland_context *ctx;
+    bool is_surface_creation_noticed;
+};
+
+ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx);
+
+void release_instance(void);
+
+#define sync_and_acquire_instance() ({ \
+    struct ilm_control_context *ctx = &ilm_context; \
+    { \
+        ilmErrorTypes status = impl_sync_and_acquire_instance(ctx); \
+        if (status != ILM_SUCCESS) { \
+            return status; \
+        } \
+    } \
+    ctx; \
+})
 
 #ifdef __cplusplus
 } /**/

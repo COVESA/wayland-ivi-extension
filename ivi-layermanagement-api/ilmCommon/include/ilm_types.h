@@ -211,6 +211,7 @@ struct ilmSurfaceProperties
     t_ilm_uint pixelformat;                 /*!< pixel format of surface */
     t_ilm_uint nativeSurface;               /*!< native surface handle of surface */
     t_ilm_int  creatorPid;                  /*!< process id of application that created this surface */
+    ilmInputDevice focus;                   /*!< bitmask of every type of device that this surface has focus in */
 };
 
 /**

@@ -231,7 +231,7 @@ void importSceneFromTXTHelper(istream& stream, StringMapTree* node)
             propertyType = decodeEscapesequences(propertyType);
 
             startIndex = in.find('[', endIndex) + 1;
-            endIndex = in.find_last_of(']', startIndex) - 1;
+            endIndex = in.find_last_of(']');
             string propertyValue = in.substr(startIndex, endIndex - startIndex);
             propertyValue = decodeEscapesequences(propertyValue);
 

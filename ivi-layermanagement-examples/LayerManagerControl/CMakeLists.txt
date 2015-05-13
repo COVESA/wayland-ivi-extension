@@ -24,6 +24,7 @@ include_directories(
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include"
+    "${CMAKE_SOURCE_DIR}/ivi-input-api/ilmInput/include"
     ${WAYLAND_CLIENT_INCLUDE_DIR}
 )
 
@@ -31,7 +32,12 @@ link_directories(
     ${WAYLAND_CLIENT_LIBRARY_DIRS}
 )
 
-add_executable(${PROJECT_NAME}
+SET(LIBS
+    ilmClient
+    ilmControl
+)
+
+SET(SRC_FILES
     src/main.cpp
     src/commands.cpp
     src/analyze.cpp
@@ -46,11 +52,19 @@ add_executable(${PROJECT_NAME}
     src/util.cpp
 )
 
-add_dependencies(${PROJECT_NAME}
-    ilmClient
-    ilmControl
-)
+if (WITH_ILM_INPUT)
+    SET(SRC_FILES
+        ${SRC_FILES}
+        src/input_commands.cpp
+    )
 
-target_link_libraries(${PROJECT_NAME} ilmClient ilmControl)
+    SET(LIBS ${LIBS} ilmInput)
+ENDIF()
+
+add_executable(${PROJECT_NAME} ${SRC_FILES})
+
+add_dependencies(${PROJECT_NAME} ${LIBS})
+
+target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
