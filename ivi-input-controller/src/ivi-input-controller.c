@@ -931,8 +931,22 @@ input_set_input_acceptance(struct wl_client *client,
     struct input_context *ctx = controller->input_context;
     struct surface_ctx *surface_ctx;
     int found_seat = 0;
+    int found_weston_seat = 0;
+    struct weston_seat *w_seat = NULL;
     const struct ivi_controller_interface *interface =
         ctx->ivi_controller_interface;
+
+    wl_list_for_each(w_seat, &ctx->compositor->seat_list, link) {
+        if(strcmp(seat,w_seat->seat_name) == 0) {
+            found_weston_seat = 1;
+            break;
+        }
+    }
+
+    if (!found_weston_seat) {
+        weston_log("%s: seat: %s was not found\n", __FUNCTION__, seat);
+        return;
+    }
 
     wl_list_for_each(surface_ctx, &ctx->surface_list, link) {
         if (interface->get_id_of_surface(surface_ctx->layout_surface) == surface) {
