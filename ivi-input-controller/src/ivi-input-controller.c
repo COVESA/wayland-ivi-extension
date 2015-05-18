@@ -1,5 +1,6 @@
 /*
  * Copyright 2015 Codethink Ltd
+ * Copyright (C) 2015 Advanced Driver Information Technology Joint Venture GmbH
  *
  * Permission to use, copy, modify, distribute, and sell this software and
  * its documentation for any purpose is hereby granted without fee, provided
