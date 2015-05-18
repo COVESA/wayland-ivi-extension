@@ -146,17 +146,14 @@ TEST_F(IlmCommandTest, ilm_input_focus) {
 }
 
 TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
-    t_ilm_surface surface1 = 1010, surface2 = 2020;
+    t_ilm_surface surface1 = 1010;
     t_ilm_uint num_seats = 0;
     t_ilm_string *seats = NULL;
-    t_ilm_string set_seats[] = {"default", "foo"};
-    t_ilm_uint set_seats_count = 2;
+    t_ilm_string set_seats[] = {"default"};
+    t_ilm_uint set_seats_count = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],
                                              0, 0, ILM_PIXELFORMAT_RGBA_8888,
                                              &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1],
-                                             0, 0, ILM_PIXELFORMAT_RGBA_8888,
-                                             &surface2));
 
     /* All seats accept the "default" seat when created */
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputAcceptanceOn(surface1, &num_seats,
@@ -176,28 +173,21 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     free(seats);
 
     /* Can add a seat to acceptance */
-    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface2, set_seats_count,
+    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, set_seats_count,
                                                     set_seats));
-    ASSERT_EQ(ILM_SUCCESS, ilm_getInputAcceptanceOn(surface2, &num_seats,
+    ASSERT_EQ(ILM_SUCCESS, ilm_getInputAcceptanceOn(surface1, &num_seats,
                                                     &seats));
     EXPECT_EQ(set_seats_count, num_seats);
     bool found = false;
-    for (uint i = 0; i < num_seats; i++)
-        if (strcmp(seats[i], set_seats[0]))
-            found = true;
+    if (!strcmp(seats[0], set_seats[0]))
+        found = true;
     EXPECT_EQ(true, found) << set_seats[0] << " not found in returned seats";
 
-    for (uint i = 0; i < num_seats; i++)
-        if (strcmp(seats[i], set_seats[1]))
-            found = true;
-    EXPECT_EQ(true, found) << set_seats[1] << " not found in returned seats";
-
-    for (uint i = 0; i < num_seats; i++)
-        free(seats[i]);
+    free(seats[0]);
     free(seats);
 
     /* Seats can be set, unset, then reset */
-    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, &set_seats[1]));
+    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, &set_seats[0]));
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 0, NULL));
-    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, &set_seats[1]));
+    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, &set_seats[0]));
 }
