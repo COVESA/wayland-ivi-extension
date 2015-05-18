@@ -950,10 +950,15 @@ input_set_input_acceptance(struct wl_client *client,
 
     wl_list_for_each(surface_ctx, &ctx->surface_list, link) {
         if (interface->get_id_of_surface(surface_ctx->layout_surface) == surface) {
-            if (accepted == ILM_TRUE)
+            if (accepted == ILM_TRUE) {
                 found_seat = add_accepted_seat(surface_ctx, seat);
-            else
+                if (found_weston_seat)
+                    set_weston_focus(ctx, surface_ctx, surface_ctx->focus, w_seat, ILM_TRUE);
+            } else {
+                if (found_weston_seat)
+                    set_weston_focus(ctx, surface_ctx, surface_ctx->focus, w_seat, ILM_FALSE);
                 found_seat = remove_accepted_seat(surface_ctx, seat);
+            }
             break;
         }
     }
