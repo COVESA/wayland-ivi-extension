@@ -849,30 +849,44 @@ input_set_input_focus(struct wl_client *client,
 {
     struct input_controller *controller = wl_resource_get_user_data(resource);
     struct input_context *ctx = controller->input_context;
-    int found_surface = 0;
-    struct surface_ctx *surf;
+    struct surface_ctx *surf, *current_surf = NULL;
+    struct weston_seat *seat;
     const struct ivi_controller_interface *interface =
 	ctx->ivi_controller_interface;
-    /* If focus is enabled for one of these devices, every other surface
-     * must have focus unset */
-    const ilmInputDevice single_surface_devices =
-        ILM_INPUT_DEVICE_POINTER | ILM_INPUT_DEVICE_TOUCH;
-    ilmInputDevice single_surface_mask = single_surface_devices & device;
+    uint32_t caps;
+    struct ivi_layout_surface *current_layout_surface;
+
+    current_layout_surface = interface->get_surface_from_id(surface);
+
+    if (!current_layout_surface) {
+        weston_log("%s: surface %d was not found\n", __FUNCTION__, surface);
+        return;
+    }
 
     wl_list_for_each(surf, &ctx->surface_list, link) {
-        uint32_t current_surface =
-            interface->get_id_of_surface(surf->layout_surface);
-        if (current_surface == surface) {
+        if (current_layout_surface == surf->layout_surface) {
+            current_surf = surf;
             if (enabled == ILM_TRUE) {
                 surf->focus |= device;
             } else {
                 surf->focus &= ~device;
             }
-            send_input_focus(ctx, current_surface, device, enabled);
-            found_surface = 1;
-        } else if (single_surface_mask && enabled == ILM_TRUE) {
-            surf->focus &= ~(single_surface_mask);
-            send_input_focus(ctx, current_surface, single_surface_mask, ILM_FALSE);
+
+            send_input_focus(ctx, surface, device, enabled);
+
+            wl_list_for_each(seat, &ctx->compositor->seat_list, link) {
+                if (get_accepted_seat(surf, seat->seat_name) < 0)
+                    continue;
+
+                caps = get_seat_capabilities(seat);
+
+                if (!(caps | device))
+                    continue;
+
+                set_weston_focus(ctx, surf, device, seat, enabled);
+            }
+
+            break;
         }
     }
 
