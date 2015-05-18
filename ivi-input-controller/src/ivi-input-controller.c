@@ -327,12 +327,6 @@ pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
             continue;
 
         surface_client = wl_resource_get_client(surf->resource);
-        wl_resource_for_each(resource, &grab->pointer->resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
-            wl_pointer_send_motion(resource, time, sx, sy);
-        }
 
         wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
             if (wl_resource_get_client(resource) != surface_client)
