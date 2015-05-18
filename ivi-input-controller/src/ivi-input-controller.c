@@ -228,14 +228,6 @@ keyboard_grab_key(struct weston_keyboard_grab *grab, uint32_t time,
             if (wl_resource_get_client(resource) != surface_client)
                 continue;
 
-            if (grab->keyboard->focus != surface) {
-                if (grab->keyboard->focus != NULL)
-                    wl_keyboard_send_leave(resource, serial,
-                                      grab->keyboard->focus->resource);
-
-                wl_keyboard_send_enter(resource, serial, surface->resource, &grab->keyboard->keys);
-                grab->keyboard->focus = surface;
-            }
             wl_keyboard_send_key(resource, serial, time, key, state);
         }
 
@@ -243,15 +235,6 @@ keyboard_grab_key(struct weston_keyboard_grab *grab, uint32_t time,
             if (wl_resource_get_client(resource) != surface_client)
                 continue;
 
-            if (grab->keyboard->focus != surface) {
-                if (grab->keyboard->focus != NULL)
-                    wl_keyboard_send_leave(resource, serial,
-                                      grab->keyboard->focus->resource);
-
-                wl_keyboard_send_enter(resource, serial, surface->resource,
-                                       &grab->keyboard->keys);
-                grab->keyboard->focus = surface;
-            }
             wl_keyboard_send_key(resource, serial, time, key, state);
         }
     }
@@ -290,15 +273,6 @@ keyboard_grab_modifiers(struct weston_keyboard_grab *grab, uint32_t serial,
             if (wl_resource_get_client(resource) != surface_client)
                 continue;
 
-            if (grab->keyboard->focus != surface) {
-                if (grab->keyboard->focus != NULL)
-                    wl_keyboard_send_leave(resource, serial,
-                                      grab->keyboard->focus->resource);
-
-                wl_keyboard_send_enter(resource, serial, surface->resource,
-                                       &grab->keyboard->keys);
-                grab->keyboard->focus = surface;
-            }
             wl_keyboard_send_modifiers(resource, serial, mods_depressed,
 			               mods_latched, mods_locked, group);
         }
@@ -307,15 +281,6 @@ keyboard_grab_modifiers(struct weston_keyboard_grab *grab, uint32_t serial,
             if (wl_resource_get_client(resource) != surface_client)
                 continue;
 
-            if (grab->keyboard->focus != surface) {
-                if (grab->keyboard->focus != NULL)
-                    wl_keyboard_send_leave(resource, serial,
-                                      grab->keyboard->focus->resource);
-
-                wl_keyboard_send_enter(resource, serial, surface->resource,
-                                       &grab->keyboard->keys);
-                grab->keyboard->focus = surface;
-            }
             wl_keyboard_send_modifiers(resource, serial, mods_depressed,
 			               mods_latched, mods_locked, group);
         }
