@@ -256,6 +256,7 @@ ILM_EXPORT ilmErrorTypes
 ilm_setInputFocus(t_ilm_surface *surfaceIDs, t_ilm_uint num_surfaces,
                   ilmInputDevice bitmask, t_ilm_bool is_set)
 {
+	ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx;
     int i;
 
@@ -285,15 +286,16 @@ ilm_setInputFocus(t_ilm_surface *surfaceIDs, t_ilm_uint num_surfaces,
 
         if (!found_surface) {
             fprintf(stderr, "Surface %d was not found\n", surfaceIDs[i]);
-            continue;
+            break;
         }
 
         ivi_input_set_input_focus(ctx->wl.input_controller,
                                              ctx_surf->id_surface,
                                              bitmask, is_set);
+        returnValue = ILM_SUCCESS;
     }
     release_instance();
-    return ILM_SUCCESS;
+    return returnValue;
 }
 
 ILM_EXPORT ilmErrorTypes
