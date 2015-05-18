@@ -321,8 +321,9 @@ pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
 
         /* Do not send motion events for coordinates outside the surface */
         weston_view_from_global_fixed(view, x, y, &sx, &sy);
-        if (!pixman_region32_contains_point(&surf->input, wl_fixed_to_int(sx),
+        if ((!pixman_region32_contains_point(&surf->input, wl_fixed_to_int(sx),
                                             wl_fixed_to_int(sy), NULL))
+             && (grab->pointer->button_count == 0))
             continue;
 
         surface_client = wl_resource_get_client(surf->resource);
