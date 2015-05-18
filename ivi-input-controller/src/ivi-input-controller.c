@@ -148,6 +148,58 @@ send_input_focus(struct input_context *ctx, t_ilm_surface surface_id,
 }
 
 static void
+set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
+                 ilmInputDevice focus, struct weston_seat *seat, t_ilm_bool enabled)
+{
+    struct weston_surface *w_surface;
+    struct weston_view *view;
+    struct wl_resource *resource;
+    struct wl_client *surface_client;
+    uint32_t serial;
+    wl_fixed_t x, y;
+    const struct ivi_controller_interface *interface =
+              ctx->ivi_controller_interface;
+
+    /* Assume one view per surface */
+	w_surface = interface->surface_get_weston_surface(surface_ctx->layout_surface);
+    view = wl_container_of(w_surface->views.next, view, surface_link);
+	if ((focus & ILM_INPUT_DEVICE_POINTER) &&
+		 (seat->pointer != NULL)){
+		if ( (view != NULL) && enabled) {
+	        weston_view_to_global_fixed(view, wl_fixed_from_int(0),
+	            wl_fixed_from_int(0), &x, &y);
+	        // move pointer to local (0,0) of the view
+	        weston_pointer_move(seat->pointer, x, y);
+		    weston_pointer_set_focus(seat->pointer, view,
+		        wl_fixed_from_int(0), wl_fixed_from_int(0));
+		} else if (seat->pointer->focus == view){
+            weston_pointer_set_focus(seat->pointer, NULL,
+                wl_fixed_from_int(0), wl_fixed_from_int(0));
+		}
+	}
+
+	if ((focus & ILM_INPUT_DEVICE_KEYBOARD) &&
+		 (seat->keyboard != NULL)) {
+		if (w_surface) {
+	        surface_client = wl_resource_get_client(w_surface->resource);
+	        serial = wl_display_next_serial(ctx->compositor->wl_display);
+	        wl_resource_for_each(resource, &seat->keyboard->resource_list) {
+	            if (wl_resource_get_client(resource) != surface_client)
+	                continue;
+
+	            if (!enabled) {
+	                wl_keyboard_send_leave(resource, serial,
+	                         w_surface->resource);
+	            } else {
+                    wl_keyboard_send_enter(resource, serial, w_surface->resource,
+                            &seat->keyboard->keys);
+	            }
+	        }
+		}
+	}
+}
+
+static void
 keyboard_grab_key(struct weston_keyboard_grab *grab, uint32_t time,
                   uint32_t key, uint32_t state)
 {
