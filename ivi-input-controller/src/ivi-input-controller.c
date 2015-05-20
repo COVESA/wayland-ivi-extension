@@ -352,61 +352,60 @@ pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
     struct wl_display *display = compositor->wl_display;
     struct surface_ctx *surf_ctx;
     wl_fixed_t sx, sy;
-    struct weston_view *view;
+    struct weston_view *picked_view, *w_view, *old_focus;
+    struct weston_surface *w_surf;
+    struct wl_resource *resource;
+    struct wl_client *surface_client;
+    uint32_t serial;
     const struct ivi_controller_interface *interface =
         seat->input_ctx->ivi_controller_interface;
 
-    view = weston_compositor_pick_view(compositor, pointer->x, pointer->y,
+    picked_view = weston_compositor_pick_view(compositor, pointer->x, pointer->y,
                                        &sx, &sy);
-    if (view == NULL)
+    if (picked_view == NULL)
         return;
 
-    /* For each surface_ctx, check for focus and send */
-    wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
-        struct weston_surface *surf;
-        struct wl_resource *resource;
-        struct wl_client *surface_client;
-        uint32_t serial;
+    /* If a button press, set pointer focus to this surface */
+    if ((grab->pointer->focus != picked_view) &&
+        (state == WL_POINTER_BUTTON_STATE_PRESSED)){
+        old_focus = grab->pointer->focus;
+        /* search for the picked view in layout surfaces */
+        wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
+            w_surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
+            w_view = wl_container_of(w_surf->views.next, w_view, surface_link);
 
-        surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
+            if (get_accepted_seat(surf_ctx, grab->pointer->seat->seat_name) < 0)
+                continue;
 
-        if (get_accepted_seat(surf_ctx, grab->pointer->seat->seat_name) < 0)
-            continue;
-
-        /* Send to surfaces that have pointer focus */
-        if (surf_ctx->focus & ILM_INPUT_DEVICE_POINTER) {
-
-            surface_client = wl_resource_get_client(surf->resource);
-            serial = wl_display_next_serial(display);
-            wl_resource_for_each(resource, &grab->pointer->resource_list) {
-                if (wl_resource_get_client(resource) != surface_client)
-                    continue;
-
-                wl_pointer_send_button(resource, serial, time, button, state);
-            }
-
-            wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
-                if (wl_resource_get_client(resource) != surface_client)
-                    continue;
-
-                wl_pointer_send_button(resource, serial, time, button, state);
-            }
-        }
-
-        /* If a button release, set pointer focus to this surface */
-        if (pointer->button_count == 0
-            && state == WL_POINTER_BUTTON_STATE_RELEASED) {
-            if (view->surface == surf) {
+            if (picked_view->surface == w_surf) {
+                /* Correct layout surface is found*/
                 surf_ctx->focus |= ILM_INPUT_DEVICE_POINTER;
                 send_input_focus(seat->input_ctx,
                                  interface->get_id_of_surface(surf_ctx->layout_surface),
                                  ILM_INPUT_DEVICE_POINTER, ILM_TRUE);
-            } else {
+
+                weston_pointer_set_focus(grab->pointer, picked_view, sx, sy);
+
+            } else if (old_focus == w_view){
+                /* Send focus lost event to the surface which has lost the focus*/
                 surf_ctx->focus &= ~ILM_INPUT_DEVICE_POINTER;
                 send_input_focus(seat->input_ctx,
                                  interface->get_id_of_surface(surf_ctx->layout_surface),
                                  ILM_INPUT_DEVICE_POINTER, ILM_FALSE);
             }
+        }
+    }
+
+    /* Send to surfaces that have pointer focus */
+    if (grab->pointer->focus == picked_view) {
+        surface_client = wl_resource_get_client(grab->pointer->focus->surface->resource);
+        serial = wl_display_next_serial(display);
+
+        wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
+            if (wl_resource_get_client(resource) != surface_client)
+                continue;
+
+            wl_pointer_send_button(resource, serial, time, button, state);
         }
     }
 }
