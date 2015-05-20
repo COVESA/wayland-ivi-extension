@@ -319,20 +319,24 @@ pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
         surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
         view = wl_container_of(surf->views.next, view, surface_link);
 
-        /* Do not send motion events for coordinates outside the surface */
-        weston_view_from_global_fixed(view, x, y, &sx, &sy);
-        if ((!pixman_region32_contains_point(&surf->input, wl_fixed_to_int(sx),
-                                            wl_fixed_to_int(sy), NULL))
-             && (grab->pointer->button_count == 0))
-            continue;
+        if (view == grab->pointer->focus) {
 
-        surface_client = wl_resource_get_client(surf->resource);
-
-        wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
+            /* Do not send motion events for coordinates outside the surface */
+            weston_view_from_global_fixed(view, x, y, &sx, &sy);
+            if ((!pixman_region32_contains_point(&surf->input, wl_fixed_to_int(sx),
+                                                wl_fixed_to_int(sy), NULL))
+                 && (grab->pointer->button_count == 0))
                 continue;
 
-            wl_pointer_send_motion(resource, time, sx, sy);
+            surface_client = wl_resource_get_client(surf->resource);
+
+            wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
+                if (wl_resource_get_client(resource) != surface_client)
+                    continue;
+
+                wl_pointer_send_motion(resource, time, sx, sy);
+            }
+            return;
         }
     }
 }
