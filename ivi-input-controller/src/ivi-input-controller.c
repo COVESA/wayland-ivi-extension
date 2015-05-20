@@ -890,8 +890,34 @@ input_set_input_focus(struct wl_client *client,
         }
     }
 
-    if (!found_surface) {
-        weston_log("%s: surface %d was not found\n", __FUNCTION__, surface);
+    /* If focus is enabled for one of these devices, every other surface
+     * must have focus unset */
+    if ((device != ILM_INPUT_DEVICE_KEYBOARD) && enabled) {
+        wl_list_for_each(surf, &ctx->surface_list, link) {
+            if (surf == current_surf)
+                continue;
+
+            /* We do not need to unset the focus, if the surface does not have it*/
+            if (!(surf->focus | device))
+                continue;
+
+            wl_list_for_each(seat, &ctx->compositor->seat_list, link) {
+                /*if both of surfaces have acceptance to same seat */
+                if ((get_accepted_seat(surf, seat->seat_name) < 0) ||
+                   (get_accepted_seat(current_surf, seat->seat_name) < 0))
+                    continue;
+
+                caps = get_seat_capabilities(seat);
+
+                if (!(caps | device))
+                    continue;
+
+                surf->focus &= ~(device);
+                send_input_focus(ctx, interface->get_id_of_surface(surf->layout_surface),
+                     device, ILM_FALSE);
+                set_weston_focus(ctx, surf, device, seat, ILM_FALSE);
+            }
+        }
     }
 }
 
