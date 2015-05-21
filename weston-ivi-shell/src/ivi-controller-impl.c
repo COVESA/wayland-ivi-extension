@@ -32,7 +32,6 @@
 #include <string.h>
 #include <linux/input.h>
 #include <cairo.h>
-#include <GLES2/gl2.h>
 
 #include "weston/compositor.h"
 #include "ivi-controller-server-protocol.h"
