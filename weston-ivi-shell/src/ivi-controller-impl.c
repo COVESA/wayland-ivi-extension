@@ -25,13 +25,7 @@
  * ivi-layout.c in weston.
  */
 
-#include <sys/wait.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <linux/input.h>
-#include <cairo.h>
 
 #include "weston/compositor.h"
 #include "ivi-controller-server-protocol.h"
