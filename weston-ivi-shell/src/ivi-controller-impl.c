@@ -168,9 +168,6 @@ destroy_ivicontroller_layer(struct wl_resource *resource)
     struct ivishell *shell = ivilayer->shell;
     struct ivicontroller_layer *ctrllayer = NULL;
     struct ivicontroller_layer *next = NULL;
-    uint32_t id_layer = 0;
-
-    id_layer = ivi_extension_get_id_of_layer(shell, ivilayer->layout_layer);
 
     wl_list_for_each_safe(ctrllayer, next,
                           &shell->list_controller_layer, link) {
@@ -327,7 +324,6 @@ send_surface_add_event(struct ivisurface *ivisurf,
     struct ivishell *shell = ivisurf->shell;
     uint32_t id_layout_layer = 0;
     struct wl_client *surface_client = wl_resource_get_client(resource);
-    int found = 0;
 
     ans = ivi_extension_get_layers_under_surface(shell, ivisurf->layout_surface,
                                                   &length, &pArray);
@@ -764,7 +760,6 @@ controller_surface_screenshot(struct wl_client *client,
     int32_t col = 0;
     int32_t offset = 0;
     int32_t image_offset = 0;
-    static const size_t bytespp = 4; /* PIXMAN_a8b8g8r8 */
 
     result = ivi_extension_surface_get_size(
         shell, ivisurf->layout_surface, &width, &height, &stride);
@@ -1094,8 +1089,6 @@ controller_screen_screenshot(struct wl_client *client,
     (void)client;
 
     struct weston_output *output = NULL;
-    cairo_surface_t *cairo_surf = NULL;
-    int32_t i = 0;
     int32_t width = 0;
     int32_t height = 0;
     int32_t stride = 0;
@@ -1250,10 +1243,6 @@ controller_layer_create(struct wl_client *client,
 static void
 surface_event_content(struct ivi_layout_surface *layout_surface, int32_t content, void *userdata)
 {
-    struct ivishell *shell = userdata;
-    struct ivicontroller_surface *ctrlsurf = NULL;
-    uint32_t id_surface = 0;
-
     if (content == 0) {
         surface_event_remove(layout_surface, userdata);
     }
