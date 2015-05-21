@@ -22,6 +22,7 @@
 #include <string.h>
 #include "ivi-controller-interface.h"
 #include "ivi-extension.h"
+#include "ivi-controller-impl.h"
 
 struct ivi_controller_shell {
     struct ivishell base;

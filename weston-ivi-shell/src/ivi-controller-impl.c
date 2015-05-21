@@ -33,6 +33,7 @@
 
 #include "ivi-layout-export.h"
 #include "ivi-extension.h"
+#include "ivi-controller-impl.h"
 
 struct ivilayer;
 struct iviscreen;
