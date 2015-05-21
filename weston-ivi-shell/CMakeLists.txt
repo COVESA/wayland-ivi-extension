@@ -24,7 +24,6 @@ project(ivi-controller)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_SERVER wayland-server>=1.7.0 REQUIRED)
-pkg_check_modules(CAIRO cairo REQUIRED)
 pkg_check_modules(WESTON weston>=1.7.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
@@ -34,7 +33,6 @@ include_directories(
     src
     ${IVI_EXTENSION_INCLUDE_DIRS}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
-    ${CAIRO_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
     ${PIXMAN_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}/weston
@@ -42,7 +40,6 @@ include_directories(
 
 link_directories(
     ${WAYLAND_SERVER_LIBRARY_DIRS}
-    ${CAIRO_LIBRARY_DIRS}
     ${PIXMAN_LIBRARY_DIRS}
 )
 
@@ -57,7 +54,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 add_dependencies(${PROJECT_NAME}
     ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
-    ${CAIRO_LIBRARIES}
     ${PIXMAN_LIBRARIES}
 )
 
@@ -65,7 +61,6 @@ set(LIBS
     ${LIBS}
     ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
-    ${CAIRO_LIBRARIES}
 )
 
 set(CMAKE_C_LDFLAGS "-module -avoid-version")
