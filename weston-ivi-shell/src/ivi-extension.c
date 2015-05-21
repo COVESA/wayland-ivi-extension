@@ -603,7 +603,7 @@ ivi_extension_layer_set_transition(struct ivishell *shell,
 {
     struct ivi_controller_shell *controller_shell = (struct ivi_controller_shell*)shell;
 
-    controller_shell->interface->layer_set_transition(ivilayer, type, duration);
+    return controller_shell->interface->layer_set_transition(ivilayer, type, duration);
 }
 
 struct ivi_layout_screen *
