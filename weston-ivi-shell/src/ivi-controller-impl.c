@@ -314,7 +314,7 @@ send_surface_add_event(struct ivisurface *ivisurf,
                        enum ivi_layout_notification_mask mask)
 {
     struct ivi_layout_layer **pArray = NULL;
-    uint32_t length = 0;
+    int32_t length = 0;
     int32_t ans = 0;
     int i = 0;
     struct link_layer *link_layer = NULL;
@@ -414,7 +414,7 @@ update_surface_prop(struct ivisurface *ivisurf,
                     uint32_t mask)
 {
     struct ivi_layout_layer **pArray = NULL;
-    uint32_t length = 0;
+    int32_t length = 0;
     int32_t ans = 0;
     int i = 0;
     struct ivishell *shell = ivisurf->shell;
@@ -493,7 +493,7 @@ send_layer_add_event(struct ivilayer *ivilayer,
                      enum ivi_layout_notification_mask mask)
 {
     struct ivi_layout_screen **pArray = NULL;
-    uint32_t length = 0;
+    int32_t length = 0;
     int32_t ans = 0;
     int i = 0;
     struct link_screen *link_scrn = NULL;
@@ -588,7 +588,7 @@ update_layer_prop(struct ivilayer *ivilayer,
                   enum ivi_layout_notification_mask mask)
 {
     struct ivi_layout_screen **pArray = NULL;
-    uint32_t length = 0;
+    int32_t length = 0;
     int32_t ans = 0;
     struct link_screen *link_scrn = NULL;
     struct link_screen *next = NULL;
@@ -807,8 +807,8 @@ controller_surface_screenshot(struct wl_client *client,
 
     free(buffer);
 
-    if (save_as_bitmap(filename, image_buffer, size,
-                       width, height, 24) != 0) {
+    if (save_as_bitmap(filename, (const char *)image_buffer,
+                       size, width, height, 24) != 0) {
         weston_log("failed to take screenshot\n");
     }
 
@@ -1116,7 +1116,8 @@ controller_screen_screenshot(struct wl_client *client,
             width,
             height);
 
-    save_as_bitmap(filename, readpixs, stride * height, width, height, PIXMAN_FORMAT_BPP(output->compositor->read_format));
+    save_as_bitmap(filename, (const char*)readpixs, stride * height, width, height,
+                   PIXMAN_FORMAT_BPP(output->compositor->read_format));
     free(readpixs);
 }
 
@@ -1644,7 +1645,7 @@ check_layout_layers(struct ivishell *shell)
     struct ivi_layout_layer **pArray = NULL;
     struct ivilayer *ivilayer = NULL;
     uint32_t id_layer = 0;
-    uint32_t length = 0;
+    int32_t length = 0;
     uint32_t i = 0;
     int32_t ret = 0;
 
@@ -1679,7 +1680,7 @@ check_layout_surfaces(struct ivishell *shell)
     struct ivi_layout_surface **pArray = NULL;
     struct ivisurface *ivisurf = NULL;
     uint32_t id_surface = 0;
-    uint32_t length = 0;
+    int32_t length = 0;
     uint32_t i = 0;
     int32_t ret = 0;
 
