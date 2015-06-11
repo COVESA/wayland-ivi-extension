@@ -140,20 +140,6 @@ void release_instance(void);
 static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
 static int32_t
-wayland_controller_is_inside_surface_list(struct wl_list *list,
-                                          uint32_t id_surface)
-{
-    struct surface_context *ctx_surf = NULL;
-    wl_list_for_each(ctx_surf, list, link) {
-        if (ctx_surf->id_surface == id_surface) {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-static int32_t
 wayland_controller_is_inside_layer_list(struct wl_list *list,
                                         uint32_t id_layer)
 {
@@ -1281,7 +1267,6 @@ init_control(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     struct wayland_context *wl = &ctx->wl;
-    int wait_count = 0;
     int ret = 0;
 
     wl_list_init(&ctx->list_nativehandle);
