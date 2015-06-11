@@ -434,21 +434,6 @@ create_client_surface(struct ilm_client_context *ctx,
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
 }
 
-static struct surface_context*
-get_surface_context_by_id(struct ilm_client_context *ctx,
-                          uint32_t id_surface)
-{
-    struct surface_context *ctx_surf = NULL;
-
-    wl_list_for_each(ctx_surf, &ctx->list_surface, link) {
-        if (ctx_surf->id_surface == id_surface) {
-            return ctx_surf;
-        }
-    }
-
-    return NULL;
-}
-
 static ilmErrorTypes
 wayland_getScreenResolution(t_ilm_uint screenID,
                             t_ilm_uint* pWidth,
