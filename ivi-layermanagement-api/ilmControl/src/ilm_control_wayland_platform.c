@@ -953,6 +953,7 @@ input_listener_input_acceptance(void *data,
             /* Remove this from the accepted seats */
             free(accepted_seat->seat_name);
             wl_list_remove(&accepted_seat->link);
+            free(accepted_seat);
             return;
         }
         accepted_seat_found = 1;

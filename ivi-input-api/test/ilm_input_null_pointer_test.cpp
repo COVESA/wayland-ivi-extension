@@ -102,11 +102,9 @@ TEST_F(IlmNullPointerTest, ilm_get_input_focus_null_pointer) {
 }
 
 TEST_F(IlmNullPointerTest, ilm_set_input_event_acceptance_null_pointer) {
-    t_ilm_surface surface1 = 1010, surface2 = 2020;
-    t_ilm_uint num_seats = 0;
-    t_ilm_string *seats = NULL;
-    t_ilm_string set_seats[] = {"default", "foo"};
-    t_ilm_uint set_seats_count = 2;
+    t_ilm_surface surface1 = 1010;
+    t_ilm_string set_seats[] = {"default"};
+    t_ilm_uint set_seats_count = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],
                                              0, 0, ILM_PIXELFORMAT_RGBA_8888,
                                              &surface1));
@@ -120,27 +118,22 @@ TEST_F(IlmNullPointerTest, ilm_get_input_event_acceptance_null_pointer) {
     t_ilm_surface surface1 = 1010;
     t_ilm_uint num_seats = 0;
     t_ilm_string *seats = NULL;
-    t_ilm_string set_seats[] = {"default", "foo"};
-    t_ilm_uint set_seats_count = 2;
+
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],
                                              0, 0, ILM_PIXELFORMAT_RGBA_8888,
                                              &surface1));
 
     EXPECT_EQ(ILM_FAILED, ilm_getInputAcceptanceOn(0, &num_seats,
-                                                    &seats));
+                                                    NULL));
 
     EXPECT_EQ(ILM_FAILED, ilm_getInputAcceptanceOn(surface1, NULL,
                                                     &seats));
-
-    EXPECT_EQ(ILM_FAILED, ilm_getInputAcceptanceOn(surface1, &num_seats,
-                                                    NULL));
-
 }
 
 TEST_F(IlmNullPointerTest, ilm_get_input_devices_null_pointer) {
     t_ilm_surface surface1 = 1010;
-    t_ilm_string seats[] = {"default", "foo"};
-    t_ilm_uint num_seats = 2;
+    t_ilm_string *seats = NULL;
+    t_ilm_uint num_seats = 0;
     ilmInputDevice bitmask = ILM_INPUT_DEVICE_POINTER;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],
                                              0, 0, ILM_PIXELFORMAT_RGBA_8888,
@@ -148,12 +141,15 @@ TEST_F(IlmNullPointerTest, ilm_get_input_devices_null_pointer) {
 
     EXPECT_EQ(ILM_FAILED, ilm_getInputDevices(bitmask, &num_seats,
                                                     NULL));
+
+    EXPECT_EQ(ILM_FAILED, ilm_getInputDevices(bitmask, NULL,
+                                                    &seats));
 }
 
 TEST_F(IlmNullPointerTest, ilm_get_input_device_capabilities_null_pointer) {
-    t_ilm_string seats[] = {"default", "foo"};
+    t_ilm_string seats[] = {"default"};
     ilmInputDevice bitmask;
 
     EXPECT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities(NULL, &bitmask));
-    EXPECT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities(seats[1], NULL));
+    EXPECT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities(seats[0], NULL));
 }

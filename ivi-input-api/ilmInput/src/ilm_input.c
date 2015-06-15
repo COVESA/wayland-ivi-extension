@@ -1,6 +1,7 @@
 /**************************************************************************
  *
  * Copyright 2015 Codethink Ltd
+ * Copyright (C) 2015 Advanced Driver Information Technology Joint Venture GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +43,9 @@ ilm_setInputAcceptanceOn(t_ilm_surface surfaceID, t_ilm_uint num_seats,
     int i;
     struct surface_context *surface_ctx = NULL;
     struct accepted_seat *accepted_seat;
+    struct seat_context *seat;
     int surface_found = 0;
+    int seat_found = 0;
 
     if ((seats == NULL) && (num_seats != 0)) {
         fprintf(stderr, "Invalid Argument\n");
@@ -63,17 +66,33 @@ ilm_setInputAcceptanceOn(t_ilm_surface surfaceID, t_ilm_uint num_seats,
         release_instance();
         return ILM_FAILED;
     }
+
+    for(i = 0; i < num_seats; i++) {
+        wl_list_for_each(seat, &ctx->wl.list_seat, link) {
+            if (strcmp(seat->seat_name, seats[i]) == 0)
+                    seat_found = 1;
+        }
+
+        if (!seat_found) {
+            fprintf(stderr, "seat: %s not found\n", seats[i]);
+            release_instance();
+            return ILM_FAILED;
+        }
+
+        seat_found = 0;
+    }
     /* Send events to add input acceptance for every seat in 'seats', but
      * not on the surface's list */
     for(i = 0; i < num_seats; i++) {
-        int seat_found = 0;
+        int has_seat = 0;
 
         wl_list_for_each(accepted_seat, &surface_ctx->list_accepted_seats,
                          link) {
             if (strcmp(accepted_seat->seat_name, seats[i]) == 0)
-                seat_found = 1;
+                has_seat = 1;
         }
-        if (!seat_found) {
+
+        if (!has_seat) {
             ivi_input_set_input_acceptance(ctx->wl.input_controller,
                                                       surfaceID, seats[i],
                                                       ILM_TRUE);
@@ -83,12 +102,12 @@ ilm_setInputAcceptanceOn(t_ilm_surface surfaceID, t_ilm_uint num_seats,
     /* Send events to remove input acceptance for every seat on the surface's
      * list but not in 'seats' */
     wl_list_for_each(accepted_seat, &surface_ctx->list_accepted_seats, link) {
-        int seat_found = 0;
+        int has_seat = 0;
         for (i = 0; i < num_seats; i++) {
             if (strcmp(accepted_seat->seat_name, seats[i]) == 0)
-                seat_found = 1;
+                has_seat = 1;
         }
-        if (!seat_found)
+        if (!has_seat)
             ivi_input_set_input_acceptance(ctx->wl.input_controller,
                                                       surfaceID,
                                                       accepted_seat->seat_name,
@@ -238,6 +257,7 @@ ILM_EXPORT ilmErrorTypes
 ilm_setInputFocus(t_ilm_surface *surfaceIDs, t_ilm_uint num_surfaces,
                   ilmInputDevice bitmask, t_ilm_bool is_set)
 {
+	ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx;
     int i;
 
@@ -267,15 +287,16 @@ ilm_setInputFocus(t_ilm_surface *surfaceIDs, t_ilm_uint num_surfaces,
 
         if (!found_surface) {
             fprintf(stderr, "Surface %d was not found\n", surfaceIDs[i]);
-            continue;
+            break;
         }
 
         ivi_input_set_input_focus(ctx->wl.input_controller,
                                              ctx_surf->id_surface,
                                              bitmask, is_set);
+        returnValue = ILM_SUCCESS;
     }
     release_instance();
-    return ILM_SUCCESS;
+    return returnValue;
 }
 
 ILM_EXPORT ilmErrorTypes
