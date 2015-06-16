@@ -197,7 +197,7 @@ COMMAND3(54,"set surface <surfaceid> input acceptance to [<namearray>]")
              array[i] = strdup(token.c_str());
              if (array[i] == NULL) {
                  cerr << "Failed to duplicate string: " << token << endl;
-                 for (int j = 0; j < i; j++)
+                 for (unsigned int j = 0; j < i; j++)
                      free(array[i]);
                  free(array);
                  return;

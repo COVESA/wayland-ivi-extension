@@ -449,6 +449,9 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
     const struct ivi_controller_interface *interface =
         seat->input_ctx->ivi_controller_interface;
 
+    /* if touch device has no focused view, there is nothing to do*/
+    if (grab->touch->focus == NULL)
+        return;
 
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
