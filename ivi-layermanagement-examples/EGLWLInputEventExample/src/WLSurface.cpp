@@ -22,7 +22,6 @@
 #include <string.h>
 #include <assert.h>
 #include "WLSurface.h"
-#include "ilm_control.h"
 
 WLSurface::WLSurface(WLContext* wlContext)
 : m_wlContext(wlContext)
@@ -79,16 +78,6 @@ WLSurface::CreateIlmSurface(t_ilm_surface* surfaceId,
         return false;
     }
 
-    rtnv = ilm_surfaceSetDestinationRectangle(*surfaceId, 0, 0, width, height);
-    rtnv = ilm_surfaceSetSourceRectangle(*surfaceId, 0, 0, width, height);
-    rtnv = ilm_surfaceSetVisibility(*surfaceId, ILM_TRUE);
-    rtnv = ilm_surfaceSetOpacity(*surfaceId, 1.0f);
-
-    /* TODO: Set input acceptance using new API */
-    /* TODO: Set keyboard focus using new API */
-
-    rtnv = ilm_commitChanges();
-
     m_ilmSurfaceId = *surfaceId;
 
     return true;
@@ -98,9 +87,6 @@ void
 WLSurface::DestroyIlmSurface()
 {
     if (m_ilmSurfaceId > 0){
-        /* TODO: Set input acceptance using new API */
-	/* TODO: Set input focus using the new API */
-        ilm_commitChanges();
         ilm_surfaceRemove(m_ilmSurfaceId);
     }
 }

@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     wlContext = new WLContext();
     wlContext->InitWLContext(&PointerListener, &KeyboardListener, &TouchListener);
 
-    ilm_initWithNativedisplay((t_ilm_nativedisplay)wlContext->GetWLDisplay());
+    ilmClient_init((t_ilm_nativedisplay)wlContext->GetWLDisplay());
 
     eglSurface = new WLEGLSurface(wlContext);
     eglSurface->CreateSurface(400, 240);
@@ -110,12 +110,10 @@ int main(int argc, char **argv)
 
     TerminateRenderer();
     ilm_surfaceRemove(surfaceId);
-    /* TODO: Update input acceptance to new API */
-    ilm_commitChanges();
-    eglSurface->DestroyIlmSurface();
-    ilm_commitChanges();
 
-    ilm_destroy();
+    eglSurface->DestroyIlmSurface();
+
+    ilmClient_destroy();
     delete eyes;
     delete eglSurface;
     delete wlContext;

@@ -29,11 +29,9 @@ pkg_check_modules(WAYLAND_EGL wayland-egl REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
 GET_TARGET_PROPERTY(ILM_CLIENT_INCLUDE_DIRS  ilmClient  INCLUDE_DIRECTORIES)
-GET_TARGET_PROPERTY(ILM_CONTROL_INCLUDE_DIRS ilmControl INCLUDE_DIRECTORIES)
 
 include_directories(
     ${ILM_CLIENT_INCLUDE_DIRS}
-    ${ILM_CONTROL_INCLUDE_DIRS}
     ${GLESv2_INCLUDE_DIR}
     ${EGL_INCLUDE_DIR}
     ${WAYLAND_CLIENT_INCLUDE_DIR}
@@ -76,7 +74,6 @@ add_dependencies(EGLWLInputEventExample
     wayland-client
     wayland-egl
     ilmClient
-    ilmControl
     ${LIBS}
 )
 
@@ -88,7 +85,6 @@ set(LIBS
     ${FFI_LIBRARIES}
     ${EGL_LIBRARIES}
     ilmClient
-    ilmControl
 )
 
 add_definitions(${EGL_CFLAGS})
