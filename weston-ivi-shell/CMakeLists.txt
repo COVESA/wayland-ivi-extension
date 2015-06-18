@@ -35,7 +35,6 @@ include_directories(
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
     ${PIXMAN_INCLUDE_DIRS}
-    ${WESTON_INCLUDE_DIRS}/weston
 )
 
 link_directories(

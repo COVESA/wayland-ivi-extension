@@ -27,7 +27,7 @@
 
 #include <stdlib.h>
 
-#include "weston/compositor.h"
+#include <weston/compositor.h>
 #include "ivi-controller-server-protocol.h"
 #include "bitmap.h"
 
