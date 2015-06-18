@@ -32,7 +32,6 @@ struct SurfaceConfiguration
     unsigned int surfaceId;
     unsigned int surfaceWidth;
     unsigned int surfaceHeight;
-    float opacity;
     bool nosky;
 };
 

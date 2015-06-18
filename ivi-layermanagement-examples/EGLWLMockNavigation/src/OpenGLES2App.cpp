@@ -21,7 +21,6 @@
 #include "LayerScene.h"
 #include <ilm_common.h>
 #include <ilm_client.h>
-#include <ilm_control.h>
 
 #include <iostream>
 using std::cout;
@@ -127,7 +126,7 @@ OpenGLES2App::OpenGLES2App(float fps, float animationSpeed, SurfaceConfiguration
     createWLContext(config);
     createEGLContext();
 
-    ilm_initWithNativedisplay((t_ilm_nativedisplay)m_wlContextStruct.wlDisplay);
+    ilmClient_init((t_ilm_nativedisplay)m_wlContextStruct.wlDisplay);
     setupLayerMangement(config);
 
     if (config->nosky)
@@ -152,7 +151,7 @@ OpenGLES2App::~OpenGLES2App()
     destroyWLContext();
 
     ilm_surfaceRemove(m_surfaceId);
-    ilm_destroy();
+    ilmClient_destroy();
 }
 
 void OpenGLES2App::mainloop()
@@ -326,7 +325,6 @@ ilmErrorTypes OpenGLES2App::setupLayerMangement(SurfaceConfiguration* config)
     t_ilm_surface surfaceid = (t_ilm_surface)config->surfaceId;//SURFACE_EXAMPLE_EGLX11_APPLICATION;
     int width = config->surfaceWidth;
     int height = config->surfaceHeight;
-    float opacity = config->opacity;
 
     if (config->nosky)
     {
@@ -339,19 +337,6 @@ ilmErrorTypes OpenGLES2App::setupLayerMangement(SurfaceConfiguration* config)
 
     ilm_surfaceCreate((t_ilm_nativehandle)m_wlContextStruct.wlSurface, width, height,
             ILM_PIXELFORMAT_RGBA_8888, &surfaceid);
-
-    cout << "set surface " << surfaceid << " src region " << 0 << ", " << 0 << ", " << width << ", " << height << "\n";
-    error = ilm_surfaceSetSourceRectangle(surfaceid, 0, 0, width, height);
-    ilm_surfaceSetDestinationRectangle(surfaceid, 0, 0, width, height);
-
-    cout << "Set surface " << surfaceid << " visible\n";
-    error = ilm_surfaceSetVisibility(surfaceid, ILM_TRUE);
-
-    cout << "Set surface " << surfaceid << " opacity " << opacity << "\n";
-    ilm_surfaceSetOpacity(surfaceid, opacity);
-
-    cout << "commit\n";
-    error = ilm_commitChanges();
 
     m_surfaceId = surfaceid;
 

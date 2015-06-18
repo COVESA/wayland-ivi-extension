@@ -40,7 +40,6 @@ int main (int argc, const char * argv[])
     UnsignedIntArgument surfaceId("surface", DEFAULT_SURFACE, argc, argv);
     IntArgument width("width", DEFAULT_WIDTH, argc, argv);
     IntArgument height("height", DEFAULT_HEIGHT, argc, argv);
-    FloatArgument opacity("opacity", DEFAULT_OPACITY, argc, argv);
     BoolArgument nosky("nosky", DEFAULT_NOSKY, argc, argv);
     BoolArgument help("help", DEFAULT_HELP, argc, argv);
 
@@ -54,8 +53,7 @@ int main (int argc, const char * argv[])
              << "  -nosky        do not render sky, background transparent (default " << DEFAULT_NOSKY << ")\n"
              << "  -surface x    render to surface id x (default " << DEFAULT_SURFACE << ")\n"
              << "  -width x      set surface width to x (default " << DEFAULT_WIDTH << ")\n"
-             << "  -height x     set surface height to x (default " << DEFAULT_HEIGHT << ")\n"
-             << "  -opacity x    set opacity of surface to x (default " << DEFAULT_OPACITY << ")\n\n";
+             << "  -height x     set surface height to x (default " << DEFAULT_HEIGHT << ")\n\n";
     }
     else
     {
@@ -63,7 +61,6 @@ int main (int argc, const char * argv[])
         config.surfaceId = surfaceId.get();
         config.surfaceWidth = width.get();
         config.surfaceHeight = height.get();
-        config.opacity = opacity.get();
         config.nosky = nosky.get();
 
         MockNavi navi(fps.get(), animSpeed.get(), &config);
