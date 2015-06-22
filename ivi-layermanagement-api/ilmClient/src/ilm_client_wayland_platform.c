@@ -216,9 +216,15 @@ registry_handle_client(void *data, struct wl_registry *registry,
     }
 }
 
+static void
+registry_handle_client_remove(void *data, struct wl_registry *registry,
+	      uint32_t name)
+{
+}
+
 static const struct wl_registry_listener registry_client_listener = {
     registry_handle_client,
-    NULL
+    registry_handle_client_remove
 };
 
 static void
@@ -258,9 +264,15 @@ registry_handle_client_for_output(void *data, struct wl_registry *registry,
     }
 }
 
+static void
+registry_handle_client_for_output_remove(void *data, struct wl_registry *registry,
+	      uint32_t name)
+{
+}
+
 static const struct wl_registry_listener registry_client_listener_for_output = {
     registry_handle_client_for_output,
-    NULL
+    registry_handle_client_for_output_remove
 };
 
 static struct ilm_client_context ilm_context = {0};

@@ -924,14 +924,6 @@ TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
     ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetPixelformat(0xdeadbeef, &p));
 }
 
-TEST_F(IlmCommandTest, ilm_keyboard_focus) {
-    ASSERT_EQ(ILM_SUCCESS, ILM_FAILED); /* Keyboard focus tests need to be reworked under the new API */
-}
-
-TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
-    ASSERT_EQ(ILM_SUCCESS, ILM_FAILED); /* Input acceptance tests need to be reworked under the new API */
-}
-
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;

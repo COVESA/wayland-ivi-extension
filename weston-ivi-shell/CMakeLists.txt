@@ -23,8 +23,8 @@ cmake_minimum_required (VERSION 2.6)
 project(ivi-controller)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(WAYLAND_SERVER wayland-server>=1.7.0 REQUIRED)
-pkg_check_modules(WESTON weston>=1.7.0 REQUIRED)
+pkg_check_modules(WAYLAND_SERVER wayland-server>=1.8.0 REQUIRED)
+pkg_check_modules(WESTON weston>=1.8.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
 GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
@@ -35,7 +35,6 @@ include_directories(
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
     ${PIXMAN_INCLUDE_DIRS}
-    ${WESTON_INCLUDE_DIRS}/weston
 )
 
 link_directories(

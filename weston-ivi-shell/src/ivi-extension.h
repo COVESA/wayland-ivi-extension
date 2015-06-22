@@ -23,7 +23,7 @@
 #define IVI_EXTENSION_H
 
 #include <stdbool.h>
-#include "weston/compositor.h"
+#include <weston/compositor.h>
 
 struct ivishell {
     struct wl_resource *resource;

@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "weston/compositor.h"
+#include <weston/compositor.h>
 #include "ilm_types.h"
 
 #include "ivi-input-server-protocol.h"

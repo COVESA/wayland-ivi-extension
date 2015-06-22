@@ -53,7 +53,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "stdbool.h"
-#include "compositor.h"
+#include <weston/compositor.h>
 
 #define IVI_SUCCEEDED (0)
 #define IVI_FAILED (-1)
