@@ -19,9 +19,6 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-OPTION(BUILD_ILM_API_TESTS   "Install unit tests for IVI LayerManagement API" OFF)
-OPTION(INSTALL_ILM_API_TESTS "Build unit tests for IVI LayerManagement API"   OFF)
-
 FIND_PACKAGE(gtest)
 
 IF(NOT gtest_FOUND)
