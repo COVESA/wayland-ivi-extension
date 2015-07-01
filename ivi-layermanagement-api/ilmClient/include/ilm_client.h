@@ -105,19 +105,6 @@ ilmErrorTypes ilm_surfaceSetNativeContent(t_ilm_nativehandle nativehandle,
                                             ilmPixelFormat pixelFormat,
                                             t_ilm_surface surfaceId);
 
-/**
- * \brief Set the area of a surface which should be used for the rendering.
- * \ingroup ilmClient
- * \param[in] surfaceId Id of surface.
- * \param[in] x horizontal start position of the used area
- * \param[in] y vertical start position of the used area
- * \param[in] width width of the area
- * \param[in] height height of the area
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
-
 #ifdef __cplusplus
 } /**/
 #endif /* __cplusplus */
