@@ -479,13 +479,6 @@ void setScene(t_scene_data* pScene, bool clean)
         t_ilm_surface surface = it->first;
         ilmSurfaceProperties& props = it->second;
 
-        ilm_surfaceSetNativeContent(props.nativeSurface,
-                props.origSourceWidth,
-                props.origSourceHeight,
-                (e_ilmPixelFormat) props.pixelformat,
-                surface);
-        ilm_commitChanges();
-
         ilm_surfaceSetOpacity(surface, props.opacity);
         ilm_commitChanges();
 
