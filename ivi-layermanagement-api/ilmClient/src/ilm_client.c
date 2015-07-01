@@ -72,12 +72,6 @@ ilm_surfaceRemove(t_ilm_surface surfaceId)
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceRemoveNativeContent(t_ilm_surface surfaceId)
-{
-    return gIlmClientPlatformFunc.surfaceRemoveNativeContent(surfaceId);
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceSetNativeContent(t_ilm_nativehandle nativehandle,
                             t_ilm_int width, t_ilm_int height,
                             ilmPixelFormat pixelFormat,

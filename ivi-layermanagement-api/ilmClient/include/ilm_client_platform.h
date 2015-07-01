@@ -33,7 +33,6 @@ typedef struct _ILM_CLIENT_PLATFORM_FUNC
                    t_ilm_int width, t_ilm_int height,
                    ilmPixelFormat pixelFormat, t_ilm_surface* pSurfaceId);
     ilmErrorTypes (*surfaceRemove)(const t_ilm_surface surfaceId);
-    ilmErrorTypes (*surfaceRemoveNativeContent)(t_ilm_surface surfaceId);
     ilmErrorTypes (*surfaceSetNativeContent)(t_ilm_nativehandle nativehandle,
                    t_ilm_int width, t_ilm_int height,
                    ilmPixelFormat pixelFormat, t_ilm_surface surfaceId);
