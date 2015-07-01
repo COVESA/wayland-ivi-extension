@@ -49,14 +49,6 @@ ilmClient_destroy(void)
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_getScreenResolution(t_ilm_uint screenID,
-                        t_ilm_uint* pWidth, t_ilm_uint* pHeight)
-{
-    return gIlmClientPlatformFunc.getScreenResolution(
-               screenID, pWidth, pHeight);
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceCreate(t_ilm_nativehandle nativehandle,
                   t_ilm_int width, t_ilm_int height,
                   ilmPixelFormat pixelFormat, t_ilm_surface* pSurfaceId)
