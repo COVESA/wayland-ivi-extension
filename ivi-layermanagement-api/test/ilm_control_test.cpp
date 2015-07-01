@@ -73,29 +73,6 @@ public:
     }
 };
 
-TEST_F(IlmCommandTest, SetGetSurfaceDimension) {
-    uint surface = 36;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 10, 10, ILM_PIXELFORMAT_RGBA_8888, &surface));
-
-    t_ilm_uint dim[2] = {15, 25};
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetDimension(surface, dim));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-    t_ilm_uint dimreturned[2];
-    EXPECT_EQ(ILM_SUCCESS, ilm_surfaceGetDimension(surface, dimreturned));
-    EXPECT_EQ(dim[0], dimreturned[0]);
-    EXPECT_EQ(dim[1], dimreturned[1]);
-}
-
-TEST_F(IlmCommandTest, SetGetSurfaceDimension_InvalidInput) {
-    uint surface = 0xdeadbeef;
-    t_ilm_uint dim[2] = {15, 25};
-
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetDimension(surface, dim));
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetDimension(surface, dim));
-}
-
 TEST_F(IlmCommandTest, SetGetLayerDimension) {
     uint layer = 4316;
 
