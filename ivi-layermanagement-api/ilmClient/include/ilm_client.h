@@ -39,16 +39,6 @@ extern "C" {
 ilmErrorTypes ilm_getScreenResolution(t_ilm_uint screenID, t_ilm_uint* pWidth, t_ilm_uint* pHeight);
 
 /**
- * \brief Add a surface to a layer which is currently managed by the service
- * \ingroup ilmClient
- * \param[in] layerId Id of layer which should host the surface.
- * \param[in] surfaceId Id of surface which should be added to the layer.
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerAddSurface(t_ilm_layer layerId, t_ilm_surface surfaceId);
-
-/**
  * \brief Removes a surface from a layer which is currently managed by the service
  * \ingroup ilmClient
  * \param[in] layerId Id of the layer which contains the surface.

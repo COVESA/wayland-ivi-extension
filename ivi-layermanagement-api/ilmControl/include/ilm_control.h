@@ -137,6 +137,16 @@ ilmErrorTypes ilm_layerCreateWithDimension(t_ilm_layer* pLayerId, t_ilm_uint wid
 ilmErrorTypes ilm_layerRemove(t_ilm_layer layerId);
 
 /**
+ * \brief Add a surface to a layer which is currently managed by the service
+ * \ingroup ilmClient
+ * \param[in] layerId Id of layer which should host the surface.
+ * \param[in] surfaceId Id of surface which should be added to the layer.
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_layerAddSurface(t_ilm_layer layerId, t_ilm_surface surfaceId);
+
+/**
  * \brief Set the visibility of a layer. If a layer is not visible, the layer and its
  * surfaces will not be rendered.
  * \ingroup ilmControl
