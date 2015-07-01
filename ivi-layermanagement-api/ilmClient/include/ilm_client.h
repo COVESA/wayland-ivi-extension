@@ -28,17 +28,6 @@ extern "C" {
 #include "ilm_common.h"
 
 /**
- * \brief Get the screen resolution of a specific screen from the Layermanagement
- * \ingroup ilmClient
- * \param[in] screenID Screen Indentifier as a Number from 0 .. MaxNumber of Screens
- * \param[out] pWidth pointer where width of screen should be stored
- * \param[out] pHeight pointer where height of screen should be stored
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not get the resolution.
- */
-ilmErrorTypes ilm_getScreenResolution(t_ilm_uint screenID, t_ilm_uint* pWidth, t_ilm_uint* pHeight);
-
-/**
  * \brief Create a surface
  * \ingroup ilmClient
  * \param[in] nativehandle The native windowsystem's handle for the surface

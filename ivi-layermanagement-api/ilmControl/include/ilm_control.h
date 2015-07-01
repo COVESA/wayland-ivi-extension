@@ -67,6 +67,17 @@ ilmErrorTypes ilm_getPropertiesOfScreen(t_ilm_display screenID, struct ilmScreen
 ilmErrorTypes ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs);
 
 /**
+ * \brief Get the screen resolution of a specific screen from the Layermanagement
+ * \ingroup ilmClient
+ * \param[in] screenID Screen Indentifier as a Number from 0 .. MaxNumber of Screens
+ * \param[out] pWidth pointer where width of screen should be stored
+ * \param[out] pHeight pointer where height of screen should be stored
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not get the resolution.
+ */
+ilmErrorTypes ilm_getScreenResolution(t_ilm_uint screenID, t_ilm_uint* pWidth, t_ilm_uint* pHeight);
+
+/**
  * \brief Get all LayerIds which are currently registered and managed by the services
  * \ingroup ilmControl
  * \param[out] pLength Pointer where length of ids array should be stored
