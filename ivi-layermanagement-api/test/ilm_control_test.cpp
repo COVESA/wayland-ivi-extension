@@ -542,25 +542,6 @@ TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
     ASSERT_NE(ILM_SUCCESS, ilm_layerRemove(layer));
 }
 
-TEST_F(IlmCommandTest, ilm_surface_initialize) {
-    uint surface_10 = 10;
-    uint surface_20 = 20;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceInitialize(&surface_10));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceInitialize(&surface_20));
-
-    t_ilm_int length;
-    t_ilm_uint* IDs;
-    ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
-
-    EXPECT_EQ(length, 2);
-    if (length == 2)
-    {
-        EXPECT_EQ(surface_10, IDs[0]);
-        EXPECT_EQ(surface_20, IDs[1]);
-    }
-    free(IDs);
-}
-
 TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurfaceIDsOnLayer) {
     uint layer = 3246;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));

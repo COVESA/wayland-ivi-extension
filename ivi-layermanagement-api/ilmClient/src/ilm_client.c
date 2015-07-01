@@ -62,9 +62,3 @@ ilm_surfaceRemove(t_ilm_surface surfaceId)
 {
     return gIlmClientPlatformFunc.surfaceRemove(surfaceId);
 }
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceInitialize(t_ilm_surface *pSurfaceId)
-{
-    return gIlmClientPlatformFunc.surfaceInitialize(pSurfaceId);
-}

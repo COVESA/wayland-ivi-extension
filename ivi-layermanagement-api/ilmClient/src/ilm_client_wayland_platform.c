@@ -34,7 +34,6 @@ static ilmErrorTypes wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
 static ilmErrorTypes wayland_surfaceRemove(const t_ilm_surface surfaceId);
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
 static void wayland_destroy(void);
-static ilmErrorTypes wayland_surfaceInitialize(t_ilm_surface *pSurfaceId);
 
 void init_ilmClientPlatformTable(void)
 {
@@ -46,8 +45,6 @@ void init_ilmClientPlatformTable(void)
         wayland_init;
     gIlmClientPlatformFunc.destroy =
         wayland_destroy;
-    gIlmClientPlatformFunc.surfaceInitialize =
-        wayland_surfaceInitialize;
 }
 
 struct surface_context {
@@ -326,15 +323,4 @@ wayland_surfaceRemove(t_ilm_surface surfaceId)
     }
 
     return ILM_SUCCESS;
-}
-
-static ilmErrorTypes
-wayland_surfaceInitialize(t_ilm_surface *pSurfaceId)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-
-    returnValue = wayland_surfaceCreate((t_ilm_nativehandle)NULL,
-                                        100, 100, (ilmPixelFormat)NULL,
-                                        (t_ilm_surface*)pSurfaceId);
-    return returnValue;
 }

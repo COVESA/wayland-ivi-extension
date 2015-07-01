@@ -318,16 +318,6 @@ ilmErrorTypes ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrie
 ilmErrorTypes ilm_layerSetRenderOrder(t_ilm_layer layerId, t_ilm_layer *pSurfaceId, t_ilm_int number);
 
 /**
- * \brief Create the logical surface, which has no native buffer associated
- * \ingroup ilmControl
- * \param[in] pSurfaceId The value pSurfaceId points to is used as ID for new surface;
- * \param[out] pSurfaceId The ID of the newly created surface is returned in this parameter
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceInitialize(t_ilm_surface *pSurfaceId);
-
-/**
  * \brief Set the visibility of a surface. If a surface is not visible it will not be rendered.
  * \ingroup ilmControl
  * \param[in] surfaceId Id of the surface to set the visibility of
