@@ -58,19 +58,6 @@ ilmErrorTypes ilm_surfaceCreate(t_ilm_nativehandle nativehandle,
                                 t_ilm_surface *pSurfaceId);
 
 /**
- * \brief Get the horizontal and vertical dimension of the surface.
- * \ingroup ilmClient
- * \param[in] surfaceId Id of surface.
- * \param[out] pDimension pointer to an array where the dimension should be stored.
- *                        dimension[0]=width, dimension[1]=height
- *
- *
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceGetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension);
-
-/**
  * \brief Remove a surface
  * \ingroup ilmClient
  * \param[in] surfaceId The id of the surface to be removed
