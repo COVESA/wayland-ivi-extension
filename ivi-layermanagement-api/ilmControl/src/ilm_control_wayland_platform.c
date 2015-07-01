@@ -2579,28 +2579,6 @@ ilm_layerRemoveSurface(t_ilm_layer layerId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceGetDimension(t_ilm_surface surfaceId,
-                            t_ilm_uint *pDimension)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pDimension != NULL) {
-        struct surface_context *ctx_surf = NULL;
-
-        ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceId);
-        if (ctx_surf != NULL) {
-            *pDimension = (t_ilm_uint)ctx_surf->prop.destWidth;
-            *(pDimension + 1) = (t_ilm_uint)ctx_surf->prop.destHeight;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceGetVisibility(t_ilm_surface surfaceId,
                              t_ilm_bool *pVisibility)
 {
