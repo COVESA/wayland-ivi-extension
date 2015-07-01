@@ -89,6 +89,7 @@ struct ilm_client_context {
     struct wl_registry *registry;
     struct wl_compositor *compositor;
     struct ivi_application *ivi_application;
+    struct wl_event_queue *queue;
 
     int32_t num_screen;
     struct wl_list list_surface;
@@ -324,6 +325,12 @@ destroy_client_resouses(void)
         ctx->ivi_application = NULL;
     }
 
+    if (ctx->queue)
+    {
+        wl_event_queue_destroy(ctx->queue);
+        ctx->queue = NULL;
+    }
+
     if (ctx->registry)
     {
         wl_registry_destroy(ctx->registry);
@@ -364,18 +371,21 @@ init_client(void)
     wl_list_init(&ctx->list_screen);
     wl_list_init(&ctx->list_surface);
 
+    ctx->queue = wl_display_create_queue(ctx->display);
     ctx->registry = wl_display_get_registry(ctx->display);
     if (ctx->registry == NULL) {
+        wl_event_queue_destroy(ctx->queue);
         fprintf(stderr, "Failed to get registry\n");
         return;
     }
+
+    wl_proxy_set_queue((void*)ctx->registry, ctx->queue);
     if (wl_registry_add_listener(ctx->registry,
                              &registry_client_listener, ctx)) {
         fprintf(stderr, "Failed to add registry listener\n");
         return;
     }
-    wl_display_dispatch(ctx->display);
-    wl_display_roundtrip(ctx->display);
+    wl_display_roundtrip_queue(ctx->display, ctx->queue);
 
     if ((ctx->display == NULL) || (ctx->ivi_application == NULL)) {
         fprintf(stderr, "Failed to connect display at ilm_client\n");
@@ -422,7 +432,7 @@ get_client_instance(void)
         exit(0);
     }
 
-    wl_display_roundtrip(ctx->display);
+    wl_display_roundtrip_queue(ctx->display, ctx->queue);
 
     return ctx;
 }
