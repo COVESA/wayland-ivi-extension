@@ -327,6 +327,19 @@ ilmErrorTypes ilm_surfaceInitialize(t_ilm_surface *pSurfaceId);
 ilmErrorTypes ilm_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility);
 
 /**
+ * \brief Get the visibility of a surface. If a surface is not visible, the surface
+ * will not be rendered.
+ * \ingroup ilmClient
+ * \param[in] surfaceId Id of the surface to get the visibility of.
+ * \param[out] pVisibility pointer where the visibility of a surface should be stored
+ *                         ILM_SUCCESS if the surface is visible,
+ *                         ILM_FALSE if the visibility is disabled.
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_surfaceGetVisibility(t_ilm_surface surfaceId, t_ilm_bool *pVisibility);
+
+/**
  * \brief Set the opacity of a surface.
  * \ingroup ilmControl
  * \param surfaceId Id of the surface to set the opacity of.

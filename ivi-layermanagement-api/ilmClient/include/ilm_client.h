@@ -71,19 +71,6 @@ ilmErrorTypes ilm_surfaceCreate(t_ilm_nativehandle nativehandle,
 ilmErrorTypes ilm_surfaceGetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension);
 
 /**
- * \brief Get the visibility of a surface. If a surface is not visible, the surface
- * will not be rendered.
- * \ingroup ilmClient
- * \param[in] surfaceId Id of the surface to get the visibility of.
- * \param[out] pVisibility pointer where the visibility of a surface should be stored
- *                         ILM_SUCCESS if the surface is visible,
- *                         ILM_FALSE if the visibility is disabled.
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceGetVisibility(t_ilm_surface surfaceId, t_ilm_bool *pVisibility);
-
-/**
  * \brief Remove a surface
  * \ingroup ilmClient
  * \param[in] surfaceId The id of the surface to be removed
