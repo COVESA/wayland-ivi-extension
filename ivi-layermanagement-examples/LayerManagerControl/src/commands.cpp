@@ -458,10 +458,13 @@ COMMAND("set layer|surface <id> width <width>")
     }
     else if (input->contains("surface"))
     {
-        unsigned int dimension[2];
+        t_ilm_uint w;
         unsigned int surfaceid = input->getUint("id");
 
-        ilmErrorTypes callResult = ilm_surfaceGetDimension(surfaceid, dimension);
+        //surface properties
+        ilmSurfaceProperties sp;
+
+        ilmErrorTypes callResult = ilm_getPropertiesOfSurface(surfaceid, &sp);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
@@ -469,9 +472,9 @@ COMMAND("set layer|surface <id> width <width>")
             return;
         }
 
-        dimension[0] = input->getUint("width");
+        w = input->getUint("width");
 
-        callResult = ilm_surfaceSetDimension(surfaceid, dimension);
+        callResult = ilm_surfaceSetDestinationRectangle(surfaceid, sp.destX, sp.destY, w, sp.destHeight);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
@@ -514,10 +517,13 @@ COMMAND("set layer|surface <id> height <height>")
     }
     else if (input->contains("surface"))
     {
-        unsigned int dimension[2];
+        t_ilm_uint h;
         unsigned int surfaceid = input->getUint("id");
 
-        ilmErrorTypes callResult = ilm_surfaceGetDimension(surfaceid, dimension);
+        //surface properties
+        ilmSurfaceProperties sp;
+
+        ilmErrorTypes callResult = ilm_getPropertiesOfSurface(surfaceid, &sp);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
@@ -525,9 +531,8 @@ COMMAND("set layer|surface <id> height <height>")
             return;
         }
 
-        dimension[1] = input->getUint("height");
-
-        callResult = ilm_surfaceSetDimension(surfaceid, dimension);
+        h = input->getUint("height");
+        callResult = ilm_surfaceSetDestinationRectangle(surfaceid, sp.destX, sp.destY, sp.destWidth, h);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
