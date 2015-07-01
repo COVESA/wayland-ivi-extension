@@ -27,6 +27,16 @@ extern "C" {
 #include "ilm_common.h"
 
 /**
+ * \brief Get the surface properties from the Layermanagement
+ * \ingroup ilmClient
+ * \param[in] surfaceID surface Indentifier as a Number from 0 .. MaxNumber of Surfaces
+ * \param[out] pSurfaceProperties pointer where the surface properties should be stored
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not get the resolution.
+ */
+ilmErrorTypes ilm_getPropertiesOfSurface(t_ilm_uint surfaceID, struct ilmSurfaceProperties* pSurfaceProperties);
+
+/**
  * \brief  Get the layer properties from the Layermanagement
  * \ingroup ilmControl
  * \param[in] layerID layer Indentifier as a Number from 0 .. MaxNumber of Layer
