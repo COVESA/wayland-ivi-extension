@@ -34,11 +34,6 @@ static ilmErrorTypes wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
                          ilmPixelFormat pixelFormat,
                          t_ilm_surface* pSurfaceId);
 static ilmErrorTypes wayland_surfaceRemove(const t_ilm_surface surfaceId);
-static ilmErrorTypes wayland_surfaceSetNativeContent(
-                         t_ilm_nativehandle nativehandle,
-                         t_ilm_int width, t_ilm_int height,
-                         ilmPixelFormat pixelFormat,
-                         t_ilm_surface surfaceId);
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
 static void wayland_destroy(void);
 static ilmErrorTypes wayland_surfaceInitialize(t_ilm_surface *pSurfaceId);
@@ -51,8 +46,6 @@ void init_ilmClientPlatformTable(void)
         wayland_surfaceCreate;
     gIlmClientPlatformFunc.surfaceRemove =
         wayland_surfaceRemove;
-    gIlmClientPlatformFunc.surfaceSetNativeContent =
-        wayland_surfaceSetNativeContent;
     gIlmClientPlatformFunc.init =
         wayland_init;
     gIlmClientPlatformFunc.destroy =
@@ -539,24 +532,6 @@ wayland_surfaceRemove(t_ilm_surface surfaceId)
     }
 
     return ILM_SUCCESS;
-}
-
-static ilmErrorTypes
-wayland_surfaceSetNativeContent(t_ilm_nativehandle nativehandle,
-                                t_ilm_int width,
-                                t_ilm_int height,
-                                ilmPixelFormat pixelFormat,
-                                t_ilm_surface surfaceId)
-{
-    (void)nativehandle;
-    (void)width;
-    (void)height;
-    (void)pixelFormat;
-    (void)surfaceId;
-
-    /* There is no API to set native content
-        as such ivi_surface_set_native. */
-    return ILM_FAILED;
 }
 
 static ilmErrorTypes

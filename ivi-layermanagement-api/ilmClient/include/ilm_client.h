@@ -79,23 +79,6 @@ ilmErrorTypes ilm_surfaceGetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDime
  */
 ilmErrorTypes ilm_surfaceRemove(const t_ilm_surface surfaceId);
 
-/**
- * \brief Set the native content of an application to be used as surface content
- * \ingroup ilmClient
- * \param[in] nativehandle The native windowsystem's handle for the surface
- * \param[in] width The original width of the surface
- * \param[in] height The original height of the surface
- * \param[in] pixelFormat The pixelformat to be used for the surface
- * \param[in] surfaceId The ID of the surface
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceSetNativeContent(t_ilm_nativehandle nativehandle,
-                                            t_ilm_int width,
-                                            t_ilm_int height,
-                                            ilmPixelFormat pixelFormat,
-                                            t_ilm_surface surfaceId);
-
 #ifdef __cplusplus
 } /**/
 #endif /* __cplusplus */
