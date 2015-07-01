@@ -147,6 +147,16 @@ ilmErrorTypes ilm_layerRemove(t_ilm_layer layerId);
 ilmErrorTypes ilm_layerAddSurface(t_ilm_layer layerId, t_ilm_surface surfaceId);
 
 /**
+ * \brief Removes a surface from a layer which is currently managed by the service
+ * \ingroup ilmClient
+ * \param[in] layerId Id of the layer which contains the surface.
+ * \param[in] surfaceId Id of the surface which should be removed from the layer.
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_layerRemoveSurface(t_ilm_layer layerId, t_ilm_surface surfaceId);
+
+/**
  * \brief Set the visibility of a layer. If a layer is not visible, the layer and its
  * surfaces will not be rendered.
  * \ingroup ilmControl
