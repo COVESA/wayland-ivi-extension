@@ -148,6 +148,8 @@ struct wayland_context {
     struct wl_list list_layer;
     struct wl_list list_screen;
     struct wl_list list_seat;
+    notificationFunc notification;
+    void *notification_user_data;
 
     struct ivi_input *input_controller;
 };
