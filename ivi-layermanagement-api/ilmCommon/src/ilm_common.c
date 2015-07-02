@@ -32,9 +32,7 @@
 #define ILM_EXPORT
 #endif
 
-ILM_EXPORT ilmErrorTypes ilmClient_init(t_ilm_nativedisplay);
 ILM_EXPORT ilmErrorTypes ilmControl_init(t_ilm_nativedisplay);
-ILM_EXPORT void ilmClient_destroy(void);
 ILM_EXPORT void ilmControl_destroy(void);
 
 ILM_EXPORT ilmErrorTypes
@@ -59,17 +57,9 @@ ilm_initWithNativedisplay(t_ilm_nativedisplay nativedisplay)
 
     display = gIlmCommonPlatformFunc.getNativedisplay();
 
-    err = ilmClient_init(display);
-    if (ILM_SUCCESS != err)
-    {
-        gIlmCommonPlatformFunc.destroy();
-        return err;
-    }
-
     err = ilmControl_init(display);
     if (ILM_SUCCESS != err)
     {
-        ilmClient_destroy();
         gIlmCommonPlatformFunc.destroy();
         return err;
     }
@@ -87,7 +77,6 @@ ILM_EXPORT ilmErrorTypes
 ilm_destroy(void)
 {
     ilmControl_destroy(); // block until control thread is stopped
-    ilmClient_destroy();
     ilmErrorTypes retVal = gIlmCommonPlatformFunc.destroy();
     return retVal;
 }
