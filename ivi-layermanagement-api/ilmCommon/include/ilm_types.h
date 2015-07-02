@@ -306,6 +306,14 @@ typedef void(*surfaceNotificationFunc)(t_ilm_surface surface,
                                         t_ilm_notification_mask mask);
 
 /**
+ * Typedef for notification callback on object creation/deletion
+ */
+typedef void(*notificationFunc)(ilmObjectType object,
+                                        t_ilm_uint id,
+                                        t_ilm_bool created,
+                                        void* user_data);
+
+/**
  * enum for identifying different health states
  */
 enum HealthCondition
