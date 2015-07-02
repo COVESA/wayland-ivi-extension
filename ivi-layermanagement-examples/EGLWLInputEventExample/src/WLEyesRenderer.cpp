@@ -24,6 +24,7 @@
 #include "WLEGLSurface.h"
 #include "WLEyes.h"
 #include "WLEyesRenderer.h"
+#include <poll.h>
 
 #define WL_UNUSED(A) (A)=(A)
 
@@ -55,9 +56,39 @@ const struct wl_touch_listener TouchListener = {
     TouchHandleCancel,
 };
 
-void WaitForEvent(struct wl_display* wlDisplay)
+void WaitForEvent(struct wl_display* wlDisplay, int fd)
 {
-    wl_display_dispatch_pending(wlDisplay);
+    int err;
+
+    /* Execute every pending event in the display and stop any other thread from placing
+    * events into this display */
+    while (wl_display_prepare_read(wlDisplay) != 0) {
+        wl_display_dispatch_pending(wlDisplay);
+    }
+
+    if (wl_display_flush(wlDisplay) == -1)
+    {
+        err = wl_display_get_error(wlDisplay);
+        printf("Error communicating with wayland: %d",err);
+        return;
+    }
+
+    /*Wait till an event occurs */
+    struct pollfd pfd[1];
+    pfd[0].fd = fd;
+    pfd[0].events = POLLIN;
+    int pollret = poll(pfd, 1, -1);
+
+    if (pollret != -1 && (pfd[0].revents & POLLIN))
+    {
+        /* Read the upcoming events from the file descriptor and execute them */
+        wl_display_read_events(wlDisplay);
+        wl_display_dispatch_pending(wlDisplay);
+    }
+    else {
+        /*Unblock other threads, if an error happens */
+        wl_display_cancel_read(wlDisplay);
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////

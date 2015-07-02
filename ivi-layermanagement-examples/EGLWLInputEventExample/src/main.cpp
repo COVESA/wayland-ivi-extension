@@ -79,6 +79,8 @@ int main(int argc, char **argv)
     wlContext = new WLContext();
     wlContext->InitWLContext(&PointerListener, &KeyboardListener, &TouchListener);
 
+    int const fd = wl_display_get_fd(wlContext->GetWLDisplay());
+
     ilmClient_init((t_ilm_nativedisplay)wlContext->GetWLDisplay());
 
     eglSurface = new WLEGLSurface(wlContext);
@@ -100,12 +102,11 @@ int main(int argc, char **argv)
     gRunLoop = 1;
     gNeedRedraw = 0;
     while (gRunLoop){
-        WaitForEvent(wlContext->GetWLDisplay());
+        WaitForEvent(wlContext->GetWLDisplay(), fd);
         if (gNeedRedraw && gRunLoop){
             DrawEyes(eglSurface, eyes);
             gNeedRedraw = 0;
         }
-        usleep(50);
     }
 
     TerminateRenderer();
