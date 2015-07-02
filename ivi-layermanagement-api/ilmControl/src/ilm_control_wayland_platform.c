@@ -2332,6 +2332,24 @@ create_surface_context(struct wayland_context *ctx, uint32_t id_surface)
 }
 
 ILM_EXPORT ilmErrorTypes
+ilm_registerNotification(notificationFunc callback, void *user_data)
+{
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+
+    ctx->wl.notification = callback;
+    ctx->wl.notification_user_data = user_data;
+
+    release_instance();
+    return ILM_SUCCESS;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_unregisterNotification(void)
+{
+   return ilm_registerNotification(NULL, NULL);
+}
+
+ILM_EXPORT ilmErrorTypes
 ilm_surfaceAddNotification(t_ilm_surface surface,
                              surfaceNotificationFunc callback)
 {
