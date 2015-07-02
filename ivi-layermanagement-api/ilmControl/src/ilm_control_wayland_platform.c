@@ -434,6 +434,13 @@ controller_layer_listener_destroyed(void *data,
     struct layer_context *ctx_layer = data;
     wl_list_remove(&ctx_layer->order.link);
     wl_list_remove(&ctx_layer->link);
+
+    if (ctx_layer->ctx->notification != NULL) {
+        ilmObjectType layer = ILM_LAYER;
+        ctx_layer->ctx->notification(layer, ctx_layer->id_layer, ILM_FALSE,
+                                     ctx_layer->ctx->notification_user_data);
+    }
+
     free(ctx_layer);
 }
 
@@ -1721,6 +1728,12 @@ static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width
 
      ivi_controller_layer_add_listener(ctx_layer->controller,
                                    &controller_layer_listener, ctx_layer);
+
+     if (ctx->notification != NULL) {
+        ilmObjectType layer = ILM_LAYER;
+        ctx->notification(layer, ctx_layer->id_layer, ILM_TRUE,
+                          ctx->notification_user_data);
+     }
 
      return 0;
 }
