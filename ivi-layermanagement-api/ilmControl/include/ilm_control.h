@@ -357,17 +357,6 @@ ilmErrorTypes ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId, t_ilm_int x
 ilmErrorTypes ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
 /**
- * \brief Sets the horizontal and vertical position of the surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of surface.
- * \param[in] pPosition pointer to an array where the position is stored.
- *                      position[0]=x, position[1]=y
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceSetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition);
-
-/**
  * \brief Sets the orientation of a surface.
  * \ingroup ilmControl
  * \param[in] surfaceId Id of surface.

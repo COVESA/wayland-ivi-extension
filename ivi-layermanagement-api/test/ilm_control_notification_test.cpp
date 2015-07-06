@@ -564,26 +564,6 @@ TEST_F(NotificationTest, DefaultIsNotToReceiveNotificationsLayer)
     assertNoCallbackIsCalled();
 }
 
-// ######## SURFACES
-TEST_F(NotificationTest, NotifyOnSurfaceSetPosition)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
-    // change something
-    t_ilm_uint pos[] = { 7, 2 };
-    ilm_surfaceSetPosition(surface,pos);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled();
-
-    EXPECT_EQ(surface,callbackSurfaceId);
-    EXPECT_EQ(7u,SurfaceProperties.destX);
-    EXPECT_EQ(2u,SurfaceProperties.destY);
-    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
-}
-
 TEST_F(NotificationTest, NotifyOnSurfaceSetDestinationRectangle)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
