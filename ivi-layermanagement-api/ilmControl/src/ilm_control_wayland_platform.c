@@ -2178,29 +2178,6 @@ ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceSetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pDimension != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
-            uint32_t width = *pDimension;
-            uint32_t height = *(pDimension + 1);
-            ivi_controller_surface_set_destination_rectangle(
-                ctx_surf->controller,
-                ctx_surf->prop.destX, ctx_surf->prop.destY, width, height);
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
 {
     ilmErrorTypes returnValue = ILM_FAILED;

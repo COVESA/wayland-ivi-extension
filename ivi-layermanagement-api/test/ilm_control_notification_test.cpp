@@ -603,25 +603,6 @@ TEST_F(NotificationTest, NotifyOnSurfaceSetPosition)
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
 }
 
-TEST_F(NotificationTest, NotifyOnSurfaceSetDimension)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
-    // change something
-    t_ilm_uint pos[] = { 70, 22 };
-    ilm_surfaceSetDimension(surface,pos);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled();
-
-    EXPECT_EQ(surface,callbackSurfaceId);
-    EXPECT_EQ(70u,SurfaceProperties.destWidth);
-    EXPECT_EQ(22u,SurfaceProperties.destHeight);
-    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
-}
-
 TEST_F(NotificationTest, NotifyOnSurfaceSetDestinationRectangle)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
