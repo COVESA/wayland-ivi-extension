@@ -553,13 +553,22 @@ COMMAND("set layer|surface <id> position <x> <y>")
 //=============================================================================
 {
     unsigned int id = input->getUint("id");
-    unsigned int dimension[2];
-    dimension[0] = input->getUint("x");
-    dimension[1] = input->getUint("y");
+    unsigned int destX = input->getUint("x");
+    unsigned int destY = input->getUint("y");
 
     if (input->contains("layer"))
     {
-        ilmErrorTypes callResult = ilm_layerSetPosition(id, dimension);
+        ilmLayerProperties lp;
+
+        ilmErrorTypes callResult = ilm_getPropertiesOfLayer(id, &lp);
+        if (ILM_SUCCESS != callResult)
+        {
+            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
+            cout << "Failed to set position of layer with ID " << id << "\n";
+            return;
+        }
+
+        callResult = ilm_layerSetDestinationRectangle(id, destX, destY, lp.destWidth, lp.destHeight);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
@@ -571,13 +580,24 @@ COMMAND("set layer|surface <id> position <x> <y>")
     }
     else if (input->contains("surface"))
     {
-        ilmErrorTypes callResult = ilm_surfaceSetPosition(id, dimension);
+        ilmSurfaceProperties sp;
+
+        ilmErrorTypes callResult = ilm_getPropertiesOfSurface(id, &sp);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
             cout << "Failed to set position of surface with ID " << id << "\n";
             return;
         }
+
+        callResult = ilm_surfaceSetDestinationRectangle(id, destX, destY, sp.destWidth, sp.destHeight);
+        if (ILM_SUCCESS != callResult)
+        {
+            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
+            cout << "Failed to set position of surface with ID " << id << "\n";
+            return;
+        }
+
 
         ilm_commitChanges();
     }
