@@ -241,17 +241,6 @@ ilmErrorTypes ilm_layerSetSourceRectangle(t_ilm_layer layerId, t_ilm_uint x, t_i
 ilmErrorTypes ilm_layerSetDestinationRectangle(t_ilm_layer layerId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
 /**
- * \brief Sets the horizontal and vertical position of the layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[in] pPosition pointer to an array where the position is stored.
- *                      dimension[0]=x, dimension[1]=y
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerSetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition);
-
-/**
  * \brief Sets the orientation of a layer.
  * \ingroup ilmControl
  * \param[in] layerId Id of layer.
