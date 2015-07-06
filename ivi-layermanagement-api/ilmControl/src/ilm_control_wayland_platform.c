@@ -521,6 +521,12 @@ controller_surface_listener_configuration(void *data,
 
     ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
     ctx_surf->prop.origSourceHeight = (t_ilm_uint)height;
+
+    if (ctx_surf->notification != NULL) {
+        ctx_surf->notification(ctx_surf->id_surface,
+                                &ctx_surf->prop,
+                                ILM_NOTIFICATION_CONFIGURED);
+    }
 }
 
 static void
