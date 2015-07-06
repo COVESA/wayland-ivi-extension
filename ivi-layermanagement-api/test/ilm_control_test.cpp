@@ -73,28 +73,6 @@ public:
     }
 };
 
-TEST_F(IlmCommandTest, SetGetSurfacePosition) {
-    uint surface = 37;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 10, 10, ILM_PIXELFORMAT_RGBA_8888, &surface));
-
-    t_ilm_uint pos[2] = {15, 25};
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetPosition(surface, pos));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-    t_ilm_uint posreturned[2];
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPosition(surface, posreturned));
-    EXPECT_EQ(pos[0], posreturned[0]);
-    EXPECT_EQ(pos[1], posreturned[1]);
-}
-
-TEST_F(IlmCommandTest, SetGetSurfacePosition_InvalidInput) {
-    uint surface = 0xdeadbeef;
-    t_ilm_uint pos[2] = {15, 25};
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetPosition(surface, pos));
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetPosition(surface, pos));
-}
-
 TEST_F(IlmCommandTest, SetGetLayerPosition) {
     uint layer = 4316;
 
