@@ -1933,28 +1933,6 @@ ilm_layerSetDestinationRectangle(t_ilm_layer layerId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerGetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    if (pDimension != NULL) {
-        ctx_layer = (struct layer_context*)
-                    wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer != NULL) {
-            *pDimension = ctx_layer->prop.destWidth;
-            *(pDimension + 1) = ctx_layer->prop.destHeight;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_layerSetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
