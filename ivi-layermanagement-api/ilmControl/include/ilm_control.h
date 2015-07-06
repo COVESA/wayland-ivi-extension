@@ -27,6 +27,16 @@ extern "C" {
 #include "ilm_common.h"
 
 /**
+ * \brief Get the surface properties from the Layermanagement
+ * \ingroup ilmClient
+ * \param[in] surfaceID surface Indentifier as a Number from 0 .. MaxNumber of Surfaces
+ * \param[out] pSurfaceProperties pointer where the surface properties should be stored
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not get the resolution.
+ */
+ilmErrorTypes ilm_getPropertiesOfSurface(t_ilm_uint surfaceID, struct ilmSurfaceProperties* pSurfaceProperties);
+
+/**
  * \brief  Get the layer properties from the Layermanagement
  * \ingroup ilmControl
  * \param[in] layerID layer Indentifier as a Number from 0 .. MaxNumber of Layer
@@ -55,6 +65,17 @@ ilmErrorTypes ilm_getPropertiesOfScreen(t_ilm_display screenID, struct ilmScreen
  * \return ILM_FAILED if the client can not get the resolution.
  */
 ilmErrorTypes ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs);
+
+/**
+ * \brief Get the screen resolution of a specific screen from the Layermanagement
+ * \ingroup ilmClient
+ * \param[in] screenID Screen Indentifier as a Number from 0 .. MaxNumber of Screens
+ * \param[out] pWidth pointer where width of screen should be stored
+ * \param[out] pHeight pointer where height of screen should be stored
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not get the resolution.
+ */
+ilmErrorTypes ilm_getScreenResolution(t_ilm_uint screenID, t_ilm_uint* pWidth, t_ilm_uint* pHeight);
 
 /**
  * \brief Get all LayerIds which are currently registered and managed by the services
@@ -125,6 +146,26 @@ ilmErrorTypes ilm_layerCreateWithDimension(t_ilm_layer* pLayerId, t_ilm_uint wid
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_layerRemove(t_ilm_layer layerId);
+
+/**
+ * \brief Add a surface to a layer which is currently managed by the service
+ * \ingroup ilmClient
+ * \param[in] layerId Id of layer which should host the surface.
+ * \param[in] surfaceId Id of surface which should be added to the layer.
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_layerAddSurface(t_ilm_layer layerId, t_ilm_surface surfaceId);
+
+/**
+ * \brief Removes a surface from a layer which is currently managed by the service
+ * \ingroup ilmClient
+ * \param[in] layerId Id of the layer which contains the surface.
+ * \param[in] surfaceId Id of the surface which should be removed from the layer.
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_layerRemoveSurface(t_ilm_layer layerId, t_ilm_surface surfaceId);
 
 /**
  * \brief Set the visibility of a layer. If a layer is not visible, the layer and its
@@ -277,16 +318,6 @@ ilmErrorTypes ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrie
 ilmErrorTypes ilm_layerSetRenderOrder(t_ilm_layer layerId, t_ilm_layer *pSurfaceId, t_ilm_int number);
 
 /**
- * \brief Create the logical surface, which has no native buffer associated
- * \ingroup ilmControl
- * \param[in] pSurfaceId The value pSurfaceId points to is used as ID for new surface;
- * \param[out] pSurfaceId The ID of the newly created surface is returned in this parameter
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceInitialize(t_ilm_surface *pSurfaceId);
-
-/**
  * \brief Set the visibility of a surface. If a surface is not visible it will not be rendered.
  * \ingroup ilmControl
  * \param[in] surfaceId Id of the surface to set the visibility of
@@ -295,6 +326,19 @@ ilmErrorTypes ilm_surfaceInitialize(t_ilm_surface *pSurfaceId);
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility);
+
+/**
+ * \brief Get the visibility of a surface. If a surface is not visible, the surface
+ * will not be rendered.
+ * \ingroup ilmClient
+ * \param[in] surfaceId Id of the surface to get the visibility of.
+ * \param[out] pVisibility pointer where the visibility of a surface should be stored
+ *                         ILM_SUCCESS if the surface is visible,
+ *                         ILM_FALSE if the visibility is disabled.
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_surfaceGetVisibility(t_ilm_surface surfaceId, t_ilm_bool *pVisibility);
 
 /**
  * \brief Set the opacity of a surface.
@@ -318,6 +362,19 @@ ilmErrorTypes ilm_surfaceSetOpacity(const t_ilm_surface surfaceId, t_ilm_float o
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_surfaceGetOpacity(const t_ilm_surface surfaceId, t_ilm_float *pOpacity);
+
+/**
+ * \brief Set the area of a surface which should be used for the rendering.
+ * \ingroup ilmClient
+ * \param[in] surfaceId Id of surface.
+ * \param[in] x horizontal start position of the used area
+ * \param[in] y vertical start position of the used area
+ * \param[in] width width of the area
+ * \param[in] height height of the area
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
 /**
  * \brief Set the destination area of a surface within a layer for rendering. The surface will be scaled to this rectangle for rendering.

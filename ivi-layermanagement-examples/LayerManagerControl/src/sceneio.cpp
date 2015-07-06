@@ -496,19 +496,6 @@ void restoreSceneHelper(IlmSurface* pIlmsurface)
     pIlmsurface->get("id", &surfaceId);
     ilmSurfaceProperties props = getSurfaceProperties(pIlmsurface);
 
-    ilmPixelFormat pixelFormat;
-    pixelFormat = toPixelFormat(props.pixelformat);
-
-    ilmErrorTypes callResult = ilm_surfaceSetNativeContent(props.nativeSurface, props.origSourceWidth,
-                                                            props.origSourceHeight, pixelFormat, surfaceId);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to set native content for surface with ID " << surfaceId << ")\n";
-    }
-
-    ilm_commitChanges();
-
     ilm_surfaceSetOpacity(surfaceId, props.opacity);
     ilm_commitChanges();
     ilm_surfaceSetOrientation(surfaceId, props.orientation);

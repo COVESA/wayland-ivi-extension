@@ -1528,6 +1528,29 @@ ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
 }
 
 ILM_EXPORT ilmErrorTypes
+ilm_getScreenResolution(t_ilm_uint screenID, t_ilm_uint* pWidth, t_ilm_uint* pHeight)
+{
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+
+    if ((pWidth != NULL) && (pHeight != NULL))
+    {
+        struct screen_context *ctx_scrn;
+        wl_list_for_each(ctx_scrn, &ctx->wl.list_screen, link) {
+            if (screenID == ctx_scrn->id_screen) {
+                *pWidth = ctx_scrn->prop.screenWidth;
+                *pHeight = ctx_scrn->prop.screenHeight;
+                returnValue = ILM_SUCCESS;
+                break;
+            }
+        }
+    }
+
+    release_instance();
+    return returnValue;
+}
+
+ILM_EXPORT ilmErrorTypes
 ilm_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2572,28 +2595,6 @@ ilm_layerRemoveSurface(t_ilm_layer layerId,
         ivi_controller_layer_remove_surface(ctx_layer->controller,
                                             ctx_surf->controller);
         returnValue = ILM_SUCCESS;
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceGetDimension(t_ilm_surface surfaceId,
-                            t_ilm_uint *pDimension)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pDimension != NULL) {
-        struct surface_context *ctx_surf = NULL;
-
-        ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceId);
-        if (ctx_surf != NULL) {
-            *pDimension = (t_ilm_uint)ctx_surf->prop.destWidth;
-            *(pDimension + 1) = (t_ilm_uint)ctx_surf->prop.destHeight;
-            returnValue = ILM_SUCCESS;
-        }
     }
 
     release_instance();

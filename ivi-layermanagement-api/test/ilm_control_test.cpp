@@ -73,29 +73,6 @@ public:
     }
 };
 
-TEST_F(IlmCommandTest, SetGetSurfaceDimension) {
-    uint surface = 36;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 10, 10, ILM_PIXELFORMAT_RGBA_8888, &surface));
-
-    t_ilm_uint dim[2] = {15, 25};
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetDimension(surface, dim));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-    t_ilm_uint dimreturned[2];
-    EXPECT_EQ(ILM_SUCCESS, ilm_surfaceGetDimension(surface, dimreturned));
-    EXPECT_EQ(dim[0], dimreturned[0]);
-    EXPECT_EQ(dim[1], dimreturned[1]);
-}
-
-TEST_F(IlmCommandTest, SetGetSurfaceDimension_InvalidInput) {
-    uint surface = 0xdeadbeef;
-    t_ilm_uint dim[2] = {15, 25};
-
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetDimension(surface, dim));
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetDimension(surface, dim));
-}
-
 TEST_F(IlmCommandTest, SetGetLayerDimension) {
     uint layer = 4316;
 
@@ -563,25 +540,6 @@ TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
 
     // try to remove the same layer once more
     ASSERT_NE(ILM_SUCCESS, ilm_layerRemove(layer));
-}
-
-TEST_F(IlmCommandTest, ilm_surface_initialize) {
-    uint surface_10 = 10;
-    uint surface_20 = 20;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceInitialize(&surface_10));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceInitialize(&surface_20));
-
-    t_ilm_int length;
-    t_ilm_uint* IDs;
-    ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
-
-    EXPECT_EQ(length, 2);
-    if (length == 2)
-    {
-        EXPECT_EQ(surface_10, IDs[0]);
-        EXPECT_EQ(surface_20, IDs[1]);
-    }
-    free(IDs);
 }
 
 TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurfaceIDsOnLayer) {
