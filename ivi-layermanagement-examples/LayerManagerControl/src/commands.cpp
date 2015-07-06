@@ -433,10 +433,12 @@ COMMAND("set layer|surface <id> width <width>")
 {
     if (input->contains("layer"))
     {
-        unsigned int dimension[2];
+        t_ilm_uint w;
         unsigned int layerid = input->getUint("id");
 
-        ilmErrorTypes callResult = ilm_layerGetDimension(layerid, dimension);
+        ilmLayerProperties lp;
+
+        ilmErrorTypes callResult = ilm_getPropertiesOfLayer(layerid, &lp);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
@@ -444,9 +446,9 @@ COMMAND("set layer|surface <id> width <width>")
             return;
         }
 
-        dimension[0] = input->getUint("width");
+        w = input->getUint("width");
 
-        callResult = ilm_layerSetDimension(layerid, dimension);
+        callResult = ilm_layerSetDestinationRectangle(layerid, lp.destX, lp.destY, w, lp.destHeight);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
@@ -492,10 +494,12 @@ COMMAND("set layer|surface <id> height <height>")
 {
     if (input->contains("layer"))
     {
-        unsigned int dimension[2];
+        t_ilm_uint h;
         unsigned int layerid = input->getUint("id");
 
-        ilmErrorTypes callResult = ilm_layerGetDimension(layerid, dimension);
+        ilmLayerProperties lp;
+
+        ilmErrorTypes callResult = ilm_getPropertiesOfLayer(layerid, &lp);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
@@ -503,9 +507,9 @@ COMMAND("set layer|surface <id> height <height>")
             return;
         }
 
-        dimension[1] = input->getUint("height");
+        h = input->getUint("height");
 
-        callResult = ilm_layerSetDimension(layerid, dimension);
+        callResult = ilm_layerSetDestinationRectangle(layerid, lp.destX, lp.destY, lp.destWidth, h);
         if (ILM_SUCCESS != callResult)
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
