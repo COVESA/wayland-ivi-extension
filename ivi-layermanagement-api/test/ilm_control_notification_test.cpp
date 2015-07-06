@@ -315,25 +315,6 @@ TEST_F(NotificationTest, NotifyOnLayerSetPosition)
     ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
 }
 
-TEST_F(NotificationTest, NotifyOnLayerSetDimension)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
-    // change something
-    t_ilm_uint pos[] = { 70, 22 };
-    ilm_layerSetDimension(layer,pos);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled();
-
-    EXPECT_EQ(layer,callbackLayerId);
-    EXPECT_EQ(70u,LayerProperties.destWidth);
-    EXPECT_EQ(22u,LayerProperties.destHeight);
-    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
-}
-
 TEST_F(NotificationTest, NotifyOnLayerSetDestinationRectangle)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
