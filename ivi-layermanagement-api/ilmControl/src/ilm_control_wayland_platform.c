@@ -519,8 +519,8 @@ controller_surface_listener_configuration(void *data,
 {
     struct surface_context *ctx_surf = data;
 
-    ctx_surf->prop.sourceWidth = (t_ilm_uint)width;
-    ctx_surf->prop.sourceHeight = (t_ilm_uint)height;
+    ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
+    ctx_surf->prop.origSourceHeight = (t_ilm_uint)height;
 }
 
 static void
@@ -537,12 +537,6 @@ controller_surface_listener_source_rectangle(void *data,
     ctx_surf->prop.sourceY = (t_ilm_uint)y;
     ctx_surf->prop.sourceWidth = (t_ilm_uint)width;
     ctx_surf->prop.sourceHeight = (t_ilm_uint)height;
-    if (ctx_surf->prop.origSourceWidth == 0) {
-        ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
-    }
-    if (ctx_surf->prop.origSourceHeight == 0) {
-        ctx_surf->prop.origSourceHeight = (t_ilm_uint)height;
-    }
 
     if (ctx_surf->notification != NULL) {
         ctx_surf->notification(ctx_surf->id_surface,
