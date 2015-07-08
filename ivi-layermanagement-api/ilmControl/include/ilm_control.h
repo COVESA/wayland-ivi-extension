@@ -241,50 +241,6 @@ ilmErrorTypes ilm_layerSetSourceRectangle(t_ilm_layer layerId, t_ilm_uint x, t_i
 ilmErrorTypes ilm_layerSetDestinationRectangle(t_ilm_layer layerId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
 /**
- * \brief Get the horizontal and vertical dimension of the layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[out] pDimension pointer to an array where the dimension should be stored.
- *                       dimension[0]=width, dimension[1]=height
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerGetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension);
-
-/**
- * \brief Set the horizontal and vertical dimension of the layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[in] pDimension pointer to an array where the dimension is stored.
- *                       dimension[0]=width, dimension[1]=height
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerSetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension);
-
-/**
- * \brief Get the horizontal and vertical position of the layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[out] pPosition pointer to an array where the position should be stored.
- *                       dimension[0]=width, dimension[1]=height
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerGetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition);
-
-/**
- * \brief Sets the horizontal and vertical position of the layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[in] pPosition pointer to an array where the position is stored.
- *                      dimension[0]=x, dimension[1]=y
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerSetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition);
-
-/**
  * \brief Sets the orientation of a layer.
  * \ingroup ilmControl
  * \param[in] layerId Id of layer.
@@ -388,39 +344,6 @@ ilmErrorTypes ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId, t_ilm_int x
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
-
-/**
- * \brief Set the horizontal and vertical dimension of the surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of surface.
- * \param[in] pDimension pointer to an array where the dimension is stored.
- *                       dimension[0]=width, dimension[1]=height
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceSetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension);
-
-/**
- * \brief Get the horizontal and vertical position of the surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of surface.
- * \param[out] pPosition pointer to an array where the position should be stored.
- *                       position[0]=x, position[1]=y
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition);
-
-/**
- * \brief Sets the horizontal and vertical position of the surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of surface.
- * \param[in] pPosition pointer to an array where the position is stored.
- *                      position[0]=x, position[1]=y
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceSetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition);
 
 /**
  * \brief Sets the orientation of a surface.

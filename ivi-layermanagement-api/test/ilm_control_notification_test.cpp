@@ -295,45 +295,6 @@ TEST_F(NotificationTest, ilm_surfaceAddNotificationWithoutCallback)
     ilm_commitChanges();
 }
 
-// ######### LAYERS
-TEST_F(NotificationTest, NotifyOnLayerSetPosition)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
-    // change something
-    t_ilm_uint pos[] = { 7, 2 };
-    ilm_layerSetPosition(layer,pos);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled();
-
-    EXPECT_EQ(layer,callbackLayerId);
-    EXPECT_EQ(7u,LayerProperties.destX);
-    EXPECT_EQ(2u,LayerProperties.destY);
-    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
-}
-
-TEST_F(NotificationTest, NotifyOnLayerSetDimension)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
-    // change something
-    t_ilm_uint pos[] = { 70, 22 };
-    ilm_layerSetDimension(layer,pos);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled();
-
-    EXPECT_EQ(layer,callbackLayerId);
-    EXPECT_EQ(70u,LayerProperties.destWidth);
-    EXPECT_EQ(22u,LayerProperties.destHeight);
-    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
-}
-
 TEST_F(NotificationTest, NotifyOnLayerSetDestinationRectangle)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
@@ -581,45 +542,6 @@ TEST_F(NotificationTest, DefaultIsNotToReceiveNotificationsLayer)
 
     // assert that we have not been notified
     assertNoCallbackIsCalled();
-}
-
-// ######## SURFACES
-TEST_F(NotificationTest, NotifyOnSurfaceSetPosition)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
-    // change something
-    t_ilm_uint pos[] = { 7, 2 };
-    ilm_surfaceSetPosition(surface,pos);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled();
-
-    EXPECT_EQ(surface,callbackSurfaceId);
-    EXPECT_EQ(7u,SurfaceProperties.destX);
-    EXPECT_EQ(2u,SurfaceProperties.destY);
-    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
-}
-
-TEST_F(NotificationTest, NotifyOnSurfaceSetDimension)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
-    // change something
-    t_ilm_uint pos[] = { 70, 22 };
-    ilm_surfaceSetDimension(surface,pos);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled();
-
-    EXPECT_EQ(surface,callbackSurfaceId);
-    EXPECT_EQ(70u,SurfaceProperties.destWidth);
-    EXPECT_EQ(22u,SurfaceProperties.destHeight);
-    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
 }
 
 TEST_F(NotificationTest, NotifyOnSurfaceSetDestinationRectangle)

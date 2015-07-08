@@ -519,8 +519,14 @@ controller_surface_listener_configuration(void *data,
 {
     struct surface_context *ctx_surf = data;
 
-    ctx_surf->prop.sourceWidth = (t_ilm_uint)width;
-    ctx_surf->prop.sourceHeight = (t_ilm_uint)height;
+    ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
+    ctx_surf->prop.origSourceHeight = (t_ilm_uint)height;
+
+    if (ctx_surf->notification != NULL) {
+        ctx_surf->notification(ctx_surf->id_surface,
+                                &ctx_surf->prop,
+                                ILM_NOTIFICATION_CONFIGURED);
+    }
 }
 
 static void
@@ -537,12 +543,6 @@ controller_surface_listener_source_rectangle(void *data,
     ctx_surf->prop.sourceY = (t_ilm_uint)y;
     ctx_surf->prop.sourceWidth = (t_ilm_uint)width;
     ctx_surf->prop.sourceHeight = (t_ilm_uint)height;
-    if (ctx_surf->prop.origSourceWidth == 0) {
-        ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
-    }
-    if (ctx_surf->prop.origSourceHeight == 0) {
-        ctx_surf->prop.origSourceHeight = (t_ilm_uint)height;
-    }
 
     if (ctx_surf->notification != NULL) {
         ctx_surf->notification(ctx_surf->id_surface,
@@ -1933,98 +1933,6 @@ ilm_layerSetDestinationRectangle(t_ilm_layer layerId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerGetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    if (pDimension != NULL) {
-        ctx_layer = (struct layer_context*)
-                    wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer != NULL) {
-            *pDimension = ctx_layer->prop.destWidth;
-            *(pDimension + 1) = ctx_layer->prop.destHeight;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_layerSetDimension(t_ilm_layer layerId, t_ilm_uint *pDimension)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    if (pDimension != NULL) {
-        ctx_layer = (struct layer_context*)
-                    wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer != NULL) {
-            ivi_controller_layer_set_destination_rectangle(
-                ctx_layer->controller,
-                ctx_layer->prop.destX, ctx_layer->prop.destY,
-                (int32_t)*pDimension, (int32_t)*(pDimension + 1));
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_layerGetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    if (pPosition != NULL) {
-        ctx_layer = (struct layer_context*)
-                    wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer != NULL) {
-            *pPosition = ctx_layer->prop.destX;
-            *(pPosition + 1) = ctx_layer->prop.destY;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_layerSetPosition(t_ilm_layer layerId, t_ilm_uint *pPosition)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    if (pPosition != NULL) {
-        ctx_layer = (struct layer_context*)
-                    wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer != NULL) {
-            ivi_controller_layer_set_destination_rectangle(
-                ctx_layer->controller,
-                (int32_t)*pPosition, (int32_t)*(pPosition + 1),
-                ctx_layer->prop.destWidth, ctx_layer->prop.destHeight);
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2193,72 +2101,6 @@ ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
                                              ctx_surf->controller,
                                              x, y, width, height);
         returnValue = ILM_SUCCESS;
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceSetDimension(t_ilm_surface surfaceId, t_ilm_uint *pDimension)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pDimension != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
-            uint32_t width = *pDimension;
-            uint32_t height = *(pDimension + 1);
-            ivi_controller_surface_set_destination_rectangle(
-                ctx_surf->controller,
-                ctx_surf->prop.destX, ctx_surf->prop.destY, width, height);
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceGetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pPosition != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
-            *pPosition = ctx_surf->prop.destX;
-            *(pPosition + 1) = ctx_surf->prop.destY;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceSetPosition(t_ilm_surface surfaceId, t_ilm_uint *pPosition)
-{
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pPosition != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
-            int32_t destX = (int32_t)*pPosition;
-            int32_t destY = (int32_t)*(pPosition + 1);
-            ivi_controller_surface_set_destination_rectangle(
-                ctx_surf->controller, destX, destY,
-                ctx_surf->prop.destWidth, ctx_surf->prop.destHeight);
-            returnValue = ILM_SUCCESS;
-        }
     }
 
     release_instance();

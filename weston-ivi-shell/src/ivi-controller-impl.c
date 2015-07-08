@@ -369,6 +369,30 @@ send_surface_add_event(struct ivisurface *ivisurf,
 }
 
 static void
+send_surface_configure_event(struct ivisurface *ivisurf,
+                       struct wl_resource *resource)
+{
+    struct weston_surface *surface;
+    struct ivi_layout_surface* layout_surface;
+    struct ivishell* shell;
+
+    layout_surface = ivisurf->layout_surface;
+    shell = ivisurf->shell;
+
+    surface = ivi_extension_surface_get_weston_surface(shell, layout_surface);
+
+    if (!surface)
+        return;
+
+    if ((surface->width == 0) || (surface->height == 0))
+        return;
+
+    ivi_controller_surface_send_configuration(resource,
+                                              surface->width,
+                                              surface->height);
+}
+
+static void
 send_surface_event(struct wl_resource *resource,
                    struct ivisurface *ivisurf,
                    const struct ivi_layout_surface_properties *prop,
@@ -401,6 +425,9 @@ send_surface_event(struct wl_resource *resource,
     }
     if (mask & IVI_NOTIFICATION_ADD) {
         send_surface_add_event(ivisurf, resource, IVI_NOTIFICATION_ADD);
+    }
+    if (mask & IVI_NOTIFICATION_CONFIGURE) {
+        send_surface_configure_event(ivisurf, resource);
     }
 }
 
@@ -1630,7 +1657,7 @@ surface_event_configure(struct ivi_layout_surface *layout_surface,
             continue;
         }
         send_surface_event(ctrlsurf->resource, ivisurf,
-                           prop, IVI_NOTIFICATION_ALL);
+                           prop, IVI_NOTIFICATION_CONFIGURE);
     }
 }
 
