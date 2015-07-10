@@ -692,6 +692,12 @@ controller_surface_listener_content(void *data,
                                    ILM_NOTIFICATION_CONTENT_REMOVED);
         }
 
+        if (ctx_surf->ctx->notification != NULL) {
+            ilmObjectType surface = ILM_SURFACE;
+            ctx_surf->ctx->notification(surface, ctx_surf->id_surface, ILM_FALSE,
+                                        ctx_surf->ctx->notification_user_data);
+        }
+
         ivi_controller_surface_destroy(controller, 1);
 
         wl_list_remove(&ctx_surf->order.link);
@@ -787,6 +793,12 @@ controller_listener_surface(void *data,
     wl_list_init(&ctx_surf->list_accepted_seats);
     ivi_controller_surface_add_listener(ctx_surf->controller,
                                         &controller_surface_listener, ctx_surf);
+
+    if (ctx->notification != NULL) {
+        ilmObjectType surface = ILM_SURFACE;
+        ctx->notification(surface, ctx_surf->id_surface, ILM_TRUE,
+                          ctx->notification_user_data);
+    }
 }
 
 static void
