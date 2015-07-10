@@ -32,7 +32,7 @@ typedef struct _ILM_CLIENT_PLATFORM_FUNC
                    ilmPixelFormat pixelFormat, t_ilm_surface* pSurfaceId);
     ilmErrorTypes (*surfaceRemove)(const t_ilm_surface surfaceId);
     ilmErrorTypes (*init)(t_ilm_nativedisplay nativedisplay);
-    void (*destroy)();
+    ilmErrorTypes (*destroy)();
 } ILM_CLIENT_PLATFORM_FUNC;
 
 ILM_CLIENT_PLATFORM_FUNC gIlmClientPlatformFunc;
