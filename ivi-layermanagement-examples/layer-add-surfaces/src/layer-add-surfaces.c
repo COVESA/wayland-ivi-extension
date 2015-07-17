@@ -43,12 +43,16 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
 
     if (object == ILM_SURFACE) {
         if (created) {
-            printf("surface: %d created\n",id);
+            printf("surface                : %d created\n",id);
             ilm_getPropertiesOfSurface(id, &sp);
             ilm_surfaceSetDestinationRectangle(id, 0, 0, sp.sourceWidth, sp.sourceHeight);
+            printf("SetDestinationRectangle: surface ID (%d), Width (%u), Height (%u)\n", id, sp.sourceWidth, sp.sourceHeight);
             ilm_surfaceSetSourceRectangle(id, 0, 0, sp.sourceWidth, sp.sourceHeight);
+            printf("SetSourceRectangle     : surface ID (%d), Width (%u), Height (%u)\n", id, sp.sourceWidth, sp.sourceHeight);
             ilm_surfaceSetVisibility(id, ILM_TRUE);
+            printf("SetVisibility          : surface ID (%d), ILM_TRUE\n", id);
             ilm_layerAddSurface(layer,id);
+            printf("layerAddSurface        : surface ID (%d) is added to layer ID (%d)\n", id, layer);
             ilm_commitChanges();
             pthread_cond_signal( &waiterVariable );
         }
@@ -103,7 +107,9 @@ int main (int argc, const char * argv[])
     screenWidth = screenProperties.screenWidth;
     screenHeight = screenProperties.screenHeight;
     ilm_layerCreateWithDimension(&layer, screenWidth, screenHeight);
+    printf("CreateWithDimension: layer ID (%d), Width (%u), Height (%u)\n", layer, screenWidth, screenHeight);
     ilm_layerSetVisibility(layer,ILM_TRUE);
+    printf("SetVisibility      : layer ID (%d), ILM_TRUE\n", layer);
     ilm_displaySetRenderOrder(0,renderOrder,1);
     ilm_registerNotification(callbackFunction, NULL);
     ilm_commitChanges();
