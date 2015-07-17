@@ -36,6 +36,28 @@ t_ilm_uint layer;
 pthread_mutex_t mutex;
 static pthread_cond_t  waiterVariable = PTHREAD_COND_INITIALIZER;
 
+static void configure_ilm_surface(t_ilm_uint id, t_ilm_uint width, t_ilm_uint height)
+{
+    ilm_surfaceSetDestinationRectangle(id, 0, 0, width, height);
+    printf("SetDestinationRectangle: surface ID (%d), Width (%u), Height (%u)\n", id, width, height);
+    ilm_surfaceSetSourceRectangle(id, 0, 0, width, height);
+    printf("SetSourceRectangle     : surface ID (%d), Width (%u), Height (%u)\n", id, width, height);
+    ilm_surfaceSetVisibility(id, ILM_TRUE);
+    printf("SetVisibility          : surface ID (%d), ILM_TRUE\n", id);
+    ilm_layerAddSurface(layer,id);
+    printf("layerAddSurface        : surface ID (%d) is added to layer ID (%d)\n", id, layer);
+    ilm_commitChanges();
+    pthread_cond_signal( &waiterVariable );
+}
+
+static void surfaceCallbackFunction(t_ilm_uint id, struct ilmSurfaceProperties* sp, t_ilm_notification_mask m)
+{
+    if ((unsigned)m & ILM_NOTIFICATION_CONFIGURED)
+    {
+        configure_ilm_surface(id, sp->origSourceWidth, sp->origSourceHeight);
+    }
+}
+
 static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool created, void *user_data)
 {
     (void)user_data;
@@ -45,16 +67,15 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
         if (created) {
             printf("surface                : %d created\n",id);
             ilm_getPropertiesOfSurface(id, &sp);
-            ilm_surfaceSetDestinationRectangle(id, 0, 0, sp.sourceWidth, sp.sourceHeight);
-            printf("SetDestinationRectangle: surface ID (%d), Width (%u), Height (%u)\n", id, sp.sourceWidth, sp.sourceHeight);
-            ilm_surfaceSetSourceRectangle(id, 0, 0, sp.sourceWidth, sp.sourceHeight);
-            printf("SetSourceRectangle     : surface ID (%d), Width (%u), Height (%u)\n", id, sp.sourceWidth, sp.sourceHeight);
-            ilm_surfaceSetVisibility(id, ILM_TRUE);
-            printf("SetVisibility          : surface ID (%d), ILM_TRUE\n", id);
-            ilm_layerAddSurface(layer,id);
-            printf("layerAddSurface        : surface ID (%d) is added to layer ID (%d)\n", id, layer);
-            ilm_commitChanges();
-            pthread_cond_signal( &waiterVariable );
+
+            if ((sp.origSourceWidth != 0) && (sp.origSourceHeight !=0))
+            {   // surface is already configured
+                configure_ilm_surface(id, sp.origSourceWidth, sp.origSourceHeight);
+            } else {
+                // wait for configured event
+                ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
+                ilm_commitChanges();
+            }
         }
         else if(!created)
             printf("surface: %d destroyed\n",id);
