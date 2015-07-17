@@ -27,7 +27,7 @@
 bool InitRenderer();
 bool InitShader();
 bool InitVertexBuffer();
-void WaitForEvent(struct wl_display* wlDisplay);
+void WaitForEvent(struct wl_display* wlDisplay, int fd);
 void TerminateRenderer();
 
 // Pointer event handler

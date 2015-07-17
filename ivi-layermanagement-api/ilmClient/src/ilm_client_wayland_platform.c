@@ -33,7 +33,7 @@ static ilmErrorTypes wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
                          t_ilm_surface* pSurfaceId);
 static ilmErrorTypes wayland_surfaceRemove(const t_ilm_surface surfaceId);
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
-static void wayland_destroy(void);
+static ilmErrorTypes wayland_destroy(void);
 
 void init_ilmClientPlatformTable(void)
 {
@@ -133,7 +133,7 @@ static struct ilm_client_context ilm_context = {0};
 static void
 destroy_client_resouses(void);
 
-static void
+static ilmErrorTypes
 wayland_destroy(void)
 {
     struct ilm_client_context *ctx = &ilm_context;
@@ -141,7 +141,10 @@ wayland_destroy(void)
     {
         destroy_client_resouses();
         ctx->valid = 0;
+
     }
+
+    return ILM_SUCCESS;
 }
 
 static void

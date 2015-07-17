@@ -434,6 +434,13 @@ controller_layer_listener_destroyed(void *data,
     struct layer_context *ctx_layer = data;
     wl_list_remove(&ctx_layer->order.link);
     wl_list_remove(&ctx_layer->link);
+
+    if (ctx_layer->ctx->notification != NULL) {
+        ilmObjectType layer = ILM_LAYER;
+        ctx_layer->ctx->notification(layer, ctx_layer->id_layer, ILM_FALSE,
+                                     ctx_layer->ctx->notification_user_data);
+    }
+
     free(ctx_layer);
 }
 
@@ -685,6 +692,12 @@ controller_surface_listener_content(void *data,
                                    ILM_NOTIFICATION_CONTENT_REMOVED);
         }
 
+        if (ctx_surf->ctx->notification != NULL) {
+            ilmObjectType surface = ILM_SURFACE;
+            ctx_surf->ctx->notification(surface, ctx_surf->id_surface, ILM_FALSE,
+                                        ctx_surf->ctx->notification_user_data);
+        }
+
         ivi_controller_surface_destroy(controller, 1);
 
         wl_list_remove(&ctx_surf->order.link);
@@ -742,14 +755,14 @@ controller_listener_surface(void *data,
     ctx_surf = get_surface_context(ctx, id_surface);
     if (ctx_surf != NULL) {
         if (!ctx_surf->is_surface_creation_noticed) {
+            ctx_surf->controller = ivi_controller_surface_create(
+                                       controller, id_surface);
             if (ctx_surf->notification != NULL) {
                 ctx_surf->notification(ctx_surf->id_surface,
                                        &ctx_surf->prop,
                                        ILM_NOTIFICATION_CONTENT_AVAILABLE);
                 ctx_surf->is_surface_creation_noticed = true;
             }
-            ctx_surf->controller = ivi_controller_surface_create(
-                                       controller, id_surface);
         }
         else {
             fprintf(stderr, "invalid id_surface in controller_listener_surface\n");
@@ -780,6 +793,12 @@ controller_listener_surface(void *data,
     wl_list_init(&ctx_surf->list_accepted_seats);
     ivi_controller_surface_add_listener(ctx_surf->controller,
                                         &controller_surface_listener, ctx_surf);
+
+    if (ctx->notification != NULL) {
+        ilmObjectType surface = ILM_SURFACE;
+        ctx->notification(surface, ctx_surf->id_surface, ILM_TRUE,
+                          ctx->notification_user_data);
+    }
 }
 
 static void
@@ -1722,6 +1741,12 @@ static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width
      ivi_controller_layer_add_listener(ctx_layer->controller,
                                    &controller_layer_listener, ctx_layer);
 
+     if (ctx->notification != NULL) {
+        ilmObjectType layer = ILM_LAYER;
+        ctx->notification(layer, ctx_layer->id_layer, ILM_TRUE,
+                          ctx->notification_user_data);
+     }
+
      return 0;
 }
 
@@ -2038,9 +2063,11 @@ ilm_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility)
     }
     ctx_surf = get_surface_context(&ctx->wl, surfaceId);
     if (ctx_surf) {
-        ivi_controller_surface_set_visibility(ctx_surf->controller,
-                                              visibility);
-        returnValue = ILM_SUCCESS;
+        if (ctx_surf->controller != NULL) {
+            ivi_controller_surface_set_visibility(ctx_surf->controller,
+                                                  visibility);
+            returnValue = ILM_SUCCESS;
+        }
     }
 
     release_instance();
@@ -2058,9 +2085,11 @@ ilm_surfaceSetOpacity(t_ilm_surface surfaceId, t_ilm_float opacity)
     opacity_fixed = wl_fixed_from_double((double)opacity);
     ctx_surf = get_surface_context(&ctx->wl, surfaceId);
     if (ctx_surf) {
-        ivi_controller_surface_set_opacity(ctx_surf->controller,
-                                           opacity_fixed);
-        returnValue = ILM_SUCCESS;
+        if (ctx_surf->controller != NULL) {
+            ivi_controller_surface_set_opacity(ctx_surf->controller,
+                                               opacity_fixed);
+            returnValue = ILM_SUCCESS;
+        }
     }
 
     release_instance();
@@ -2097,10 +2126,12 @@ ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
 
     ctx_surf = get_surface_context(&ctx->wl, surfaceId);
     if (ctx_surf) {
-        ivi_controller_surface_set_destination_rectangle(
-                                             ctx_surf->controller,
-                                             x, y, width, height);
-        returnValue = ILM_SUCCESS;
+        if (ctx_surf->controller != NULL) {
+            ivi_controller_surface_set_destination_rectangle(
+                                                 ctx_surf->controller,
+                                                 x, y, width, height);
+            returnValue = ILM_SUCCESS;
+        }
     }
 
     release_instance();
@@ -2302,6 +2333,47 @@ ilm_layerRemoveNotification(t_ilm_layer layer)
    return ilm_layerAddNotification(layer, NULL);
 }
 
+static struct surface_context *
+create_surface_context(struct wayland_context *ctx, uint32_t id_surface)
+{
+    struct surface_context *ctx_surf = NULL;
+
+    ctx_surf = calloc(1, sizeof *ctx_surf);
+    if (ctx_surf == NULL) {
+        fprintf(stderr, "Failed to allocate memory for surface_context\n");
+        return NULL;
+    }
+
+    ctx_surf->id_surface = id_surface;
+    ctx_surf->ctx = ctx;
+    ctx_surf->is_surface_creation_noticed = false;
+
+    wl_list_init(&ctx_surf->link);
+    wl_list_insert(&ctx->list_surface, &ctx_surf->link);
+    wl_list_init(&ctx_surf->order.link);
+    wl_list_init(&ctx_surf->list_accepted_seats);
+
+    return ctx_surf;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_registerNotification(notificationFunc callback, void *user_data)
+{
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+
+    ctx->wl.notification = callback;
+    ctx->wl.notification_user_data = user_data;
+
+    release_instance();
+    return ILM_SUCCESS;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_unregisterNotification(void)
+{
+   return ilm_registerNotification(NULL, NULL);
+}
+
 ILM_EXPORT ilmErrorTypes
 ilm_surfaceAddNotification(t_ilm_surface surface,
                              surfaceNotificationFunc callback)
@@ -2315,10 +2387,15 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
     if (ctx_surf == NULL) {
         if (callback != NULL) {
             callback((uint32_t)surface, NULL, ILM_NOTIFICATION_CONTENT_REMOVED);
-            controller_listener_surface(ctx, ctx->wl.controller, (uint32_t)surface);
-            ctx_surf = (struct surface_context*)get_surface_context(
-                        &ctx->wl, (uint32_t)surface);
-            ctx_surf->is_surface_creation_noticed = false;
+            ctx_surf = create_surface_context(&ctx->wl, (uint32_t)surface);
+        }
+    }
+    else {
+        if (callback != NULL) {
+            callback(ctx_surf->id_surface,
+                     &ctx_surf->prop,
+                     (ctx_surf->controller) ? ILM_NOTIFICATION_CONTENT_AVAILABLE
+                                            : ILM_NOTIFICATION_CONTENT_REMOVED);
         }
     }
 
@@ -2327,7 +2404,6 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
     }
     else {
         ctx_surf->notification = callback;
-
         returnValue = ILM_SUCCESS;
     }
 

@@ -79,7 +79,9 @@ int main(int argc, char **argv)
     wlContext = new WLContext();
     wlContext->InitWLContext(&PointerListener, &KeyboardListener, &TouchListener);
 
-    ilm_initWithNativedisplay((t_ilm_nativedisplay)wlContext->GetWLDisplay());
+    int const fd = wl_display_get_fd(wlContext->GetWLDisplay());
+
+    ilmClient_init((t_ilm_nativedisplay)wlContext->GetWLDisplay());
 
     eglSurface = new WLEGLSurface(wlContext);
     eglSurface->CreateSurface(400, 240);
@@ -100,22 +102,19 @@ int main(int argc, char **argv)
     gRunLoop = 1;
     gNeedRedraw = 0;
     while (gRunLoop){
-        WaitForEvent(wlContext->GetWLDisplay());
+        WaitForEvent(wlContext->GetWLDisplay(), fd);
         if (gNeedRedraw && gRunLoop){
             DrawEyes(eglSurface, eyes);
             gNeedRedraw = 0;
         }
-        usleep(50);
     }
 
     TerminateRenderer();
     ilm_surfaceRemove(surfaceId);
-    /* TODO: Update input acceptance to new API */
-    ilm_commitChanges();
-    eglSurface->DestroyIlmSurface();
-    ilm_commitChanges();
 
-    ilm_destroy();
+    eglSurface->DestroyIlmSurface();
+
+    ilmClient_destroy();
     delete eyes;
     delete eglSurface;
     delete wlContext;

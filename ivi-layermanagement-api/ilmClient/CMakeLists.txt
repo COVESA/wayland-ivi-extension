@@ -44,7 +44,6 @@ add_library(${PROJECT_NAME} SHARED
 
 set(LIBS
     ${LIBS}
-    ilmCommon
     ivi-extension-protocol
     ${WAYLAND_CLIENT_LIBRARIES}
 )

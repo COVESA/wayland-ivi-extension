@@ -48,6 +48,7 @@ public:
     void SetUp()
     {
         ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay));
+        ASSERT_EQ(ILM_SUCCESS, ilmClient_init((t_ilm_nativedisplay)wlDisplay));
     }
 
     void TearDown()
@@ -72,6 +73,7 @@ public:
         free(surfaces);
 
         EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
+        EXPECT_EQ(ILM_SUCCESS, ilmClient_destroy());
         EXPECT_EQ(ILM_SUCCESS, ilm_destroy());
     }
 };

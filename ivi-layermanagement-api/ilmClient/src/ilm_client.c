@@ -42,10 +42,10 @@ ilmClient_init(t_ilm_nativedisplay nativedisplay)
     return gIlmClientPlatformFunc.init(nativedisplay);
 }
 
-ILM_EXPORT void
+ILM_EXPORT ilmErrorTypes
 ilmClient_destroy(void)
 {
-    gIlmClientPlatformFunc.destroy();
+    return gIlmClientPlatformFunc.destroy();
 }
 
 ILM_EXPORT ilmErrorTypes

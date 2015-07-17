@@ -28,6 +28,15 @@ extern "C" {
 #include "ilm_common.h"
 
 /**
+ * \brief  Initializes the IVI LayerManagement Client APIs.
+ * \ingroup ilmControl
+ * \param[in] nativedisplay the wl_display of native application
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if a connection can not be established to the services.
+ */
+ilmErrorTypes ilmClient_init(t_ilm_nativedisplay nativedisplay);
+
+/**
  * \brief Create a surface
  * \ingroup ilmClient
  * \param[in] nativehandle The native windowsystem's handle for the surface
@@ -54,6 +63,14 @@ ilmErrorTypes ilm_surfaceCreate(t_ilm_nativehandle nativehandle,
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_surfaceRemove(const t_ilm_surface surfaceId);
+
+/**
+ * \brief Destroys the IVI LayerManagement Client APIs.
+ * \ingroup ilmCommon
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not be closed or was not initialized.
+ */
+ilmErrorTypes ilmClient_destroy(void);
 
 #ifdef __cplusplus
 } /**/
