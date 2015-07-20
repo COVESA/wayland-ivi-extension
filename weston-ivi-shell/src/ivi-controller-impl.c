@@ -830,7 +830,7 @@ controller_surface_screenshot(struct wl_client *client,
     free(buffer);
 
     if (save_as_bitmap(filename, (const char *)image_buffer,
-                       size, width, height, 24) != 0) {
+                       image_size, width, height, 24) != 0) {
         weston_log("failed to take screenshot\n");
     }
 
