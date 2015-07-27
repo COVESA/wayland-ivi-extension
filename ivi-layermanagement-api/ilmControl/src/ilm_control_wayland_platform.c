@@ -2360,10 +2360,24 @@ ILM_EXPORT ilmErrorTypes
 ilm_registerNotification(notificationFunc callback, void *user_data)
 {
     struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct layer_context *ctx_layer = NULL;
+    struct surface_context *ctx_surf = NULL;
 
     ctx->wl.notification = callback;
     ctx->wl.notification_user_data = user_data;
+    if (callback != NULL) {
+        wl_list_for_each(ctx_layer, &ctx->wl.list_layer, link) {
+            if (ctx_layer->controller) {
+                 callback(ILM_LAYER, ctx_layer->id_layer, ILM_TRUE, user_data);
+            }
+        }
 
+        wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
+            if (ctx_surf->controller) {
+                 callback(ILM_SURFACE, ctx_surf->id_surface, ILM_TRUE, user_data);
+            }
+        }
+    }
     release_instance();
     return ILM_SUCCESS;
 }
