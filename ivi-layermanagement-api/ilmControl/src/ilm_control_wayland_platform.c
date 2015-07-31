@@ -2428,7 +2428,23 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
 ILM_EXPORT ilmErrorTypes
 ilm_surfaceRemoveNotification(t_ilm_surface surface)
 {
-    return ilm_surfaceAddNotification(surface, NULL);
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct surface_context *ctx_surf = NULL;
+
+    ctx_surf = (struct surface_context*)get_surface_context(
+                    &ctx->wl, (uint32_t)surface);
+    if (ctx_surf != NULL) {
+        if (ctx_surf->notification != NULL) {
+            ctx_surf->notification = NULL;
+            returnValue = ILM_SUCCESS;
+        } else {
+            returnValue = ILM_ERROR_INVALID_ARGUMENTS;
+        }
+    }
+
+    release_instance();
+    return returnValue;
 }
 
 ILM_EXPORT ilmErrorTypes
