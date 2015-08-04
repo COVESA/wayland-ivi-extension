@@ -393,12 +393,23 @@ controller_layer_listener_screen(void *data,
 }
 
 static void
+remove_ordersurface_from_layer(struct surface_context *ctx_surf);
+
+static void
 controller_layer_listener_destroyed(void *data,
                                     struct ivi_controller_layer *controller)
 {
     struct layer_context *ctx_layer = data;
+    struct surface_context *ctx_surf = NULL;
+    struct surface_context *ctx_surf_next = NULL;
+
     wl_list_remove(&ctx_layer->order.link);
     wl_list_remove(&ctx_layer->link);
+
+    wl_list_for_each_safe(ctx_surf, ctx_surf_next,
+                          &ctx_layer->order.list_surface, order.link) {
+        remove_ordersurface_from_layer(ctx_surf);
+    }
 
     if (ctx_layer->ctx->notification != NULL) {
         ilmObjectType layer = ILM_LAYER;
@@ -1771,6 +1782,8 @@ ilm_layerRemove(t_ilm_layer layerId)
     struct ilm_control_context *ctx = sync_and_acquire_instance();
     struct layer_context *ctx_layer = NULL;
     struct layer_context *ctx_next = NULL;
+    struct surface_context *ctx_surf = NULL;
+    struct surface_context *ctx_surf_next = NULL;
 
     wl_list_for_each_safe(ctx_layer, ctx_next,
             &ctx->wl.list_layer, link) {
@@ -1779,6 +1792,12 @@ ilm_layerRemove(t_ilm_layer layerId)
 
             wl_list_remove(&ctx_layer->order.link);
             wl_list_remove(&ctx_layer->link);
+
+            wl_list_for_each_safe(ctx_surf, ctx_surf_next,
+                                  &ctx_layer->order.list_surface, order.link) {
+                remove_ordersurface_from_layer(ctx_surf);
+            }
+
             free(ctx_layer);
 
             returnValue = ILM_SUCCESS;
