@@ -65,6 +65,7 @@ struct screen_context {
     struct ivi_controller_screen *controller;
     t_ilm_uint id_from_server;
     t_ilm_uint id_screen;
+    int32_t transform;
 
     struct ilmScreenProperties prop;
 
@@ -146,7 +147,9 @@ output_listener_geometry(void *data,
     (void)subpixel;
     (void)make;
     (void)model;
-    (void)transform;
+
+    struct screen_context *ctx_scrn = data;
+    ctx_scrn->transform = transform;
 }
 
 static void
@@ -167,8 +170,16 @@ output_listener_mode(void *data,
     if (flags & WL_OUTPUT_MODE_CURRENT)
     {
         struct screen_context *ctx_scrn = data;
-        ctx_scrn->prop.screenWidth = width;
-        ctx_scrn->prop.screenHeight = height;
+        if (ctx_scrn->transform == WL_OUTPUT_TRANSFORM_90 ||
+            ctx_scrn->transform == WL_OUTPUT_TRANSFORM_270 ||
+            ctx_scrn->transform == WL_OUTPUT_TRANSFORM_FLIPPED_90 ||
+            ctx_scrn->transform == WL_OUTPUT_TRANSFORM_FLIPPED_270) {
+            ctx_scrn->prop.screenWidth = height;
+            ctx_scrn->prop.screenHeight = width;
+        } else {
+            ctx_scrn->prop.screenWidth = width;
+            ctx_scrn->prop.screenHeight = height;
+        }
     }
 }
 
