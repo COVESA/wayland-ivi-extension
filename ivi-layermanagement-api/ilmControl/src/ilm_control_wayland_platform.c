@@ -1128,15 +1128,19 @@ ilmControl_destroy(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
 
-    send_shutdown_event(ctx);
+    if (ctx->shutdown_fd > -1)
+        send_shutdown_event(ctx);
 
-    if (0 != pthread_join(ctx->thread, NULL)) {
-        fprintf(stderr, "failed to join control thread\n");
+    if (ctx->thread > 0) {
+        if (0 != pthread_join(ctx->thread, NULL)) {
+            fprintf(stderr, "failed to join control thread\n");
+        }
     }
 
     destroy_control_resources();
 
-    close(ctx->shutdown_fd);
+    if (ctx->shutdown_fd > -1)
+        close(ctx->shutdown_fd);
 
     memset(ctx, 0, sizeof *ctx);
 }
@@ -1188,7 +1192,13 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
        pthread_mutexattr_destroy(&a);
     }
 
-    return init_control() == 0 ? ILM_SUCCESS : ILM_FAILED;
+    if (init_control() != 0)
+    {
+        ilmControl_destroy();
+        return ILM_FAILED;
+    }
+
+    return ILM_SUCCESS;
 }
 
 static void*
