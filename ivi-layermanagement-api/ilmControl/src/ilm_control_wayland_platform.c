@@ -81,46 +81,6 @@ struct nativehandle_context {
     struct wl_list link;
 };
 
-static void roundtrip_done(void *data, struct wl_callback *callback,
-                           uint32_t serial)
-{
-    (void) serial;
-
-    *(int *)data = 1;
-
-    wl_callback_destroy(callback);
-}
-
-static struct wl_callback_listener roundtrip_listener = {roundtrip_done};
-
-int display_roundtrip_queue(struct wl_display *display,
-                            struct wl_event_queue *queue)
-{
-    int done = 0;
-    int ret = 0;
-    struct wl_callback *callback = wl_display_sync(display);
-
-    if (! callback)
-    {
-        return -1;
-    }
-
-    wl_proxy_set_queue((void *)callback, queue);
-    wl_callback_add_listener(callback, &roundtrip_listener, &done);
-
-    while (ret != -1 && !done)
-    {
-        ret = wl_display_dispatch_queue(display, queue);
-    }
-
-    if (ret == -1 && !done)
-    {
-        wl_callback_destroy(callback);
-    }
-
-    return ret;
-}
-
 static inline void lock_context(struct ilm_control_context *ctx)
 {
    pthread_mutex_lock(&ctx->mutex);
@@ -1317,11 +1277,11 @@ init_control(void)
 
     if (
        // first level objects; ivi_controller
-       display_roundtrip_queue(wl->display, wl->queue) == -1 ||
+       wl_display_roundtrip_queue(wl->display, wl->queue) == -1 ||
        // second level object: ivi_controller_surfaces/layers
-       display_roundtrip_queue(wl->display, wl->queue) == -1 ||
+       wl_display_roundtrip_queue(wl->display, wl->queue) == -1 ||
        // third level objects: ivi_controller_surfaces/layers properties
-       display_roundtrip_queue(wl->display, wl->queue) == -1)
+       wl_display_roundtrip_queue(wl->display, wl->queue) == -1)
     {
         fprintf(stderr, "Failed to initialize wayland connection: %s\n", strerror(errno));
         return -1;
@@ -1362,7 +1322,7 @@ ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx)
 
     lock_context(ctx);
 
-    if (display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1) {
+    if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1) {
         int err = wl_display_get_error(ctx->wl.display);
         fprintf(stderr, "Error communicating with wayland: %s\n", strerror(err));
         unlock_context(ctx);
@@ -2488,7 +2448,7 @@ ilm_getPropertiesOfSurface(t_ilm_uint surfaceID,
             // request statistics for surface
             ivi_controller_surface_send_stats(ctx_surf->controller);
             // force submission
-            int ret = display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+            int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
 
             // If we got an error here, there is really no sense
             // in returning the properties as something is fundamentally
@@ -2601,7 +2561,7 @@ ilm_commitChanges(void)
     if (ctx->wl.controller != NULL) {
         ivi_controller_commit_changes(ctx->wl.controller);
 
-        if (display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1)
+        if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1)
         {
             returnValue = ILM_SUCCESS;
         }
