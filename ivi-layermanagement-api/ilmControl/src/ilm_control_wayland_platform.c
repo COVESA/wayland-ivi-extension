@@ -75,12 +75,6 @@ struct screen_context {
     struct ilm_control_context *ctx;
 };
 
-struct nativehandle_context {
-    uint32_t pid;
-    uint32_t nativehandle;
-    struct wl_list link;
-};
-
 static inline void lock_context(struct ilm_control_context *ctx)
 {
    pthread_mutex_lock(&ctx->mutex);
@@ -1251,8 +1245,6 @@ init_control(void)
     struct wayland_context *wl = &ctx->wl;
     int ret = 0;
 
-    wl_list_init(&ctx->list_nativehandle);
-
     wl->queue = wl_display_create_queue(wl->display);
     if (! wl->queue) {
         fprintf(stderr, "Could not create wayland event queue\n");
@@ -2405,32 +2397,6 @@ ilm_surfaceRemoveNotification(t_ilm_surface surface)
 
     release_instance();
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_getNativeHandle(t_ilm_uint pid, t_ilm_int *n_handle,
-                        t_ilm_nativehandle **p_handles)
-{
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct nativehandle_context *p_nh_ctx = NULL;
-
-    *n_handle = 0;
-    *p_handles = NULL;
-
-    wl_list_for_each(p_nh_ctx, &ctx->list_nativehandle, link)
-    {
-        if (p_nh_ctx->pid == pid)
-        {
-            *n_handle = 1;
-            *p_handles =
-                 (t_ilm_nativehandle*)malloc(sizeof(t_ilm_nativehandle));
-            (*p_handles)[0] = p_nh_ctx->nativehandle;
-            break;
-        }
-    }
-
-    release_instance();
-    return (*n_handle > 0) ? ILM_SUCCESS : ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
