@@ -1139,6 +1139,12 @@ ilmControl_destroy(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
 
+    if (!ctx->initialized)
+    {
+        fprintf(stderr, "[Warning] The ilm_control_context is already destroyed\n");
+        return;
+    }
+
     if (ctx->shutdown_fd > -1)
         send_shutdown_event(ctx);
 
