@@ -36,6 +36,8 @@ ILM_EXPORT ilmErrorTypes ilmControl_init(t_ilm_nativedisplay);
 ILM_EXPORT void ilmControl_destroy(void);
 
 static pthread_mutex_t g_initialize_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t g_deinitialize_lock = PTHREAD_MUTEX_INITIALIZER;
+static int gInitialized = 0;
 
 ILM_EXPORT ilmErrorTypes
 ilm_init(void)
@@ -60,8 +62,10 @@ ilm_initWithNativedisplay(t_ilm_nativedisplay nativedisplay)
         {
             fprintf(stderr, "[Warning] ilm_init or ilm_initWithNativedisplay is called,\n"
                             "          but ilmClientLib has been already initialized.\n"
-                            "          Returning success and initialization is skipped\n"
-                            "          at this time.\n");
+                            "          gInitialized is incremented by one.\n"
+                            "          Returning success and incrementing gInitialized.\n"
+                            "          Initialization is skipped at this time.\n");
+            gInitialized++;
             ret = ILM_SUCCESS;
             break;
         }
@@ -81,6 +85,7 @@ ilm_initWithNativedisplay(t_ilm_nativedisplay nativedisplay)
             break;
         }
 
+        gInitialized++;
         ret = ILM_SUCCESS;
 
     } while (0);
@@ -99,7 +104,28 @@ ilm_isInitialized(void)
 ILM_EXPORT ilmErrorTypes
 ilm_destroy(void)
 {
-    ilmControl_destroy(); // block until control thread is stopped
-    ilmErrorTypes retVal = gIlmCommonPlatformFunc.destroy();
+    ilmErrorTypes retVal;
+
+    pthread_mutex_lock(&g_deinitialize_lock);
+    if (gInitialized > 1)
+    {
+        fprintf(stderr, "[Warning] ilm_destroy is called, but gInitialized is %d.\n"
+                        "          Returning success and deinitialization is skipped\n"
+                        "          at this time.\n", gInitialized);
+        retVal = ILM_SUCCESS;
+    }
+    else
+    {
+        ilmControl_destroy(); // block until control thread is stopped
+        retVal = gIlmCommonPlatformFunc.destroy();
+    }
+
+    if (retVal == ILM_SUCCESS)
+    {
+        gInitialized--;
+    }
+
+    pthread_mutex_unlock(&g_deinitialize_lock);
+
     return retVal;
 }
