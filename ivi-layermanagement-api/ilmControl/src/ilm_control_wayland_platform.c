@@ -65,6 +65,7 @@ struct screen_context {
     struct ivi_controller_screen *controller;
     t_ilm_uint id_from_server;
     t_ilm_uint id_screen;
+    int32_t transform;
 
     struct ilmScreenProperties prop;
 
@@ -74,52 +75,6 @@ struct screen_context {
 
     struct ilm_control_context *ctx;
 };
-
-struct nativehandle_context {
-    uint32_t pid;
-    uint32_t nativehandle;
-    struct wl_list link;
-};
-
-static void roundtrip_done(void *data, struct wl_callback *callback,
-                           uint32_t serial)
-{
-    (void) serial;
-
-    *(int *)data = 1;
-
-    wl_callback_destroy(callback);
-}
-
-static struct wl_callback_listener roundtrip_listener = {roundtrip_done};
-
-int display_roundtrip_queue(struct wl_display *display,
-                            struct wl_event_queue *queue)
-{
-    int done = 0;
-    int ret = 0;
-    struct wl_callback *callback = wl_display_sync(display);
-
-    if (! callback)
-    {
-        return -1;
-    }
-
-    wl_proxy_set_queue((void *)callback, queue);
-    wl_callback_add_listener(callback, &roundtrip_listener, &done);
-
-    while (ret != -1 && !done)
-    {
-        ret = wl_display_dispatch_queue(display, queue);
-    }
-
-    if (ret == -1 && !done)
-    {
-        wl_callback_destroy(callback);
-    }
-
-    return ret;
-}
 
 static inline void lock_context(struct ilm_control_context *ctx)
 {
@@ -192,7 +147,9 @@ output_listener_geometry(void *data,
     (void)subpixel;
     (void)make;
     (void)model;
-    (void)transform;
+
+    struct screen_context *ctx_scrn = data;
+    ctx_scrn->transform = transform;
 }
 
 static void
@@ -213,8 +170,16 @@ output_listener_mode(void *data,
     if (flags & WL_OUTPUT_MODE_CURRENT)
     {
         struct screen_context *ctx_scrn = data;
-        ctx_scrn->prop.screenWidth = width;
-        ctx_scrn->prop.screenHeight = height;
+        if (ctx_scrn->transform == WL_OUTPUT_TRANSFORM_90 ||
+            ctx_scrn->transform == WL_OUTPUT_TRANSFORM_270 ||
+            ctx_scrn->transform == WL_OUTPUT_TRANSFORM_FLIPPED_90 ||
+            ctx_scrn->transform == WL_OUTPUT_TRANSFORM_FLIPPED_270) {
+            ctx_scrn->prop.screenWidth = height;
+            ctx_scrn->prop.screenHeight = width;
+        } else {
+            ctx_scrn->prop.screenWidth = width;
+            ctx_scrn->prop.screenHeight = height;
+        }
     }
 }
 
@@ -428,12 +393,23 @@ controller_layer_listener_screen(void *data,
 }
 
 static void
+remove_ordersurface_from_layer(struct surface_context *ctx_surf);
+
+static void
 controller_layer_listener_destroyed(void *data,
                                     struct ivi_controller_layer *controller)
 {
     struct layer_context *ctx_layer = data;
+    struct surface_context *ctx_surf = NULL;
+    struct surface_context *ctx_surf_next = NULL;
+
     wl_list_remove(&ctx_layer->order.link);
     wl_list_remove(&ctx_layer->link);
+
+    wl_list_for_each_safe(ctx_surf, ctx_surf_next,
+                          &ctx_layer->order.list_surface, order.link) {
+        remove_ordersurface_from_layer(ctx_surf);
+    }
 
     if (ctx_layer->ctx->notification != NULL) {
         ilmObjectType layer = ILM_LAYER;
@@ -1163,15 +1139,25 @@ ilmControl_destroy(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
 
-    send_shutdown_event(ctx);
+    if (!ctx->initialized)
+    {
+        fprintf(stderr, "[Warning] The ilm_control_context is already destroyed\n");
+        return;
+    }
 
-    if (0 != pthread_join(ctx->thread, NULL)) {
-        fprintf(stderr, "failed to join control thread\n");
+    if (ctx->shutdown_fd > -1)
+        send_shutdown_event(ctx);
+
+    if (ctx->thread > 0) {
+        if (0 != pthread_join(ctx->thread, NULL)) {
+            fprintf(stderr, "failed to join control thread\n");
+        }
     }
 
     destroy_control_resources();
 
-    close(ctx->shutdown_fd);
+    if (ctx->shutdown_fd > -1)
+        close(ctx->shutdown_fd);
 
     memset(ctx, 0, sizeof *ctx);
 }
@@ -1223,7 +1209,13 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
        pthread_mutexattr_destroy(&a);
     }
 
-    return init_control() == 0 ? ILM_SUCCESS : ILM_FAILED;
+    if (init_control() != 0)
+    {
+        ilmControl_destroy();
+        return ILM_FAILED;
+    }
+
+    return ILM_SUCCESS;
 }
 
 static void*
@@ -1291,8 +1283,6 @@ init_control(void)
     struct wayland_context *wl = &ctx->wl;
     int ret = 0;
 
-    wl_list_init(&ctx->list_nativehandle);
-
     wl->queue = wl_display_create_queue(wl->display);
     if (! wl->queue) {
         fprintf(stderr, "Could not create wayland event queue\n");
@@ -1317,11 +1307,11 @@ init_control(void)
 
     if (
        // first level objects; ivi_controller
-       display_roundtrip_queue(wl->display, wl->queue) == -1 ||
+       wl_display_roundtrip_queue(wl->display, wl->queue) == -1 ||
        // second level object: ivi_controller_surfaces/layers
-       display_roundtrip_queue(wl->display, wl->queue) == -1 ||
+       wl_display_roundtrip_queue(wl->display, wl->queue) == -1 ||
        // third level objects: ivi_controller_surfaces/layers properties
-       display_roundtrip_queue(wl->display, wl->queue) == -1)
+       wl_display_roundtrip_queue(wl->display, wl->queue) == -1)
     {
         fprintf(stderr, "Failed to initialize wayland connection: %s\n", strerror(errno));
         return -1;
@@ -1362,7 +1352,7 @@ ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx)
 
     lock_context(ctx);
 
-    if (display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1) {
+    if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1) {
         int err = wl_display_get_error(ctx->wl.display);
         fprintf(stderr, "Error communicating with wayland: %s\n", strerror(err));
         unlock_context(ctx);
@@ -1798,6 +1788,8 @@ ilm_layerRemove(t_ilm_layer layerId)
     struct ilm_control_context *ctx = sync_and_acquire_instance();
     struct layer_context *ctx_layer = NULL;
     struct layer_context *ctx_next = NULL;
+    struct surface_context *ctx_surf = NULL;
+    struct surface_context *ctx_surf_next = NULL;
 
     wl_list_for_each_safe(ctx_layer, ctx_next,
             &ctx->wl.list_layer, link) {
@@ -1806,6 +1798,12 @@ ilm_layerRemove(t_ilm_layer layerId)
 
             wl_list_remove(&ctx_layer->order.link);
             wl_list_remove(&ctx_layer->link);
+
+            wl_list_for_each_safe(ctx_surf, ctx_surf_next,
+                                  &ctx_layer->order.list_surface, order.link) {
+                remove_ordersurface_from_layer(ctx_surf);
+            }
+
             free(ctx_layer);
 
             returnValue = ILM_SUCCESS;
@@ -2360,10 +2358,24 @@ ILM_EXPORT ilmErrorTypes
 ilm_registerNotification(notificationFunc callback, void *user_data)
 {
     struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct layer_context *ctx_layer = NULL;
+    struct surface_context *ctx_surf = NULL;
 
     ctx->wl.notification = callback;
     ctx->wl.notification_user_data = user_data;
+    if (callback != NULL) {
+        wl_list_for_each(ctx_layer, &ctx->wl.list_layer, link) {
+            if (ctx_layer->controller) {
+                 callback(ILM_LAYER, ctx_layer->id_layer, ILM_TRUE, user_data);
+            }
+        }
 
+        wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
+            if (ctx_surf->controller) {
+                 callback(ILM_SURFACE, ctx_surf->id_surface, ILM_TRUE, user_data);
+            }
+        }
+    }
     release_instance();
     return ILM_SUCCESS;
 }
@@ -2414,33 +2426,23 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
 ILM_EXPORT ilmErrorTypes
 ilm_surfaceRemoveNotification(t_ilm_surface surface)
 {
-    return ilm_surfaceAddNotification(surface, NULL);
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_getNativeHandle(t_ilm_uint pid, t_ilm_int *n_handle,
-                        t_ilm_nativehandle **p_handles)
-{
+    ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct nativehandle_context *p_nh_ctx = NULL;
+    struct surface_context *ctx_surf = NULL;
 
-    *n_handle = 0;
-    *p_handles = NULL;
-
-    wl_list_for_each(p_nh_ctx, &ctx->list_nativehandle, link)
-    {
-        if (p_nh_ctx->pid == pid)
-        {
-            *n_handle = 1;
-            *p_handles =
-                 (t_ilm_nativehandle*)malloc(sizeof(t_ilm_nativehandle));
-            (*p_handles)[0] = p_nh_ctx->nativehandle;
-            break;
+    ctx_surf = (struct surface_context*)get_surface_context(
+                    &ctx->wl, (uint32_t)surface);
+    if (ctx_surf != NULL) {
+        if (ctx_surf->notification != NULL) {
+            ctx_surf->notification = NULL;
+            returnValue = ILM_SUCCESS;
+        } else {
+            returnValue = ILM_ERROR_INVALID_ARGUMENTS;
         }
     }
 
     release_instance();
-    return (*n_handle > 0) ? ILM_SUCCESS : ILM_FAILED;
+    return returnValue;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2458,7 +2460,7 @@ ilm_getPropertiesOfSurface(t_ilm_uint surfaceID,
             // request statistics for surface
             ivi_controller_surface_send_stats(ctx_surf->controller);
             // force submission
-            int ret = display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+            int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
 
             // If we got an error here, there is really no sense
             // in returning the properties as something is fundamentally
@@ -2571,7 +2573,7 @@ ilm_commitChanges(void)
     if (ctx->wl.controller != NULL) {
         ivi_controller_commit_changes(ctx->wl.controller);
 
-        if (display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1)
+        if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1)
         {
             returnValue = ILM_SUCCESS;
         }

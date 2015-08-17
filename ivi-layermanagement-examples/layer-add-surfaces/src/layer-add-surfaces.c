@@ -35,6 +35,7 @@ t_ilm_uint screenHeight;
 t_ilm_uint layer;
 pthread_mutex_t mutex;
 static pthread_cond_t  waiterVariable = PTHREAD_COND_INITIALIZER;
+static int number_of_surfaces;
 
 static void configure_ilm_surface(t_ilm_uint id, t_ilm_uint width, t_ilm_uint height)
 {
@@ -65,16 +66,19 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
 
     if (object == ILM_SURFACE) {
         if (created) {
-            printf("surface                : %d created\n",id);
-            ilm_getPropertiesOfSurface(id, &sp);
+            if (number_of_surfaces > 0) {
+                number_of_surfaces--;
+                printf("surface                : %d created\n",id);
+                ilm_getPropertiesOfSurface(id, &sp);
 
-            if ((sp.origSourceWidth != 0) && (sp.origSourceHeight !=0))
-            {   // surface is already configured
-                configure_ilm_surface(id, sp.origSourceWidth, sp.origSourceHeight);
-            } else {
-                // wait for configured event
-                ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
-                ilm_commitChanges();
+                if ((sp.origSourceWidth != 0) && (sp.origSourceHeight !=0))
+                {   // surface is already configured
+                    configure_ilm_surface(id, sp.origSourceWidth, sp.origSourceHeight);
+                } else {
+                    // wait for configured event
+                    ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
+                    ilm_commitChanges();
+                }
             }
         }
         else if(!created)
@@ -90,14 +94,14 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
 int main (int argc, const char * argv[])
 {
     // Get command-line options
-	if ( argc != 3) {
-		printf("Call layer-add-surface <layerID> <number_of_surfaces>\n");
-		return -1;
-	}
+    if ( argc != 3) {
+        printf("Call layer-add-surface <layerID> <number_of_surfaces>\n");
+        return -1;
+    }
 
     layer = strtol(argv[1], NULL, 0);
 
-    int number_of_surfaces = strtol(argv[2], NULL, 0);
+    number_of_surfaces = strtol(argv[2], NULL, 0);
 
     pthread_mutexattr_t a;
     if (pthread_mutexattr_init(&a) != 0)
@@ -132,13 +136,12 @@ int main (int argc, const char * argv[])
     ilm_layerSetVisibility(layer,ILM_TRUE);
     printf("SetVisibility      : layer ID (%d), ILM_TRUE\n", layer);
     ilm_displaySetRenderOrder(0,renderOrder,1);
-    ilm_registerNotification(callbackFunction, NULL);
     ilm_commitChanges();
+    ilm_registerNotification(callbackFunction, NULL);
 
     while (number_of_surfaces > 0) {
         pthread_mutex_lock(&mutex);
         pthread_cond_wait( &waiterVariable, &mutex);
-        number_of_surfaces--;
     }
 
     ilm_unregisterNotification();

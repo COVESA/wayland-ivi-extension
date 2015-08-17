@@ -103,6 +103,12 @@ wayland_destroy(void)
 {
     struct ilm_common_context *ctx = &ilm_context;
 
+    if (ctx->valid == 0)
+    {
+        fprintf(stderr, "[Warning] The ilm_common_context is already destroyed\n");
+        return ILM_FAILED;
+    }
+
     ctx->valid = 0;
 
     // we own the display, act like it.

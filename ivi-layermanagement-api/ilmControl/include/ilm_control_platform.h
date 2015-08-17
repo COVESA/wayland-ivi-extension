@@ -61,22 +61,12 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
     ilmErrorTypes (*layerSetDestinationRectangle)(t_ilm_layer layerId,
                    t_ilm_int x, t_ilm_int y,
                    t_ilm_int width, t_ilm_int height);
-    ilmErrorTypes (*layerGetDimension)(t_ilm_layer layerId,
-                   t_ilm_uint *pDimension);
-    ilmErrorTypes (*layerSetDimension)(t_ilm_layer layerId,
-                   t_ilm_uint *pDimension);
-    ilmErrorTypes (*layerGetPosition)(t_ilm_layer layerId,
-                   t_ilm_uint *pPosition);
-    ilmErrorTypes (*layerSetPosition)(t_ilm_layer layerId,
-                   t_ilm_uint *pPosition);
     ilmErrorTypes (*layerSetOrientation)(t_ilm_layer layerId,
                    ilmOrientation orientation);
     ilmErrorTypes (*layerGetOrientation)(t_ilm_layer layerId,
                    ilmOrientation *pOrientation);
     ilmErrorTypes (*layerSetRenderOrder)(t_ilm_layer layerId,
                    t_ilm_layer *pSurfaceId, t_ilm_int number);
-    ilmErrorTypes (*layerTypeGetCapabilities)(ilmLayerType layerType,
-                   t_ilm_layercapabilities *pCapabilities);
     ilmErrorTypes (*surfaceSetVisibility)(t_ilm_surface surfaceId,
                    t_ilm_bool newVisibility);
     ilmErrorTypes (*surfaceSetOpacity)(t_ilm_surface surfaceId,
@@ -86,12 +76,6 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
     ilmErrorTypes (*surfaceSetDestinationRectangle)(t_ilm_surface surfaceId,
                    t_ilm_int x, t_ilm_int y,
                    t_ilm_int width, t_ilm_int height);
-    ilmErrorTypes (*surfaceSetDimension)(t_ilm_surface surfaceId,
-                   t_ilm_uint *pDimension);
-    ilmErrorTypes (*surfaceGetPosition)(t_ilm_surface surfaceId,
-                   t_ilm_uint *pPosition);
-    ilmErrorTypes (*surfaceSetPosition)(t_ilm_surface surfaceId,
-                   t_ilm_uint *pPosition);
     ilmErrorTypes (*surfaceSetOrientation)(t_ilm_surface surfaceId,
                    ilmOrientation orientation);
     ilmErrorTypes (*surfaceGetOrientation)(t_ilm_surface surfaceId,
@@ -114,16 +98,12 @@ typedef struct _ILM_CONTROL_PLATFORM_FUNC
     ilmErrorTypes (*surfaceRemoveNotification)(t_ilm_surface surface);
     ilmErrorTypes (*init)(t_ilm_nativedisplay nativedisplay);
     void (*destroy)();
-    ilmErrorTypes (*getNativeHandle)(t_ilm_uint pid, t_ilm_int *p_handle,
-                   t_ilm_nativehandle **p_handles);
     ilmErrorTypes (*getPropertiesOfSurface)(t_ilm_uint surfaceID,
                    struct ilmSurfaceProperties* pSurfaceProperties);
     ilmErrorTypes (*layerAddSurface)(t_ilm_layer layerId,
                    t_ilm_surface surfaceId);
     ilmErrorTypes (*layerRemoveSurface)(t_ilm_layer layerId,
                    t_ilm_surface surfaceId);
-    ilmErrorTypes (*surfaceGetDimension)(t_ilm_surface surfaceId,
-                   t_ilm_uint *pDimension);
     ilmErrorTypes (*surfaceGetVisibility)(t_ilm_surface surfaceId,
                    t_ilm_bool *pVisibility);
     ilmErrorTypes (*surfaceSetSourceRectangle)(t_ilm_surface surfaceId,
@@ -159,8 +139,6 @@ struct ilm_control_context {
     bool initialized;
 
     uint32_t internal_id_layer;
-
-    struct wl_list list_nativehandle;
 
     pthread_t thread;
     pthread_mutex_t mutex;
