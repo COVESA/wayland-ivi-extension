@@ -43,11 +43,6 @@ struct link_layer {
     struct wl_list link;
 };
 
-struct link_screen {
-    struct iviscreen *screen;
-    struct wl_list link;
-};
-
 struct ivisurface {
     struct wl_list link;
     struct wl_client *client;
@@ -64,7 +59,7 @@ struct ivilayer {
     struct wl_list link;
     struct ivishell *shell;
     struct ivi_layout_layer *layout_layer;
-    struct wl_list list_screen;
+    struct iviscreen *on_screen;
     uint32_t controller_layer_count;
     int layer_canbe_removed;
 };
@@ -513,8 +508,6 @@ send_layer_add_event(struct ivilayer *ivilayer,
     int32_t length = 0;
     int32_t ans = 0;
     int i = 0;
-    struct link_screen *link_scrn = NULL;
-    struct link_screen *next = NULL;
     struct iviscreen *iviscrn = NULL;
     struct ivishell *shell = ivilayer->shell;
     struct wl_client *client = wl_resource_get_client(resource);
@@ -529,9 +522,7 @@ send_layer_add_event(struct ivilayer *ivilayer,
 
     /* Send Null to cancel added layer */
     if (mask & IVI_NOTIFICATION_REMOVE) {
-        wl_list_for_each_safe(link_scrn, next, &ivilayer->list_screen, link) {
             ivi_controller_layer_send_screen(resource, NULL);
-        }
     }
     else if (mask & IVI_NOTIFICATION_ADD) {
         for (i = 0; i < (int)length; i++) {
@@ -607,8 +598,6 @@ update_layer_prop(struct ivilayer *ivilayer,
     struct ivi_layout_screen **pArray = NULL;
     int32_t length = 0;
     int32_t ans = 0;
-    struct link_screen *link_scrn = NULL;
-    struct link_screen *next = NULL;
     struct ivishell *shell = ivilayer->shell;
 
     ans = ivi_extension_get_screens_under_layer(shell, ivilayer->layout_layer,
@@ -620,36 +609,20 @@ update_layer_prop(struct ivilayer *ivilayer,
 
     /* Send Null to cancel added layer */
     if (mask & IVI_NOTIFICATION_REMOVE) {
-        wl_list_for_each_safe(link_scrn, next, &ivilayer->list_screen, link) {
-            wl_list_remove(&link_scrn->link);
-            free(link_scrn);
-            link_scrn = NULL;
-        }
+        ivilayer->on_screen = NULL;
     }
     if (mask & IVI_NOTIFICATION_ADD) {
         int i = 0;
         for (i = 0; i < (int)length; i++) {
             struct ivishell *shell = ivilayer->shell;
             struct iviscreen *iviscrn = NULL;
-            /* Create list_screen */
-            link_scrn = calloc(1, sizeof(*link_scrn));
-            if (NULL == link_scrn) {
-                continue;
-            }
-            link_scrn->screen = NULL;
+
             wl_list_for_each(iviscrn, &shell->list_screen, link) {
                 if (iviscrn->layout_screen == pArray[i]) {
-                    link_scrn->screen = iviscrn;
+                    ivilayer->on_screen = iviscrn;
                     break;
                 }
             }
-
-            if (link_scrn->screen == NULL) {
-                free(link_scrn);
-                link_scrn = NULL;
-                continue;
-            }
-            wl_list_insert(&ivilayer->list_screen, &link_scrn->link);
         }
     }
 
@@ -1451,7 +1424,6 @@ create_layer(struct ivishell *shell,
     }
 
     ivilayer->shell = shell;
-    wl_list_init(&ivilayer->list_screen);
     wl_list_insert(&shell->list_layer, &ivilayer->link);
     ivilayer->layout_layer = layout_layer;
 
