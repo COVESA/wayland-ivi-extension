@@ -138,10 +138,7 @@ destroy_ivicontroller_surface(struct wl_resource *resource)
             continue;
         }
 
-        if (!wl_list_empty(&ctrlsurf->link)) {
-            wl_list_remove(&ctrlsurf->link);
-        }
-
+        wl_list_remove(&ctrlsurf->link);
         is_removed = 1;
         free(ctrlsurf);
         ctrlsurf = NULL;
@@ -297,7 +294,6 @@ controller_screen_create(struct ivishell *shell,
                                    &controller_screen_implementation,
                                    iviscrn, destroy_ivicontroller_screen);
 
-    wl_list_init(&ctrlscrn->link);
     wl_list_insert(&shell->list_controller_screen, &ctrlscrn->link);
 
     return ctrlscrn;
@@ -466,7 +462,6 @@ update_surface_prop(struct ivisurface *ivisurf,
             if (NULL == link_layer) {
                 continue;
             }
-            wl_list_init(&link_layer->link);
             link_layer->layer = NULL;
             wl_list_for_each(ivilayer, &shell->list_layer, link) {
                 if (ivilayer->layout_layer == pArray[i]) {
@@ -641,7 +636,6 @@ update_layer_prop(struct ivilayer *ivilayer,
             if (NULL == link_scrn) {
                 continue;
             }
-            wl_list_init(&link_scrn->link);
             link_scrn->screen = NULL;
             wl_list_for_each(iviscrn, &shell->list_screen, link) {
                 if (iviscrn->layout_screen == pArray[i]) {
@@ -1251,7 +1245,6 @@ controller_layer_create(struct wl_client *client,
         return;
     }
 
-    wl_list_init(&ctrllayer->link);
     wl_list_insert(&shell->list_controller_layer, &ctrllayer->link);
 
     wl_resource_set_implementation(ctrllayer->resource,
@@ -1299,7 +1292,6 @@ controller_surface_create(struct wl_client *client,
     ctrlsurf->client = client;
     ctrlsurf->id = id;
     ctrlsurf->id_surface = id_surface;
-    wl_list_init(&ctrlsurf->link);
     wl_list_insert(&shell->list_controller_surface, &ctrlsurf->link);
 
     ctrlsurf->resource = wl_resource_create(client,
@@ -1412,7 +1404,6 @@ bind_ivi_controller(struct wl_client *client, void *data,
     controller->client = client;
     controller->id = id;
 
-    wl_list_init(&controller->link);
     wl_list_insert(&shell->list_controller, &controller->link);
 
     add_client_to_resources(shell, client, controller);
@@ -1461,7 +1452,6 @@ create_layer(struct ivishell *shell,
 
     ivilayer->shell = shell;
     wl_list_init(&ivilayer->list_screen);
-    wl_list_init(&ivilayer->link);
     wl_list_insert(&shell->list_layer, &ivilayer->link);
     ivilayer->layout_layer = layout_layer;
 
@@ -1497,7 +1487,6 @@ create_surface(struct ivishell *shell,
     ivisurf->shell = shell;
     ivisurf->layout_surface = layout_surface;
     wl_list_init(&ivisurf->list_layer);
-    wl_list_init(&ivisurf->link);
     wl_list_insert(&shell->list_surface, &ivisurf->link);
 
     wl_list_for_each(controller, &shell->list_controller, link) {
