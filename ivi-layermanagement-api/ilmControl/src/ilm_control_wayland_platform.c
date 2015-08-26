@@ -238,7 +238,6 @@ add_orderlayer_to_screen(struct layer_context *ctx_layer,
     }
 
     if (found == 0) {
-        wl_list_init(&ctx_layer->order.link);
         wl_list_insert(&ctx_scrn->order.list_layer, &ctx_layer->order.link);
     }
 }
@@ -450,7 +449,6 @@ add_ordersurface_to_layer(struct surface_context *ctx_surf,
     }
 
     if (found == 0) {
-        wl_list_init(&ctx_surf->order.link);
         wl_list_insert(&ctx_layer->order.list_surface, &ctx_surf->order.link);
     }
 }
@@ -763,7 +761,6 @@ controller_listener_surface(void *data,
     ctx_surf->ctx = ctx;
     ctx_surf->is_surface_creation_noticed = true;
 
-    wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
     wl_list_init(&ctx_surf->order.link);
     wl_list_init(&ctx_surf->list_accepted_seats);
@@ -1014,7 +1011,6 @@ registry_handle_control(void *data,
             fprintf(stderr, "Failed to allocate memory for screen_context\n");
             return;
         }
-        wl_list_init(&ctx_scrn->link);
         ctx_scrn->output = wl_registry_bind(registry, name,
                                            &wl_output_interface, 1);
         if (ctx_scrn->output == NULL) {
@@ -1723,7 +1719,6 @@ static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width
      ctx_layer->id_layer = layerid;
      ctx_layer->ctx = ctx;
 
-     wl_list_init(&ctx_layer->link);
      wl_list_insert(&ctx->list_layer, &ctx_layer->link);
      wl_list_init(&ctx_layer->order.link);
      wl_list_init(&ctx_layer->order.list_surface);
@@ -2346,7 +2341,6 @@ create_surface_context(struct wayland_context *ctx, uint32_t id_surface)
     ctx_surf->ctx = ctx;
     ctx_surf->is_surface_creation_noticed = false;
 
-    wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
     wl_list_init(&ctx_surf->order.link);
     wl_list_init(&ctx_surf->list_accepted_seats);
