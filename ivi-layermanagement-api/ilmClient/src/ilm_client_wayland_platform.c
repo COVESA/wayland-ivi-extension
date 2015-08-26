@@ -259,7 +259,6 @@ create_client_surface(struct ilm_client_context *ctx,
 
     ctx_surf->surface = surface;
     ctx_surf->id_surface = id_surface;
-    wl_list_init(&ctx_surf->link);
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
 }
 
