@@ -45,7 +45,6 @@ struct ivishell {
     struct wl_list list_weston_surface;
 
     struct wl_list list_controller;
-    struct wl_list list_controller_surface;
     struct wl_list list_controller_layer;
     struct wl_list list_controller_screen;
 
