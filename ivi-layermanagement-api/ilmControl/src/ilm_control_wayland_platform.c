@@ -731,6 +731,8 @@ controller_listener_surface(void *data,
         if (!ctx_surf->is_surface_creation_noticed) {
             ctx_surf->controller = ivi_controller_surface_create(
                                        controller, id_surface);
+            ivi_controller_surface_add_listener(ctx_surf->controller,
+                                       &controller_surface_listener, ctx_surf);
             if (ctx_surf->notification != NULL) {
                 ctx_surf->notification(ctx_surf->id_surface,
                                        &ctx_surf->prop,
