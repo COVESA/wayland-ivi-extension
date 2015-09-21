@@ -1417,9 +1417,7 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
     wl_list_init(&shell->list_surface);
     wl_list_init(&shell->list_layer);
     wl_list_init(&shell->list_screen);
-    wl_list_init(&shell->list_weston_surface);
     wl_list_init(&shell->list_controller);
-    shell->event_restriction = 0;
 
     wl_list_for_each(output, &ec->output_list, link) {
         iviscrn = create_screen(shell, output);
