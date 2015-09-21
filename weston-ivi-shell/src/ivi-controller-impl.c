@@ -72,14 +72,6 @@ struct ivicontroller {
     struct ivishell *shell;
 };
 
-struct link_shell_weston_surface
-{
-    struct wl_resource *resource;
-    struct wl_listener destroy_listener;
-    struct weston_surface *surface;
-    struct wl_list link;
-};
-
 static void surface_event_remove(struct ivi_layout_surface *, void *);
 
 static void
