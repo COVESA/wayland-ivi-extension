@@ -62,21 +62,13 @@ struct iviscreen {
     struct ivishell *shell;
     struct ivi_layout_screen *layout_screen;
     struct weston_output *output;
+    struct wl_list resource_list;
 };
 
 struct ivicontroller_layer {
     struct wl_resource *resource;
     uint32_t id;
     uint32_t id_layer;
-    struct wl_client *client;
-    struct wl_list link;
-    struct ivishell *shell;
-};
-
-struct ivicontroller_screen {
-    struct wl_resource *resource;
-    uint32_t id;
-    uint32_t id_screen;
     struct wl_client *client;
     struct wl_list link;
     struct ivishell *shell;
@@ -139,28 +131,7 @@ destroy_ivicontroller_layer(struct wl_resource *resource)
 static void
 destroy_ivicontroller_screen(struct wl_resource *resource)
 {
-    struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
-    struct ivicontroller_screen *ctrlscrn = NULL;
-    struct ivicontroller_screen *next = NULL;
-
-    wl_list_for_each_safe(ctrlscrn, next,
-                          &iviscrn->shell->list_controller_screen, link) {
-// TODO : Only Single display
-#if 0
-        if (iviscrn->output->id != ctrlscrn->id_screen) {
-            continue;
-        }
-#endif
-
-        if (resource != ctrlscrn->resource) {
-            continue;
-        }
-
-        wl_list_remove(&ctrlscrn->link);
-        free(ctrlscrn);
-        ctrlscrn = NULL;
-        break;
-    }
+    wl_list_remove(wl_resource_get_link(resource));
 }
 
 static void
@@ -204,52 +175,6 @@ get_layer(struct wl_list *list_layer, uint32_t id_layer)
     }
 
     return NULL;
-}
-
-static const
-struct ivi_controller_screen_interface controller_screen_implementation;
-
-static struct ivicontroller_screen*
-controller_screen_create(struct ivishell *shell,
-                         struct wl_client *client,
-                         struct iviscreen *iviscrn)
-{
-    struct ivicontroller_screen *ctrlscrn = NULL;
-
-    ctrlscrn = calloc(1, sizeof *ctrlscrn);
-    if (ctrlscrn == NULL) {
-        weston_log("no memory to allocate controller screen\n");
-        return NULL;
-    }
-
-    ctrlscrn->client = client;
-    ctrlscrn->shell  = shell;
-// FIXME
-// TODO : Only Single display
-#if 0
-    /* ctrlscrn->id_screen = iviscrn->id_screen; */
-#else
-    ctrlscrn->id_screen = 0;
-#endif
-
-    ctrlscrn->resource =
-        wl_resource_create(client, &ivi_controller_screen_interface, 1, 0);
-    if (ctrlscrn->resource == NULL) {
-        weston_log("couldn't new screen controller object");
-
-        free(ctrlscrn);
-        ctrlscrn = NULL;
-
-        return NULL;
-    }
-
-    wl_resource_set_implementation(ctrlscrn->resource,
-                                   &controller_screen_implementation,
-                                   iviscrn, destroy_ivicontroller_screen);
-
-    wl_list_insert(&shell->list_controller_screen, &ctrlscrn->link);
-
-    return ctrlscrn;
 }
 
 static void
@@ -959,23 +884,8 @@ static void
 controller_screen_destroy(struct wl_client *client,
                           struct wl_resource *resource)
 {
-    struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
-    struct ivicontroller_screen *ctrlscrn = NULL;
-    struct ivicontroller_screen *next = NULL;
     (void)client;
-
-    wl_list_for_each_safe(ctrlscrn, next,
-                          &iviscrn->shell->list_controller_screen, link) {
-        if (resource != ctrlscrn->resource) {
-            continue;
-        }
-
-        wl_list_remove(&ctrlscrn->link);
-        wl_resource_destroy(ctrlscrn->resource);
-        free(ctrlscrn);
-        ctrlscrn = NULL;
-        break;
-    }
+    wl_resource_destroy(resource);
 }
 
 static void
@@ -1212,10 +1122,10 @@ add_client_to_resources(struct ivishell *shell,
                         struct wl_client *client,
                         struct ivicontroller *controller)
 {
+    struct wl_resource *screen_resource;
     struct ivisurface* ivisurf = NULL;
     struct ivilayer* ivilayer = NULL;
     struct iviscreen* iviscrn = NULL;
-    struct ivicontroller_screen *ctrlscrn = NULL;
     struct wl_resource *resource_output = NULL;
     uint32_t id_layout_surface = 0;
     uint32_t id_layout_layer = 0;
@@ -1227,14 +1137,21 @@ add_client_to_resources(struct ivishell *shell,
             continue;
         }
 
-        ctrlscrn = controller_screen_create(iviscrn->shell, client, iviscrn);
-        if (ctrlscrn == NULL) {
-            continue;
+        screen_resource = wl_resource_create(client, &ivi_controller_screen_interface, 1, 0);
+        if (screen_resource == NULL) {
+            weston_log("couldn't new screen controller object");
+            return;
         }
+
+        wl_resource_set_implementation(screen_resource,
+                                       &controller_screen_implementation,
+                                       iviscrn, destroy_ivicontroller_screen);
+
+        wl_list_insert(&iviscrn->resource_list, wl_resource_get_link(screen_resource));
 
         ivi_controller_send_screen(controller->resource,
                                    wl_resource_get_id(resource_output),
-                                   ctrlscrn->resource);
+                                   screen_resource);
     }
     wl_list_for_each_reverse(ivilayer, &shell->list_layer, link) {
         id_layout_layer =
@@ -1298,6 +1215,7 @@ create_screen(struct ivishell *shell, struct weston_output *output)
     iviscrn->layout_screen = ivi_extension_get_screen_from_id(shell, id_counter++);
 
     wl_list_init(&iviscrn->link);
+    wl_list_init(&iviscrn->resource_list);
 
     return iviscrn;
 }
@@ -1583,7 +1501,6 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
     wl_list_init(&shell->list_screen);
     wl_list_init(&shell->list_weston_surface);
     wl_list_init(&shell->list_controller);
-    wl_list_init(&shell->list_controller_screen);
     wl_list_init(&shell->list_controller_layer);
     shell->event_restriction = 0;
 

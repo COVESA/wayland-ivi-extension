@@ -46,7 +46,6 @@ struct ivishell {
 
     struct wl_list list_controller;
     struct wl_list list_controller_layer;
-    struct wl_list list_controller_screen;
 
     struct {
         struct weston_process process;
