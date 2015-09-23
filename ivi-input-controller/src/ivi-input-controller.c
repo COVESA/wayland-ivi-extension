@@ -158,6 +158,8 @@ set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
     struct wl_client *surface_client;
     uint32_t serial;
     wl_fixed_t x, y;
+    struct weston_pointer *pointer = weston_seat_get_pointer(seat);
+    struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
     const struct ivi_controller_interface *interface =
               ctx->ivi_controller_interface;
 
@@ -165,26 +167,26 @@ set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
 	w_surface = interface->surface_get_weston_surface(surface_ctx->layout_surface);
     view = wl_container_of(w_surface->views.next, view, surface_link);
 	if ((focus & ILM_INPUT_DEVICE_POINTER) &&
-		 (seat->pointer != NULL)){
+		 (pointer != NULL)){
 		if ( (view != NULL) && enabled) {
 	        weston_view_to_global_fixed(view, wl_fixed_from_int(0),
 	            wl_fixed_from_int(0), &x, &y);
 	        // move pointer to local (0,0) of the view
-	        weston_pointer_move(seat->pointer, x, y);
-		    weston_pointer_set_focus(seat->pointer, view,
+	        weston_pointer_move(pointer, x, y);
+		    weston_pointer_set_focus(pointer, view,
 		        wl_fixed_from_int(0), wl_fixed_from_int(0));
-		} else if (seat->pointer->focus == view){
-            weston_pointer_set_focus(seat->pointer, NULL,
+		} else if (pointer->focus == view){
+            weston_pointer_set_focus(pointer, NULL,
                 wl_fixed_from_int(0), wl_fixed_from_int(0));
 		}
 	}
 
 	if ((focus & ILM_INPUT_DEVICE_KEYBOARD) &&
-		 (seat->keyboard != NULL)) {
+		 (keyboard != NULL)) {
 		if (w_surface) {
 	        surface_client = wl_resource_get_client(w_surface->resource);
 	        serial = wl_display_next_serial(ctx->compositor->wl_display);
-	        wl_resource_for_each(resource, &seat->keyboard->resource_list) {
+	        wl_resource_for_each(resource, &keyboard->resource_list) {
 	            if (wl_resource_get_client(resource) != surface_client)
 	                continue;
 
@@ -193,7 +195,7 @@ set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
 	                         w_surface->resource);
 	            } else {
                     wl_keyboard_send_enter(resource, serial, w_surface->resource,
-                            &seat->keyboard->keys);
+                            &keyboard->keys);
 	            }
 	        }
 		}
@@ -647,14 +649,18 @@ static struct weston_touch_grab_interface touch_grab_interface = {
 };
 
 static uint32_t
-get_seat_capabilities(const struct weston_seat *seat)
+get_seat_capabilities(struct weston_seat *seat)
 {
+    struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
+    struct weston_pointer *pointer = weston_seat_get_pointer(seat);
+    struct weston_touch *touch = weston_seat_get_touch(seat);
     uint32_t caps = 0;
-    if (seat->keyboard_device_count > 0)
+
+    if (keyboard != NULL)
         caps |= ILM_INPUT_DEVICE_KEYBOARD;
-    if (seat->pointer_device_count > 0)
+    if (pointer != NULL)
         caps |= ILM_INPUT_DEVICE_POINTER;
-    if (seat->touch_device_count > 0)
+    if (touch != NULL)
         caps |= ILM_INPUT_DEVICE_TOUCH;
     return caps;
 }
@@ -663,17 +669,21 @@ static void
 handle_seat_updated_caps(struct wl_listener *listener, void *data)
 {
     struct weston_seat *seat = data;
+    struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
+    struct weston_pointer *pointer = weston_seat_get_pointer(seat);
+    struct weston_touch *touch = weston_seat_get_touch(seat);
     struct seat_ctx *ctx = wl_container_of(listener, ctx,
                                            updated_caps_listener);
     struct input_controller *controller;
-    if (seat->keyboard && seat->keyboard != ctx->keyboard_grab.keyboard) {
-        weston_keyboard_start_grab(seat->keyboard, &ctx->keyboard_grab);
+
+    if (keyboard && keyboard != ctx->keyboard_grab.keyboard) {
+        weston_keyboard_start_grab(keyboard, &ctx->keyboard_grab);
     }
-    if (seat->pointer && seat->pointer != ctx->pointer_grab.pointer) {
-        weston_pointer_start_grab(seat->pointer, &ctx->pointer_grab);
+    if (pointer && pointer != ctx->pointer_grab.pointer) {
+        weston_pointer_start_grab(pointer, &ctx->pointer_grab);
     }
-    if (seat->touch && seat->touch != ctx->touch_grab.touch) {
-        weston_touch_start_grab(seat->touch, &ctx->touch_grab);
+    if (touch && touch != ctx->touch_grab.touch) {
+        weston_touch_start_grab(touch, &ctx->touch_grab);
     }
 
     wl_list_for_each(controller, &ctx->input_ctx->controller_list, link) {
