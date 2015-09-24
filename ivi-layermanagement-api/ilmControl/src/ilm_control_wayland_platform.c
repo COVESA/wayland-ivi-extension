@@ -125,7 +125,6 @@ wayland_controller_get_layer_context(struct wayland_context *ctx,
         }
     }
 
-    fprintf(stderr, "failed to get layer context in ilmControl\n");
     return NULL;
 }
 
@@ -1407,7 +1406,6 @@ get_surface_context(struct wayland_context *ctx,
         }
     }
 
-    fprintf(stderr, "failed to get surface context in ilmControl\n");
     return NULL;
 }
 

@@ -26,41 +26,13 @@
 #include <weston/compositor.h>
 
 struct ivishell {
-    struct wl_resource *resource;
-
-    struct wl_listener destroy_listener;
-
     struct weston_compositor *compositor;
-
-    struct weston_surface *surface;
-
-    struct weston_process process;
-
-    struct weston_seat *seat;
 
     struct wl_list list_surface;
     struct wl_list list_layer;
     struct wl_list list_screen;
 
-    struct wl_list list_weston_surface;
-
     struct wl_list list_controller;
-    struct wl_list list_controller_surface;
-    struct wl_list list_controller_layer;
-    struct wl_list list_controller_screen;
-
-    struct {
-        struct weston_process process;
-        struct wl_client *client;
-        struct wl_resource *desktop_shell;
-
-        unsigned deathcount;
-        uint32_t deathstamp;
-    } child;
-
-    int state;
-    int previous_state;
-    int event_restriction;
 };
 
 int32_t
