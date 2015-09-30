@@ -35,7 +35,7 @@ TestBase::TestBase()
     }
 
     wlSurfaces.reserve(10);
-    for (int i = 0; i < wlSurfaces.capacity(); ++i)
+    for (int i = 0; i < (int)wlSurfaces.capacity(); ++i)
     {
         wlSurfaces.push_back(wl_compositor_create_surface(wlCompositor));
     }
