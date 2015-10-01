@@ -105,7 +105,7 @@ TEST_F(IlmNullPointerTest, ilm_get_input_focus_null_pointer) {
 
 TEST_F(IlmNullPointerTest, ilm_set_input_event_acceptance_null_pointer) {
     t_ilm_surface surface1 = 1010;
-    t_ilm_string set_seats[] = {"default"};
+    char const *set_seats = "default";
     t_ilm_uint set_seats_count = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],
                                              0, 0, ILM_PIXELFORMAT_RGBA_8888,
@@ -113,7 +113,7 @@ TEST_F(IlmNullPointerTest, ilm_set_input_event_acceptance_null_pointer) {
 
     EXPECT_EQ(ILM_FAILED, ilm_setInputAcceptanceOn(surface1, set_seats_count, NULL));
 
-    EXPECT_EQ(ILM_FAILED, ilm_setInputAcceptanceOn(0, set_seats_count, set_seats));
+    EXPECT_EQ(ILM_FAILED, ilm_setInputAcceptanceOn(0, set_seats_count, (t_ilm_string*)&set_seats));
 }
 
 TEST_F(IlmNullPointerTest, ilm_get_input_event_acceptance_null_pointer) {
@@ -149,9 +149,9 @@ TEST_F(IlmNullPointerTest, ilm_get_input_devices_null_pointer) {
 }
 
 TEST_F(IlmNullPointerTest, ilm_get_input_device_capabilities_null_pointer) {
-    t_ilm_string seats[] = {"default"};
+	char const *seats = "default";
     ilmInputDevice bitmask;
 
     EXPECT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities(NULL, &bitmask));
-    EXPECT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities(seats[0], NULL));
+    EXPECT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities((t_ilm_string)seats, NULL));
 }

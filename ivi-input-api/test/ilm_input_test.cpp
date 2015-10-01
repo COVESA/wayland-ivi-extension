@@ -151,7 +151,7 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     t_ilm_surface surface1 = 1010;
     t_ilm_uint num_seats = 0;
     t_ilm_string *seats = NULL;
-    t_ilm_string set_seats[] = {"default"};
+    char const *set_seats = "default";
     t_ilm_uint set_seats_count = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],
                                              0, 0, ILM_PIXELFORMAT_RGBA_8888,
@@ -162,7 +162,7 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
                                                     &seats));
     EXPECT_EQ(1, num_seats);
     /* googletest doesn't like comparing to null pointers */
-    ASSERT_EQ(false, seats == NULL);
+    ASSERT_FALSE(seats == NULL);
     EXPECT_STREQ("default", seats[0]);
     free(seats[0]);
     free(seats);
@@ -176,12 +176,12 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
 
     /* Can add a seat to acceptance */
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, set_seats_count,
-                                                    set_seats));
+                                                    (t_ilm_string*)&set_seats));
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputAcceptanceOn(surface1, &num_seats,
                                                     &seats));
     EXPECT_EQ(set_seats_count, num_seats);
     bool found = false;
-    if (!strcmp(seats[0], set_seats[0]))
+    if (!strcmp(*seats, (t_ilm_string)set_seats))
         found = true;
     EXPECT_EQ(true, found) << set_seats[0] << " not found in returned seats";
 
@@ -189,7 +189,7 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     free(seats);
 
     /* Seats can be set, unset, then reset */
-    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, &set_seats[0]));
+    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, (t_ilm_string*)&set_seats));
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 0, NULL));
-    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, &set_seats[0]));
+    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, (t_ilm_string*)&set_seats));
 }
