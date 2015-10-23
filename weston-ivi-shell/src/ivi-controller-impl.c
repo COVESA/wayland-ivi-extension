@@ -26,6 +26,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <weston/compositor.h>
 #include "ivi-controller-server-protocol.h"
@@ -34,6 +35,7 @@
 #include "ivi-layout-export.h"
 #include "ivi-extension.h"
 #include "ivi-controller-impl.h"
+#include "wayland-util.h"
 
 struct ivilayer;
 struct iviscreen;
@@ -70,6 +72,11 @@ struct ivicontroller {
     struct wl_client *client;
     struct wl_list link;
     struct ivishell *shell;
+};
+
+struct screenshot_frame_listener {
+        struct wl_listener listener;
+	char *filename;
 };
 
 static void surface_event_remove(struct ivi_layout_surface *, void *);
@@ -843,21 +850,20 @@ controller_screen_add_layer(struct wl_client *client,
 }
 
 static void
-controller_screen_screenshot(struct wl_client *client,
-                struct wl_resource *resource,
-                const char *filename)
+controller_screenshot_notify(struct wl_listener *listener, void *data)
 {
-    struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
-    (void)client;
+    struct screenshot_frame_listener *l =
+        wl_container_of(listener, l, listener);
+    char *filename = l->filename;
 
-    struct weston_output *output = NULL;
+    struct weston_output *output = data;
     int32_t width = 0;
     int32_t height = 0;
     int32_t stride = 0;
     uint8_t *readpixs = NULL;
 
-    output = ivi_extension_screen_get_output(iviscrn->shell, iviscrn->layout_screen);
     --output->disable_planes;
+    wl_list_remove(&listener->link);
 
     width = output->current_mode->width;
     height = output->current_mode->height;
@@ -866,6 +872,8 @@ controller_screen_screenshot(struct wl_client *client,
     readpixs = malloc(stride * height);
     if (readpixs == NULL) {
         weston_log("fails to allocate memory\n");
+        free(l->filename);
+        free(l);
         return;
     }
 
@@ -881,6 +889,40 @@ controller_screen_screenshot(struct wl_client *client,
     save_as_bitmap(filename, (const char*)readpixs, stride * height, width, height,
                    PIXMAN_FORMAT_BPP(output->compositor->read_format));
     free(readpixs);
+    free(l->filename);
+    free(l);
+}
+
+static void
+controller_screen_screenshot(struct wl_client *client,
+                struct wl_resource *resource,
+                const char *filename)
+{
+    struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
+    struct screenshot_frame_listener *l;
+    (void)client;
+
+    struct weston_output *output = NULL;
+    l = malloc(sizeof *l);
+    if(l == NULL) {
+        fprintf(stderr, "fails to allocate memory\n");
+        return;
+    }
+
+    l->filename = malloc(strlen(filename));
+    if(l->filename == NULL) {
+        fprintf(stderr, "fails to allocate memory\n");
+        free(l);
+        return;
+    }
+
+    output = ivi_extension_screen_get_output(iviscrn->shell, iviscrn->layout_screen);
+    strcpy(l->filename, filename);
+    l->listener.notify = controller_screenshot_notify;
+    wl_signal_add(&output->frame_signal, &l->listener);
+    output->disable_planes++;
+    weston_output_schedule_repaint(output);
+    return;
 }
 
 static void
