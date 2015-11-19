@@ -159,11 +159,7 @@ output_listener_mode(void *data,
                      int32_t height,
                      int32_t refresh)
 {
-    (void)data;
     (void)output;
-    (void)flags;
-    (void)width;
-    (void)height;
     (void)refresh;
 
     if (flags & WL_OUTPUT_MODE_CURRENT)
