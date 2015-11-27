@@ -47,7 +47,6 @@ link_directories(
 
 set (HEADER_FILES
     include/transform.h
-    include/WaylandServerinfoClientProtocol.h
     include/WLContext.h
     include/WLEGLSurface.h
     include/WLEyes.h
@@ -57,7 +56,6 @@ set (HEADER_FILES
 
 set (SRC_FILES
     src/main.cpp
-    src/WaylandServerinfoProtocol.cpp
     src/WLContext.cpp
     src/WLEGLSurface.cpp
     src/WLEyes.cpp
