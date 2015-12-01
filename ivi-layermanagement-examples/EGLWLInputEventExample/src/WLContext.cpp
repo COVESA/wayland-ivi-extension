@@ -22,7 +22,6 @@
 #include <string.h>
 #include <assert.h>
 #include "WLContext.h"
-#include "WaylandServerinfoClientProtocol.h"
 
 #define WL_UNUSED(A) (A)=(A)
 
@@ -31,10 +30,6 @@
 static struct wl_registry_listener registryListener = {
     WLContext::RegistryHandleGlobal,
     NULL
-};
-
-static struct serverinfo_listener serverInfoListenerList = {
-    WLContext::ServerInfoListener,
 };
 
 static struct wl_seat_listener seatListener = {
@@ -85,15 +80,6 @@ WLContext::RegistryHandleGlobal(void* data,
             break;
         }
 
-        if (!strcmp(interface, "serverinfo")){
-            struct serverinfo* wlServerInfo = (struct serverinfo*)wl_registry_bind(
-                registry, name, &serverinfo_interface, 1);
-            serverinfo_add_listener(wlServerInfo, &serverInfoListenerList, data);
-            serverinfo_get_connection_id(wlServerInfo);
-            surface->SetWLServerInfo(wlServerInfo);
-            break;
-        }
-
         if (!strcmp(interface, "wl_seat")){
             struct WLContext::seat_data *seat_data = (struct WLContext::seat_data *)calloc(1, sizeof *seat_data);
             seat_data->ctx = surface;
@@ -103,19 +89,6 @@ WLContext::RegistryHandleGlobal(void* data,
                                  (void *)seat_data);
         }
     } while (0);
-}
-
-void
-WLContext::ServerInfoListener(void* data,
-                              struct serverinfo* serverInfo,
-                              uint32_t clientHandle)
-{
-    WL_UNUSED(serverInfo);
-
-    WLContext* surface = static_cast<WLContext*>(data);
-    assert(surface);
-
-    surface->SetConnectionId(clientHandle);
 }
 
 void

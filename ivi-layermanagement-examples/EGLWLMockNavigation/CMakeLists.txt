@@ -72,7 +72,6 @@ set (SRC_FILES
     src/ShaderBase.cpp
     src/ShaderLighting.cpp
     src/main.cpp
-    src/WaylandServerinfoProtocol.cpp
     src/IlmMatrix.cpp
 )
 
@@ -94,6 +93,8 @@ set(LIBS
 add_dependencies(${PROJECT_NAME}
     ${LIBS}
 )
+
+add_definitions(${EGL_CFLAGS})
 
 target_link_libraries(${PROJECT_NAME}
     ${LIBS}
