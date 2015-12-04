@@ -1,4 +1,0 @@
-This directory contains the ivi-input-controller module.
-To use this, add it to the "ivi-module" entry in your weston.ini.
-Multiple modules may be specified in the same entry by separating
-the modules with commas.

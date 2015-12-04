@@ -1037,9 +1037,9 @@ create_input_context(struct weston_compositor *ec,
 }
 
 WL_EXPORT int
-controller_module_init(struct weston_compositor *ec, int* argc, char *argv[],
-                       const struct ivi_controller_interface *interface,
-                       size_t interface_version)
+input_controller_module_init(struct weston_compositor *ec,
+                             const struct ivi_controller_interface *interface,
+                             size_t interface_version)
 {
     struct input_context *ctx = create_input_context(ec, interface);
     if (ctx == NULL) {
