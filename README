@@ -1,14 +1,16 @@
 Sections in this file describe:
-- How to build 
+- How to build
 - Example applications
+- How to test
 
 How to build on different platforms
 ====================================
 
 Pre-requisite: 
-- Weston works with any shell downloaded from the following URL
-  http://cgit.freedesktop.org/wayland/weston/
+- Weston
 - CMake required (version 2.6 or higher)
+- Open GLES and EGL for example applications
+- Gtest for the test suite
 
 Build up
 1. Pull the current codebase form the git repo
@@ -21,15 +23,6 @@ Build up
    E.g. cd <build-dir>
         cmake -DCMAKE_TOOLCHAIN_FILE=<your setting *.cmake> ../
 
-   Example of *.cmake
-
-add_definitions ("-g -O3")
-set (CMAKE_FIND_ROOT_PATH <your root path>)
-set (CMAKE_INSTALL_PREFIX <your installation path>)
-set (FFI_INCLUDE_DIR /usr/lib/libffi-3.0.10/include)
-set (XKB_INCLUDE_DIR <your installation path>/include/xkbcommon)
-set (CAIRO_INCLUDE_DIR <your installation path>/include/cairo)
-
 4. Start the build and install
    
    E.g. sudo make install
@@ -40,7 +33,12 @@ Example applications
 Pre-requisite:
 - Modify weston.ini to use ivi-shell.so
   Example:
+    [core]
     shell=ivi-shell.so
+
+    [ivi-shell]
+    ivi-module=ivi-controller.so,ivi-input-controller.so
+
 - Set Environmental values
   Example:
     export XDG_RUNTIME_DIR=/var/run/<your user name>/1000
@@ -49,6 +47,16 @@ Pre-requisite:
 Start-up Weston:
    Example: <your installation path>/bin/weston
 
+Start-up HMI helper:
+   Example: <your installation path>/bin/layer-add-surfaces 1000 1
+
 EGLWLMockNavigation:
    Example: <your installation path>/bin/EGLWLMockNavigation
 
+How to test
+====================================
+1. Build the testsuite by setting BUILD_ILM_API_TESTS and INSTALL_ILM_API_TESTS options.
+   Example: cmake -DBUILD_ILM_API_TESTS -DINSTALL_ILM_API_TESTS
+2. After starting up Weston run the testsuite.
+   Example: <your installation path>/bin/ivi-layermanagement-api-test
+            <your installation path>/bin/ivi-input-api-test
