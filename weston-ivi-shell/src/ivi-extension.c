@@ -702,6 +702,43 @@ ivi_extension_layer_set_fade_info(struct ivishell *shell,
                                                             start_alpha, end_alpha);
 }
 
+static int
+load_input_module(struct weston_compositor *ec,
+                  const struct ivi_controller_interface *interface,
+                  size_t interface_version)
+{
+    struct weston_config *config = ec->config;
+    struct weston_config_section *section;
+    char *input_module = NULL;
+
+    int (*input_module_init)(struct weston_compositor *ec,
+                             const struct ivi_controller_interface *interface,
+                             size_t interface_version);
+
+    section = weston_config_get_section(config, "ivi-shell", NULL, NULL);
+
+    if (weston_config_section_get_string(section, "ivi-input-module",
+                                         &input_module, NULL) < 0) {
+        /* input events are handled by weston's default grabs */
+        weston_log("ivi-controller: No ivi-input-module set\n");
+        return 0;
+    }
+
+    input_module_init = weston_load_module(input_module, "input_controller_module_init");
+    if (!input_module_init)
+        return -1;
+
+    if (input_module_init(ec, interface,
+                          sizeof(struct ivi_controller_interface)) != 0) {
+        weston_log("ivi-controller: Initialization of input module failes");
+        return -1;
+    }
+
+    free(input_module);
+
+    return 0;
+}
+
 WL_EXPORT int
 controller_module_init(struct weston_compositor *compositor,
 		       int *argc, char *argv[],
@@ -723,6 +760,11 @@ controller_module_init(struct weston_compositor *compositor,
     init_ivi_shell(compositor, &controller_shell->base);
 
     if (setup_ivi_controller_server(compositor, &controller_shell->base)) {
+        free(controller_shell);
+        return -1;
+    }
+
+    if (load_input_module(compositor, interface, interface_version) < 0) {
         free(controller_shell);
         return -1;
     }
