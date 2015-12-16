@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="ivi_share">
+
+    <copyright>
+        Copyright (c) 2012 Advanced Driver Information Technology.
+
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+        THE SOFTWARE.
+    </copyright>
+
+    <interface name="ivi_share" version="1">
+        <description summary="get handle to manipulate ivi_surface">
+          get handle ID to manipulate shared ivi_surface. The host ivi application
+          can get trigger of update of the ivi_surface from client to draw it in host's
+          content. Additionally the interface allows host ivi application to send
+          transformed input coordinates to client because the coordinate is transformed
+          outside of compositor.
+        </description>
+        <request name="get_ivi_share_surface">
+            <arg name="id" type="new_id" interface="ivi_share_surface"/>
+            <arg name="surface_id" type="uint" summary="IVI id which is global in a system"/>
+        </request>
+    </interface>
+
+    <interface name="ivi_share_surface" version="1">
+        <description summary="extension interface for sharing a ivi_surface">
+        </description>
+
+        <request name="destroy" type="destructor">
+            <description summary="delete share surface">
+              Deletes the surface and invalidates its object ID.
+            </description>
+        </request>
+
+        <enum name="type">
+            <description summary="name type">
+              The ivi-share is dependent on an architecture how to share graphic
+              buffer inter processes. This informs Host ivi_application which way shall
+              be used in its own system. The most popular way is gbm now.
+            </description>
+            <entry name="gbm" value="0"/>
+            <entry name="unknown" value="1"/>
+        </enum>
+
+        <enum name="format">
+            <description summary="share surface format"/>
+            <entry name="argb8888" value="0"/>
+            <entry name="xrgb8888" value="1"/>
+            <entry name="unknown" value="2"/>
+        </enum>
+
+        <event name="damage">
+            <description summary="damage">
+              Notify if shared ivi_surface is updated in client.
+            </description>
+
+            <arg name="name" type="uint"/>
+        </event>
+
+        <event name="configure">
+            <description summary="configuration of share surface">
+            </description>
+
+            <arg name="type" type="uint"/>
+            <arg name="width" type="uint"/>
+            <arg name="height" type="uint"/>
+            <arg name="stride" type="uint"/>
+            <arg name="format" type="uint"/>
+        </event>
+
+        <enum name="input_caps">
+            <description summary="input capability bitmask"/>
+            <entry name="pointer" value="1" summary="Shared surface can receive a pointer event"/>
+            <entry name="keyboard" value="2" summary="Shared surface can receive a keyboard event"/>
+            <entry name="touch" value="4" summary="Shared surface can receive a touch event"/>
+        </enum>
+
+        <event name="input_capabilities">
+            <description summary="seat capabilities of shared surface"/>
+            <arg name="capabilities" type="uint"/>
+        </event>
+
+        <request name="redirect_touch_down">
+            <description summary="redirect touch down event"/>
+            <arg name="serial" type="uint"/>
+            <arg name="id" type="int" summary="the unique ID of this touch point"/>
+            <arg name="x" type="fixed" summary="x coordinate in shared surface-relative coordinates"/>
+            <arg name="y" type="fixed" summary="y coordinate in shared surface-relative coordinates"/>
+        </request>
+
+        <request name="redirect_touch_up">
+            <description summary="redirect end of touch event sequence"/>
+            <arg name="serial" type="uint"/>
+            <arg name="id" type="int" summary="the unique ID of this touch point"/>
+        </request>
+
+        <request name="redirect_touch_motion">
+            <description summary="redirect update of touch point coordinates"/>
+            <arg name="id" type="int" summary="the unique ID of this touch point"/>
+            <arg name="x" type="fixed" summary="x coordinate in shared surface-relative coordinates"/>
+            <arg name="y" type="fixed" summary="y coordinate in shared surface-relative coordinates"/>
+        </request>
+
+        <request name="redirect_touch_frame">
+            <description summary="end of touch frame event"/>
+        </request>
+
+        <request name="redirect_touch_cancel">
+            <description summary="touch session canceled"/>
+        </request>
+
+        <enum name="share_surface_state">
+            <description summary="state of shared surface"/>
+            <entry name="not_exist" value="1" summary="the surface which shared is not exist"/>
+            <entry name="destroyed" value="2" summary="the surface which shared has been destroyed"/>
+            <entry name="invalid_surface" value="3" summary="the surface is unsited for share"/>
+        </enum>
+
+        <event name="share_surface_state">
+            <description summary="state of shared surface"/>
+            <arg name="state" type="uint"/>
+        </event>
+    </interface>
+</protocol>
