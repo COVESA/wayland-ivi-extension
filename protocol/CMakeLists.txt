@@ -99,6 +99,30 @@ add_custom_command(
     DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
 )
 
+add_custom_command(
+    OUTPUT  ivi-share-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-share-server-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-server-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-share-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+)
+
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
@@ -120,6 +144,9 @@ add_library(${PROJECT_NAME} STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-server-protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

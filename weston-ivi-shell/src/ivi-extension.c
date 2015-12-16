@@ -23,6 +23,9 @@
 #include "ivi-controller-interface.h"
 #include "ivi-extension.h"
 #include "ivi-controller-impl.h"
+#ifdef IVI_SHARE_ENABLE
+#  include "ivi-share.h"
+#endif
 
 struct ivi_controller_shell {
     struct ivishell base;
@@ -758,6 +761,13 @@ controller_module_init(struct weston_compositor *compositor,
     controller_shell->interface = interface;
 
     init_ivi_shell(compositor, &controller_shell->base);
+
+#ifdef IVI_SHARE_ENABLE
+    if (setup_buffer_sharing(compositor, interface) < 0) {
+        free(controller_shell);
+        return -1;
+    }
+#endif
 
     if (setup_ivi_controller_server(compositor, &controller_shell->base)) {
         free(controller_shell);

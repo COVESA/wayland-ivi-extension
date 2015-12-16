@@ -27,6 +27,17 @@ pkg_check_modules(WAYLAND_SERVER wayland-server>=1.9.0 REQUIRED)
 pkg_check_modules(WESTON weston>=1.9.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
+find_package(Threads REQUIRED)
+if (IVI_SHARE)
+    pkg_check_modules(GBM gbm REQUIRED)
+    pkg_check_modules(LIBDRM libdrm REQUIRED)
+    ADD_DEFINITIONS("-DIVI_SHARE_ENABLE")
+    SET(BUFFER_SHARING_SRC_FILES
+        src/ivi-share.c
+        src/ivi-share-gbm.c
+    )
+endif (IVI_SHARE)
+
 GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
 
 include_directories(
@@ -46,6 +57,7 @@ link_directories(
 add_library(${PROJECT_NAME} MODULE
     src/ivi-extension.c src/ivi-controller-impl.c
     src/bitmap.c
+    ${BUFFER_SHARING_SRC_FILES}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
@@ -61,6 +73,31 @@ set(LIBS
     ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
 )
+
+if (IVI_SHARE)
+     include_directories(
+         ${include_directories}
+         ${GBM_INCLUDE_DIRS}
+         ${LIBDRM_INCLUDE_DIRS}
+     )
+
+     link_directories(
+         ${link_directories}
+         ${GBM_LIBRARY_DIRS}
+         ${LIBDRM_LIBRARY_DIRS}
+     )
+
+     add_dependencies(${PROJECT_NAME}
+         ${GBM_LIBRARIES}
+         ${LIBDRM_LIBRARIES}
+     )
+
+     set(LIBS
+         ${LIBS}
+         ${GBM_LIBRARIES}
+         ${LIBDRM_LIBRARIES}
+     )
+endif (IVI_SHARE)
 
 set(CMAKE_C_LDFLAGS "-module -avoid-version")
 
