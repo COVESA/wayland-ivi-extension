@@ -443,11 +443,12 @@ static struct weston_pointer_grab_interface pointer_grab_interface = {
 
 static void
 touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
-                wl_fixed_t sx, wl_fixed_t sy)
+                wl_fixed_t x, wl_fixed_t y)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
     struct wl_display *display = grab->touch->seat->compositor->wl_display;
     struct surface_ctx *surf_ctx;
+    wl_fixed_t sx, sy;
     const struct ivi_controller_interface *interface =
         seat->input_ctx->ivi_controller_interface;
 
@@ -458,6 +459,7 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
         struct weston_surface *surf;
+        struct weston_view *view;
         struct wl_resource *resource;
         struct wl_client *surface_client;
         uint32_t serial;
@@ -486,6 +488,10 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
          * decided only one surface has touch focus */
         if (!(surf_ctx->focus & ILM_INPUT_DEVICE_TOUCH))
             continue;
+
+        /* Assume one view per surface */
+        view = wl_container_of(surf->views.next, view, surface_link);
+        weston_view_from_global_fixed(view, x, y, &sx, &sy);
 
         surface_client = wl_resource_get_client(surf->resource);
         serial = wl_display_next_serial(display);
@@ -560,16 +566,18 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
 
 static void
 touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
-                  wl_fixed_t sx, wl_fixed_t sy)
+                  wl_fixed_t x, wl_fixed_t y)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
     struct surface_ctx *surf_ctx;
+    wl_fixed_t sx, sy;
     const struct ivi_controller_interface *interface =
         seat->input_ctx->ivi_controller_interface;
 
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
         struct weston_surface *surf;
+        struct weston_view *view;
         struct wl_resource *resource;
         struct wl_client *surface_client;
 
@@ -579,7 +587,11 @@ touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
         if (get_accepted_seat(surf_ctx, grab->touch->seat->seat_name) < 0)
             continue;
 
+        /* Assume one view per surface */
         surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
+        view = wl_container_of(surf->views.next, view, surface_link);
+        weston_view_from_global_fixed(view, x, y, &sx, &sy);
+
         surface_client = wl_resource_get_client(surf->resource);
         wl_resource_for_each(resource, &grab->touch->resource_list) {
             if (wl_resource_get_client(resource) != surface_client)
