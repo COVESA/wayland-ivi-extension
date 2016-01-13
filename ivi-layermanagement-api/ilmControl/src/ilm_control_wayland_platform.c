@@ -1514,7 +1514,9 @@ ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs)
         *ppIDs = (t_ilm_uint*)malloc(length * sizeof **ppIDs);
         if (*ppIDs != NULL) {
             t_ilm_uint* ids = *ppIDs;
-            wl_list_for_each(ctx_scrn, &ctx->wl.list_screen, link) {
+            // compositor sends screens in opposite order
+            // write ids from back to front to turn them around
+            wl_list_for_each_reverse(ctx_scrn, &ctx->wl.list_screen, link) {
                 *ids = ctx_scrn->id_screen;
                 ids++;
             }
