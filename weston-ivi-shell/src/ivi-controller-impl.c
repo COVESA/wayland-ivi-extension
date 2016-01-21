@@ -154,6 +154,7 @@ send_surface_add_event(struct ivisurface *ivisurf,
     int i = 0;
     struct ivilayer *ivilayer = NULL;
     struct ivishell *shell = ivisurf->shell;
+    struct wl_client *client = wl_resource_get_client(resource);
 
     ans = ivi_extension_get_layers_under_surface(shell, ivisurf->layout_surface,
                                                   &length, &pArray);
@@ -180,7 +181,10 @@ send_surface_add_event(struct ivisurface *ivisurf,
                 continue;
             }
 
-            wl_resource_for_each(layer_resource, &ivilayer->resource_list) {
+            layer_resource = wl_resource_find_for_client(&ivilayer->resource_list,
+                                                         client);
+
+            if (layer_resource != NULL) {
                 ivi_controller_surface_send_layer(resource, layer_resource);
             }
         }
