@@ -34,6 +34,9 @@
 #include "bitmap.h"
 
 #include "wayland-util.h"
+#ifdef IVI_SHARE_ENABLE
+#  include "ivi-share.h"
+#endif
 
 struct ivilayer;
 struct iviscreen;
@@ -1414,6 +1417,83 @@ setup_ivi_controller_server(struct weston_compositor *compositor,
 {
     if (wl_global_create(compositor->wl_display, &ivi_controller_interface, 1,
                          shell, bind_ivi_controller) == NULL) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int
+load_input_module(struct weston_compositor *ec,
+                  const struct ivi_layout_interface *interface,
+                  size_t interface_version)
+{
+    struct weston_config *config = ec->config;
+    struct weston_config_section *section;
+    char *input_module = NULL;
+
+    int (*input_module_init)(struct weston_compositor *ec,
+                             const struct ivi_layout_interface *interface,
+                             size_t interface_version);
+
+    section = weston_config_get_section(config, "ivi-shell", NULL, NULL);
+
+    if (weston_config_section_get_string(section, "ivi-input-module",
+                                         &input_module, NULL) < 0) {
+        /* input events are handled by weston's default grabs */
+        weston_log("ivi-controller: No ivi-input-module set\n");
+        return 0;
+    }
+
+    input_module_init = weston_load_module(input_module, "input_controller_module_init");
+    if (!input_module_init)
+        return -1;
+
+    if (input_module_init(ec, interface,
+                          sizeof(struct ivi_layout_interface)) != 0) {
+        weston_log("ivi-controller: Initialization of input module failes");
+        return -1;
+    }
+
+    free(input_module);
+
+    return 0;
+}
+
+WL_EXPORT int
+controller_module_init(struct weston_compositor *compositor,
+		       int *argc, char *argv[],
+		       const struct ivi_layout_interface *interface,
+		       size_t interface_version)
+{
+    struct ivishell *shell;
+    (void)argc;
+    (void)argv;
+
+    shell = malloc(sizeof *shell);
+    if (shell == NULL)
+        return -1;
+
+    memset(shell, 0, sizeof *shell);
+
+    shell->interface = interface;
+
+    init_ivi_shell(compositor, shell);
+
+#ifdef IVI_SHARE_ENABLE
+    if (setup_buffer_sharing(compositor, interface) < 0) {
+        free(shell);
+        return -1;
+    }
+#endif
+
+    if (setup_ivi_controller_server(compositor, shell)) {
+        free(shell);
+        return -1;
+    }
+
+    if (load_input_module(compositor, interface, interface_version) < 0) {
+        free(shell);
         return -1;
     }
 
