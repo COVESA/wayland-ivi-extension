@@ -73,6 +73,17 @@ struct ivicontroller {
     struct ivishell *shell;
 };
 
+struct ivishell {
+    struct weston_compositor *compositor;
+    const struct ivi_layout_interface *interface;
+
+    struct wl_list list_surface;
+    struct wl_list list_layer;
+    struct wl_list list_screen;
+
+    struct wl_list list_controller;
+};
+
 struct screenshot_frame_listener {
         struct wl_listener listener;
 	char *filename;
