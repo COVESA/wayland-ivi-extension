@@ -55,7 +55,7 @@ link_directories(
 
 
 add_library(${PROJECT_NAME} MODULE
-    src/ivi-extension.c src/ivi-controller-impl.c
+    src/ivi-controller-impl.c
     src/bitmap.c
     ${BUFFER_SHARING_SRC_FILES}
 )
