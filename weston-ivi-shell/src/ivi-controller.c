@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 DENSO CORPORATION
+ * Copyright (C) 2016 Advanced Driver Information Technology Joint Venture GmbH
  *
  * Permission to use, copy, modify, distribute, and sell this software and
  * its documentation for any purpose is hereby granted without fee, provided
