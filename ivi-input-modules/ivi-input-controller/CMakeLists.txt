@@ -37,14 +37,12 @@ include_directories(
     ${IVI_CONTROLLER_INCLUDE_DIRS}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
-    ${WESTON_INCLUDE_DIRS}/weston
     ${PIXMAN_INCLUDE_DIRS}
 )
 
 link_directories(
     ${WAYLAND_SERVER_LIBRARY_DIRS}
     ${WESTON_LIBRARY_DIRS}
-    ${WESTON_LIBDIR}/weston
     ${PIXMAN_LIBRARY_DIRS}
 )
 
