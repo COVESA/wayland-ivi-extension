@@ -111,14 +111,12 @@ unbind_resource_controller(struct wl_resource *resource)
 }
 
 static struct ivisurface*
-get_surface(struct wl_list *list_surf, uint32_t id_surface)
+get_surface(struct wl_list *list_surf, struct ivi_layout_surface *layout_surface)
 {
     struct ivisurface *ivisurf = NULL;
-    uint32_t ivisurf_id = 0;
 
     wl_list_for_each(ivisurf, list_surf, link) {
-        ivisurf_id = ivi_extension_get_id_of_surface(ivisurf->shell, ivisurf->layout_surface);
-        if (ivisurf_id == id_surface) {
+        if (layout_surface == ivisurf->layout_surface) {
             return ivisurf;
         }
     }
@@ -127,14 +125,12 @@ get_surface(struct wl_list *list_surf, uint32_t id_surface)
 }
 
 static struct ivilayer*
-get_layer(struct wl_list *list_layer, uint32_t id_layer)
+get_layer(struct wl_list *list_layer, struct ivi_layout_layer *layout_layer)
 {
     struct ivilayer *ivilayer = NULL;
-    uint32_t ivilayer_id = 0;
 
     wl_list_for_each(ivilayer, list_layer, link) {
-        ivilayer_id = ivi_extension_get_id_of_layer(ivilayer->shell, ivilayer->layout_layer);
-        if (ivilayer_id == id_layer) {
+        if (layout_layer == ivilayer->layout_layer) {
             return ivilayer;
         }
     }
@@ -1000,21 +996,21 @@ controller_layer_create(struct wl_client *client,
     struct ivilayer *ivilayer = NULL;
     const struct ivi_layout_layer_properties *prop;
 
-    ivilayer = get_layer(&shell->list_layer, id_layer);
-    if (ivilayer == NULL) {
+    layout_layer = ivi_extension_get_layer_from_id(shell, id_layer);
+    if (layout_layer == NULL) {
         layout_layer = ivi_extension_layer_create_with_dimension(shell, id_layer,
                            (uint32_t)width, (uint32_t)height);
         if (layout_layer == NULL) {
             weston_log("id_layer is already created\n");
             return;
         }
+    }
 
-        /* ivilayer will be created by layer_event_create */
-        ivilayer = get_layer(&shell->list_layer, id_layer);
-        if (ivilayer == NULL) {
-            weston_log("couldn't get layer object\n");
-            return;
-        }
+    /* ivilayer will be created by layer_event_create */
+    ivilayer = get_layer(&shell->list_layer, layout_layer);
+    if (ivilayer == NULL) {
+        weston_log("couldn't get layer object\n");
+        return;
     }
 
     layer_resource = wl_resource_create(client,
@@ -1052,9 +1048,15 @@ controller_surface_create(struct wl_client *client,
     struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
     struct ivishell *shell = ctrl->shell;
     const struct ivi_layout_surface_properties *prop;
+    struct ivi_layout_surface *layout_surface = NULL;
     struct ivisurface *ivisurf = NULL;
 
-    ivisurf = get_surface(&shell->list_surface, id_surface);
+    layout_surface = ivi_extension_get_surface_from_id(shell, id_surface);
+    if (layout_surface == NULL) {
+        return;
+    }
+
+    ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
         return;
     }
@@ -1194,12 +1196,6 @@ create_layer(struct ivishell *shell,
     struct ivilayer *ivilayer = NULL;
     struct ivicontroller *controller = NULL;
 
-    ivilayer = get_layer(&shell->list_layer, id_layer);
-    if (ivilayer != NULL) {
-        weston_log("id_layer is already created\n");
-        return NULL;
-    }
-
     ivilayer = calloc(1, sizeof *ivilayer);
     if (NULL == ivilayer) {
         weston_log("no memory to allocate client layer\n");
@@ -1227,12 +1223,6 @@ create_surface(struct ivishell *shell,
 {
     struct ivisurface *ivisurf = NULL;
     struct ivicontroller *controller = NULL;
-
-    ivisurf = get_surface(&shell->list_surface, id_surface);
-    if (ivisurf != NULL) {
-        weston_log("id_surface is already created\n");
-        return NULL;
-    }
 
     ivisurf = calloc(1, sizeof *ivisurf);
     if (ivisurf == NULL) {
@@ -1280,11 +1270,8 @@ layer_event_remove(struct ivi_layout_layer *layout_layer,
     struct wl_resource *resource;
     struct ivishell *shell = userdata;
     struct ivilayer *ivilayer = NULL;
-    uint32_t id_layer = 0;
 
-    id_layer = ivi_extension_get_id_of_layer(shell, layout_layer);
-
-    ivilayer = get_layer(&shell->list_layer, id_layer);
+    ivilayer = get_layer(&shell->list_layer, layout_layer);
     if (ivilayer == NULL) {
         weston_log("id_surface is not created yet\n");
         return;
@@ -1328,11 +1315,8 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
     struct wl_resource *resource;
     struct ivishell *shell = userdata;
     struct ivisurface *ivisurf = NULL;
-    uint32_t id_surface = 0;
 
-    id_surface = ivi_extension_get_id_of_surface(shell, layout_surface);
-
-    ivisurf = get_surface(&shell->list_surface, id_surface);
+    ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
         weston_log("id_surface is not created yet\n");
         return;
@@ -1355,11 +1339,8 @@ surface_event_configure(struct ivi_layout_surface *layout_surface,
     struct ivishell *shell = userdata;
     struct ivisurface *ivisurf = NULL;
     const struct ivi_layout_surface_properties *prop;
-    uint32_t id_surface = 0;
 
-    id_surface = ivi_extension_get_id_of_surface(shell, layout_surface);
-
-    ivisurf = get_surface(&shell->list_surface, id_surface);
+    ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
         weston_log("id_surface is not created yet\n");
         return;
