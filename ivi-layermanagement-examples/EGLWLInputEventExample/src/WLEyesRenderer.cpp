@@ -103,7 +103,8 @@ PointerHandleEnter(void* data, struct wl_pointer* wlPointer, uint32_t serial,
     WL_UNUSED(wlSurface);
     WL_UNUSED(sx);
     WL_UNUSED(sy);
-    printf("ENTER EGLWLINPUT PointerHandleEnter: x(%d), y(%d)\n", sx, sy);
+    printf("ENTER EGLWLINPUT PointerHandleEnter: x(%d), y(%d)\n",
+           wl_fixed_to_int(sx), wl_fixed_to_int(sy));
 }
 
 void
