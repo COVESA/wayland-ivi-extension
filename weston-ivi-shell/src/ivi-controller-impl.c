@@ -1331,7 +1331,6 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
     }
 
     wl_resource_for_each(resource, &ivisurf->resource_list) {
-            ivi_controller_surface_send_content(resource, IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_REMOVED);
             ivi_controller_surface_send_destroyed(resource);
     }
 
