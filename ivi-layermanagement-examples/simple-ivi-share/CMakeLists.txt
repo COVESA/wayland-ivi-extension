@@ -25,22 +25,6 @@ project (generate-protocol-src)
 
 find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
 
-add_custom_command(
-    OUTPUT  ivi-application-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-share-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-)
-
 ################################################################
 
 project (simple-ivi-share)
@@ -69,6 +53,7 @@ link_directories(
 
 SET(LIBS
     ${LIBS}
+    ivi-extension-protocol
     ${GLESv2_LIBRARIES}
     ${WAYLAND_CLIENT_LIBRARIES}
     ${WAYLAND_EGL_LIBRARIES}
@@ -82,8 +67,6 @@ SET(SRC_FILES
 
 add_executable(${PROJECT_NAME}
                ${SRC_FILES}
-               ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
-               ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
 )
 
 add_dependencies(${PROJECT_NAME} ${LIBS})
