@@ -25,14 +25,6 @@ project (generate-protocol-src)
 
 find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
 
-add_custom_command(
-    OUTPUT  ivi-application-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
-)
-
 ################################################################
 
 project (multi-touch-viewer)
@@ -61,6 +53,7 @@ link_directories(
 
 SET(LIBS
     ${LIBS}
+    ivi-extension-protocol
     ${GLESv2_LIBRARIES}
     ${WAYLAND_CLIENT_LIBRARIES}
     ${WAYLAND_EGL_LIBRARIES}
@@ -82,7 +75,6 @@ set(HEADER_FILES
 
 add_executable(${PROJECT_NAME}
                ${SRC_FILES}
-               ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
 )
 
 add_dependencies(${PROJECT_NAME} ${LIBS})

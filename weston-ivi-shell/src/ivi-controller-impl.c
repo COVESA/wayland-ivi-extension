@@ -610,10 +610,18 @@ controller_surface_send_stats(struct wl_client *client,
                               struct wl_resource *resource)
 {
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    struct weston_surface *surface;
+    struct wl_client* target_client;
     pid_t pid;
     uid_t uid;
     gid_t gid;
-    wl_client_get_credentials(client, &pid, &uid, &gid);
+
+    /* Get pid that creates surface */
+    surface = ivi_extension_surface_get_weston_surface(ivisurf->shell,
+                                                       ivisurf->layout_surface);
+    target_client = wl_resource_get_client(surface->resource);
+
+    wl_client_get_credentials(target_client, &pid, &uid, &gid);
 
     ivi_controller_surface_send_stats(resource, 0, 0,
                                       ivisurf->update_count, pid, "");
