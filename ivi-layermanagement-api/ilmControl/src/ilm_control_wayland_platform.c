@@ -637,6 +637,14 @@ controller_surface_listener_destroyed(void *data,
                                ILM_NOTIFICATION_CONTENT_REMOVED);
     }
 
+    if (ctx_surf->ctx->notification != NULL) {
+        ilmObjectType surface = ILM_SURFACE;
+        ctx_surf->ctx->notification(surface, ctx_surf->id_surface, ILM_FALSE,
+                                    ctx_surf->ctx->notification_user_data);
+    }
+
+    ivi_controller_surface_destroy(controller, 1);
+
     wl_list_remove(&ctx_surf->order.link);
     wl_list_remove(&ctx_surf->link);
     free(ctx_surf);
@@ -649,31 +657,7 @@ controller_surface_listener_content(void *data,
 {
     struct surface_context *ctx_surf = data;
 
-    // if client surface (=content) was removed with ilm_surfaceDestroy()
-    // the expected behavior within ILM API mandates a full removal
-    // of the surface from the scene. We must remove the controller
-    // from scene, too.
-    if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_REMOVED == content_state)
-    {
-        if (ctx_surf->notification != NULL) {
-            ctx_surf->notification(ctx_surf->id_surface,
-                                   &ctx_surf->prop,
-                                   ILM_NOTIFICATION_CONTENT_REMOVED);
-        }
-
-        if (ctx_surf->ctx->notification != NULL) {
-            ilmObjectType surface = ILM_SURFACE;
-            ctx_surf->ctx->notification(surface, ctx_surf->id_surface, ILM_FALSE,
-                                        ctx_surf->ctx->notification_user_data);
-        }
-
-        ivi_controller_surface_destroy(controller, 1);
-
-        wl_list_remove(&ctx_surf->order.link);
-        wl_list_remove(&ctx_surf->link);
-        free(ctx_surf);
-    }
-    else if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_AVAILABLE == content_state)
+    if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_AVAILABLE == content_state)
     {
         if (ctx_surf->notification != NULL) {
             ctx_surf->notification(ctx_surf->id_surface,
