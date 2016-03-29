@@ -287,6 +287,9 @@ update_surface_prop(struct ivisurface *ivisurf,
             ivisurf->on_layer = ivilayer;
         }
     }
+
+    free(pArray);
+    pArray = NULL;
 }
 
 static void
