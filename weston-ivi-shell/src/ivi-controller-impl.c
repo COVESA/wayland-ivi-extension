@@ -917,7 +917,7 @@ controller_screen_screenshot(struct wl_client *client,
         return;
     }
 
-    l->filename = malloc(strlen(filename));
+    l->filename = strdup(filename);
     if(l->filename == NULL) {
         fprintf(stderr, "fails to allocate memory\n");
         free(l);
@@ -925,7 +925,6 @@ controller_screen_screenshot(struct wl_client *client,
     }
 
     output = ivi_extension_screen_get_output(iviscrn->shell, iviscrn->layout_screen);
-    strcpy(l->filename, filename);
     l->listener.notify = controller_screenshot_notify;
     wl_signal_add(&output->frame_signal, &l->listener);
     output->disable_planes++;
