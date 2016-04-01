@@ -397,6 +397,8 @@ controller_layer_listener_destroyed(void *data,
     struct surface_context *ctx_surf = NULL;
     struct surface_context *ctx_surf_next = NULL;
 
+    ivi_controller_layer_destroy(controller, 1);
+
     wl_list_remove(&ctx_layer->order.link);
     wl_list_remove(&ctx_layer->link);
 
@@ -1062,6 +1064,7 @@ static void destroy_control_resources(void)
             wl_list_for_each_safe(l, n, &ctx->wl.list_layer, link) {
                 wl_list_remove(&l->link);
                 wl_list_remove(&l->order.link);
+                ivi_controller_layer_destroy(l->controller, 0);
                 free(l);
             }
         }
