@@ -633,8 +633,14 @@ controller_surface_destroy(struct wl_client *client,
               int32_t destroy_scene_object)
 {
     (void)client;
-    (void)destroy_scene_object;
+    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+
     wl_resource_destroy(resource);
+
+    if (wl_list_empty(&ivisurf->resource_list) && destroy_scene_object) {
+        wl_list_remove(&ivisurf->link);
+        free(ivisurf);
+    }
 }
 
 static const
@@ -1341,12 +1347,17 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
         return;
     }
 
-    wl_resource_for_each(resource, &ivisurf->resource_list) {
-            ivi_controller_surface_send_destroyed(resource);
+    /*If there is no ivi_controller_surface objects, free
+     * ivisurf immediately. Otherwise wait for clients to destroy
+     * their proxies. */
+    if (wl_list_empty(&ivisurf->resource_list)) {
+        wl_list_remove(&ivisurf->link);
+        free(ivisurf);
+    } else {
+        wl_resource_for_each(resource, &ivisurf->resource_list) {
+                ivi_controller_surface_send_destroyed(resource);
+        }
     }
-
-    wl_list_remove(&ivisurf->link);
-    free(ivisurf);
 }
 
 static void
