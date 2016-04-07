@@ -287,6 +287,9 @@ update_surface_prop(struct ivisurface *ivisurf,
             ivisurf->on_layer = ivilayer;
         }
     }
+
+    free(pArray);
+    pArray = NULL;
 }
 
 static void
@@ -633,8 +636,14 @@ controller_surface_destroy(struct wl_client *client,
               int32_t destroy_scene_object)
 {
     (void)client;
-    (void)destroy_scene_object;
+    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+
     wl_resource_destroy(resource);
+
+    if (wl_list_empty(&ivisurf->resource_list) && destroy_scene_object) {
+        wl_list_remove(&ivisurf->link);
+        free(ivisurf);
+    }
 }
 
 static const
@@ -802,15 +811,22 @@ controller_layer_destroy(struct wl_client *client,
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
     (void)client;
-    (void)destroy_scene_object;
 
-    if (ivilayer->layout_layer != NULL) {
-        ivi_extension_layer_remove(ivilayer->shell, ivilayer->layout_layer);
-        ivilayer->layout_layer = NULL;
+    if (destroy_scene_object) {
+        if (ivilayer->layout_layer != NULL) {
+            ivi_extension_layer_remove(ivilayer->shell, ivilayer->layout_layer);
+            ivilayer->layout_layer = NULL;
+        }
+
+        wl_resource_destroy(resource);
+
+        if (wl_list_empty(&ivilayer->resource_list)) {
+            wl_list_remove(&ivilayer->link);
+            free(ivilayer);
+        }
+    } else {
+        wl_resource_destroy(resource);
     }
-
-    wl_resource_destroy(resource);
-
 }
 
 static const
@@ -1284,12 +1300,17 @@ layer_event_remove(struct ivi_layout_layer *layout_layer,
         return;
     }
 
-    wl_resource_for_each(resource, &ivilayer->resource_list) {
+    /*If there is no ivi_controller_layer objects, free
+    * ivilayer immediately. Otherwise wait for clients to destroy
+    * their proxies. */
+    if (wl_list_empty(&ivilayer->resource_list)) {
+        wl_list_remove(&ivilayer->link);
+        free(ivilayer);
+    } else {
+        wl_resource_for_each(resource, &ivilayer->resource_list) {
             ivi_controller_layer_send_destroyed(resource);
+        }
     }
-
-    wl_list_remove(&ivilayer->link);
-    free(ivilayer);
 }
 
 
@@ -1329,12 +1350,17 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
         return;
     }
 
-    wl_resource_for_each(resource, &ivisurf->resource_list) {
-            ivi_controller_surface_send_destroyed(resource);
+    /*If there is no ivi_controller_surface objects, free
+     * ivisurf immediately. Otherwise wait for clients to destroy
+     * their proxies. */
+    if (wl_list_empty(&ivisurf->resource_list)) {
+        wl_list_remove(&ivisurf->link);
+        free(ivisurf);
+    } else {
+        wl_resource_for_each(resource, &ivisurf->resource_list) {
+                ivi_controller_surface_send_destroyed(resource);
+        }
     }
-
-    wl_list_remove(&ivisurf->link);
-    free(ivisurf);
 }
 
 static void

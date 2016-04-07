@@ -273,7 +273,7 @@ get_share_surface(struct window *window, struct display *display)
         ivi_share_get_ivi_share_surface(display->ivi_share,
                                         window->share_buffer.share_surface_id);
 
-    ivi_share_surface_add_listener(window->share_surface,
+    return ivi_share_surface_add_listener(window->share_surface,
                                    &share_surface_listener, window);
 }
 
@@ -363,6 +363,8 @@ init_gl(struct window *window)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    return 0;
 }
 
 static void
@@ -436,7 +438,7 @@ init_egl(struct display *display)
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
         EGL_NONE
     };
-    EGLint major, minor, n, count, i, size;
+    EGLint major, minor, n;
 
     display->egl.egldisplay = eglGetDisplay(display->display);
 
@@ -660,7 +662,6 @@ main(int argc, char **argv)
 {
     struct display display;
     struct window window;
-    uint32_t share_surface_id;
     int ret = 0;
     struct sigaction sigact;
 
