@@ -24,12 +24,10 @@
 #include <string>
 using std::string;
 
-class IlmMatrix;
-
 class ShaderBase
 {
 public:
-	ShaderBase(string vertexCode, string fragmentCode, IlmMatrix* projectionMatrix);
+	ShaderBase(string vertexCode, string fragmentCode, float* projectionMatrix);
 	virtual ~ShaderBase();
 	virtual void use(vec3f* position, vec4f* color);
 
@@ -48,7 +46,7 @@ private:
 private:
 	string m_vertexCode;
 	string m_fragmentCode;
-	IlmMatrix* m_projectionMatrix;
+	float* m_projectionMatrix;
 };
 
 #endif // __SHADERBASE_H__

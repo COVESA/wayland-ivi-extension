@@ -66,7 +66,7 @@ void MockNavi::render()
 
 void MockNavi::generateCity()
 {
-	IlmMatrix* projection = m_camera.getViewProjectionMatrix();
+    float* projection = m_camera.getViewProjectionMatrix();
     ShaderLighting* pShader = new ShaderLighting(projection);
 
     // generate base plate

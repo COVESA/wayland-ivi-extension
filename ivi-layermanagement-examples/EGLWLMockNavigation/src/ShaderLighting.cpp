@@ -17,7 +17,6 @@
  *
  ****************************************************************************/
 #include "ShaderLighting.h"
-#include "IlmMatrix.h"
 
 const char* vertexShaderCode =
 		    "attribute mediump vec4 a_vertex;                                 \
@@ -40,7 +39,7 @@ const char* fragmentShaderCode =
 		         gl_FragColor.a = 1.0;   \
 		     }";
 
-ShaderLighting::ShaderLighting(IlmMatrix* projectionMatrix)
+ShaderLighting::ShaderLighting(float* projectionMatrix)
 : ShaderBase(vertexShaderCode, fragmentShaderCode, projectionMatrix)
 {
     glUseProgram(shaderProgramId);
@@ -56,11 +55,29 @@ void ShaderLighting::use(vec3f* position, vec4f* color)
 {
 	ShaderBase::use(position, color);
 
-    IlmMatrix translation;
-	IlmMatrixTranslation(translation, position->x, position->y, position->z);
+    float translation[16];
+    translation[0] = 1.0f;
+    translation[1] = 0.0f;
+    translation[2] = 0.0f;
+    translation[3] = 0.0f;
+
+    translation[4] = 0.0f;
+    translation[5] = 1.0f;
+    translation[6] = 0.0f;
+    translation[7] = 0.0f;
+
+    translation[8] = 0.0f;
+    translation[9] = 0.0f;
+    translation[10] = 1.0f;
+    translation[11] = 0.0f;
+
+    translation[12] = position->x;
+    translation[13] = position->y;
+    translation[14] = position->z;
+    translation[15] = 1.0f;
 
 	glUseProgram(shaderProgramId);
-	glUniformMatrix4fv(m_uniformModelMatrix, 1, GL_FALSE, translation.f);
+	glUniformMatrix4fv(m_uniformModelMatrix, 1, GL_FALSE, translation);
     glUniform4fv(m_uniformColor, 1, &color->r);
 
 }

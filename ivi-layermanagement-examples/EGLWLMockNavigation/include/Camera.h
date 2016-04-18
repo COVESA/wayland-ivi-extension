@@ -20,7 +20,6 @@
 #define _CAMERA_H
 
 #include "IUpdateable.h"
-#include "IlmMatrix.h"
 #include "vec.h"
 
 class Camera : public IUpdateable
@@ -29,17 +28,27 @@ public:
     Camera(vec3f position, vec3f target, float viewportWidth, float viewportHeight);
     virtual ~Camera();
 
-    IlmMatrix* getViewProjectionMatrix();
+    float* getViewProjectionMatrix();
     void update(int currentTimeInMs, int lastFrameTime);
 
 private:
     vec3f m_position;
     vec3f m_target;
-    IlmMatrix m_viewProjectionMatrix;
-    IlmMatrix m_translationMatrix;
-    IlmMatrix m_rotationMatrix;
-    IlmMatrix m_projectionMatrix;
-    IlmMatrix m_identityMatrix;
+    float m_viewProjectionMatrix[16];
+    float m_translationMatrix[16];
+    float m_projectionMatrix[16];
+    float m_identityMatrix[16];
+
+    //Parameters for projection matrix calculation
+    float m_fov; // field of view
+    float m_near;
+    float m_far;
+    float m_aspectRatio;
+
+    void calculateTranslationMatrix();
+    void calculateProjectionMatrix();
+    void calculateViewProjectionMatrix();
+
 };
 
 #endif /* _CAMERA_H */

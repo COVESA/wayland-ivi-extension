@@ -23,7 +23,7 @@
 
 class ShaderLighting: public ShaderBase {
 public:
-	ShaderLighting(IlmMatrix* projectionMatrix);
+	ShaderLighting(float* projectionMatrix);
 	virtual ~ShaderLighting();
 
 	virtual void use(vec3f* position, vec4f* color);

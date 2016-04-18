@@ -28,35 +28,107 @@ Camera::Camera(vec3f position, vec3f target, float viewportWidth, float viewport
 : m_position(position)
 , m_target(target)
 {
-    IlmMatrixIdentity(m_identityMatrix);
-    IlmMatrixTranslation(m_translationMatrix, m_position.x, m_position.y, m_position.z);
-    IlmMatrixRotateX(m_rotationMatrix, 45.0);
-    IlmMatrixProjection(m_projectionMatrix,
-                        45.0,                          // field of view
-                        0.1f,                          // near
-                        1000.0f,                       // far
-                        viewportWidth/viewportHeight); // aspect ratio
-    m_viewProjectionMatrix = m_identityMatrix;
+    calculateTranslationMatrix();
+
+    m_fov = M_PI / 4; // 45°
+    m_near = 0.1f;
+    m_far = 1000.0f;
+    m_aspectRatio = viewportWidth/viewportHeight;
+    calculateProjectionMatrix();
+    calculateViewProjectionMatrix();
 }
 
 Camera::~Camera()
 {
 }
 
-IlmMatrix* Camera::getViewProjectionMatrix()
+void Camera::calculateProjectionMatrix()
 {
-    return &m_viewProjectionMatrix;
+    // Precompute borders for projection
+    float range = m_near * tan(m_fov / 2.0);
+    float right = range * m_aspectRatio;
+    float top = range;
+
+    // Column 1
+    m_projectionMatrix[0] = m_near / right;
+    m_projectionMatrix[1] = 0.0;
+    m_projectionMatrix[2] = 0.0;
+    m_projectionMatrix[3] = 0.0;
+
+    // Column 2
+    m_projectionMatrix[4] = 0.0;
+    m_projectionMatrix[5] = m_near / top;
+    m_projectionMatrix[6] = 0.0;
+    m_projectionMatrix[7] = 0.0;
+
+    // Column 3
+    m_projectionMatrix[8] = 0.0;
+    m_projectionMatrix[9] = 0.0;
+    m_projectionMatrix[10] = -(m_far + m_near) / (m_far - m_near);
+    m_projectionMatrix[11] = -1;
+
+    // Column 4
+    m_projectionMatrix[12] = 0.0;
+    m_projectionMatrix[13] = 0.0;
+    m_projectionMatrix[14] = -(2 * m_far * m_near) / (m_far - m_near);
+    m_projectionMatrix[15] = 0.0;
+}
+
+void Camera::calculateTranslationMatrix()
+{
+    m_translationMatrix[0] = 1.0f;
+    m_translationMatrix[1] = 0.0f;
+    m_translationMatrix[2] = 0.0f;
+    m_translationMatrix[3] = 0.0f;
+
+    m_translationMatrix[4] = 0.0f;
+    m_translationMatrix[5] = 1.0f;
+    m_translationMatrix[6] = 0.0f;
+    m_translationMatrix[7] = 0.0f;
+
+    m_translationMatrix[8] = 0.0f;
+    m_translationMatrix[9] = 0.0f;
+    m_translationMatrix[10] = 1.0f;
+    m_translationMatrix[11] = 0.0f;
+
+    m_translationMatrix[12] = m_position.x;
+    m_translationMatrix[13] = m_position.y;
+    m_translationMatrix[14] = m_position.z;
+    m_translationMatrix[15] = 1.0f;
+}
+
+void Camera::calculateViewProjectionMatrix()
+{
+
+    m_viewProjectionMatrix[0]  = m_translationMatrix[0] * m_projectionMatrix[0];
+    m_viewProjectionMatrix[1]  = 0.0f;
+    m_viewProjectionMatrix[2]  = 0.0f;
+    m_viewProjectionMatrix[3]  = 0.0f;
+
+    m_viewProjectionMatrix[4]  = 0.0f;
+    m_viewProjectionMatrix[5]  = m_translationMatrix[5] * m_projectionMatrix[5];
+    m_viewProjectionMatrix[6]  = 0.0f;
+    m_viewProjectionMatrix[7]  = 0.0f;
+
+    m_viewProjectionMatrix[8]  = 0.0f;
+    m_viewProjectionMatrix[9]  = 0.0f;
+    m_viewProjectionMatrix[10] = m_translationMatrix[10] * m_projectionMatrix[10];
+    m_viewProjectionMatrix[11] = m_translationMatrix[10] * m_projectionMatrix[11];
+
+    m_viewProjectionMatrix[12] = m_translationMatrix[12] * m_projectionMatrix[0];
+    m_viewProjectionMatrix[13] = m_translationMatrix[13] * m_projectionMatrix[5];
+    m_viewProjectionMatrix[14] = m_translationMatrix[14] * m_projectionMatrix[10]
+                 + m_translationMatrix[15] * m_projectionMatrix[14];
+    m_viewProjectionMatrix[15] = m_translationMatrix[14] * m_projectionMatrix[11];
+}
+
+float* Camera::getViewProjectionMatrix()
+{
+    return m_viewProjectionMatrix;
 }
 
 void Camera::update(int currentTimeInMs, int lastFrameTime)
 {
     (void)currentTimeInMs; // prevent warning
     (void)lastFrameTime; // prevent warning
-
-    IlmMatrixTranslation(m_translationMatrix, m_position.x, m_position.y, m_position.z);
-
-    m_viewProjectionMatrix = m_identityMatrix;
-    //IlmMatrixMultiply(m_viewProjectionMatrix, m_viewProjectionMatrix, m_rotationMatrix);
-    IlmMatrixMultiply(m_viewProjectionMatrix, m_viewProjectionMatrix, m_translationMatrix);
-    IlmMatrixMultiply(m_viewProjectionMatrix, m_viewProjectionMatrix, m_projectionMatrix);
 }

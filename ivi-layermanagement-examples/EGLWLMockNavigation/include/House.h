@@ -21,7 +21,6 @@
 
 #include "IRenderable.h"
 #include "IUpdateable.h"
-#include "IlmMatrix.h"
 #include "vec.h"
 
 class ShaderBase;

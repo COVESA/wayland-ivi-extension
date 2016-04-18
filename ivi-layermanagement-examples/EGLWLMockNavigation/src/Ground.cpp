@@ -18,7 +18,6 @@
  *
  ****************************************************************************/
 #include "Ground.h"
-#include "IlmMatrix.h"
 #include "ShaderLighting.h"
 
 #include <string.h>
