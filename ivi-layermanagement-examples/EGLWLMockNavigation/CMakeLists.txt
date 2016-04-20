@@ -72,7 +72,6 @@ set (SRC_FILES
     src/ShaderBase.cpp
     src/ShaderLighting.cpp
     src/main.cpp
-    src/IlmMatrix.cpp
 )
 
 add_executable(${PROJECT_NAME}

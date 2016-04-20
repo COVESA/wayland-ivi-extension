@@ -17,14 +17,13 @@
  *
  ****************************************************************************/
 #include "ShaderBase.h"
-#include "IlmMatrix.h"
 #include <ilm_client.h>
 #include <GLES2/gl2.h>
 #include <stdlib.h>
 #include <iostream>
 using std::cout;
 
-ShaderBase::ShaderBase(string vertexCode, string fragmentCode, IlmMatrix* projectionMatrix)
+ShaderBase::ShaderBase(string vertexCode, string fragmentCode, float* projectionMatrix)
 : m_vertexCode()
 , m_fragmentCode(fragmentCode)
 , m_projectionMatrix(projectionMatrix)
@@ -171,5 +170,5 @@ void ShaderBase::use(vec3f* position, vec4f* color)
 	(void)color; // prevent warning
 
 	glUseProgram(shaderProgramId);
-	glUniformMatrix4fv(m_uniformProjectionMatrix, 1, GL_FALSE, m_projectionMatrix->f);
+	glUniformMatrix4fv(m_uniformProjectionMatrix, 1, GL_FALSE, m_projectionMatrix);
 }

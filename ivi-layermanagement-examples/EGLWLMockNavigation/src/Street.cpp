@@ -18,7 +18,6 @@
  *
  ****************************************************************************/
 #include "Street.h"
-#include "IlmMatrix.h"
 #include "ShaderBase.h"
 
 #include <string.h>

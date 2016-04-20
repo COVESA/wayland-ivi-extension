@@ -22,7 +22,6 @@
 #include "IRenderable.h"
 #include "vec.h"
 
-class IlmMatrix;
 class ShaderBase;
 
 class Ground : public IRenderable
