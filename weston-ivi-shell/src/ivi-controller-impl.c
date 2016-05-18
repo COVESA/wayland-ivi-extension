@@ -53,7 +53,6 @@ struct ivilayer {
     struct wl_list link;
     struct ivishell *shell;
     struct ivi_layout_layer *layout_layer;
-    struct iviscreen *on_screen;
     struct wl_list resource_list;
 };
 
@@ -359,45 +358,6 @@ send_layer_event(struct wl_resource *resource,
 }
 
 static void
-update_layer_prop(struct ivilayer *ivilayer,
-                  enum ivi_layout_notification_mask mask)
-{
-    struct ivi_layout_screen **pArray = NULL;
-    int32_t length = 0;
-    int32_t ans = 0;
-    struct ivishell *shell = ivilayer->shell;
-
-    ans = ivi_extension_get_screens_under_layer(shell, ivilayer->layout_layer,
-                                                 &length, &pArray);
-    if (0 != ans) {
-        weston_log("failed to get screens at send_layer_add_event\n");
-        return;
-    }
-
-    /* Send Null to cancel added layer */
-    if (mask & IVI_NOTIFICATION_REMOVE) {
-        ivilayer->on_screen = NULL;
-    }
-    if (mask & IVI_NOTIFICATION_ADD) {
-        int i = 0;
-        for (i = 0; i < (int)length; i++) {
-            struct ivishell *shell = ivilayer->shell;
-            struct iviscreen *iviscrn = NULL;
-
-            wl_list_for_each(iviscrn, &shell->list_screen, link) {
-                if (iviscrn->layout_screen == pArray[i]) {
-                    ivilayer->on_screen = iviscrn;
-                    break;
-                }
-            }
-        }
-    }
-
-    free(pArray);
-    pArray = NULL;
-}
-
-static void
 send_layer_prop(struct ivi_layout_layer *layer,
                 const struct ivi_layout_layer_properties *prop,
                 enum ivi_layout_notification_mask mask,
@@ -409,8 +369,6 @@ send_layer_prop(struct ivi_layout_layer *layer,
     wl_resource_for_each(resource, &ivilayer->resource_list) {
         send_layer_event(resource, ivilayer, prop, mask);
     }
-
-    update_layer_prop(ivilayer, mask);
 }
 
 static void
