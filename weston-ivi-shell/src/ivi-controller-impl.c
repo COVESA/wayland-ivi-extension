@@ -165,6 +165,10 @@ send_surface_add_event(struct ivisurface *ivisurf,
         for (i = 0; i < (int)length; i++) {
             /* Send new surface event */
             ivilayer = NULL;
+            if (wl_list_empty(&shell->list_layer)) {
+                break;
+            }
+
             wl_list_for_each(ivilayer, &shell->list_layer, link) {
                 if (ivilayer->layout_layer == pArray[i]) {
                     break;
