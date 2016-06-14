@@ -164,26 +164,21 @@ send_surface_add_event(struct ivisurface *ivisurf,
     else if (mask & IVI_NOTIFICATION_ADD) {
         for (i = 0; i < (int)length; i++) {
             /* Send new surface event */
-            ivilayer = NULL;
             if (wl_list_empty(&shell->list_layer)) {
                 break;
             }
 
             wl_list_for_each(ivilayer, &shell->list_layer, link) {
                 if (ivilayer->layout_layer == pArray[i]) {
+                    layer_resource =
+                        wl_resource_find_for_client(&ivilayer->resource_list,
+                                                    client);
+                    if (layer_resource != NULL) {
+                        ivi_controller_surface_send_layer(resource, layer_resource);
+                    }
+
                     break;
                 }
-            }
-
-            if (ivilayer == NULL) {
-                continue;
-            }
-
-            layer_resource = wl_resource_find_for_client(&ivilayer->resource_list,
-                                                         client);
-
-            if (layer_resource != NULL) {
-                ivi_controller_surface_send_layer(resource, layer_resource);
             }
         }
     }
