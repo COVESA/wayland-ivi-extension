@@ -292,22 +292,21 @@ send_layer_add_event(struct ivilayer *ivilayer,
     else if (mask & IVI_NOTIFICATION_ADD) {
         for (i = 0; i < (int)length; i++) {
             /* Send new layer event */
-            iviscrn = NULL;
+            if (wl_list_empty(&shell->list_screen)){
+                break;
+            }
+
             wl_list_for_each(iviscrn, &shell->list_screen, link) {
                 if (iviscrn->layout_screen == pArray[i]) {
+                    resource_output =
+                        wl_resource_find_for_client(&iviscrn->output->resource_list,
+                                                    client);
+                    if (resource_output != NULL) {
+                        ivi_controller_layer_send_screen(resource, resource_output);
+                    }
+
                     break;
                 }
-            }
-
-            if (iviscrn == NULL) {
-                continue;
-            }
-
-            resource_output =
-                wl_resource_find_for_client(&iviscrn->output->resource_list,
-                                     client);
-            if (resource_output != NULL) {
-                ivi_controller_layer_send_screen(resource, resource_output);
             }
         }
     }
