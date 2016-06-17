@@ -29,12 +29,10 @@
 #include <string.h>
 
 #include <weston/compositor.h>
+#include <weston/ivi-layout-export.h>
 #include "ivi-controller-server-protocol.h"
 #include "bitmap.h"
 
-#include "ivi-layout-export.h"
-#include "ivi-extension.h"
-#include "ivi-controller-impl.h"
 #include "wayland-util.h"
 
 struct ivilayer;
