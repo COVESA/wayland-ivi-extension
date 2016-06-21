@@ -152,6 +152,20 @@ send_input_focus(struct input_context *ctx, t_ilm_surface surface_id,
 }
 
 static void
+pointer_move(struct weston_pointer *pointer, wl_fixed_t x, wl_fixed_t y)
+{
+    struct weston_pointer_motion_event event;
+
+    event.x = x;
+    event.y = y;
+    event.dx = 0;
+    event.dy = 0;
+    event.mask = WESTON_POINTER_MOTION_ABS;
+
+    weston_pointer_move(pointer, &event);
+}
+
+static void
 set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
                  ilmInputDevice focus, struct weston_seat *seat, t_ilm_bool enabled)
 {
@@ -175,7 +189,7 @@ set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
 	        weston_view_to_global_fixed(view, wl_fixed_from_int(0),
 	            wl_fixed_from_int(0), &x, &y);
 	        // move pointer to local (0,0) of the view
-	        weston_pointer_move(pointer, x, y);
+	        pointer_move(pointer, x, y);
 		    weston_pointer_set_focus(pointer, view,
 		        wl_fixed_from_int(0), wl_fixed_from_int(0));
 		} else if (pointer->focus == view){
@@ -311,55 +325,38 @@ pointer_grab_focus(struct weston_pointer_grab *grab)
 
 static void
 pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
-                    wl_fixed_t x, wl_fixed_t y)
+                    struct weston_pointer_motion_event *event)
 {
-    struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
-    struct surface_ctx *surf_ctx;
-    const struct ivi_layout_interface *interface =
-        seat->input_ctx->ivi_layout_interface;
+    struct weston_pointer *pointer = grab->pointer;
+    struct weston_compositor *compositor = pointer->seat->compositor;
+    struct wl_list *resource_list;
+    struct wl_resource *resource;
+    struct weston_view *picked_view;
+    wl_fixed_t x, y;
+    wl_fixed_t sx, sy;
+    wl_fixed_t old_sx = pointer->sx;
+    wl_fixed_t old_sy = pointer->sy;
 
-    weston_pointer_move(grab->pointer, x, y);
+    weston_pointer_move(pointer, event);
 
-    /* Get coordinates relative to the surface the pointer is in.
-     * This might cause weirdness if there are multiple surfaces
-     * that are accepted by this pointer's seat and have focus */
+    if (pointer->focus) {
+        weston_pointer_motion_to_abs(pointer, event, &x, &y);
+        picked_view = weston_compositor_pick_view(compositor, x, y,
+                                           &sx, &sy);
 
-    /* For each surface_ctx, check for focus and send */
-    wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
-        struct weston_surface *surf;
-        struct wl_resource *resource;
-        struct wl_client *surface_client;
-        struct weston_view *view;
-        wl_fixed_t sx, sy;
+       if (picked_view != pointer->focus)
+           return;
 
-        if (!(surf_ctx->focus & ILM_INPUT_DEVICE_POINTER))
-            continue;
+        pointer->sx = sx;
+        pointer->sy = sy;
+    }
 
-        if (get_accepted_seat(surf_ctx, grab->pointer->seat->seat_name) < 0)
-            continue;
-
-        /* Assume one view per surface */
-        surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
-        view = wl_container_of(surf->views.next, view, surface_link);
-
-        if (view == grab->pointer->focus) {
-
-            /* Do not send motion events for coordinates outside the surface */
-            weston_view_from_global_fixed(view, x, y, &sx, &sy);
-            if ((!pixman_region32_contains_point(&surf->input, wl_fixed_to_int(sx),
-                                                wl_fixed_to_int(sy), NULL))
-                 && (grab->pointer->button_count == 0))
-                continue;
-
-            surface_client = wl_resource_get_client(surf->resource);
-
-            wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
-                if (wl_resource_get_client(resource) != surface_client)
-                    continue;
-
-                wl_pointer_send_motion(resource, time, sx, sy);
-            }
-            return;
+    if (pointer->focus_client &&
+        (old_sx != pointer->sx || old_sy != pointer->sy)) {
+        resource_list = &pointer->focus_client->pointer_resources;
+        wl_resource_for_each(resource, resource_list) {
+            wl_pointer_send_motion(resource, time,
+                            pointer->sx, pointer->sy);
         }
     }
 }
@@ -377,7 +374,7 @@ pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
     struct weston_view *picked_view, *w_view, *old_focus;
     struct weston_surface *w_surf;
     struct wl_resource *resource;
-    struct wl_client *surface_client;
+    struct wl_list *resource_list = NULL;
     uint32_t serial;
     const struct ivi_layout_interface *interface =
         seat->input_ctx->ivi_layout_interface;
@@ -418,18 +415,39 @@ pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
         }
     }
 
-    /* Send to surfaces that have pointer focus */
-    if (grab->pointer->focus == picked_view) {
-        surface_client = wl_resource_get_client(grab->pointer->focus->surface->resource);
+    if (pointer->focus_client)
+        resource_list = &pointer->focus_client->pointer_resources;
+    if (resource_list && !wl_list_empty(resource_list)) {
+        resource_list = &pointer->focus_client->pointer_resources;
         serial = wl_display_next_serial(display);
-
-        wl_resource_for_each(resource, &grab->pointer->focus_resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
-            wl_pointer_send_button(resource, serial, time, button, state);
-        }
+        wl_resource_for_each(resource, resource_list)
+            wl_pointer_send_button(resource,
+                           serial,
+                           time,
+                           button,
+                           state);
     }
+}
+
+static void
+pointer_grab_axis(struct weston_pointer_grab *grab,
+                  uint32_t time,
+                  struct weston_pointer_axis_event *event)
+{
+    weston_pointer_send_axis(grab->pointer, time, event);
+}
+
+static void
+pointer_grab_axis_source(struct weston_pointer_grab *grab,
+                          uint32_t source)
+{
+    weston_pointer_send_axis_source(grab->pointer, source);
+}
+
+static void
+pointer_grab_frame(struct weston_pointer_grab *grab)
+{
+    weston_pointer_send_frame(grab->pointer);
 }
 
 static void
@@ -441,6 +459,9 @@ static struct weston_pointer_grab_interface pointer_grab_interface = {
     pointer_grab_focus,
     pointer_grab_motion,
     pointer_grab_button,
+    pointer_grab_axis,
+    pointer_grab_axis_source,
+    pointer_grab_frame,
     pointer_grab_cancel
 };
 
