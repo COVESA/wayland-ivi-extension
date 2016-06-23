@@ -25,10 +25,10 @@
 #include <string.h>
 
 #include <weston/compositor.h>
+#include <weston/ivi-layout-export.h>
 #include "ilm_types.h"
 
 #include "ivi-input-server-protocol.h"
-#include "ivi-controller-interface.h"
 
 struct seat_ctx {
     struct input_context *input_ctx;
@@ -60,7 +60,10 @@ struct input_context {
     struct wl_list controller_list;
     struct wl_list surface_list;
     struct weston_compositor *compositor;
-    const struct ivi_controller_interface *ivi_controller_interface;
+    const struct ivi_layout_interface *ivi_layout_interface;
+
+    struct wl_listener surface_created;
+    struct wl_listener surface_destroyed;
 };
 
 static int
@@ -79,8 +82,8 @@ static int
 add_accepted_seat(struct surface_ctx *surface, const char *seat)
 {
     char **added_entry;
-    const struct ivi_controller_interface *interface =
-        surface->input_context->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        surface->input_context->ivi_layout_interface;
     if (get_accepted_seat(surface, seat) >= 0) {
         weston_log("%s: Warning: seat '%s' is already accepted by surface %d\n",
                    __FUNCTION__, seat,
@@ -110,8 +113,8 @@ remove_accepted_seat(struct surface_ctx *surface, const char *seat)
     int i;
     struct wl_array *array = &surface->accepted_devices;
     char **data = array->data;
-    const struct ivi_controller_interface *interface =
-        surface->input_context->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        surface->input_context->ivi_layout_interface;
     if (seat_index < 0) {
         weston_log("%s: Warning: seat '%s' not found for surface %d\n",
                   __FUNCTION__, seat,
@@ -160,8 +163,8 @@ set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
     wl_fixed_t x, y;
     struct weston_pointer *pointer = weston_seat_get_pointer(seat);
     struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
-    const struct ivi_controller_interface *interface =
-              ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+              ctx->ivi_layout_interface;
 
     /* Assume one view per surface */
 	w_surface = interface->surface_get_weston_surface(surface_ctx->layout_surface);
@@ -209,8 +212,8 @@ keyboard_grab_key(struct weston_keyboard_grab *grab, uint32_t time,
     struct seat_ctx *seat_ctx = wl_container_of(grab, seat_ctx, keyboard_grab);
     struct surface_ctx *surf_ctx;
     struct wl_display *display = grab->keyboard->seat->compositor->wl_display;
-    const struct ivi_controller_interface *interface =
-        seat_ctx->input_ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        seat_ctx->input_ctx->ivi_layout_interface;
 
     wl_list_for_each(surf_ctx, &seat_ctx->input_ctx->surface_list, link) {
         struct weston_surface *surface;
@@ -251,8 +254,8 @@ keyboard_grab_modifiers(struct weston_keyboard_grab *grab, uint32_t serial,
     struct seat_ctx *seat_ctx = wl_container_of(grab, seat_ctx, keyboard_grab);
     struct surface_ctx *surf_ctx;
     struct wl_display *display = grab->keyboard->seat->compositor->wl_display;
-    const struct ivi_controller_interface *interface =
-        seat_ctx->input_ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        seat_ctx->input_ctx->ivi_layout_interface;
 
     wl_list_for_each(surf_ctx, &seat_ctx->input_ctx->surface_list, link) {
         struct weston_surface *surface;
@@ -312,8 +315,8 @@ pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
     struct surface_ctx *surf_ctx;
-    const struct ivi_controller_interface *interface =
-        seat->input_ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        seat->input_ctx->ivi_layout_interface;
 
     weston_pointer_move(grab->pointer, x, y);
 
@@ -376,8 +379,8 @@ pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
     struct wl_resource *resource;
     struct wl_client *surface_client;
     uint32_t serial;
-    const struct ivi_controller_interface *interface =
-        seat->input_ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        seat->input_ctx->ivi_layout_interface;
 
     picked_view = weston_compositor_pick_view(compositor, pointer->x, pointer->y,
                                        &sx, &sy);
@@ -449,8 +452,8 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
     struct wl_display *display = grab->touch->seat->compositor->wl_display;
     struct surface_ctx *surf_ctx;
     wl_fixed_t sx, sy;
-    const struct ivi_controller_interface *interface =
-        seat->input_ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        seat->input_ctx->ivi_layout_interface;
 
     /* if touch device has no focused view, there is nothing to do*/
     if (grab->touch->focus == NULL)
@@ -520,8 +523,8 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
     struct wl_display *display = grab->touch->seat->compositor->wl_display;
     struct surface_ctx *surf_ctx;
-    const struct ivi_controller_interface *interface =
-        seat->input_ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        seat->input_ctx->ivi_layout_interface;
 
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
@@ -571,8 +574,8 @@ touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
     struct surface_ctx *surf_ctx;
     wl_fixed_t sx, sy;
-    const struct ivi_controller_interface *interface =
-        seat->input_ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        seat->input_ctx->ivi_layout_interface;
 
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
@@ -614,8 +617,8 @@ touch_grab_frame(struct weston_touch_grab *grab)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
     struct surface_ctx *surf_ctx;
-    const struct ivi_controller_interface *interface =
-        seat->input_ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        seat->input_ctx->ivi_layout_interface;
 
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
@@ -760,13 +763,16 @@ handle_seat_create(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_surface_destroy(struct ivi_layout_surface *layout_surface, void *data)
+handle_surface_destroy(struct wl_listener *listener, void *data)
 {
-    struct input_context *ctx = data;
+    struct input_context *ctx =
+            wl_container_of(listener, ctx, surface_destroyed);
     struct surface_ctx *surf, *next;
+    struct ivi_layout_surface *layout_surface =
+           (struct ivi_layout_surface *) data;
     int surface_removed = 0;
-    const struct ivi_controller_interface *interface =
-        ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        ctx->ivi_layout_interface;
 
     wl_list_for_each_safe(surf, next, &ctx->surface_list, link) {
         if (surf->layout_surface == layout_surface) {
@@ -790,12 +796,15 @@ handle_surface_destroy(struct ivi_layout_surface *layout_surface, void *data)
 }
 
 static void
-handle_surface_create(struct ivi_layout_surface *layout_surface, void *data)
+handle_surface_create(struct wl_listener *listener, void *data)
 {
-    struct input_context *input_ctx = data;
+    struct input_context *input_ctx =
+            wl_container_of(listener, input_ctx, surface_created);
     struct surface_ctx *ctx;
-    const struct ivi_controller_interface *interface =
-        input_ctx->ivi_controller_interface;
+    struct ivi_layout_surface *layout_surface =
+           (struct ivi_layout_surface *) data;
+    const struct ivi_layout_interface *interface =
+        input_ctx->ivi_layout_interface;
 
     wl_list_for_each(ctx, &input_ctx->surface_list, link) {
         if (ctx->layout_surface == layout_surface) {
@@ -842,8 +851,8 @@ input_set_input_focus(struct wl_client *client,
     struct input_context *ctx = controller->input_context;
     struct surface_ctx *surf, *current_surf = NULL;
     struct weston_seat *seat;
-    const struct ivi_controller_interface *interface =
-	ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+	ctx->ivi_layout_interface;
     uint32_t caps;
     struct ivi_layout_surface *current_layout_surface;
 
@@ -924,8 +933,8 @@ input_set_input_acceptance(struct wl_client *client,
     int found_seat = 0;
     int found_weston_seat = 0;
     struct weston_seat *w_seat = NULL;
-    const struct ivi_controller_interface *interface =
-        ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        ctx->ivi_layout_interface;
 
     wl_list_for_each(w_seat, &ctx->compositor->seat_list, link) {
         if(strcmp(seat,w_seat->seat_name) == 0) {
@@ -971,8 +980,8 @@ bind_ivi_input(struct wl_client *client, void *data,
     struct input_controller *controller;
     struct weston_seat *seat;
     struct surface_ctx *surface_ctx;
-    const struct ivi_controller_interface *interface =
-        ctx->ivi_controller_interface;
+    const struct ivi_layout_interface *interface =
+        ctx->ivi_layout_interface;
     controller = calloc(1, sizeof *controller);
     if (controller == NULL) {
         weston_log("%s: Failed to allocate memory for controller\n",
@@ -1016,7 +1025,7 @@ bind_ivi_input(struct wl_client *client, void *data,
 
 static struct input_context *
 create_input_context(struct weston_compositor *ec,
-                     const struct ivi_controller_interface *interface)
+                     const struct ivi_layout_interface *interface)
 {
     struct input_context *ctx = NULL;
     struct weston_seat *seat;
@@ -1028,14 +1037,16 @@ create_input_context(struct weston_compositor *ec,
     }
 
     ctx->compositor = ec;
-    ctx->ivi_controller_interface = interface;
+    ctx->ivi_layout_interface = interface;
     wl_list_init(&ctx->controller_list);
     wl_list_init(&ctx->surface_list);
 
-    /* Add signal handlers for ivi surfaces. Warning: these functions leak
-     * memory. */
-    interface->add_notification_create_surface(handle_surface_create, ctx);
-    interface->add_notification_remove_surface(handle_surface_destroy, ctx);
+    /* Add signal handlers for ivi surfaces. */
+    ctx->surface_created.notify = handle_surface_create;
+    ctx->surface_destroyed.notify = handle_surface_destroy;
+
+    interface->add_listener_create_surface(&ctx->surface_created);
+    interface->add_listener_remove_surface(&ctx->surface_destroyed);
 
     ctx->seat_create_listener.notify = &handle_seat_create;
     wl_signal_add(&ec->seat_created_signal, &ctx->seat_create_listener);
@@ -1050,7 +1061,7 @@ create_input_context(struct weston_compositor *ec,
 
 WL_EXPORT int
 input_controller_module_init(struct weston_compositor *ec,
-                             const struct ivi_controller_interface *interface,
+                             const struct ivi_layout_interface *interface,
                              size_t interface_version)
 {
     struct input_context *ctx = create_input_context(ec, interface);
