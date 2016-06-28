@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 DENSO CORPORATION
+ * Copyright (C) 2016 Advanced Driver Information Technology Joint Venture GmbH
  *
  * Permission to use, copy, modify, distribute, and sell this software and
  * its documentation for any purpose is hereby granted without fee, provided
@@ -29,13 +30,14 @@
 #include <string.h>
 
 #include <weston/compositor.h>
+#include <weston/ivi-layout-export.h>
 #include "ivi-controller-server-protocol.h"
 #include "bitmap.h"
 
-#include "ivi-layout-export.h"
-#include "ivi-extension.h"
-#include "ivi-controller-impl.h"
 #include "wayland-util.h"
+#ifdef IVI_SHARE_ENABLE
+#  include "ivi-share.h"
+#endif
 
 struct ivilayer;
 struct iviscreen;
@@ -45,6 +47,8 @@ struct ivisurface {
     struct ivishell *shell;
     uint32_t update_count;
     struct ivi_layout_surface *layout_surface;
+    const struct ivi_layout_surface_properties *prop;
+    struct wl_listener property_changed;
     struct wl_listener surface_destroy_listener;
     struct wl_list resource_list;
 };
@@ -53,13 +57,15 @@ struct ivilayer {
     struct wl_list link;
     struct ivishell *shell;
     struct ivi_layout_layer *layout_layer;
+    const struct ivi_layout_layer_properties *prop;
+    struct wl_listener property_changed;
     struct wl_list resource_list;
 };
 
 struct iviscreen {
     struct wl_list link;
     struct ivishell *shell;
-    struct ivi_layout_screen *layout_screen;
+    uint32_t id_screen;
     struct weston_output *output;
     struct wl_list resource_list;
 };
@@ -72,12 +78,28 @@ struct ivicontroller {
     struct ivishell *shell;
 };
 
+struct ivishell {
+    struct weston_compositor *compositor;
+    const struct ivi_layout_interface *interface;
+
+    struct wl_list list_surface;
+    struct wl_list list_layer;
+    struct wl_list list_screen;
+
+    struct wl_list list_controller;
+
+    struct wl_listener surface_created;
+    struct wl_listener surface_removed;
+    struct wl_listener surface_configured;
+
+    struct wl_listener layer_created;
+    struct wl_listener layer_removed;
+};
+
 struct screenshot_frame_listener {
         struct wl_listener listener;
 	char *filename;
 };
-
-static void surface_event_remove(struct ivi_layout_surface *, void *);
 
 static void
 destroy_ivicontroller_surface(struct wl_resource *resource)
@@ -148,10 +170,11 @@ send_surface_add_event(struct ivisurface *ivisurf,
     int i = 0;
     struct ivilayer *ivilayer = NULL;
     struct ivishell *shell = ivisurf->shell;
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct wl_client *client = wl_resource_get_client(resource);
 
-    ans = ivi_extension_get_layers_under_surface(shell, ivisurf->layout_surface,
-                                                  &length, &pArray);
+    ans = lyt->get_layers_under_surface(ivisurf->layout_surface,
+                                        &length, &pArray);
     if (0 != ans) {
         weston_log("failed to get layers at send_surface_add_event\n");
         return;
@@ -193,12 +216,12 @@ send_surface_configure_event(struct ivisurface *ivisurf,
 {
     struct weston_surface *surface;
     struct ivi_layout_surface* layout_surface;
-    struct ivishell* shell;
+    struct ivishell *shell = ivisurf->shell;
+    const struct ivi_layout_interface *lyt = shell->interface;
 
     layout_surface = ivisurf->layout_surface;
-    shell = ivisurf->shell;
 
-    surface = ivi_extension_surface_get_weston_surface(shell, layout_surface);
+    surface = lyt->surface_get_weston_surface(layout_surface);
 
     if (!surface)
         return;
@@ -251,16 +274,19 @@ send_surface_event(struct wl_resource *resource,
 }
 
 static void
-send_surface_prop(struct ivi_layout_surface *layout_surface,
-                  const struct ivi_layout_surface_properties *prop,
-                  enum ivi_layout_notification_mask mask,
-                  void *userdata)
+send_surface_prop(struct wl_listener *listener, void *data)
 {
-    struct ivisurface *ivisurf = userdata;
+    struct ivisurface *ivisurf =
+             wl_container_of(listener, ivisurf,
+                    property_changed);
+    (void)data;
+    enum ivi_layout_notification_mask mask;
     struct wl_resource *resource;
 
+    mask = ivisurf->prop->event_mask;
+
     wl_resource_for_each(resource, &ivisurf->resource_list) {
-        send_surface_event(resource, ivisurf, prop, mask);
+        send_surface_event(resource, ivisurf, ivisurf->prop, mask);
     }
 }
 
@@ -269,17 +295,18 @@ send_layer_add_event(struct ivilayer *ivilayer,
                      struct wl_resource *resource,
                      enum ivi_layout_notification_mask mask)
 {
-    struct ivi_layout_screen **pArray = NULL;
+    struct weston_output **pArray = NULL;
     int32_t length = 0;
     int32_t ans = 0;
     int i = 0;
     struct iviscreen *iviscrn = NULL;
     struct ivishell *shell = ivilayer->shell;
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct wl_client *client = wl_resource_get_client(resource);
     struct wl_resource *resource_output = NULL;
 
-    ans = ivi_extension_get_screens_under_layer(shell, ivilayer->layout_layer,
-                                                 &length, &pArray);
+    ans = lyt->get_screens_under_layer(ivilayer->layout_layer,
+                                       &length, &pArray);
     if (0 != ans) {
         weston_log("failed to get screens at send_layer_add_event\n");
         return;
@@ -297,7 +324,7 @@ send_layer_add_event(struct ivilayer *ivilayer,
             }
 
             wl_list_for_each(iviscrn, &shell->list_screen, link) {
-                if (iviscrn->layout_screen == pArray[i]) {
+                if (iviscrn->output == pArray[i]) {
                     resource_output =
                         wl_resource_find_for_client(&iviscrn->output->resource_list,
                                                     client);
@@ -356,16 +383,18 @@ send_layer_event(struct wl_resource *resource,
 }
 
 static void
-send_layer_prop(struct ivi_layout_layer *layer,
-                const struct ivi_layout_layer_properties *prop,
-                enum ivi_layout_notification_mask mask,
-                void *userdata)
+send_layer_prop(struct wl_listener *listener, void *data)
 {
-    struct ivilayer *ivilayer = userdata;
+    struct ivilayer *ivilayer =
+           wl_container_of(listener, ivilayer, property_changed);
+    (void)data;
+    enum ivi_layout_notification_mask mask;
     struct wl_resource *resource;
 
+    mask = ivilayer->prop->event_mask;
+
     wl_resource_for_each(resource, &ivilayer->resource_list) {
-        send_layer_event(resource, ivilayer, prop, mask);
+        send_layer_event(resource, ivilayer, ivilayer->prop, mask);
     }
 }
 
@@ -375,8 +404,9 @@ controller_surface_set_opacity(struct wl_client *client,
                    wl_fixed_t opacity)
 {
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
     (void)client;
-    ivi_extension_surface_set_opacity(ivisurf->shell, ivisurf->layout_surface, opacity);
+    lyt->surface_set_opacity(ivisurf->layout_surface, opacity);
 }
 
 static void
@@ -388,8 +418,9 @@ controller_surface_set_source_rectangle(struct wl_client *client,
                    int32_t height)
 {
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
     (void)client;
-    ivi_extension_surface_set_source_rectangle(ivisurf->shell, ivisurf->layout_surface,
+    lyt->surface_set_source_rectangle(ivisurf->layout_surface,
             (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
 
@@ -402,14 +433,15 @@ controller_surface_set_destination_rectangle(struct wl_client *client,
                      int32_t height)
 {
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
     (void)client;
 
     // TODO: create set transition type protocol
-    ivi_extension_surface_set_transition(ivisurf->shell, ivisurf->layout_surface,
+    lyt->surface_set_transition(ivisurf->layout_surface,
                                      IVI_LAYOUT_TRANSITION_NONE,
                                      300); // ms
 
-    ivi_extension_surface_set_destination_rectangle(ivisurf->shell, ivisurf->layout_surface,
+    lyt->surface_set_destination_rectangle(ivisurf->layout_surface,
             (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
 
@@ -419,8 +451,9 @@ controller_surface_set_visibility(struct wl_client *client,
                       uint32_t visibility)
 {
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
     (void)client;
-    ivi_extension_surface_set_visibility(ivisurf->shell, ivisurf->layout_surface, visibility);
+    lyt->surface_set_visibility(ivisurf->layout_surface, visibility);
 }
 
 static void
@@ -441,8 +474,9 @@ controller_surface_set_orientation(struct wl_client *client,
                    int32_t orientation)
 {
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
     (void)client;
-    ivi_extension_surface_set_orientation(ivisurf->shell, ivisurf->layout_surface, (uint32_t)orientation);
+    lyt->surface_set_orientation(ivisurf->layout_surface, (uint32_t)orientation);
 }
 
 static void
@@ -457,7 +491,7 @@ controller_surface_screenshot(struct wl_client *client,
     int32_t height = 0;
     int32_t stride = 0;
     int32_t size = 0;
-    struct ivishell *shell = ivisurf->shell;
+    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
     char *buffer = NULL;
     int32_t image_stride = 0;
     int32_t image_size = 0;
@@ -467,8 +501,8 @@ controller_surface_screenshot(struct wl_client *client,
     int32_t offset = 0;
     int32_t image_offset = 0;
 
-    result = ivi_extension_surface_get_size(
-        shell, ivisurf->layout_surface, &width, &height, &stride);
+    result = lyt->surface_get_size(ivisurf->layout_surface, &width,
+                                   &height, &stride);
     if (result != IVI_SUCCEEDED) {
         weston_log("failed to get surface size\n");
         return;
@@ -487,11 +521,10 @@ controller_surface_screenshot(struct wl_client *client,
         return;
     }
 
-    weston_surface = ivi_extension_surface_get_weston_surface(
-        shell, ivisurf->layout_surface);
+    weston_surface = lyt->surface_get_weston_surface(ivisurf->layout_surface);
 
-    result = ivi_extension_surface_dump(shell, weston_surface,
-        buffer, size, 0, 0, width, height);
+    result = lyt->surface_dump(weston_surface, buffer, size, 0, 0,
+                               width, height);
 
     if (result != IVI_SUCCEEDED) {
         free(image_buffer);
@@ -527,6 +560,7 @@ controller_surface_send_stats(struct wl_client *client,
                               struct wl_resource *resource)
 {
     struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
     struct weston_surface *surface;
     struct wl_client* target_client;
     pid_t pid;
@@ -534,8 +568,7 @@ controller_surface_send_stats(struct wl_client *client,
     gid_t gid;
 
     /* Get pid that creates surface */
-    surface = ivi_extension_surface_get_weston_surface(ivisurf->shell,
-                                                       ivisurf->layout_surface);
+    surface = lyt->surface_get_weston_surface(ivisurf->layout_surface);
     target_client = wl_resource_get_client(surface->resource);
 
     wl_client_get_credentials(target_client, &pid, &uid, &gid);
@@ -582,8 +615,9 @@ controller_layer_set_source_rectangle(struct wl_client *client,
                    int32_t height)
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
-    ivi_extension_layer_set_source_rectangle(ivilayer->shell, ivilayer->layout_layer,
+    lyt->layer_set_source_rectangle(ivilayer->layout_layer,
            (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
 
@@ -596,8 +630,9 @@ controller_layer_set_destination_rectangle(struct wl_client *client,
                  int32_t height)
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
-    ivi_extension_layer_set_destination_rectangle(ivilayer->shell, ivilayer->layout_layer,
+    lyt->layer_set_destination_rectangle(ivilayer->layout_layer,
             (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
 
@@ -607,8 +642,9 @@ controller_layer_set_visibility(struct wl_client *client,
                     uint32_t visibility)
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
-    ivi_extension_layer_set_visibility(ivilayer->shell, ivilayer->layout_layer, visibility);
+    lyt->layer_set_visibility(ivilayer->layout_layer, visibility);
 }
 
 static void
@@ -617,8 +653,9 @@ controller_layer_set_opacity(struct wl_client *client,
                  wl_fixed_t opacity)
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
-    ivi_extension_layer_set_opacity(ivilayer->shell, ivilayer->layout_layer, opacity);
+    lyt->layer_set_opacity(ivilayer->layout_layer, opacity);
 }
 
 static void
@@ -640,8 +677,9 @@ controller_layer_set_orientation(struct wl_client *client,
                  int32_t orientation)
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
-    ivi_extension_layer_set_orientation(ivilayer->shell, ivilayer->layout_layer, (uint32_t)orientation);
+    lyt->layer_set_orientation(ivilayer->layout_layer, (uint32_t)orientation);
 }
 
 static void
@@ -649,8 +687,9 @@ controller_layer_clear_surfaces(struct wl_client *client,
                     struct wl_resource *resource)
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
-    ivi_extension_layer_set_render_order(ivilayer->shell, ivilayer->layout_layer, NULL, 0);
+    lyt->layer_set_render_order(ivilayer->layout_layer, NULL, 0);
 }
 
 static void
@@ -660,8 +699,9 @@ controller_layer_add_surface(struct wl_client *client,
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
     struct ivisurface *ivisurf = wl_resource_get_user_data(surface);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
-    ivi_extension_layer_add_surface(ivilayer->shell, ivilayer->layout_layer, ivisurf->layout_surface);
+    lyt->layer_add_surface(ivilayer->layout_layer, ivisurf->layout_surface);
 }
 
 static void
@@ -671,8 +711,9 @@ controller_layer_remove_surface(struct wl_client *client,
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
     struct ivisurface *ivisurf = wl_resource_get_user_data(surface);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
-    ivi_extension_layer_remove_surface(ivilayer->shell, ivilayer->layout_layer, ivisurf->layout_surface);
+    lyt->layer_remove_surface(ivilayer->layout_layer, ivisurf->layout_surface);
 }
 
 static void
@@ -691,20 +732,20 @@ controller_layer_set_render_order(struct wl_client *client,
                                   struct wl_array *id_surfaces)
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     struct ivi_layout_surface **layoutsurf_array = NULL;
     struct ivisurface *ivisurf = NULL;
     uint32_t *id_surface = NULL;
     uint32_t id_layout_surface = 0;
     int i = 0;
     (void)client;
-    struct ivishell *shell = ivilayer->shell;
 
     layoutsurf_array = (struct ivi_layout_surface**)calloc(
                            id_surfaces->size, sizeof(void*));
 
     wl_array_for_each(id_surface, id_surfaces) {
         wl_list_for_each(ivisurf, &ivilayer->shell->list_surface, link) {
-            id_layout_surface = ivi_extension_get_id_of_surface(shell, ivisurf->layout_surface);
+            id_layout_surface = lyt->get_id_of_surface(ivisurf->layout_surface);
             if (*id_surface == id_layout_surface) {
                 layoutsurf_array[i] = ivisurf->layout_surface;
                 i++;
@@ -713,7 +754,7 @@ controller_layer_set_render_order(struct wl_client *client,
         }
     }
 
-    ivi_extension_layer_set_render_order(shell, ivilayer->layout_layer,
+    lyt->layer_set_render_order(ivilayer->layout_layer,
                                    layoutsurf_array, i);
     free(layoutsurf_array);
 }
@@ -724,11 +765,12 @@ controller_layer_destroy(struct wl_client *client,
               int32_t destroy_scene_object)
 {
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     (void)client;
 
     if (destroy_scene_object) {
         if (ivilayer->layout_layer != NULL) {
-            ivi_extension_layer_remove(ivilayer->shell, ivilayer->layout_layer);
+            lyt->layer_destroy(ivilayer->layout_layer);
             ivilayer->layout_layer = NULL;
         }
 
@@ -772,8 +814,9 @@ controller_screen_clear(struct wl_client *client,
                 struct wl_resource *resource)
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = iviscrn->shell->interface;
     (void)client;
-    ivi_extension_screen_set_render_order(iviscrn->shell, iviscrn->layout_screen, NULL, 0);
+    lyt->screen_set_render_order(iviscrn->output, NULL, 0);
 }
 
 static void
@@ -782,9 +825,10 @@ controller_screen_add_layer(struct wl_client *client,
                 struct wl_resource *layer)
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = iviscrn->shell->interface;
     struct ivilayer *ivilayer = wl_resource_get_user_data(layer);
     (void)client;
-    ivi_extension_screen_add_layer(iviscrn->shell, iviscrn->layout_screen, ivilayer->layout_layer);
+    lyt->screen_add_layer(iviscrn->output, ivilayer->layout_layer);
 }
 
 static void
@@ -840,7 +884,6 @@ controller_screen_screenshot(struct wl_client *client,
     struct screenshot_frame_listener *l;
     (void)client;
 
-    struct weston_output *output = NULL;
     l = malloc(sizeof *l);
     if(l == NULL) {
         fprintf(stderr, "fails to allocate memory\n");
@@ -854,11 +897,10 @@ controller_screen_screenshot(struct wl_client *client,
         return;
     }
 
-    output = ivi_extension_screen_get_output(iviscrn->shell, iviscrn->layout_screen);
     l->listener.notify = controller_screenshot_notify;
-    wl_signal_add(&output->frame_signal, &l->listener);
-    output->disable_planes++;
-    weston_output_schedule_repaint(output);
+    wl_signal_add(&iviscrn->output->frame_signal, &l->listener);
+    iviscrn->output->disable_planes++;
+    weston_output_schedule_repaint(iviscrn->output);
     return;
 }
 
@@ -868,20 +910,20 @@ controller_screen_set_render_order(struct wl_client *client,
                 struct wl_array *id_layers)
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = iviscrn->shell->interface;
     struct ivi_layout_layer **layoutlayer_array = NULL;
     struct ivilayer *ivilayer = NULL;
     uint32_t *id_layer = NULL;
     uint32_t id_layout_layer = 0;
     int i = 0;
     (void)client;
-    struct ivishell *shell = iviscrn->shell;
 
     layoutlayer_array = (struct ivi_layout_layer**)calloc(
                            id_layers->size, sizeof(void*));
 
     wl_array_for_each(id_layer, id_layers) {
         wl_list_for_each(ivilayer, &iviscrn->shell->list_layer, link) {
-            id_layout_layer = ivi_extension_get_id_of_layer(shell, ivilayer->layout_layer);
+            id_layout_layer = lyt->get_id_of_layer(ivilayer->layout_layer);
             if (*id_layer == id_layout_layer) {
                 layoutlayer_array[i] = ivilayer->layout_layer;
                 i++;
@@ -890,7 +932,7 @@ controller_screen_set_render_order(struct wl_client *client,
         }
     }
 
-    ivi_extension_screen_set_render_order(shell, iviscrn->layout_screen,
+    lyt->screen_set_render_order(iviscrn->output,
                                     layoutlayer_array, i);
     free(layoutlayer_array);
 }
@@ -912,7 +954,7 @@ controller_commit_changes(struct wl_client *client,
     (void)client;
     struct ivicontroller *controller = wl_resource_get_user_data(resource);
 
-    ans = ivi_extension_commit_changes(controller->shell);
+    ans = controller->shell->interface->commit_changes();
     if (ans < 0) {
         weston_log("Failed to commit changes at controller_commit_changes\n");
     }
@@ -929,13 +971,14 @@ controller_layer_create(struct wl_client *client,
     struct wl_resource *layer_resource;
     struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
     struct ivishell *shell = ctrl->shell;
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct ivi_layout_layer *layout_layer = NULL;
     struct ivilayer *ivilayer = NULL;
     const struct ivi_layout_layer_properties *prop;
 
-    layout_layer = ivi_extension_get_layer_from_id(shell, id_layer);
+    layout_layer = lyt->get_layer_from_id(id_layer);
     if (layout_layer == NULL) {
-        layout_layer = ivi_extension_layer_create_with_dimension(shell, id_layer,
+        layout_layer = lyt->layer_create_with_dimension(id_layer,
                            (uint32_t)width, (uint32_t)height);
         if (layout_layer == NULL) {
             weston_log("id_layer is already created\n");
@@ -962,17 +1005,9 @@ controller_layer_create(struct wl_client *client,
                                    &controller_layer_implementation,
                                    ivilayer, destroy_ivicontroller_layer);
 
-    prop = ivi_extension_get_properties_of_layer(shell, ivilayer->layout_layer);
+    prop = lyt->get_properties_of_layer(ivilayer->layout_layer);
     send_layer_event(layer_resource, ivilayer,
                      prop, IVI_NOTIFICATION_ALL);
-}
-
-static void
-surface_event_content(struct ivi_layout_surface *layout_surface, int32_t content, void *userdata)
-{
-    if (content == 0) {
-        surface_event_remove(layout_surface, userdata);
-    }
 }
 
 static void
@@ -984,11 +1019,12 @@ controller_surface_create(struct wl_client *client,
     struct wl_resource *surf_resource;
     struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
     struct ivishell *shell = ctrl->shell;
+    const struct ivi_layout_interface *lyt = shell->interface;
     const struct ivi_layout_surface_properties *prop;
     struct ivi_layout_surface *layout_surface = NULL;
     struct ivisurface *ivisurf = NULL;
 
-    layout_surface = ivi_extension_get_surface_from_id(shell, id_surface);
+    layout_surface = lyt->get_surface_from_id(id_surface);
     if (layout_surface == NULL) {
         return;
     }
@@ -1010,8 +1046,7 @@ controller_surface_create(struct wl_client *client,
                                    &controller_surface_implementation,
                                    ivisurf, destroy_ivicontroller_surface);
 
-    prop = ivi_extension_get_properties_of_surface(shell, ivisurf->layout_surface);
-    ivi_extension_surface_set_content_observer(shell, ivisurf->layout_surface, surface_event_content, shell);
+    prop = lyt->get_properties_of_surface(ivisurf->layout_surface);
 
     send_surface_event(surf_resource, ivisurf, prop, IVI_NOTIFICATION_ALL);
 }
@@ -1027,6 +1062,7 @@ add_client_to_resources(struct ivishell *shell,
                         struct wl_client *client,
                         struct ivicontroller *controller)
 {
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct wl_resource *screen_resource;
     struct ivisurface* ivisurf = NULL;
     struct ivilayer* ivilayer = NULL;
@@ -1059,15 +1095,13 @@ add_client_to_resources(struct ivishell *shell,
                                    screen_resource);
     }
     wl_list_for_each_reverse(ivilayer, &shell->list_layer, link) {
-        id_layout_layer =
-            ivi_extension_get_id_of_layer(shell, ivilayer->layout_layer);
+        id_layout_layer = lyt->get_id_of_layer(ivilayer->layout_layer);
 
         ivi_controller_send_layer(controller->resource,
                                   id_layout_layer);
     }
     wl_list_for_each_reverse(ivisurf, &shell->list_surface, link) {
-        id_layout_surface =
-            ivi_extension_get_id_of_surface(shell, ivisurf->layout_surface);
+        id_layout_surface = lyt->get_id_of_surface(ivisurf->layout_surface);
 
         ivi_controller_send_surface(controller->resource,
                                     id_layout_surface);
@@ -1107,7 +1141,6 @@ static struct iviscreen*
 create_screen(struct ivishell *shell, struct weston_output *output)
 {
     struct iviscreen *iviscrn;
-    static int id_counter = 0;
     iviscrn = calloc(1, sizeof *iviscrn);
     if (iviscrn == NULL) {
         weston_log("no memory to allocate client screen\n");
@@ -1117,7 +1150,7 @@ create_screen(struct ivishell *shell, struct weston_output *output)
     iviscrn->shell = shell;
     iviscrn->output = output;
 
-    iviscrn->layout_screen = ivi_extension_get_screen_from_id(shell, id_counter++);
+    iviscrn->id_screen = output->id;
 
     wl_list_init(&iviscrn->link);
     wl_list_init(&iviscrn->resource_list);
@@ -1130,6 +1163,7 @@ create_layer(struct ivishell *shell,
              struct ivi_layout_layer *layout_layer,
              uint32_t id_layer)
 {
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct ivilayer *ivilayer = NULL;
     struct ivicontroller *controller = NULL;
 
@@ -1143,8 +1177,10 @@ create_layer(struct ivishell *shell,
     wl_list_insert(&shell->list_layer, &ivilayer->link);
     wl_list_init(&ivilayer->resource_list);
     ivilayer->layout_layer = layout_layer;
+    ivilayer->prop = lyt->get_properties_of_layer(layout_layer);
 
-    ivi_extension_layer_add_notification(shell, layout_layer, send_layer_prop, ivilayer);
+    ivilayer->property_changed.notify = send_layer_prop;
+    lyt->layer_add_listener(layout_layer, &ivilayer->property_changed);
 
     wl_list_for_each(controller, &shell->list_controller, link) {
         ivi_controller_send_layer(controller->resource, id_layer);
@@ -1158,6 +1194,7 @@ create_surface(struct ivishell *shell,
                struct ivi_layout_surface *layout_surface,
                uint32_t id_surface)
 {
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
     struct ivicontroller *controller = NULL;
 
@@ -1169,6 +1206,7 @@ create_surface(struct ivishell *shell,
 
     ivisurf->shell = shell;
     ivisurf->layout_surface = layout_surface;
+    ivisurf->prop = lyt->get_properties_of_surface(layout_surface);
     wl_list_insert(&shell->list_surface, &ivisurf->link);
     wl_list_init(&ivisurf->resource_list);
 
@@ -1177,21 +1215,23 @@ create_surface(struct ivishell *shell,
                                     id_surface);
     }
 
-    ivi_extension_surface_add_notification(shell, layout_surface,
-                                    send_surface_prop, ivisurf);
+    ivisurf->property_changed.notify = send_surface_prop;
+    lyt->surface_add_listener(layout_surface, &ivisurf->property_changed);
 
     return ivisurf;
 }
 
 static void
-layer_event_create(struct ivi_layout_layer *layout_layer,
-                     void *userdata)
+layer_event_create(struct wl_listener *listener, void *data)
 {
-    struct ivishell *shell = userdata;
+    struct ivishell *shell = wl_container_of(listener, shell, layer_created);
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct ivilayer *ivilayer = NULL;
+    struct ivi_layout_layer *layout_layer =
+           (struct ivi_layout_layer *) data;
     uint32_t id_layer = 0;
 
-    id_layer = ivi_extension_get_id_of_layer(shell, layout_layer);
+    id_layer = lyt->get_id_of_layer(layout_layer);
 
     ivilayer = create_layer(shell, layout_layer, id_layer);
     if (ivilayer == NULL) {
@@ -1201,12 +1241,13 @@ layer_event_create(struct ivi_layout_layer *layout_layer,
 }
 
 static void
-layer_event_remove(struct ivi_layout_layer *layout_layer,
-                     void *userdata)
+layer_event_remove(struct wl_listener *listener, void *data)
 {
     struct wl_resource *resource;
-    struct ivishell *shell = userdata;
+    struct ivishell *shell = wl_container_of(listener, shell, layer_removed);
     struct ivilayer *ivilayer = NULL;
+    struct ivi_layout_layer *layout_layer =
+           (struct ivi_layout_layer *) data;
 
     ivilayer = get_layer(&shell->list_layer, layout_layer);
     if (ivilayer == NULL) {
@@ -1219,6 +1260,7 @@ layer_event_remove(struct ivi_layout_layer *layout_layer,
     * their proxies. */
     if (wl_list_empty(&ivilayer->resource_list)) {
         wl_list_remove(&ivilayer->link);
+        wl_list_remove(&ivilayer->property_changed.link);
         free(ivilayer);
     } else {
         wl_resource_for_each(resource, &ivilayer->resource_list) {
@@ -1229,15 +1271,17 @@ layer_event_remove(struct ivi_layout_layer *layout_layer,
 
 
 static void
-surface_event_create(struct ivi_layout_surface *layout_surface,
-                     void *userdata)
+surface_event_create(struct wl_listener *listener, void *data)
 {
     struct wl_resource *resource;
-    struct ivishell *shell = userdata;
+    struct ivishell *shell = wl_container_of(listener, shell, surface_created);
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
+    struct ivi_layout_surface *layout_surface =
+           (struct ivi_layout_surface *) data;
     uint32_t id_surface = 0;
 
-    id_surface = ivi_extension_get_id_of_surface(shell, layout_surface);
+    id_surface = lyt->get_id_of_surface(layout_surface);
 
     ivisurf = create_surface(shell, layout_surface, id_surface);
     if (ivisurf == NULL) {
@@ -1251,12 +1295,13 @@ surface_event_create(struct ivi_layout_surface *layout_surface,
 }
 
 static void
-surface_event_remove(struct ivi_layout_surface *layout_surface,
-                     void *userdata)
+surface_event_remove(struct wl_listener *listener, void *data)
 {
     struct wl_resource *resource;
-    struct ivishell *shell = userdata;
+    struct ivishell *shell = wl_container_of(listener, shell, surface_removed);
     struct ivisurface *ivisurf = NULL;
+    struct ivi_layout_surface *layout_surface =
+           (struct ivi_layout_surface *) data;
 
     ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
@@ -1269,6 +1314,7 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
      * their proxies. */
     if (wl_list_empty(&ivisurf->resource_list)) {
         wl_list_remove(&ivisurf->link);
+        wl_list_remove(&ivisurf->property_changed.link);
         free(ivisurf);
     } else {
         wl_resource_for_each(resource, &ivisurf->resource_list) {
@@ -1278,12 +1324,14 @@ surface_event_remove(struct ivi_layout_surface *layout_surface,
 }
 
 static void
-surface_event_configure(struct ivi_layout_surface *layout_surface,
-                        void *userdata)
+surface_event_configure(struct wl_listener *listener, void *data)
 {
     struct wl_resource *resource;
-    struct ivishell *shell = userdata;
+    struct ivishell *shell = wl_container_of(listener, shell, surface_configured);
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
+    struct ivi_layout_surface *layout_surface =
+           (struct ivi_layout_surface *) data;
     const struct ivi_layout_surface_properties *prop;
 
     ivisurf = get_surface(&shell->list_surface, layout_surface);
@@ -1292,7 +1340,7 @@ surface_event_configure(struct ivi_layout_surface *layout_surface,
         return;
     }
 
-    prop = ivi_extension_get_properties_of_surface(shell, layout_surface);
+    prop = lyt->get_properties_of_surface(layout_surface);
 
     wl_resource_for_each(resource, &ivisurf->resource_list) {
         send_surface_event(resource, ivisurf,
@@ -1305,12 +1353,13 @@ check_layout_layers(struct ivishell *shell)
 {
     struct ivi_layout_layer **pArray = NULL;
     struct ivilayer *ivilayer = NULL;
+    const struct ivi_layout_interface *lyt = shell->interface;
     uint32_t id_layer = 0;
     int32_t length = 0;
     uint32_t i = 0;
     int32_t ret = 0;
 
-    ret = ivi_extension_get_layers(shell, &length, &pArray);
+    ret = lyt->get_layers(&length, &pArray);
     if(ret != 0) {
         weston_log("failed to get layers at check_layout_layers\n");
         return -1;
@@ -1322,7 +1371,7 @@ check_layout_layers(struct ivishell *shell)
     }
 
     for (i = 0; i < length; i++) {
-        id_layer = ivi_extension_get_id_of_layer(shell, pArray[i]);
+        id_layer = lyt->get_id_of_layer(pArray[i]);
         ivilayer = create_layer(shell, pArray[i], id_layer);
         if (ivilayer == NULL) {
             weston_log("failed to create layer");
@@ -1340,12 +1389,13 @@ check_layout_surfaces(struct ivishell *shell)
 {
     struct ivi_layout_surface **pArray = NULL;
     struct ivisurface *ivisurf = NULL;
+    const struct ivi_layout_interface *lyt = shell->interface;
     uint32_t id_surface = 0;
     int32_t length = 0;
     uint32_t i = 0;
     int32_t ret = 0;
 
-    ret = ivi_extension_get_surfaces(shell, &length, &pArray);
+    ret = lyt->get_surfaces(&length, &pArray);
     if(ret != 0) {
         weston_log("failed to get surfaces at check_layout_surfaces\n");
         return -1;
@@ -1357,7 +1407,7 @@ check_layout_surfaces(struct ivishell *shell)
     }
 
     for (i = 0; i < length; i++) {
-        id_surface = ivi_extension_get_id_of_surface(shell, pArray[i]);
+        id_surface = lyt->get_id_of_surface(pArray[i]);
         ivisurf = create_surface(shell, pArray[i], id_surface);
         if (ivisurf == NULL) {
             weston_log("failed to create surface");
@@ -1373,6 +1423,7 @@ check_layout_surfaces(struct ivishell *shell)
 void
 init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
 {
+    const struct ivi_layout_interface *lyt = shell->interface;
     struct weston_output *output = NULL;
     struct iviscreen *iviscrn = NULL;
     int32_t ret = 0;
@@ -1401,13 +1452,19 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
         weston_log("failed to check_layout_surfaces");
     }
 
-    ivi_extension_add_notification_create_layer(shell, layer_event_create, shell);
-    ivi_extension_add_notification_remove_layer(shell, layer_event_remove, shell);
+    shell->layer_created.notify = layer_event_create;
+    shell->layer_removed.notify = layer_event_remove;
 
-    ivi_extension_add_notification_create_surface(shell, surface_event_create, shell);
-    ivi_extension_add_notification_remove_surface(shell, surface_event_remove, shell);
+    lyt->add_listener_create_layer(&shell->layer_created);
+    lyt->add_listener_remove_layer(&shell->layer_removed);
 
-    ivi_extension_add_notification_configure_surface(shell, surface_event_configure, shell);
+    shell->surface_created.notify = surface_event_create;
+    shell->surface_removed.notify = surface_event_remove;
+    shell->surface_configured.notify = surface_event_configure;
+
+    lyt->add_listener_create_surface(&shell->surface_created);
+    lyt->add_listener_remove_surface(&shell->surface_removed);
+    lyt->add_listener_configure_surface(&shell->surface_configured);
 }
 
 int
@@ -1416,6 +1473,83 @@ setup_ivi_controller_server(struct weston_compositor *compositor,
 {
     if (wl_global_create(compositor->wl_display, &ivi_controller_interface, 1,
                          shell, bind_ivi_controller) == NULL) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int
+load_input_module(struct weston_compositor *ec,
+                  const struct ivi_layout_interface *interface,
+                  size_t interface_version)
+{
+    struct weston_config *config = ec->config;
+    struct weston_config_section *section;
+    char *input_module = NULL;
+
+    int (*input_module_init)(struct weston_compositor *ec,
+                             const struct ivi_layout_interface *interface,
+                             size_t interface_version);
+
+    section = weston_config_get_section(config, "ivi-shell", NULL, NULL);
+
+    if (weston_config_section_get_string(section, "ivi-input-module",
+                                         &input_module, NULL) < 0) {
+        /* input events are handled by weston's default grabs */
+        weston_log("ivi-controller: No ivi-input-module set\n");
+        return 0;
+    }
+
+    input_module_init = weston_load_module(input_module, "input_controller_module_init");
+    if (!input_module_init)
+        return -1;
+
+    if (input_module_init(ec, interface,
+                          sizeof(struct ivi_layout_interface)) != 0) {
+        weston_log("ivi-controller: Initialization of input module failes");
+        return -1;
+    }
+
+    free(input_module);
+
+    return 0;
+}
+
+WL_EXPORT int
+controller_module_init(struct weston_compositor *compositor,
+		       int *argc, char *argv[],
+		       const struct ivi_layout_interface *interface,
+		       size_t interface_version)
+{
+    struct ivishell *shell;
+    (void)argc;
+    (void)argv;
+
+    shell = malloc(sizeof *shell);
+    if (shell == NULL)
+        return -1;
+
+    memset(shell, 0, sizeof *shell);
+
+    shell->interface = interface;
+
+    init_ivi_shell(compositor, shell);
+
+#ifdef IVI_SHARE_ENABLE
+    if (setup_buffer_sharing(compositor, interface) < 0) {
+        free(shell);
+        return -1;
+    }
+#endif
+
+    if (setup_ivi_controller_server(compositor, shell)) {
+        free(shell);
+        return -1;
+    }
+
+    if (load_input_module(compositor, interface, interface_version) < 0) {
+        free(shell);
         return -1;
     }
 

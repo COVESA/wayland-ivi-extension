@@ -23,8 +23,8 @@ cmake_minimum_required (VERSION 2.6)
 project(ivi-controller)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(WAYLAND_SERVER wayland-server>=1.9.0 REQUIRED)
-pkg_check_modules(WESTON weston>=1.9.0 REQUIRED)
+pkg_check_modules(WAYLAND_SERVER wayland-server>=1.11.0 REQUIRED)
+pkg_check_modules(WESTON weston>=1.11.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
 find_package(Threads REQUIRED)
@@ -55,7 +55,7 @@ link_directories(
 
 
 add_library(${PROJECT_NAME} MODULE
-    src/ivi-extension.c src/ivi-controller-impl.c
+    src/ivi-controller.c
     src/bitmap.c
     ${BUFFER_SHARING_SRC_FILES}
 )

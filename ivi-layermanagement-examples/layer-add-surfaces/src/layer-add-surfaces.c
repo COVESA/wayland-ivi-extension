@@ -91,6 +91,37 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
     }
 }
 
+/* Choose the display with the largest resolution.*/
+static t_ilm_uint choose_screen(void)
+{
+    struct ilmScreenProperties screenProperties;
+    t_ilm_uint* screen_IDs = NULL;
+    t_ilm_uint screen_ID = 0;
+    t_ilm_uint screen_count = NULL;
+    t_ilm_uint choosen_width = 0;
+    t_ilm_uint choosen_height = 0;
+    int i;
+
+    ilm_getScreenIDs(&screen_count, &screen_IDs);
+
+    for (i = 0; i<screen_count; i++)
+    {
+        ilm_getPropertiesOfScreen(screen_IDs[i], &screenProperties);
+        if (screenProperties.screenWidth > choosen_width) {
+            choosen_width = screenProperties.screenWidth;
+            choosen_height = screenProperties.screenHeight;
+            screen_ID = screen_IDs[i];
+        }
+    }
+
+    screenWidth = choosen_width;
+    screenHeight = choosen_height;
+
+    free(screen_IDs);
+
+    return screen_ID;
+}
+
 int main (int argc, const char * argv[])
 {
     // Get command-line options
@@ -124,18 +155,17 @@ int main (int argc, const char * argv[])
 
     pthread_mutexattr_destroy(&a);
 
-    struct ilmScreenProperties screenProperties;
     t_ilm_layer renderOrder[1];
+    t_ilm_uint screen_ID;
     renderOrder[0] = layer;
     ilm_init();
-    ilm_getPropertiesOfScreen(0, &screenProperties);
-    screenWidth = screenProperties.screenWidth;
-    screenHeight = screenProperties.screenHeight;
+
+    screen_ID = choose_screen();
     ilm_layerCreateWithDimension(&layer, screenWidth, screenHeight);
     printf("CreateWithDimension: layer ID (%d), Width (%u), Height (%u)\n", layer, screenWidth, screenHeight);
     ilm_layerSetVisibility(layer,ILM_TRUE);
     printf("SetVisibility      : layer ID (%d), ILM_TRUE\n", layer);
-    ilm_displaySetRenderOrder(0,renderOrder,1);
+    ilm_displaySetRenderOrder(screen_ID, renderOrder, 1);
     ilm_commitChanges();
     ilm_registerNotification(callbackFunction, NULL);
 
