@@ -23,8 +23,8 @@ SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
 project(wayland-ivi-extension)
 
-SET(IVI_EXTENSION_VERSION 1.9.1)
-SET(ILM_API_VERSION 1.9.1)
+SET(IVI_EXTENSION_VERSION 1.10.90)
+SET(ILM_API_VERSION 1.10.90)
 
 add_subdirectory(protocol)
 
