@@ -916,14 +916,10 @@ controller_screen_set_render_order(struct wl_client *client,
                            id_layers->size, sizeof(void*));
 
     wl_array_for_each(id_layer, id_layers) {
-        wl_list_for_each(ivilayer, &iviscrn->shell->list_layer, link) {
-            id_layout_layer = lyt->get_id_of_layer(ivilayer->layout_layer);
-            if (*id_layer == id_layout_layer) {
-                layoutlayer_array[i] = ivilayer->layout_layer;
-                i++;
-                break;
-            }
-        }
+        layoutlayer_array[i] = lyt->get_layer_from_id(*id_layer);
+
+        if (layoutlayer_array[i])
+            i++;
     }
 
     lyt->screen_set_render_order(iviscrn->output,
