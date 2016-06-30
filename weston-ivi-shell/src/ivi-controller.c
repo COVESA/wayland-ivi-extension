@@ -734,9 +734,7 @@ controller_layer_set_render_order(struct wl_client *client,
     struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
     const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
     struct ivi_layout_surface **layoutsurf_array = NULL;
-    struct ivisurface *ivisurf = NULL;
     uint32_t *id_surface = NULL;
-    uint32_t id_layout_surface = 0;
     int i = 0;
     (void)client;
 
@@ -744,14 +742,10 @@ controller_layer_set_render_order(struct wl_client *client,
                            id_surfaces->size, sizeof(void*));
 
     wl_array_for_each(id_surface, id_surfaces) {
-        wl_list_for_each(ivisurf, &ivilayer->shell->list_surface, link) {
-            id_layout_surface = lyt->get_id_of_surface(ivisurf->layout_surface);
-            if (*id_surface == id_layout_surface) {
-                layoutsurf_array[i] = ivisurf->layout_surface;
-                i++;
-                break;
-            }
-        }
+        layoutsurf_array[i] = lyt->get_surface_from_id(*id_surface);
+
+        if (layoutsurf_array[i])
+            i++;
     }
 
     lyt->layer_set_render_order(ivilayer->layout_layer,
