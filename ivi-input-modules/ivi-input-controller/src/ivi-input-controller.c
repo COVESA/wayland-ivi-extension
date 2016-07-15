@@ -372,7 +372,8 @@ pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
     struct surface_ctx *surf_ctx;
     wl_fixed_t sx, sy;
     struct weston_view *picked_view, *w_view, *old_focus;
-    struct weston_surface *w_surf;
+    struct weston_surface *w_surf, *send_surf;
+    struct weston_subsurface *sub;
     struct wl_resource *resource;
     struct wl_list *resource_list = NULL;
     uint32_t serial;
@@ -391,12 +392,24 @@ pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
         /* search for the picked view in layout surfaces */
         wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
             w_surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
-            w_view = wl_container_of(w_surf->views.next, w_view, surface_link);
+
+            /* Find a focused surface from subsurface list */
+            send_surf = w_surf;
+            if (!wl_list_empty(&w_surf->subsurface_list)) {
+                wl_list_for_each(sub, &w_surf->subsurface_list, parent_link) {
+                    if (sub->surface == picked_view->surface) {
+                        send_surf = sub->surface;
+                        break;
+                    }
+                }
+            }
+
+            w_view = wl_container_of(send_surf->views.next, w_view, surface_link);
 
             if (get_accepted_seat(surf_ctx, grab->pointer->seat->seat_name) < 0)
                 continue;
 
-            if (picked_view->surface == w_surf) {
+            if (picked_view->surface == send_surf) {
                 /* Correct layout surface is found*/
                 surf_ctx->focus |= ILM_INPUT_DEVICE_POINTER;
                 send_input_focus(seat->input_ctx,
@@ -482,7 +495,8 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
 
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
-        struct weston_surface *surf;
+        struct weston_surface *surf, *send_surf;
+        struct weston_subsurface *sub;
         struct weston_view *view;
         struct wl_resource *resource;
         struct wl_client *surface_client;
@@ -493,9 +507,20 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
         if (get_accepted_seat(surf_ctx, grab->touch->seat->seat_name) < 0)
             continue;
 
+        /* Find a focused surface from subsurface list */
+        send_surf = surf;
+        if (!wl_list_empty(&surf->subsurface_list)) {
+            wl_list_for_each(sub, &surf->subsurface_list, parent_link) {
+                if (sub->surface == grab->touch->focus->surface) {
+                    send_surf = sub->surface;
+                    break;
+                }
+            }
+        }
+
         /* Touches set touch focus */
         if (grab->touch->num_tp == 1) {
-            if (surf == grab->touch->focus->surface) {
+            if (send_surf == grab->touch->focus->surface) {
                 surf_ctx->focus |= ILM_INPUT_DEVICE_TOUCH;
                 send_input_focus(seat->input_ctx,
                                  interface->get_id_of_surface(surf_ctx->layout_surface),
@@ -514,23 +539,23 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
             continue;
 
         /* Assume one view per surface */
-        view = wl_container_of(surf->views.next, view, surface_link);
+        view = wl_container_of(send_surf->views.next, view, surface_link);
         weston_view_from_global_fixed(view, x, y, &sx, &sy);
 
-        surface_client = wl_resource_get_client(surf->resource);
+        surface_client = wl_resource_get_client(send_surf->resource);
         serial = wl_display_next_serial(display);
         wl_resource_for_each(resource, &grab->touch->resource_list) {
             if (wl_resource_get_client(resource) != surface_client)
                 continue;
 
-            wl_touch_send_down(resource, serial, time, surf->resource,
+            wl_touch_send_down(resource, serial, time, send_surf->resource,
                                touch_id, sx, sy);
         }
         wl_resource_for_each(resource, &grab->touch->focus_resource_list) {
             if (wl_resource_get_client(resource) != surface_client)
                 continue;
 
-            wl_touch_send_down(resource, serial, time, surf->resource,
+            wl_touch_send_down(resource, serial, time, send_surf->resource,
                                touch_id, sx, sy);
         }
     }
@@ -549,7 +574,8 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
 
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
-        struct weston_surface *surf;
+        struct weston_surface *surf, *send_surf;
+        struct weston_subsurface *sub;
         struct wl_resource *resource;
         struct wl_client *surface_client;
         uint32_t serial;
@@ -561,8 +587,20 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
             continue;
 
         surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
-        surface_client = wl_resource_get_client(surf->resource);
         serial = wl_display_next_serial(display);
+
+        /* Find a focused surface from subsurface list */
+        send_surf = surf;
+        if (!wl_list_empty(&surf->subsurface_list)) {
+            wl_list_for_each(sub, &surf->subsurface_list, parent_link) {
+                if (sub->surface == grab->touch->focus->surface) {
+                    send_surf = sub->surface;
+                    break;
+                }
+            }
+        }
+        surface_client = wl_resource_get_client(send_surf->resource);
+
         wl_resource_for_each(resource, &grab->touch->resource_list) {
             if (wl_resource_get_client(resource) != surface_client)
                 continue;
@@ -579,7 +617,7 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
 
         /* Touches unset touch focus */
         if (grab->touch->num_tp == 0) {
-            if (surf == grab->touch->focus->surface)
+            if (send_surf == grab->touch->focus->surface)
                 surf_ctx->focus &= ~ILM_INPUT_DEVICE_TOUCH;
                 send_input_focus(seat->input_ctx,
                                  interface->get_id_of_surface(surf_ctx->layout_surface),
@@ -600,7 +638,8 @@ touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
 
     /* For each surface_ctx, check for focus and send */
     wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
-        struct weston_surface *surf;
+        struct weston_surface *surf, *send_surf;
+        struct weston_subsurface *sub;
         struct weston_view *view;
         struct wl_resource *resource;
         struct wl_client *surface_client;
@@ -616,7 +655,18 @@ touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
         view = wl_container_of(surf->views.next, view, surface_link);
         weston_view_from_global_fixed(view, x, y, &sx, &sy);
 
-        surface_client = wl_resource_get_client(surf->resource);
+        /* Find a focused surface from subsurface list */
+        send_surf = surf;
+        if (!wl_list_empty(&surf->subsurface_list)) {
+            wl_list_for_each(sub, &surf->subsurface_list, parent_link) {
+                if (sub->surface == grab->touch->focus->surface) {
+                    send_surf = sub->surface;
+                    break;
+                }
+            }
+        }
+        surface_client = wl_resource_get_client(send_surf->resource);
+
         wl_resource_for_each(resource, &grab->touch->resource_list) {
             if (wl_resource_get_client(resource) != surface_client)
                 continue;
