@@ -44,6 +44,8 @@ struct ivi_share_nativesurface
     uint32_t send_flag;
     struct wl_listener surface_destroy_listener;
     struct ivi_shell_share_ext *shell_ext;
+    bool has_subsurface;
+    void *sub_compositor;
 };
 
 struct ivi_shell_share_ext
@@ -69,7 +71,13 @@ enum ivi_sharebuffer_updatetype
 int32_t setup_buffer_sharing(struct weston_compositor *wc,
                              const struct ivi_layout_interface *interface);
 
-uint32_t get_buffer_name(struct weston_surface *surface,
-                         struct ivi_shell_share_ext *shell_ext);
+uint32_t get_buffer_name(struct ivi_share_nativesurface *native_surface);
+
 uint32_t update_buffer_nativesurface(struct ivi_share_nativesurface *nativesurface,
                                      struct ivi_shell_share_ext *shell_ext);
+#ifdef ENABLE_SHARE_SUBSURFACE
+void check_subsurface(struct ivi_share_nativesurface *native_surface);
+int setup_subcompositor(struct ivi_share_nativesurface *native_surface);
+void destroy_subcompositor(struct ivi_share_nativesurface *native_surface);
+uint32_t update_subsurfaces(struct ivi_share_nativesurface *nativesurface);
+#endif

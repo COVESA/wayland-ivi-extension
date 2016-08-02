@@ -69,6 +69,11 @@ free_nativesurface(struct ivi_share_nativesurface *nativesurf)
         return;
     }
 
+#ifdef ENABLE_SHARE_SUBSURFACE
+    if (nativesurf->sub_compositor != NULL)
+        destroy_subcompositor(nativesurf);
+#endif
+
     nativesurf->surface_destroy_listener.notify = NULL;
     wl_list_remove(&nativesurf->surface_destroy_listener.link);
     free(nativesurf);
@@ -119,6 +124,44 @@ get_event_time()
     return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
 }
 
+#ifdef ENABLE_SHARE_SUBSURFACE
+static struct weston_surface *
+pick_surface(struct ivi_share_nativesurface *native_surface, wl_fixed_t x, wl_fixed_t y,
+             wl_fixed_t *sx, wl_fixed_t *sy)
+{
+    struct weston_surface *root = native_surface->surface;
+    struct weston_subsurface *sub;
+
+    wl_list_for_each(sub, &root->subsurface_list, parent_link) {
+        struct weston_surface *surface = sub->surface;
+        if (sub->parent) {
+            /* must be child surface */
+            int ix = wl_fixed_to_int(x);
+            int iy = wl_fixed_to_int(y);
+            pixman_region32_t sub_rect;
+
+            pixman_region32_init_rect(&sub_rect,
+                                      sub->position.x,
+                                      sub->position.y,
+                                      surface->width,
+                                      surface->height);
+
+            if (pixman_region32_contains_point(&sub_rect, ix, iy, NULL)) {
+                /* contained - transform the coordinates */
+                *sx = wl_fixed_from_int(ix - sub->position.x);
+                *sy = wl_fixed_from_int(iy - sub->position.y);
+                return surface;
+            }
+        } else {
+            /* must be parent surface - no need to transform the coordinates */
+            return surface;
+        }
+    }
+
+    return NULL;
+}
+#endif
+
 static void
 share_surface_redirect_touch_down(struct wl_client *client,
                                   struct wl_resource *resource,
@@ -133,12 +176,14 @@ share_surface_redirect_touch_down(struct wl_client *client,
     uint32_t time = get_event_time();
     struct redirect_target *redirect_target = NULL;
     struct wl_resource *surface_resource;
+    struct ivi_share_nativesurface *native_surface;
 
     if (client_link->parent == NULL) {
         weston_log("share_surface_redirect_touch_down: No parent surface\n");
         return;
     }
     surface_resource = client_link->parent->surface->resource;
+    native_surface = client_link->parent;
 
     seat = get_weston_seat(client_link->parent->shell_ext->wc, client_link);
     if (seat == NULL || seat->touch_state == NULL) {
@@ -147,6 +192,16 @@ share_surface_redirect_touch_down(struct wl_client *client,
 
     wl_list_for_each(target_resource, &seat->touch_state->resource_list, link) {
         if (wl_resource_get_client(target_resource) == wl_resource_get_client(surface_resource)) {
+#ifdef ENABLE_SHARE_SUBSURFACE
+            if (native_surface->has_subsurface) {
+                struct weston_surface *s = pick_surface(native_surface, x, y, &x, &y);
+                if (s) {
+                    surface_resource = s->resource;
+                } else {
+                    weston_log("touch_down: can't find the target resource\n");
+                }
+            }
+#endif
             uint32_t new_serial =
                 wl_display_next_serial(client_link->parent->shell_ext->wc->wl_display);
             wl_touch_send_down(target_resource, new_serial, time, surface_resource, id, x, y);
@@ -198,12 +253,14 @@ share_surface_redirect_touch_motion(struct wl_client *client,
     struct wl_resource *target_resource = NULL;
     uint32_t time = get_event_time();
     struct wl_resource *surface_resource;
+    struct ivi_share_nativesurface *native_surface;
 
     if (client_link->parent == NULL) {
         weston_log("share_surface_redirect_touch_motion: No parent surface\n");
         return;
     }
     surface_resource = client_link->parent->surface->resource;
+    native_surface = client_link->parent;
 
     seat = get_weston_seat(client_link->parent->shell_ext->wc, client_link);
     if (seat == NULL || seat->touch_state == NULL) {
@@ -212,6 +269,13 @@ share_surface_redirect_touch_motion(struct wl_client *client,
 
     wl_list_for_each(target_resource, &seat->touch_state->resource_list, link) {
         if (wl_resource_get_client(target_resource) == wl_resource_get_client(surface_resource)) {
+#ifdef ENABLE_SHARE_SUBSURFACE
+            if (native_surface->has_subsurface) {
+                if (pick_surface(native_surface, x, y, &x, &y) == NULL) {
+                    weston_log("touch_motion: can't find the target resource\n");
+                }
+            }
+#endif
             wl_touch_send_motion(target_resource, time, id, x, y);
             break;
         }
@@ -330,6 +394,39 @@ nativesurface_destroy(struct wl_listener *listener, void *data)
     }
 }
 
+#ifdef ENABLE_SHARE_SUBSURFACE
+void
+check_subsurface(struct ivi_share_nativesurface *native_surface)
+{
+    struct weston_surface *surface = native_surface->surface;
+    struct weston_subsurface *subsurface;
+
+    if (!wl_list_empty(&surface->subsurface_list)) {
+        if (surface->subsurface_list.next == surface->subsurface_list.prev) {
+            /* This case parent surface has had subsurfaces even once,
+               but now, don't have subsurfaces. */
+            native_surface->has_subsurface = false;
+            return;
+        }
+
+        if (native_surface->has_subsurface)
+            return;
+
+        /* It is 3 patterns to come to here
+           - When the surface for the first time share already has subsurface.
+           - When the sharing surface has subsurface for the first time.
+           - When the surface that lost subsurface once has subsurface again.
+        */
+        native_surface->has_subsurface = true;
+
+        if (setup_subcompositor(native_surface) < 0) {
+            weston_log("failed to setup surface to composite subsurface\n");
+            native_surface->has_subsurface = false;
+        }
+    }
+}
+#endif
+
 struct ivi_share_nativesurface*
 alloc_share_nativesurface(struct weston_surface *surface, uint32_t id, uint32_t surface_id,
                           uint32_t bufferType, uint32_t format,
@@ -352,12 +449,17 @@ alloc_share_nativesurface(struct weston_surface *surface, uint32_t id, uint32_t 
     nativesurface->surface_id = surface_id;
     nativesurface->shell_ext = shell_ext;
     wl_list_init(&nativesurface->client_list);
+    nativesurface->has_subsurface = false;
+    nativesurface->sub_compositor = NULL;
 
     if (NULL != surface) {
         nativesurface->surface_destroy_listener.notify = nativesurface_destroy;
         wl_signal_add(&surface->destroy_signal, &nativesurface->surface_destroy_listener);
-    }
 
+#ifdef ENABLE_SHARE_SUBSURFACE
+        check_subsurface(nativesurface);
+#endif
+    }
     return nativesurface;
 }
 
@@ -399,9 +501,9 @@ create_empty_nativesurface_client(struct wl_client *client,
     struct ivi_share_nativesurface *nativesurf;
 
     nativesurf = alloc_share_nativesurface(NULL, 0, 0,
-                                     IVI_SHARE_SURFACE_TYPE_GBM,
-                                     IVI_SHARE_SURFACE_FORMAT_ARGB8888,
-                                     shell_ext);
+                                           IVI_SHARE_SURFACE_TYPE_GBM,
+                                           IVI_SHARE_SURFACE_FORMAT_ARGB8888,
+                                           shell_ext);
     if (NULL == nativesurf) {
         return NULL;
     }
@@ -611,7 +713,7 @@ send_to_client(struct ivi_share_nativesurface *p_nativesurface, uint32_t send_fl
         }
         if ((IVI_SHAREBUFFER_DAMAGE & send_flag) == IVI_SHAREBUFFER_DAMAGE) {
             send_damage(p_link->resource, p_nativesurface->id,
-                        get_buffer_name(p_nativesurface->surface, shell_ext));
+                        get_buffer_name(p_nativesurface));
         }
     }
 }

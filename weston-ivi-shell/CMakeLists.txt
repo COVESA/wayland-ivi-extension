@@ -26,6 +26,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_SERVER wayland-server>=1.13.0 REQUIRED)
 pkg_check_modules(WESTON weston>=2.0.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
+pkg_check_modules(EGL egl REQUIRED)
+pkg_check_modules(GLESv2 glesv2 REQUIRED)
 
 find_package(Threads REQUIRED)
 if (IVI_SHARE)
@@ -35,7 +37,9 @@ if (IVI_SHARE)
     SET(BUFFER_SHARING_SRC_FILES
         src/ivi-share.c
         src/ivi-share-gbm.c
+        src/ivi-share-gbm-subsurface.c
     )
+    add_definitions ("-DENABLE_SHARE_SUBSURFACE")
 endif (IVI_SHARE)
 
 GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
@@ -79,23 +83,31 @@ if (IVI_SHARE)
          ${include_directories}
          ${GBM_INCLUDE_DIRS}
          ${LIBDRM_INCLUDE_DIRS}
+         ${EGL_INCLUDE_DIRS}
+         ${GLESv2_INCLUDE_DIRS}
      )
 
      link_directories(
          ${link_directories}
          ${GBM_LIBRARY_DIRS}
          ${LIBDRM_LIBRARY_DIRS}
+         ${EGL_LIBRARY_DIRS}
+         ${GLESv2_LIBRARY_DIRS}
      )
 
      add_dependencies(${PROJECT_NAME}
          ${GBM_LIBRARIES}
          ${LIBDRM_LIBRARIES}
+         ${EGL_LIBRARIES}
+         ${GLESv2_LIBRARIES}
      )
 
      set(LIBS
          ${LIBS}
          ${GBM_LIBRARIES}
          ${LIBDRM_LIBRARIES}
+         ${EGL_LIBRARIES}
+         ${GLESv2_LIBRARIES}
      )
 endif (IVI_SHARE)
 
