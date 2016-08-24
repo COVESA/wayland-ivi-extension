@@ -500,6 +500,9 @@ controller_surface_screenshot(struct wl_client *client,
     int32_t col = 0;
     int32_t offset = 0;
     int32_t image_offset = 0;
+    int32_t i = 0;
+    int32_t padding = 0;
+    int32_t sum_padding = 0;
 
     result = lyt->surface_get_size(ivisurf->layout_surface, &width,
                                    &height, &stride);
@@ -533,15 +536,24 @@ controller_surface_screenshot(struct wl_client *client,
         return;
     }
 
+    /* When width is not multiple of 4, calculate padding. */
+    if (width % 4 != 0)
+        padding = (4 - ((width * 3) % 4));
+
     for (row = 0; row < height; ++row) {
         for (col = 0; col < width; ++col) {
-            offset = row * width + col;
-            image_offset = (height - row - 1) * width + col;
+            offset = (height - row - 1) * width + col;
+            image_offset = (row * width + col) * 3 + sum_padding;
 
-            image_buffer[image_offset * 3] = buffer[offset * 4 + 2];
-            image_buffer[image_offset * 3 + 1] = buffer[offset * 4 + 1];
-            image_buffer[image_offset * 3 + 2] = buffer[offset * 4];
+            image_buffer[image_offset] = buffer[offset * 4 + 2];
+            image_buffer[image_offset + 1] = buffer[offset * 4 + 1];
+            image_buffer[image_offset + 2] = buffer[offset * 4];
         }
+        for (i = 1; i <= padding; ++i) {
+            image_buffer[image_offset + 2 + i] = 0;
+            sum_padding++;
+         }
+
     }
 
     free(buffer);
