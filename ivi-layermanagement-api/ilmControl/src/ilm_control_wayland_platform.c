@@ -1125,6 +1125,11 @@ static void destroy_control_resources(void)
         ctx->wl.queue = NULL;
     }
 
+    if (ctx->wl.input_controller) {
+        ivi_input_destroy(ctx->wl.input_controller);
+        ctx->wl.input_controller = NULL;
+    }
+
     if (0 != pthread_mutex_destroy(&ctx->mutex)) {
         fprintf(stderr, "failed to destroy pthread_mutex\n");
     }
