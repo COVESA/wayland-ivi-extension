@@ -1102,6 +1102,15 @@ static void destroy_control_resources(void)
         ctx->wl.controller = NULL;
     }
 
+    {
+        struct seat_context *s, *n;
+        wl_list_for_each_safe(s, n, &ctx->wl.list_seat, link) {
+            wl_list_remove(&s->link);
+            free(s->seat_name);
+            free(s);
+        }
+    }
+
     if (ctx->wl.display) {
         wl_display_flush(ctx->wl.display);
     }
