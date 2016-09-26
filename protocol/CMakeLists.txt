@@ -152,6 +152,24 @@ add_library(${PROJECT_NAME} STATIC
 set_target_properties(${PROJECT_NAME} PROPERTIES
                       COMPILE_FLAGS "-fPIC")
 
+if (IVI_SHARE)
+    project (ivi-share)
+
+    add_library(${PROJECT_NAME} SHARED
+        ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
+        ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
+    )
+
+    install(
+        TARGETS ${PROJECT_NAME}
+        LIBRARY DESTINATION lib${LIB_SUFFIX}
+    )
+
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
+        DESTINATION include
+    )
+endif (IVI_SHARE)
 
 project (ivi-application)
 
