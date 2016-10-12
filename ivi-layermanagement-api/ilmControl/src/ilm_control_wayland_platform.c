@@ -632,6 +632,7 @@ controller_surface_listener_destroyed(void *data,
                   struct ivi_controller_surface *controller)
 {
     struct surface_context *ctx_surf = data;
+    struct accepted_seat *seat, *seat_next;
 
     if (ctx_surf->notification != NULL) {
         ctx_surf->notification(ctx_surf->id_surface,
@@ -646,6 +647,12 @@ controller_surface_listener_destroyed(void *data,
     }
 
     ivi_controller_surface_destroy(controller, 1);
+
+    wl_list_for_each_safe(seat, seat_next, &ctx_surf->list_accepted_seats, link) {
+        wl_list_remove(&seat->link);
+        free(seat->seat_name);
+        free(seat);
+    }
 
     wl_list_remove(&ctx_surf->order.link);
     wl_list_remove(&ctx_surf->link);
@@ -1050,7 +1057,14 @@ static void destroy_control_resources(void)
         {
             struct surface_context *l;
             struct surface_context *n;
+            struct accepted_seat *seat, *seat_next;
             wl_list_for_each_safe(l, n, &ctx->wl.list_surface, link) {
+                wl_list_for_each_safe(seat, seat_next, &l->list_accepted_seats, link) {
+                    wl_list_remove(&seat->link);
+                    free(seat->seat_name);
+                    free(seat);
+                }
+
                 wl_list_remove(&l->link);
                 wl_list_remove(&l->order.link);
                 ivi_controller_surface_destroy(l->controller, 0);
@@ -1088,6 +1102,15 @@ static void destroy_control_resources(void)
         ctx->wl.controller = NULL;
     }
 
+    {
+        struct seat_context *s, *n;
+        wl_list_for_each_safe(s, n, &ctx->wl.list_seat, link) {
+            wl_list_remove(&s->link);
+            free(s->seat_name);
+            free(s);
+        }
+    }
+
     if (ctx->wl.display) {
         wl_display_flush(ctx->wl.display);
     }
@@ -1100,6 +1123,11 @@ static void destroy_control_resources(void)
     if (ctx->wl.queue) {
         wl_event_queue_destroy(ctx->wl.queue);
         ctx->wl.queue = NULL;
+    }
+
+    if (ctx->wl.input_controller) {
+        ivi_input_destroy(ctx->wl.input_controller);
+        ctx->wl.input_controller = NULL;
     }
 
     if (0 != pthread_mutex_destroy(&ctx->mutex)) {
