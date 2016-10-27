@@ -672,6 +672,42 @@ COMMAND("destroy layer|surface <id>")
 }
 
 //=============================================================================
+COMMAND("add surface <sid> to layer <lid>")
+//=============================================================================
+{
+    t_ilm_uint sid = input->getUint("sid");
+    t_ilm_uint lid = input->getUint("lid");
+
+    ilmErrorTypes callResult = ilm_layerAddSurface(lid, sid);
+    if (ILM_SUCCESS != callResult)
+    {
+        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
+        cout << "Failed to add surface (" << sid << " ) to layer (" << lid << " ) " << "\n";
+        return;
+    }
+
+    ilm_commitChanges();
+}
+
+//=============================================================================
+COMMAND("remove surface <sid> from layer <lid>")
+//=============================================================================
+{
+    t_ilm_uint sid = input->getUint("sid");
+    t_ilm_uint lid = input->getUint("lid");
+
+    ilmErrorTypes callResult = ilm_layerRemoveSurface(lid, sid);
+    if (ILM_SUCCESS != callResult)
+    {
+        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
+        cout << "Failed to remove surface (" << sid << " ) from layer (" << lid << " ) " << "\n";
+        return;
+    }
+
+    ilm_commitChanges();
+}
+
+//=============================================================================
 COMMAND("get communicator performance")
 //=============================================================================
 {
