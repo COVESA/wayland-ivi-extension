@@ -168,4 +168,8 @@ WLContext::DestroyWLContext()
 
     if (m_wlCompositor)
         wl_compositor_destroy(m_wlCompositor);
+
+    wl_registry_destroy(m_wlRegistry);
+    wl_display_flush(m_wlDisplay);
+    wl_display_disconnect(m_wlDisplay);
 }
