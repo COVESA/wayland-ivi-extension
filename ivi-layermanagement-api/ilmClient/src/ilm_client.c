@@ -27,13 +27,6 @@
 #include "ilm_client.h"
 #include "ilm_client_platform.h"
 
-/* GCC visibility */
-#if defined(__GNUC__) && __GNUC__ >= 4
-#define ILM_EXPORT __attribute__ ((visibility("default")))
-#else
-#define ILM_EXPORT
-#endif
-
 ILM_EXPORT ilmErrorTypes
 ilmClient_init(t_ilm_nativedisplay nativedisplay)
 {

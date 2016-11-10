@@ -25,13 +25,6 @@
 #include "ilm_common_platform.h"
 #include "ilm_types.h"
 
-/* GCC visibility */
-#if defined(__GNUC__) && __GNUC__ >= 4
-#define ILM_EXPORT __attribute__ ((visibility("default")))
-#else
-#define ILM_EXPORT
-#endif
-
 ILM_EXPORT ilmErrorTypes ilmControl_init(t_ilm_nativedisplay);
 ILM_EXPORT void ilmControl_destroy(void);
 

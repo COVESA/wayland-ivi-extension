@@ -44,6 +44,13 @@
  **/
 #define ILM_FALSE     0u
 
+/* GCC visibility */
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define ILM_EXPORT __attribute__ ((visibility("default")))
+#else
+#define ILM_EXPORT
+#endif
+
 /**
  * \brief Enumeration on possible error codes
  * \ingroup ilmClient
