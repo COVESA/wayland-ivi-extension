@@ -43,6 +43,7 @@ WLContext::WLContext()
 : m_wlDisplay(NULL)
 , m_wlRegistry(NULL)
 , m_wlCompositor(NULL)
+, m_iviApp(NULL)
 , m_wlServerInfo(NULL)
 , m_connectionId(0)
 , m_wlPointerListener(NULL)
@@ -78,6 +79,14 @@ WLContext::RegistryHandleGlobal(void* data,
                                                 &wl_compositor_interface,
                                                 1));
             break;
+        }
+
+        if (!strcmp(interface, "ivi_application")){
+            surface->SetIviApp(
+                (struct ivi_application*)wl_registry_bind(registry,
+                                                          name,
+                                                          &ivi_application_interface,
+                                                          1));
         }
 
         if (!strcmp(interface, "wl_seat")){
@@ -156,6 +165,9 @@ WLContext::InitWLContext(const struct wl_pointer_listener* wlPointerListener,
 void
 WLContext::DestroyWLContext()
 {
+    if (m_iviApp)
+        ivi_application_destroy(m_iviApp);
+
     if (m_wlCompositor)
         wl_compositor_destroy(m_wlCompositor);
 }

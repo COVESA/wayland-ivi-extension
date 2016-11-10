@@ -22,6 +22,7 @@
 
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
+#include <ivi-application-client-protocol.h>
 
 struct serverinfo;
 
@@ -39,6 +40,7 @@ private:
     struct wl_display*    m_wlDisplay;
     struct wl_registry*   m_wlRegistry;
     struct wl_compositor* m_wlCompositor;
+    struct ivi_application*    m_iviApp;
     struct serverinfo*    m_wlServerInfo;
     uint32_t m_connectionId;
 
@@ -61,10 +63,12 @@ public:
     struct wl_pointer_listener* GetWLPointerListener() const;
     struct wl_keyboard_listener* GetWLKeyboardListener() const;
     struct wl_touch_listener* GetWLTouchListener() const;
+    struct ivi_application* GetIviApp() const;
     uint32_t GetConnectionId() const;
 
     void SetEventMask(uint32_t mask);
     void SetWLCompositor(struct wl_compositor* wlCompositor);
+    void SetIviApp(struct ivi_application* iviApp);
     void SetWLServerInfo(struct serverinfo* wlServerInfo);
     void SetWLSeat(struct wl_seat* wlSeat);
     void SetConnectionId(uint32_t connectionId);
@@ -98,9 +102,12 @@ inline struct wl_keyboard_listener* WLContext::GetWLKeyboardListener() const
     { return m_wlKeyboardListener; }
 inline struct wl_touch_listener* WLContext::GetWLTouchListener() const
     { return m_wlTouchListener; }
+inline struct ivi_application* WLContext::GetIviApp() const { return m_iviApp; }
 inline uint32_t WLContext::GetConnectionId() const { return m_connectionId; }
 inline void WLContext::SetWLCompositor(struct wl_compositor* wlCompositor)
     { m_wlCompositor = wlCompositor; }
+inline void WLContext::SetIviApp(struct ivi_application* iviApp)
+    { m_iviApp = iviApp; }
 inline void WLContext::SetWLServerInfo(struct serverinfo* wlServerInfo)
     { m_wlServerInfo = wlServerInfo; }
 inline void WLContext::SetConnectionId(uint32_t connectionId)
