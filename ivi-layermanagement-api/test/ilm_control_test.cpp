@@ -775,48 +775,6 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
     ASSERT_NE(0, remove(outputFile));
 }
 
-TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat) {
-    t_ilm_uint surface1=0;
-    t_ilm_uint surface2=1;
-    t_ilm_uint surface3=2;
-    t_ilm_uint surface4=3;
-    t_ilm_uint surface5=4;
-    t_ilm_uint surface6=5;
-    t_ilm_uint surface7=6;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_4444, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_5551, &surface2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[2], 0, 0, ILM_PIXELFORMAT_RGBA_6661, &surface3));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[3], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface4));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[4], 0, 0, ILM_PIXELFORMAT_RGB_565, &surface5));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[5], 0, 0, ILM_PIXELFORMAT_RGB_888, &surface6));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[6], 0, 0, ILM_PIXELFORMAT_R_8, &surface7));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-    ilmPixelFormat p1, p2, p3, p4, p5, p6, p7;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface1, &p1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface2, &p2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface3, &p3));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface4, &p4));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface5, &p5));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface6, &p6));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface7, &p7));
-
-    ASSERT_EQ(ILM_PIXELFORMAT_RGBA_4444, p1);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGBA_5551, p2);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGBA_6661, p3);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGBA_8888, p4);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGB_565, p5);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGB_888, p6);
-    ASSERT_EQ(ILM_PIXELFORMAT_R_8, p7);
-}
-
-TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
-    ilmPixelFormat p;
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetPixelformat(0xdeadbeef, &p));
-}
-
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
     t_ilm_uint numberOfScreens = 0;
     t_ilm_uint* screenIDs = NULL;
