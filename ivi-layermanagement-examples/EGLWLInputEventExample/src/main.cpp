@@ -45,7 +45,7 @@ int main(int argc, char **argv)
     WLContext* wlContext;
     WLEGLSurface* eglSurface;
     WLEyes* eyes;
-    t_ilm_surface surfaceId = 5100;
+    int surfaceId = 5100;
 
     argc = argc; // avoid warning
     argv = argv;
@@ -81,11 +81,8 @@ int main(int argc, char **argv)
 
     int const fd = wl_display_get_fd(wlContext->GetWLDisplay());
 
-    ilmClient_init((t_ilm_nativedisplay)wlContext->GetWLDisplay());
-
     eglSurface = new WLEGLSurface(wlContext);
-    eglSurface->CreateSurface(400, 240);
-    eglSurface->CreateIlmSurface(&surfaceId, 400, 240);
+    eglSurface->CreateSurface(400, 240, surfaceId);
 
     eyes = new WLEyes(400, 240);
 
@@ -110,11 +107,7 @@ int main(int argc, char **argv)
     }
 
     TerminateRenderer();
-    ilm_surfaceRemove(surfaceId);
 
-    eglSurface->DestroyIlmSurface();
-
-    ilmClient_destroy();
     delete eyes;
     delete eglSurface;
     delete wlContext;
