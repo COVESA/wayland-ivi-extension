@@ -25,14 +25,6 @@
 #include "ilm_input.h"
 #include "ilm_control_platform.h"
 
-
-/* GCC visibility */
-#if defined(__GNUC__) && __GNUC__ >= 4
-#define ILM_EXPORT __attribute__ ((visibility("default")))
-#else
-#define ILM_EXPORT
-#endif
-
 extern struct ilm_control_context ilm_context;
 
 ILM_EXPORT ilmErrorTypes
