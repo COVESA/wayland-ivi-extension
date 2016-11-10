@@ -86,7 +86,7 @@ set(LIBS
     ${WAYLAND_CLIENT_LIBRARIES}
     ${WAYLAND_EGL_LIBRARIES}
     ${EGL_LIBRARIES}
-    ilmClient
+    ivi-application
 )
 
 add_dependencies(${PROJECT_NAME}
