@@ -4,10 +4,17 @@
 
 void registry_listener_callback(void* data, struct wl_registry* registry, uint32_t id, const char* interface, uint32_t version)
 {
+    TestBase* base = static_cast<TestBase*>(data);
+
     if (0 == strcmp(interface, "wl_compositor"))
     {
-        wl_compositor** compositor = reinterpret_cast<wl_compositor**>(data);
-        *compositor = reinterpret_cast<wl_compositor*>(wl_registry_bind(registry, id, &wl_compositor_interface, 1));
+        base->SetWLCompositor(reinterpret_cast<wl_compositor*>(wl_registry_bind(registry, id, &wl_compositor_interface, 1)));
+    }
+
+    if (0 == strcmp(interface, "ivi_application"))
+    {
+        base->SetIviApp(reinterpret_cast<ivi_application*>(wl_registry_bind(registry, id, &ivi_application_interface, 1)));
+
     }
 }
 
@@ -27,7 +34,7 @@ TestBase::TestBase()
         NULL
     };
 
-    wl_registry_add_listener(wlRegistry, &registry_listener, &wlCompositor);
+    wl_registry_add_listener(wlRegistry, &registry_listener, this);
 
     if (wl_display_roundtrip(wlDisplay) == -1 || wl_display_roundtrip(wlDisplay) == -1)
     {
