@@ -32,8 +32,8 @@ IF(BUILD_ILM_API_TESTS)
 
     INCLUDE_DIRECTORIES(
         ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include
-        ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include
         ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include
+        ${CMAKE_BINARY_DIR}/protocol
         ${CMAKE_CURRENT_SOURCE_DIR}/../ilmInput/include
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
         ${gtest_INCLUDE_DIRS}
@@ -45,9 +45,9 @@ IF(BUILD_ILM_API_TESTS)
 
     SET(LIBS
         ilmCommon
-        ilmClient
         ilmControl
         ilmInput
+        ivi-application
         ${gtest_LIBRARIES}
         ${WAYLAND_CLIENT_LIBRARY_DIRS}
     )
@@ -71,7 +71,6 @@ IF(BUILD_ILM_API_TESTS)
     # use CTest
     ENABLE_TESTING()
     ADD_TEST(ilmCommon  ${PROJECT_NAME})
-    ADD_TEST(ilmClient  ${PROJECT_NAME})
     ADD_TEST(ilmControl ${PROJECT_NAME})
     ADD_TEST(ilmInput ${PROJECT_NAME})
 

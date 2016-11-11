@@ -2,6 +2,7 @@
  *
  * Copyright 2010-2014 BMW Car IT GmbH
  * Copyright (C) 2012 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+ * Copyright (C) 2016 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +30,6 @@
 #include "TestBase.h"
 
 extern "C" {
-    #include "ilm_client.h"
     #include "ilm_control.h"
     #include "ilm_input.h"
 }
@@ -48,7 +48,6 @@ public:
     void SetUp()
     {
         ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay));
-        ASSERT_EQ(ILM_SUCCESS, ilmClient_init((t_ilm_nativedisplay)wlDisplay));
     }
 
     void TearDown()
@@ -63,17 +62,7 @@ public:
         };
         free(layers);
 
-        t_ilm_surface* surfaces = NULL;
-        t_ilm_int numSurfaces=0;
-        EXPECT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&numSurfaces, &surfaces));
-        for (t_ilm_int i=0; i<numSurfaces; i++)
-        {
-            EXPECT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surfaces[i]));
-        };
-        free(surfaces);
-
         EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
-        EXPECT_EQ(ILM_SUCCESS, ilmClient_destroy());
         EXPECT_EQ(ILM_SUCCESS, ilm_destroy());
     }
 };
@@ -81,13 +70,13 @@ public:
 TEST_F(IlmCommandTest, ilm_input_focus) {
     const uint32_t surfaceCount = 4;
     t_ilm_surface surfaces[] = {1010, 2020, 3030, 4040};
+    struct ivi_surface* ivi_surfaces[surfaceCount];
     t_ilm_surface *surfaceIDs;
     ilmInputDevice *bitmasks;
     t_ilm_uint num_ids;
 
     for (unsigned int i = 0; i < surfaceCount; i++) {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 0, 0,
-                                                 ILM_PIXELFORMAT_RGBA_8888, &surfaces[i]));
+        ivi_surfaces[i] = (struct ivi_surface*) ivi_application_surface_create(iviApp, surfaces[i], wlSurfaces[i]);
     }
 
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputFocus(&surfaceIDs, &bitmasks, &num_ids));
@@ -145,6 +134,10 @@ TEST_F(IlmCommandTest, ilm_input_focus) {
             EXPECT_EQ(bitmasks[i], ILM_INPUT_DEVICE_KEYBOARD | ILM_INPUT_DEVICE_TOUCH);
     free(surfaceIDs);
     free(bitmasks);
+
+    for (unsigned int i = 0; i < surfaceCount; i++) {
+        ivi_surface_destroy(ivi_surfaces[i]);
+    }
 }
 
 TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
@@ -153,9 +146,8 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     t_ilm_string *seats = NULL;
     char const *set_seats = "default";
     t_ilm_uint set_seats_count = 1;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],
-                                             0, 0, ILM_PIXELFORMAT_RGBA_8888,
-                                             &surface1));
+    struct ivi_surface* ivi_surface = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface1, wlSurfaces[0]);
 
     /* All seats accept the "default" seat when created */
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputAcceptanceOn(surface1, &num_seats,
@@ -192,4 +184,6 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, (t_ilm_string*)&set_seats));
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 0, NULL));
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, (t_ilm_string*)&set_seats));
+
+    ivi_surface_destroy(ivi_surface);
 }
