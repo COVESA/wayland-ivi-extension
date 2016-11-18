@@ -34,13 +34,6 @@
 #include "ivi-controller-client-protocol.h"
 #include "ivi-input-client-protocol.h"
 
-/* GCC visibility */
-#if defined(__GNUC__) && __GNUC__ >= 4
-#define ILM_EXPORT __attribute__ ((visibility("default")))
-#else
-#define ILM_EXPORT
-#endif
-
 struct layer_context {
     struct wl_list link;
 
