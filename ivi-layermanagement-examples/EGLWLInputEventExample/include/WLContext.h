@@ -22,8 +22,7 @@
 
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
-
-struct serverinfo;
+#include <ivi-application-client-protocol.h>
 
 class WLContext
 {
@@ -39,8 +38,7 @@ private:
     struct wl_display*    m_wlDisplay;
     struct wl_registry*   m_wlRegistry;
     struct wl_compositor* m_wlCompositor;
-    struct serverinfo*    m_wlServerInfo;
-    uint32_t m_connectionId;
+    struct ivi_application*    m_iviApp;
 
     struct wl_pointer_listener*  m_wlPointerListener;
     struct wl_keyboard_listener* m_wlKeyboardListener;
@@ -61,13 +59,12 @@ public:
     struct wl_pointer_listener* GetWLPointerListener() const;
     struct wl_keyboard_listener* GetWLKeyboardListener() const;
     struct wl_touch_listener* GetWLTouchListener() const;
-    uint32_t GetConnectionId() const;
+    struct ivi_application* GetIviApp() const;
 
     void SetEventMask(uint32_t mask);
     void SetWLCompositor(struct wl_compositor* wlCompositor);
-    void SetWLServerInfo(struct serverinfo* wlServerInfo);
+    void SetIviApp(struct ivi_application* iviApp);
     void SetWLSeat(struct wl_seat* wlSeat);
-    void SetConnectionId(uint32_t connectionId);
     void SetWLPointer(struct wl_pointer* wlPointer);
     void SetWLKeyboard(struct wl_keyboard* wlKeyboard);
     void SetWLTouch(struct wl_touch* wlTouch);
@@ -77,9 +74,6 @@ public:
                                      uint32_t name,
                                      const char* interface,
                                      uint32_t version);
-    static void ServerInfoListener(void* data,
-                                   struct serverinfo* serverInfo,
-                                   uint32_t clientHandle);
     static void SeatHandleCapabilities(void* data,
                                        struct wl_seat* seat,
                                        uint32_t caps);
@@ -98,12 +92,10 @@ inline struct wl_keyboard_listener* WLContext::GetWLKeyboardListener() const
     { return m_wlKeyboardListener; }
 inline struct wl_touch_listener* WLContext::GetWLTouchListener() const
     { return m_wlTouchListener; }
-inline uint32_t WLContext::GetConnectionId() const { return m_connectionId; }
+inline struct ivi_application* WLContext::GetIviApp() const { return m_iviApp; }
 inline void WLContext::SetWLCompositor(struct wl_compositor* wlCompositor)
     { m_wlCompositor = wlCompositor; }
-inline void WLContext::SetWLServerInfo(struct serverinfo* wlServerInfo)
-    { m_wlServerInfo = wlServerInfo; }
-inline void WLContext::SetConnectionId(uint32_t connectionId)
-    { m_connectionId = connectionId; }
+inline void WLContext::SetIviApp(struct ivi_application* iviApp)
+    { m_iviApp = iviApp; }
 
 #endif /* _WLCONTEXT_H_ */

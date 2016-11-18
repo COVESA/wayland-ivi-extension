@@ -20,7 +20,6 @@
 #ifndef _WLSURFACE_H_
 #define _WLSURFACE_H_
 
-#include "ilm_client.h"
 #include "WLContext.h"
 
 class WLSurface
@@ -29,10 +28,10 @@ class WLSurface
 protected:
     WLContext*         m_wlContext;
     struct wl_surface* m_wlSurface;
+    struct ivi_surface* m_iviSurface;
     int           m_width;
     int           m_height;
-    t_ilm_layer   m_ilmLayerId;
-    t_ilm_surface m_ilmSurfaceId;
+    unsigned int m_surfaceId;
 
 // methods
 public:
@@ -42,11 +41,7 @@ public:
     struct wl_display* GetWLDisplay() const;
     struct wl_surface* GetWLSurface() const;
 
-    virtual bool CreateSurface(const int width, const int height);
-    virtual bool CreateIlmSurface(t_ilm_surface* surfaceId,
-                                  t_ilm_int width,
-                                  t_ilm_int height);
-    virtual void DestroyIlmSurface();
+    virtual bool CreateSurface(const int width, const int height, const int surfaceId);
 
 protected:
     virtual bool CreatePlatformSurface();

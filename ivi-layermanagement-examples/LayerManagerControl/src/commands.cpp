@@ -621,51 +621,17 @@ COMMAND("create layer <layerid> <width> <height>")
 }
 
 //=============================================================================
-COMMAND("create surface <surfaceid> <nativehandle> <width> <height> <pixelformat>")
+COMMAND("destroy layer <id>")
 //=============================================================================
 {
-    unsigned int surfaceid = input->getUint("surfaceid");
-    unsigned int nativeHandle = input->getUint("nativehandle");
-    unsigned int width = input->getUint("width");
-    unsigned int height = input->getUint("height");
-    e_ilmPixelFormat pixelformat = (e_ilmPixelFormat)input->getUint("pixelformat");
+    unsigned int layerid = input->getUint("id");
 
-    ilmErrorTypes callResult = ilm_surfaceCreate(nativeHandle, width, height, pixelformat, &surfaceid);
+    ilmErrorTypes callResult = ilm_layerRemove(layerid);
     if (ILM_SUCCESS != callResult)
     {
         cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to create surface with ID " << surfaceid << "\n";
+        cout << "Failed to remove layer with ID " << layerid << "\n";
         return;
-    }
-}
-
-//=============================================================================
-COMMAND("destroy layer|surface <id>")
-//=============================================================================
-{
-    if (input->contains("layer"))
-    {
-        unsigned int layerid = input->getUint("id");
-
-        ilmErrorTypes callResult = ilm_layerRemove(layerid);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to remove layer with ID " << layerid << "\n";
-            return;
-        }
-    }
-    else if (input->contains("surface"))
-    {
-        unsigned int surfaceid = input->getUint("id");
-
-        ilmErrorTypes callResult = ilm_surfaceRemove(surfaceid);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to remove surface with ID " << surfaceid << "\n";
-            return;
-        }
     }
 
     ilm_commitChanges();

@@ -465,23 +465,22 @@ ilmErrorTypes ilm_surfaceAddNotification(t_ilm_surface surface, surfaceNotificat
 ilmErrorTypes ilm_surfaceRemoveNotification(t_ilm_surface surface);
 
 /**
- * \brief register for notification on property creation/deletion events for surfaces/layers
+ * \brief register notification callback for creation/deletion of ilm surfaces/layers
  * \ingroup ilmControl
- * \param[in] surface id of surface to register for notification
  * \param[in] callback pointer to function to be called for notification
+              callback function is defined as:
+              void cb(ilmObjectType o, t_ilm_uint id, t_ilm_bool created, void *user_data)
+ * \param[in] user_data pointer to data which will be passed to a notification callback
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
- * \return ILM_ERROR_INVALID_ARGUMENT if the given surface already has notification callback registered
  */
 ilmErrorTypes ilm_registerNotification(notificationFunc callback, void *user_data);
 
 /**
- * \brief remove notification on property changes of surface
- * \ingroup ilmClient
- * \param[in] surface id of surface to remove notification
+ * \brief unregister notification for creation/deletion events of ilm surfaces/layers
+ * \ingroup ilmControl
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
- * \return ILM_ERROR_INVALID_ARGUMENT if the given surface has no notification callback registered
  */
 ilmErrorTypes ilm_unregisterNotification();
 #ifdef __cplusplus
