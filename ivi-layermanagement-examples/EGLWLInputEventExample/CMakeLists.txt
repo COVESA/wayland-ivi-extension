@@ -71,7 +71,7 @@ add_executable(EGLWLInputEventExample
 add_dependencies(EGLWLInputEventExample
     wayland-client
     wayland-egl
-    ilmClient
+    ivi-application
     ${LIBS}
 )
 
@@ -82,7 +82,7 @@ set(LIBS
     ${WAYLAND_EGL_LIBRARIES}
     ${FFI_LIBRARIES}
     ${EGL_LIBRARIES}
-    ilmClient
+    ivi-application
 )
 
 add_definitions(${EGL_CFLAGS})

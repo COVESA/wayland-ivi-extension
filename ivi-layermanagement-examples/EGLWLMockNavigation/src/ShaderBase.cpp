@@ -17,7 +17,6 @@
  *
  ****************************************************************************/
 #include "ShaderBase.h"
-#include <ilm_client.h>
 #include <GLES2/gl2.h>
 #include <stdlib.h>
 #include <iostream>
@@ -56,7 +55,7 @@ bool ShaderBase::initShader()
 
     if (glResult == GL_FALSE)
     {
-        t_ilm_int infoLength, numberChars;
+        int infoLength, numberChars;
         glGetShaderiv(fragmentShaderId, GL_INFO_LOG_LENGTH, &infoLength);
 
         // Allocate Log Space
@@ -66,7 +65,7 @@ bool ShaderBase::initShader()
         // Print the error
         cout << "Failed to compile fragment shader: " << info << "\n";
         free(info);
-        return ILM_FALSE;
+        return false;
     }
 
     // Create the fragment shader object
@@ -83,7 +82,7 @@ bool ShaderBase::initShader()
 
     if (glResult == GL_FALSE)
     {
-        t_ilm_int infoLength, numberChars;
+        int infoLength, numberChars;
         glGetShaderiv(vertexShaderId, GL_INFO_LOG_LENGTH, &infoLength);
 
         // Allocate Log Space
@@ -93,7 +92,7 @@ bool ShaderBase::initShader()
         // Print the error
         cout << "Failed to compile vertex shader: " << info << "\n";
         free(info);
-        return ILM_FALSE;
+        return false;
     }
 
     shaderProgramId = glCreateProgram();
@@ -109,7 +108,7 @@ bool ShaderBase::initShader()
 
     if (glResult == GL_FALSE)
     {
-        t_ilm_int infoLength, numberChars;
+        int infoLength, numberChars;
         glGetShaderiv(shaderProgramId, GL_INFO_LOG_LENGTH, &infoLength);
 
         // Allocate Log Space
@@ -120,7 +119,7 @@ bool ShaderBase::initShader()
         // Print the error
         cout << "Failed to link program: " << info << "\n";
         free(info);
-        return ILM_FALSE;
+        return false;
     }
 
 #if 1 /* ADIT */
@@ -130,7 +129,7 @@ bool ShaderBase::initShader()
 
     if (glResult == GL_FALSE)
     {
-        t_ilm_int infoLength, numberChars;
+        int infoLength, numberChars;
         glGetShaderiv(shaderProgramId, GL_INFO_LOG_LENGTH, &infoLength);
 
         // Allocate Log Space
@@ -141,7 +140,7 @@ bool ShaderBase::initShader()
         // Print the error
         cout << "Failed to validate program: " << info << "\n";
         free(info);
-        return ILM_FALSE;
+        return false;
     }
 
 #endif /* ADIT */
@@ -152,12 +151,12 @@ bool ShaderBase::initShader()
 
     cout << "Shader setup complete.\n";
 
-    return ILM_TRUE;
+    return true;
 }
 
 bool ShaderBase::destroyShader()
 {
-    t_ilm_bool result = ILM_TRUE;
+    bool result = true;
     glDeleteProgram(shaderProgramId);
     glDeleteShader(fragmentShaderId);
     glDeleteShader(vertexShaderId);
