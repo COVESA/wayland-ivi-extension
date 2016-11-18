@@ -153,6 +153,23 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
                       COMPILE_FLAGS "-fPIC")
 
 
+project (ivi-application)
+
+add_library(${PROJECT_NAME} SHARED
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
+)
+
+install(
+    TARGETS ${PROJECT_NAME}
+    LIBRARY DESTINATION lib${LIB_SUFFIX}
+)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
+    DESTINATION include/ilm
+)
+
 #=============================================================================================
 # generate documentation for ivi-application API
 #=============================================================================================
