@@ -2,6 +2,7 @@
  *
  * Copyright 2010-2014 BMW Car IT GmbH
  * Copyright (C) 2012 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+ * Copyright (C) 2016 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +28,6 @@
 #include "TestBase.h"
 
 extern "C" {
-    #include "ilm_client.h"
     #include "ilm_control.h"
 }
 
@@ -45,7 +45,6 @@ public:
     void SetUp()
     {
         ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay));
-        ASSERT_EQ(ILM_SUCCESS, ilmClient_init((t_ilm_nativedisplay)wlDisplay));
     }
 
     void TearDown()
@@ -60,17 +59,7 @@ public:
         };
         free(layers);
 
-        t_ilm_surface* surfaces = NULL;
-        t_ilm_int numSurfaces=0;
-        EXPECT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&numSurfaces, &surfaces));
-        for (t_ilm_int i=0; i<numSurfaces; i++)
-        {
-            EXPECT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surfaces[i]));
-        };
-        free(surfaces);
-
         EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
-        EXPECT_EQ(ILM_SUCCESS, ilmClient_destroy());
         EXPECT_EQ(ILM_SUCCESS, ilm_destroy());
     }
 };
@@ -78,7 +67,8 @@ public:
 TEST_F(IlmCommandTest, SetGetSurfaceOrientation) {
     uint surface = 36;
     ilmOrientation returned;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    struct ivi_surface* ivi_surface = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface, wlSurfaces[0]);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOrientation(surface, ILM_NINETY));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
@@ -99,6 +89,8 @@ TEST_F(IlmCommandTest, SetGetSurfaceOrientation) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetOrientation(surface, &returned));
     ASSERT_EQ(ILM_ZERO, returned);
+
+    ivi_surface_destroy(ivi_surface);
 }
 
 TEST_F(IlmCommandTest, SetGetLayerOrientation) {
@@ -133,8 +125,10 @@ TEST_F(IlmCommandTest, SetGetSurfaceOpacity) {
     uint surface2 = 44;
     t_ilm_float opacity;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    struct ivi_surface* ivi_surface1 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface1, wlSurfaces[0]);
+    struct ivi_surface* ivi_surface2 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface2, wlSurfaces[1]);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface1, 0.88));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
@@ -145,6 +139,9 @@ TEST_F(IlmCommandTest, SetGetSurfaceOpacity) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetOpacity(surface2, &opacity));
     EXPECT_NEAR(0.001, opacity, 0.01);
+
+    ivi_surface_destroy(ivi_surface1);
+    ivi_surface_destroy(ivi_surface2);
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceOpacity_InvalidInput) {
@@ -186,7 +183,8 @@ TEST_F(IlmCommandTest, SetGetSurfaceVisibility) {
     uint surface = 36;
     t_ilm_bool visibility;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    struct ivi_surface* ivi_surface = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface, wlSurfaces[0]);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_TRUE));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
@@ -202,6 +200,8 @@ TEST_F(IlmCommandTest, SetGetSurfaceVisibility) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(surface, &visibility));
     ASSERT_EQ(ILM_TRUE, visibility);
+
+    ivi_surface_destroy(ivi_surface);
 }
 
 TEST_F(IlmCommandTest, SetGetSurfaceVisibility_InvalidInput) {
@@ -246,8 +246,8 @@ TEST_F(IlmCommandTest, SetGetLayerVisibility_InvalidInput) {
 
 TEST_F(IlmCommandTest, SetSurfaceSourceRectangle) {
     t_ilm_uint surface = 0xbeef;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+    struct ivi_surface* ivi_surface = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface, wlSurfaces[0]);
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(surface, 89, 6538, 638, 4));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
@@ -259,6 +259,7 @@ TEST_F(IlmCommandTest, SetSurfaceSourceRectangle) {
     ASSERT_EQ(638u, surfaceProperties.sourceWidth);
     ASSERT_EQ(4u, surfaceProperties.sourceHeight);
 
+    ivi_surface_destroy(ivi_surface);
 }
 
 TEST_F(IlmCommandTest, SetSurfaceSourceRectangle_InvalidInput) {
@@ -356,8 +357,10 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
     t_ilm_int old_length;
 
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&old_length, &IDs));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    struct ivi_surface* ivi_surface1 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface1, wlSurfaces[0]);
+    struct ivi_surface* ivi_surface2 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface2, wlSurfaces[1]);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     free(IDs);
 
@@ -371,13 +374,18 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
         EXPECT_TRUE(contains(IDs+old_length, 2, surface2));
     }
     free(IDs);
+
+    ivi_surface_destroy(ivi_surface1);
+    ivi_surface_destroy(ivi_surface2);
 }
 
 TEST_F(IlmCommandTest, ilm_surfaceCreate_Remove) {
     uint surface1 = 3246;
     uint surface2 = 46586;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    struct ivi_surface* ivi_surface1 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface1, wlSurfaces[0]);
+    struct ivi_surface* ivi_surface2 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface2, wlSurfaces[1]);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     t_ilm_int length;
@@ -392,7 +400,7 @@ TEST_F(IlmCommandTest, ilm_surfaceCreate_Remove) {
     }
     free(IDs);
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface1));
+    ivi_surface_destroy(ivi_surface1);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
     EXPECT_EQ(length, 1);
@@ -402,7 +410,7 @@ TEST_F(IlmCommandTest, ilm_surfaceCreate_Remove) {
     }
     free(IDs);
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface2));
+    ivi_surface_destroy(ivi_surface2);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     EXPECT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
     EXPECT_EQ(length, 0);
@@ -482,8 +490,10 @@ TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurface
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
     uint surface1 = 3246;
     uint surface2 = 46586;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
+    struct ivi_surface* ivi_surface1 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface1, wlSurfaces[0]);
+    struct ivi_surface* ivi_surface2 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface2, wlSurfaces[1]);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     t_ilm_int length;
@@ -528,6 +538,9 @@ TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurface
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, &IDs));
     free(IDs);
     ASSERT_EQ(length, 0);
+
+    ivi_surface_destroy(ivi_surface1);
+    ivi_surface_destroy(ivi_surface2);
 }
 
 TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidInput) {
@@ -544,9 +557,12 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidResources) {
     uint surface1 = 0xbeef1;
     uint surface2 = 0xbeef2;
     uint surface3 = 0xbeef3;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[2], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface3));
+    struct ivi_surface* ivi_surface1 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface1, wlSurfaces[0]);
+    struct ivi_surface* ivi_surface2 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface2, wlSurfaces[1]);
+    struct ivi_surface* ivi_surface3 = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface3, wlSurfaces[2]);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     t_ilm_int length;
@@ -558,11 +574,16 @@ TEST_F(IlmCommandTest, ilm_getSurfaceIDsOnLayer_InvalidResources) {
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ASSERT_NE(ILM_SUCCESS, ilm_getSurfaceIDsOnLayer(layer, &length, NULL));
+
+    ivi_surface_destroy(ivi_surface1);
+    ivi_surface_destroy(ivi_surface2);
+    ivi_surface_destroy(ivi_surface3);
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_ilm_surfaceSetDestinationRectangle) {
     t_ilm_uint surface = 0xbeef;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    struct ivi_surface* ivi_surface = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface, wlSurfaces[0]);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.8765));
@@ -607,6 +628,8 @@ TEST_F(IlmCommandTest, ilm_getPropertiesOfSurface_ilm_surfaceSetSourceRectangle_
     ASSERT_EQ(4316u, surfaceProperties2.destHeight);
     ASSERT_EQ(ILM_TWOHUNDREDSEVENTY, surfaceProperties2.orientation);
     ASSERT_FALSE(surfaceProperties2.visibility);
+
+    ivi_surface_destroy(ivi_surface);
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfLayer_ilm_layerSetSourceRectangle_ilm_layerSetDestinationRectangle) {
@@ -747,7 +770,8 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot) {
     }
 
     t_ilm_surface surface = 0xbeef;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface));
+    struct ivi_surface* ivi_surface = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface, wlSurfaces[0]);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, surface));
 
@@ -756,7 +780,7 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot) {
     ASSERT_TRUE(f!=NULL);
     fclose(f);
     remove(outputFile);
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surface));
+    ivi_surface_destroy(ivi_surface);
 }
 
 TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
@@ -773,48 +797,6 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
 
     // make sure, no screen dump file was created for invalid screen
     ASSERT_NE(0, remove(outputFile));
-}
-
-TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat) {
-    t_ilm_uint surface1=0;
-    t_ilm_uint surface2=1;
-    t_ilm_uint surface3=2;
-    t_ilm_uint surface4=3;
-    t_ilm_uint surface5=4;
-    t_ilm_uint surface6=5;
-    t_ilm_uint surface7=6;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0], 0, 0, ILM_PIXELFORMAT_RGBA_4444, &surface1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1], 0, 0, ILM_PIXELFORMAT_RGBA_5551, &surface2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[2], 0, 0, ILM_PIXELFORMAT_RGBA_6661, &surface3));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[3], 0, 0, ILM_PIXELFORMAT_RGBA_8888, &surface4));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[4], 0, 0, ILM_PIXELFORMAT_RGB_565, &surface5));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[5], 0, 0, ILM_PIXELFORMAT_RGB_888, &surface6));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[6], 0, 0, ILM_PIXELFORMAT_R_8, &surface7));
-    ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
-
-    ilmPixelFormat p1, p2, p3, p4, p5, p6, p7;
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface1, &p1));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface2, &p2));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface3, &p3));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface4, &p4));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface5, &p5));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface6, &p6));
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetPixelformat(surface7, &p7));
-
-    ASSERT_EQ(ILM_PIXELFORMAT_RGBA_4444, p1);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGBA_5551, p2);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGBA_6661, p3);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGBA_8888, p4);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGB_565, p5);
-    ASSERT_EQ(ILM_PIXELFORMAT_RGB_888, p6);
-    ASSERT_EQ(ILM_PIXELFORMAT_R_8, p7);
-}
-
-TEST_F(IlmCommandTest, ilm_surfaceGetPixelformat_InvalidInput) {
-    ilmPixelFormat p;
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetPixelformat(0xdeadbeef, &p));
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
@@ -941,13 +923,13 @@ TEST_F(IlmCommandTest, DisplaySetRenderOrder_shrinking) {
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_growing) {
     //prepare needed layers and surfaces
-    t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+    unsigned int renderOrder[] = {10, 20, 30};
     t_ilm_uint surfaceCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
+    struct ivi_surface* ivi_surfaces[surfaceCount];
 
     for (unsigned int i = 0; i < surfaceCount; ++i)
     {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
-        ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+        ivi_surfaces[i] = (struct ivi_surface*) ivi_application_surface_create(iviApp, renderOrder[i], wlSurfaces[i]);
     }
 
     t_ilm_layer layerIDs[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
@@ -992,18 +974,23 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_growing) {
         EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 
+    for (unsigned int i = 0; i < surfaceCount; ++i)
+    {
+        ivi_surface_destroy(ivi_surfaces[i]);
+    }
+
     free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_shrinking) {
     //prepare needed layers and surfaces
-    t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+    unsigned int renderOrder[] = {10, 20, 30};
     t_ilm_uint surfaceCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
+    struct ivi_surface* ivi_surfaces[surfaceCount];
 
     for (unsigned int i = 0; i < surfaceCount; ++i)
     {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
-        ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+        ivi_surfaces[i] = (struct ivi_surface*) ivi_application_surface_create(iviApp, renderOrder[i], wlSurfaces[i]);
     }
 
     t_ilm_layer layerIDs[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
@@ -1048,18 +1035,23 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_shrinking) {
         EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
     }
 
+    for (unsigned int i = 0; i < surfaceCount; ++i)
+    {
+        ivi_surface_destroy(ivi_surfaces[i]);
+    }
+
     free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
     //prepare needed layers and surfaces
-    t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+    unsigned int renderOrder[] = {10, 20, 30};
     t_ilm_uint surfaceCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
+    struct ivi_surface* ivi_surfaces[surfaceCount];
 
     for (unsigned int i = 0; i < surfaceCount; ++i)
     {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
-        ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+        ivi_surfaces[i] = (struct ivi_surface*) ivi_application_surface_create(iviApp, renderOrder[i], wlSurfaces[i]);
     }
 
     t_ilm_surface duplicateRenderOrder[] = {renderOrder[0], renderOrder[1], renderOrder[0], renderOrder[1], renderOrder[0]};
@@ -1084,17 +1076,22 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
     free(layerSurfaceIDs);
 
     ASSERT_EQ(2, layerSurfaceCount);
+
+    for (unsigned int i = 0; i < surfaceCount; ++i)
+    {
+        ivi_surface_destroy(ivi_surfaces[i]);
+    }
 }
 
 TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
     //prepare needed layers and surfaces
-    t_ilm_layer renderOrder[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+    unsigned int renderOrder[] = {10, 20, 30};
     t_ilm_uint surfaceCount = sizeof(renderOrder) / sizeof(renderOrder[0]);
+    struct ivi_surface* ivi_surfaces[surfaceCount];
 
     for (unsigned int i = 0; i < surfaceCount; ++i)
     {
-        ASSERT_EQ(ILM_SUCCESS, ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[i], 100, 100, ILM_PIXELFORMAT_RGBA_8888, renderOrder + i));
-        ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
+        ivi_surfaces[i] = (struct ivi_surface*) ivi_application_surface_create(iviApp, renderOrder[i], wlSurfaces[i]);
     }
 
     t_ilm_layer layer;
@@ -1120,4 +1117,9 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
     free(layerSurfaceIDs);
 
     ASSERT_EQ(0, layerSurfaceCount);
+
+    for (unsigned int i = 0; i < surfaceCount; ++i)
+    {
+        ivi_surface_destroy(ivi_surfaces[i]);
+    }
 }

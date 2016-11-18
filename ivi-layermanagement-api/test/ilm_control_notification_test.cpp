@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2012 BMW Car IT GmbH
+ * Copyright (C) 2016 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +30,6 @@
 #include <assert.h>
 
 extern "C" {
-    #include "ilm_client.h"
     #include "ilm_control.h"
 }
 
@@ -73,7 +73,6 @@ public:
     void SetUp()
     {
         ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay));
-        ASSERT_EQ(ILM_SUCCESS, ilmClient_init((t_ilm_nativedisplay)wlDisplay));
 
         // set default values
         callbackLayerId = -1;
@@ -89,9 +88,7 @@ public:
         ilm_commitChanges();
         // create a surface
         surface = 456;
-        ilm_surfaceRemove(surface);
-        ilm_commitChanges();
-        ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
+        ivi_surface = (struct ivi_surface*)ivi_application_surface_create(iviApp, surface, wlSurfaces[0]);
         ilm_commitChanges();
         timesCalled=0;
 
@@ -111,17 +108,9 @@ public:
        };
        free(layers);
 
-       t_ilm_surface* surfaces = NULL;
-       t_ilm_int numSurfaces=0;
-       EXPECT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&numSurfaces, &surfaces));
-       for (t_ilm_int i=0; i<numSurfaces; i++)
-       {
-           EXPECT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surfaces[i]));
-       };
-       free(surfaces);
+       ivi_surface_destroy(ivi_surface);
 
        EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
-       EXPECT_EQ(ILM_SUCCESS, ilmClient_destroy());
        EXPECT_EQ(ILM_SUCCESS, ilm_destroy());
     }
 
@@ -137,6 +126,7 @@ public:
     static struct ilmLayerProperties LayerProperties;
     static unsigned int mask;
     static t_ilm_surface surface;
+    struct ivi_surface* ivi_surface;
     static ilmSurfaceProperties SurfaceProperties;
 
     static void assertCallbackcalled(int numberOfExpectedCalls=1){
@@ -257,11 +247,8 @@ t_ilm_layer NotificationTest::callbackLayerId;
 t_ilm_surface NotificationTest::callbackSurfaceId;
 struct ilmLayerProperties NotificationTest::LayerProperties;
 unsigned int NotificationTest::mask;
-t_ilm_surface NotificationTest::surface;
+unsigned int NotificationTest::surface;
 ilmSurfaceProperties NotificationTest::SurfaceProperties;
-
-
-
 
 TEST_F(NotificationTest, ilm_layerAddNotificationWithoutCallback)
 {
@@ -285,15 +272,14 @@ TEST_F(NotificationTest, ilm_surfaceAddNotificationWithoutCallback)
 {
     // create a layer
     t_ilm_uint surface = 67;
-
-    ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1],10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
-    ilm_commitChanges();
+    struct ivi_surface* ivi_surface = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface, wlSurfaces[1]);
 
     // add notification
     ilmErrorTypes status = ilm_surfaceAddNotification(surface,NULL);
     ASSERT_EQ(ILM_SUCCESS, status);
 
-    ilm_surfaceRemove(surface);
+    ivi_surface_destroy(ivi_surface);
     ilm_commitChanges();
 }
 
