@@ -1,13 +1,40 @@
+/***************************************************************************
+ *
+ * Copyright 2012 BMW Car IT GmbH
+ * Copyright (C) 2016 Advanced Driver Information Technology Joint Venture GmbH
+ *
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ****************************************************************************/
+
 #include "TestBase.h"
 #include <cstring>
 #include <stdexcept>
 
 void registry_listener_callback(void* data, struct wl_registry* registry, uint32_t id, const char* interface, uint32_t version)
 {
+    TestBase* base = static_cast<TestBase*>(data);
+
     if (0 == strcmp(interface, "wl_compositor"))
     {
-        wl_compositor** compositor = reinterpret_cast<wl_compositor**>(data);
-        *compositor = reinterpret_cast<wl_compositor*>(wl_registry_bind(registry, id, &wl_compositor_interface, 1));
+        base->SetWLCompositor(reinterpret_cast<wl_compositor*>(wl_registry_bind(registry, id, &wl_compositor_interface, 1)));
+    }
+
+    if (0 == strcmp(interface, "ivi_application"))
+    {
+        base->SetIviApp(reinterpret_cast<ivi_application*>(wl_registry_bind(registry, id, &ivi_application_interface, 1)));
+
     }
 }
 
@@ -27,7 +54,7 @@ TestBase::TestBase()
         NULL
     };
 
-    wl_registry_add_listener(wlRegistry, &registry_listener, &wlCompositor);
+    wl_registry_add_listener(wlRegistry, &registry_listener, this);
 
     if (wl_display_roundtrip(wlDisplay) == -1 || wl_display_roundtrip(wlDisplay) == -1)
     {

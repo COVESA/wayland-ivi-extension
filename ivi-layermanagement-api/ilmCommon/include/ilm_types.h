@@ -44,6 +44,20 @@
  **/
 #define ILM_FALSE     0u
 
+/* GCC visibility */
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define ILM_EXPORT __attribute__ ((visibility("default")))
+#else
+#define ILM_EXPORT
+#endif
+
+/* Deprecated attribute */
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define ILM_DEPRECATED __attribute__ ((deprecated))
+#else
+#define ILM_DEPRECATED
+#endif
+
 /**
  * \brief Enumeration on possible error codes
  * \ingroup ilmClient

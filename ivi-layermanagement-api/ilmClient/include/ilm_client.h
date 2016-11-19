@@ -34,7 +34,7 @@ extern "C" {
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if a connection can not be established to the services.
  */
-ilmErrorTypes ilmClient_init(t_ilm_nativedisplay nativedisplay);
+ilmErrorTypes ilmClient_init(t_ilm_nativedisplay nativedisplay) ILM_DEPRECATED;
 
 /**
  * \brief Create a surface
@@ -53,7 +53,7 @@ ilmErrorTypes ilm_surfaceCreate(t_ilm_nativehandle nativehandle,
                                 t_ilm_int width,
                                 t_ilm_int height,
                                 ilmPixelFormat pixelFormat,
-                                t_ilm_surface *pSurfaceId);
+                                t_ilm_surface *pSurfaceId) ILM_DEPRECATED;
 
 /**
  * \brief Remove a surface
@@ -62,7 +62,7 @@ ilmErrorTypes ilm_surfaceCreate(t_ilm_nativehandle nativehandle,
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
-ilmErrorTypes ilm_surfaceRemove(const t_ilm_surface surfaceId);
+ilmErrorTypes ilm_surfaceRemove(const t_ilm_surface surfaceId) ILM_DEPRECATED;
 
 /**
  * \brief Destroys the IVI LayerManagement Client APIs.
@@ -70,7 +70,7 @@ ilmErrorTypes ilm_surfaceRemove(const t_ilm_surface surfaceId);
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not be closed or was not initialized.
  */
-ilmErrorTypes ilmClient_destroy(void);
+ilmErrorTypes ilmClient_destroy(void) ILM_DEPRECATED;
 
 #ifdef __cplusplus
 } /**/
