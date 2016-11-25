@@ -46,7 +46,6 @@ SET(SRC_FILES
     src/Expression.cpp
     src/ExpressionInterpreter.cpp
     src/print.cpp
-    src/scatter.cpp
     src/sceneio.cpp
     src/util.cpp
 )
