@@ -674,14 +674,6 @@ COMMAND("remove surface <sid> from layer <lid>")
 }
 
 //=============================================================================
-COMMAND("get communicator performance")
-//=============================================================================
-{
-    (void) input; //suppress warning: unused parameter
-    getCommunicatorPerformance();
-}
-
-//=============================================================================
 COMMAND("test notification layer <layerid>")
 //=============================================================================
 {
