@@ -322,11 +322,4 @@ void exportSceneToFile(string filename);
  */
 void exportXtext(string fileName, string grammar, string url);
 
-/*
- * Imports a scene from a saved text file
- */
-void importSceneFromFile(string filename);
-
-
-
 #endif

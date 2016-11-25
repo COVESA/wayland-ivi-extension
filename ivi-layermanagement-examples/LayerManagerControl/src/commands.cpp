@@ -759,11 +759,3 @@ COMMAND("export xtext to <filename> <grammar> <url>")
     string url = (string) input->getString("url");
     exportXtext(filename, grammar, url);
 }
-
-//=============================================================================
-COMMAND("import scene from <filename>")
-//=============================================================================
-{
-    string filename = (string) input->getString("filename");
-    importSceneFromFile(filename);
-}
