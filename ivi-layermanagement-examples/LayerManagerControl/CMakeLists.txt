@@ -43,7 +43,6 @@ SET(SRC_FILES
     src/analyze.cpp
     src/common.cpp
     src/control.cpp
-    src/demo.cpp
     src/Expression.cpp
     src/ExpressionInterpreter.cpp
     src/print.cpp
