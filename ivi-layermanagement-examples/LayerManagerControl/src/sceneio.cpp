@@ -16,8 +16,6 @@
  * limitations under the License.
  *
  ****************************************************************************/
-#include "ilm_client.h"
-#include "ilm_control.h"
 #include "LMControl.h"
 #include "Expression.h"
 #include "ExpressionInterpreter.h"

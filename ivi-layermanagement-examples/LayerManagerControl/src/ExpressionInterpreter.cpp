@@ -18,7 +18,7 @@
  ****************************************************************************/
 #include "ExpressionInterpreter.h"
 #include "Expression.h"
-#include "ilm_client.h"
+#include "ilm_control.h"
 #include <string>
 #include <sstream>
 #include <algorithm> // transform

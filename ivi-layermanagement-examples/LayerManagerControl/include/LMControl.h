@@ -32,6 +32,8 @@ using std::set;
 #include <string>
 using std::string;
 
+#include "ilm_common.h"
+
 /*
  * Datastructure that contains all information about a scene
  */
@@ -125,43 +127,6 @@ tuple4 getSurfaceScreenCoordinates(t_scene_data* pScene, t_ilm_surface surface);
  * the topmost surface
  */
 vector<t_ilm_surface> getSceneRenderOrder(t_scene_data* pScene);
-
-/*
- * Sets a scene to be restored if an interrupt signal (Ctrl+C) is received
- */
-void setSceneToRestore(t_scene_data* pScene);
-
-/*
- * Clones the given scene into another t_scene_data object that would look exactly the same
- * but all rendered surfaces are rendered on one (newly created) layer.
- * Order, sizes and positions of rendered surfaces are preserved relative to screen
- *
- */
-t_scene_data cloneToUniLayerScene(t_scene_data* pScene);
-
-/*
- * Hide the currently rendered scene, and render the given scene instead
- * If clean is set to true all layers and surfaces that do not exist in the given
- * scene are destroyed
- */
-void setScene(t_scene_data* pScene, bool clean = false);
-
-/*
- * Makes a smooth transformation effect from the intial to the final scene
- */
-void transformScene(t_scene_data* pInitialScene, t_scene_data* pFinalScene, t_ilm_long durationMillis, t_ilm_int frameCount);
-
-/*
- * Creates a new empty scene
- */
-void emptyScene(t_scene_data* pScene);
-
-/*
- * Returns true if the surface is rendered to the screen
- * (If the surface belongs to a layer that belongs to a screen)
- */
-t_ilm_bool surfaceRenderedOnScreen(t_scene_data& scene, t_ilm_surface surface);
-
 
 //=============================================================================
 //util.cpp
