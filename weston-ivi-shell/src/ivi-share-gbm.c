@@ -32,7 +32,6 @@
 #include "wayland-server.h"
 #include "weston/compositor.h"
 #include "ivi-share-server-protocol.h"
-#include "ivi-controller-interface.h"
 #include "ivi-share.h"
 
 static uint32_t nativesurface_name;
