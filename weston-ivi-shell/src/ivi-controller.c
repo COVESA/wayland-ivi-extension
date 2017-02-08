@@ -1486,7 +1486,7 @@ load_input_module(struct weston_compositor *ec,
                   const struct ivi_layout_interface *interface,
                   size_t interface_version)
 {
-    struct weston_config *config = ec->config;
+    struct weston_config *config = wet_get_config(ec);
     struct weston_config_section *section;
     char *input_module = NULL;
 
