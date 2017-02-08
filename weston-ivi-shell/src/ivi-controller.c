@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <weston/compositor.h>
+#include <weston.h>
 #include <weston/ivi-layout-export.h>
 #include "ivi-controller-server-protocol.h"
 #include "bitmap.h"
