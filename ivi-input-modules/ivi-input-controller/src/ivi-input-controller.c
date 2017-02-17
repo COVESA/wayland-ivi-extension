@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <weston/compositor.h>
+#include <weston.h>
 #include <weston/ivi-layout-export.h>
 #include "ilm_types.h"
 
