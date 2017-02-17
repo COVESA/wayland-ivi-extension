@@ -16,7 +16,6 @@
  * limitations under the License.
  *
  ****************************************************************************/
-#include "ilm_client.h"
 #include "ilm_control.h"
 #include "LMControl.h"
 #include "Expression.h"
@@ -674,14 +673,6 @@ COMMAND("remove surface <sid> from layer <lid>")
 }
 
 //=============================================================================
-COMMAND("get communicator performance")
-//=============================================================================
-{
-    (void) input; //suppress warning: unused parameter
-    getCommunicatorPerformance();
-}
-
-//=============================================================================
 COMMAND("test notification layer <layerid>")
 //=============================================================================
 {
@@ -721,28 +712,6 @@ COMMAND("analyze surface <surfaceid>")
 }
 
 //=============================================================================
-COMMAND("scatter [all]")
-//=============================================================================
-{
-    if (input->contains("all"))
-    {
-        scatterAll();
-    }
-    else
-    {
-        scatter();
-    }
-}
-
-//=============================================================================
-COMMAND("demo [<animation_mode=2>]")
-//=============================================================================
-{
-    t_ilm_uint mode = (t_ilm_uint) input->getUint("animation_mode");
-    demo(mode);
-}
-
-//=============================================================================
 COMMAND("export scene to <filename>")
 //=============================================================================
 {
@@ -758,12 +727,4 @@ COMMAND("export xtext to <filename> <grammar> <url>")
     string grammar = (string) input->getString("grammar");
     string url = (string) input->getString("url");
     exportXtext(filename, grammar, url);
-}
-
-//=============================================================================
-COMMAND("import scene from <filename>")
-//=============================================================================
-{
-    string filename = (string) input->getString("filename");
-    importSceneFromFile(filename);
 }
