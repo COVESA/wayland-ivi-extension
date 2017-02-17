@@ -17,7 +17,6 @@
  *
  ****************************************************************************/
 
-#include "ilm_client.h"
 #include "LMControl.h"
 
 #include <cmath>

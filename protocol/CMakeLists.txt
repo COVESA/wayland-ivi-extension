@@ -170,6 +170,8 @@ install(
     DESTINATION include/ilm
 )
 
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_API_VERSION} SOVERSION ${ILM_API_VERSION})
+
 #=============================================================================================
 # generate documentation for ivi-application API
 #=============================================================================================

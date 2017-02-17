@@ -22,7 +22,6 @@ project (LayerManagerControl)
 include_directories(
     include
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
-    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include"
     "${CMAKE_SOURCE_DIR}/ivi-input-api/ilmInput/include"
     ${WAYLAND_CLIENT_INCLUDE_DIR}
@@ -33,7 +32,6 @@ link_directories(
 )
 
 SET(LIBS
-    ilmClient
     ilmControl
 )
 
@@ -43,11 +41,9 @@ SET(SRC_FILES
     src/analyze.cpp
     src/common.cpp
     src/control.cpp
-    src/demo.cpp
     src/Expression.cpp
     src/ExpressionInterpreter.cpp
     src/print.cpp
-    src/scatter.cpp
     src/sceneio.cpp
     src/util.cpp
 )
