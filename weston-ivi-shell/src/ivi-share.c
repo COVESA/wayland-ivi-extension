@@ -521,7 +521,7 @@ static struct ivi_share_interface g_share_implementation = {
 
 static struct ivi_shell_share_ext*
 init_ivi_shell_share_ext(struct weston_compositor *wc,
-                         const struct ivi_controller_interface *controller_interface,
+                         const struct ivi_layout_interface *controller_interface,
                          struct ivi_shell_share_ext *shell_ext)
 {
     shell_ext = calloc(1, sizeof(*shell_ext));
@@ -693,7 +693,7 @@ add_weston_surf_data(struct wl_listener *listener, void *data)
 
 int32_t
 setup_buffer_sharing(struct weston_compositor *wc,
-                     const struct ivi_controller_interface *interface)
+                     const struct ivi_layout_interface *interface)
 {
     if (NULL == wc || NULL == interface) {
         weston_log("Can not execute buffer sharing.\n");

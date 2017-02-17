@@ -21,8 +21,7 @@
 
 #include <wayland-server.h>
 #include <weston/compositor.h>
-
-#include "ivi-controller-interface.h"
+#include <weston/ivi-layout-export.h>
 
 /**
  * convenience macro to access single bits of a bitmask
@@ -50,7 +49,7 @@ struct ivi_share_nativesurface
 struct ivi_shell_share_ext
 {
     struct weston_compositor *wc;
-    const struct ivi_controller_interface *controller_interface;
+    const struct ivi_layout_interface *controller_interface;
     struct wl_resource *resource;
     struct wl_list list_shell_surface;           /* shell_surface list */
     struct wl_list list_nativesurface;           /* ivi_nativesurface list */
@@ -68,7 +67,7 @@ enum ivi_sharebuffer_updatetype
 };
 
 int32_t setup_buffer_sharing(struct weston_compositor *wc,
-                             const struct ivi_controller_interface *interface);
+                             const struct ivi_layout_interface *interface);
 
 uint32_t get_buffer_name(struct weston_surface *surface,
                          struct ivi_shell_share_ext *shell_ext);
