@@ -19,59 +19,49 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-FIND_PACKAGE(gtest)
+FIND_PACKAGE(gtest REQUIRED)
 
-IF(NOT gtest_FOUND)
-    MESSAGE(STATUS "gtest not found, disabling unit tests (BUILD_ILM_API_TESTS=OFF)")
-    SET(BUILD_ILM_API_TESTS FALSE CACHE BOOL "Build unit tests for IVI LayerManagement API" FORCE)
-ENDIF()
+PROJECT(ivi-input-api-test)
 
-IF(BUILD_ILM_API_TESTS)
+INCLUDE_DIRECTORIES(
+    ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include
+    ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include
+    ${CMAKE_BINARY_DIR}/protocol
+    ${CMAKE_CURRENT_SOURCE_DIR}/../ilmInput/include
+    ${WAYLAND_CLIENT_INCLUDE_DIRS}
+    ${gtest_INCLUDE_DIRS}
+)
 
-    PROJECT(ivi-input-api-test)
+LINK_DIRECTORIES(
+    ${WAYLAND_CLIENT_LIBRARY_DIRS}
+)
 
-    INCLUDE_DIRECTORIES(
-        ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include
-        ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include
-        ${CMAKE_BINARY_DIR}/protocol
-        ${CMAKE_CURRENT_SOURCE_DIR}/../ilmInput/include
-        ${WAYLAND_CLIENT_INCLUDE_DIRS}
-        ${gtest_INCLUDE_DIRS}
-    )
+SET(LIBS
+    ilmCommon
+    ilmControl
+    ilmInput
+    ivi-application
+    ${gtest_LIBRARIES}
+    ${WAYLAND_CLIENT_LIBRARY_DIRS}
+)
 
-    LINK_DIRECTORIES(
-        ${WAYLAND_CLIENT_LIBRARY_DIRS}
-    )
+SET(SRC_FILES
+    TestBase.cpp
+    ilm_input_test.cpp
+    ilm_input_null_pointer_test.cpp
+)
 
-    SET(LIBS
-        ilmCommon
-        ilmControl
-        ilmInput
-        ivi-application
-        ${gtest_LIBRARIES}
-        ${WAYLAND_CLIENT_LIBRARY_DIRS}
-    )
+ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_FILES})
 
-    SET(SRC_FILES
-        TestBase.cpp
-        ilm_input_test.cpp
-        ilm_input_null_pointer_test.cpp
-    )
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${LIBS})
 
-    ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_FILES})
+ADD_DEPENDENCIES(${PROJECT_NAME} ${LIBS})
 
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${LIBS})
+INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
-    ADD_DEPENDENCIES(${PROJECT_NAME} ${LIBS})
+# use CTest
+ENABLE_TESTING()
+ADD_TEST(ilmCommon  ${PROJECT_NAME})
+ADD_TEST(ilmControl ${PROJECT_NAME})
+ADD_TEST(ilmInput ${PROJECT_NAME})
 
-    IF(INSTALL_ILM_API_TESTS)
-        INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)
-    ENDIF()
-
-    # use CTest
-    ENABLE_TESTING()
-    ADD_TEST(ilmCommon  ${PROJECT_NAME})
-    ADD_TEST(ilmControl ${PROJECT_NAME})
-    ADD_TEST(ilmInput ${PROJECT_NAME})
-
-ENDIF()
