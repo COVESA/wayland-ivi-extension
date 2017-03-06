@@ -136,26 +136,6 @@ void printLayerProperties(unsigned int layerid, const char* prefix)
             << p.sourceY << ", w=" << p.sourceWidth << ", h=" << p.sourceHeight
             << "\n";
 
-    cout << prefix << "- orientation:          " << p.orientation << " (";
-    switch (p.orientation)
-    {
-    case 0/*Zero*/:
-        cout << "up is top)\n";
-        break;
-    case 1/*Ninety*/:
-        cout << "up is right)\n";
-        break;
-    case 2/*OneEighty*/:
-        cout << "up is bottom)\n";
-        break;
-    case 3/*TwoSeventy*/:
-        cout << "up is left)\n";
-        break;
-    default:
-        cout << "unknown)\n";
-        break;
-    }
-
     cout << prefix << "- opacity:              " << p.opacity << "\n";
     cout << prefix << "- visibility:           " << p.visibility << "\n";
 
@@ -261,26 +241,6 @@ void printSurfaceProperties(unsigned int surfaceid, const char* prefix)
     cout << prefix << "- source region:      x=" << p.sourceX << ", y="
             << p.sourceY << ", w=" << p.sourceWidth << ", h=" << p.sourceHeight
             << "\n";
-
-    cout << prefix << "- orientation:        " << p.orientation << " (";
-    switch (p.orientation)
-    {
-    case 0/*Zero*/:
-        cout << "up is top)\n";
-        break;
-    case 1/*Ninety*/:
-        cout << "up is right)\n";
-        break;
-    case 2/*OneEighty*/:
-        cout << "up is bottom)\n";
-        break;
-    case 3/*TwoSeventy*/:
-        cout << "up is left)\n";
-        break;
-    default:
-        cout << "unknown)\n";
-        break;
-    }
 
     cout << prefix << "- opacity:            " << p.opacity << "\n";
     cout << prefix << "- visibility:         " << p.visibility << "\n";

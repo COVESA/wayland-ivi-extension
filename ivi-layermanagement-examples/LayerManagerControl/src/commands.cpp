@@ -320,39 +320,6 @@ COMMAND("set layer|surface <id> visibility <visibility>")
 }
 
 //=============================================================================
-COMMAND("set layer|surface <id> orientation <orientation>")
-//=============================================================================
-{
-    t_ilm_uint id = input->getUint("id");
-    ilmOrientation orientation = (ilmOrientation)input->getInt("orientation");
-
-    if (input->contains("layer"))
-    {
-        ilmErrorTypes callResult = ilm_layerSetOrientation(id, orientation);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to set orientation " << orientation << " for layer with ID " << id << "\n";
-            return;
-        }
-
-        ilm_commitChanges();
-    }
-    else if (input->contains("surface"))
-    {
-        ilmErrorTypes callResult = ilm_surfaceSetOrientation(id, orientation);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to set orientation " << orientation << " for surface with ID " << id << "\n";
-            return;
-        }
-
-        ilm_commitChanges();
-    }
-}
-
-//=============================================================================
 COMMAND("set screen|layer <id> render order [<idarray>]")
 //=============================================================================
 {

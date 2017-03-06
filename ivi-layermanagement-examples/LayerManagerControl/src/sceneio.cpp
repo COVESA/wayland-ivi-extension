@@ -52,7 +52,6 @@ void captureSceneDataHelper(t_ilm_surface surfaceId, t_scene_data* pSceneData, I
     pSurface->set("frameCounter", props.frameCounter);
     pSurface->set("nativeSurface", props.nativeSurface);
     pSurface->set("opacity", props.opacity);
-    pSurface->set("orientation", props.orientation);
     pSurface->set("origSourceHeight", props.origSourceHeight);
     pSurface->set("origSourceWidth", props.origSourceWidth);
     pSurface->set("pixelformat", props.pixelformat);
@@ -73,7 +72,6 @@ void captureSceneDataHelper(t_ilm_layer layerId, t_scene_data* pSceneData, IlmLa
     pLayer->set("destX", props.destX);
     pLayer->set("destY", props.destY);
     pLayer->set("opacity", props.opacity);
-    pLayer->set("orientation", props.orientation);
     pLayer->set("origSourceHeight", props.origSourceHeight);
     pLayer->set("origSourceWidth", props.origSourceWidth);
     pLayer->set("sourceHeight", props.sourceHeight);
@@ -290,7 +288,6 @@ ilmSurfaceProperties getSurfaceProperties(IlmSurface* pIlmsurface)
     pIlmsurface->get("frameCounter", &(props.frameCounter));
     pIlmsurface->get("nativeSurface", &(props.nativeSurface));
     pIlmsurface->get("opacity", &(props.opacity));
-    pIlmsurface->get("orientation", &(props.orientation));
     pIlmsurface->get("origSourceHeight", &(props.origSourceHeight));
     pIlmsurface->get("origSourceWidth", &(props.origSourceWidth));
     pIlmsurface->get("pixelformat", &(props.pixelformat));
@@ -312,7 +309,6 @@ ilmLayerProperties getLayerProperties(IlmLayer* pIlmlayer)
     pIlmlayer->get("destX", &(props.destX));
     pIlmlayer->get("destY", &(props.destY));
     pIlmlayer->get("opacity", &(props.opacity));
-    pIlmlayer->get("orientation", &(props.orientation));
     pIlmlayer->get("origSourceHeight", &(props.origSourceHeight));
     pIlmlayer->get("origSourceHeight", &(props.origSourceHeight));
     pIlmlayer->get("origSourceWidth", &(props.origSourceWidth));
