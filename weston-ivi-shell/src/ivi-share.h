@@ -20,7 +20,7 @@
 #include <sys/time.h>
 
 #include <wayland-server.h>
-#include <weston/compositor.h>
+#include <weston.h>
 #include <weston/ivi-layout-export.h>
 
 /**
