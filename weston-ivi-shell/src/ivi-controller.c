@@ -31,7 +31,7 @@
 
 #include <weston.h>
 #include <weston/ivi-layout-export.h>
-#include "ivi-controller-server-protocol.h"
+#include "ivi-manager-server-protocol.h"
 #include "bitmap.h"
 
 #include "wayland-util.h"
@@ -42,6 +42,12 @@
 struct ivilayer;
 struct iviscreen;
 
+struct notification {
+    struct wl_list link;
+    struct wl_resource *resource;
+    struct wl_list layout_link;
+};
+
 struct ivisurface {
     struct wl_list link;
     struct ivishell *shell;
@@ -50,7 +56,8 @@ struct ivisurface {
     const struct ivi_layout_surface_properties *prop;
     struct wl_listener property_changed;
     struct wl_listener surface_destroy_listener;
-    struct wl_list resource_list;
+    struct wl_list notification_list;
+    enum ivi_manager_surface_type type;
 };
 
 struct ivilayer {
@@ -59,7 +66,7 @@ struct ivilayer {
     struct ivi_layout_layer *layout_layer;
     const struct ivi_layout_layer_properties *prop;
     struct wl_listener property_changed;
-    struct wl_list resource_list;
+    struct wl_list notification_list;
 };
 
 struct iviscreen {
@@ -76,6 +83,12 @@ struct ivicontroller {
     struct wl_client *client;
     struct wl_list link;
     struct ivishell *shell;
+
+    struct wl_resource *layer_resource;
+    struct wl_resource *surface_resource;
+
+    struct wl_list layer_notifications;
+    struct wl_list surface_notifications;
 };
 
 struct ivishell {
@@ -94,11 +107,24 @@ struct ivishell {
 
     struct wl_listener layer_created;
     struct wl_listener layer_removed;
+
+    struct wl_listener output_created;
+    struct wl_listener output_destroyed;
+
+    struct wl_listener destroy_listener;
+
+    struct wl_array screen_ids;
+    uint32_t screen_id_offset;
 };
 
 struct screenshot_frame_listener {
         struct wl_listener listener;
 	char *filename;
+};
+
+struct screen_id_info {
+	char *screen_name;
+	uint32_t screen_id;
 };
 
 static void
