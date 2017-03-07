@@ -910,126 +910,26 @@ controller_commit_changes(struct wl_client *client,
 }
 
 static void
-controller_layer_create(struct wl_client *client,
+controller_create_screen(struct wl_client *client,
                         struct wl_resource *resource,
-                        uint32_t id_layer,
-                        int32_t width,
-                        int32_t height,
+                        struct wl_resource *output_resource,
                         uint32_t id)
 {
-    struct wl_resource *layer_resource;
-    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
-    struct ivishell *shell = ctrl->shell;
-    const struct ivi_layout_interface *lyt = shell->interface;
-    struct ivi_layout_layer *layout_layer = NULL;
-    struct ivilayer *ivilayer = NULL;
-    const struct ivi_layout_layer_properties *prop;
-
-    layout_layer = lyt->get_layer_from_id(id_layer);
-    if (layout_layer == NULL) {
-        layout_layer = lyt->layer_create_with_dimension(id_layer,
-                           (uint32_t)width, (uint32_t)height);
-        if (layout_layer == NULL) {
-            weston_log("id_layer is already created\n");
-            return;
-        }
-    }
-
-    /* ivilayer will be created by layer_event_create */
-    ivilayer = get_layer(&shell->list_layer, layout_layer);
-    if (ivilayer == NULL) {
-        weston_log("couldn't get layer object\n");
-        return;
-    }
-
-    layer_resource = wl_resource_create(client,
-                               &ivi_controller_layer_interface, 1, id);
-    if (layer_resource == NULL) {
-        weston_log("couldn't get layer object\n");
-        return;
-    }
-
-    wl_list_insert(&ivilayer->resource_list, wl_resource_get_link(layer_resource));
-    wl_resource_set_implementation(layer_resource,
-                                   &controller_layer_implementation,
-                                   ivilayer, destroy_ivicontroller_layer);
-
-    prop = lyt->get_properties_of_layer(ivilayer->layout_layer);
-    send_layer_event(layer_resource, ivilayer,
-                     prop, IVI_NOTIFICATION_ALL);
-}
-
-static void
-controller_surface_create(struct wl_client *client,
-                          struct wl_resource *resource,
-                          uint32_t id_surface,
-                          uint32_t id)
-{
-    struct wl_resource *surf_resource;
-    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
-    struct ivishell *shell = ctrl->shell;
-    const struct ivi_layout_interface *lyt = shell->interface;
-    const struct ivi_layout_surface_properties *prop;
-    struct ivi_layout_surface *layout_surface = NULL;
-    struct ivisurface *ivisurf = NULL;
-
-    layout_surface = lyt->get_surface_from_id(id_surface);
-    if (layout_surface == NULL) {
-        return;
-    }
-
-    ivisurf = get_surface(&shell->list_surface, layout_surface);
-    if (ivisurf == NULL) {
-        return;
-    }
-
-    surf_resource = wl_resource_create(client,
-                               &ivi_controller_surface_interface, 1, id);
-    if (surf_resource == NULL) {
-        weston_log("couldn't surface object");
-        return;
-    }
-
-    wl_list_insert(&ivisurf->resource_list, wl_resource_get_link(surf_resource));
-    wl_resource_set_implementation(surf_resource,
-                                   &controller_surface_implementation,
-                                   ivisurf, destroy_ivicontroller_surface);
-
-    prop = lyt->get_properties_of_surface(ivisurf->layout_surface);
-
-    send_surface_event(surf_resource, ivisurf, prop, IVI_NOTIFICATION_ALL);
-}
-
-static const struct ivi_controller_interface controller_implementation = {
-    controller_commit_changes,
-    controller_layer_create,
-    controller_surface_create
-};
-
-static void
-add_client_to_resources(struct ivishell *shell,
-                        struct wl_client *client,
-                        struct ivicontroller *controller)
-{
-    const struct ivi_layout_interface *lyt = shell->interface;
+    struct weston_output *weston_output =
+        wl_resource_get_user_data(output_resource);
     struct wl_resource *screen_resource;
-    struct ivisurface* ivisurf = NULL;
-    struct ivilayer* ivilayer = NULL;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
     struct iviscreen* iviscrn = NULL;
-    struct wl_resource *resource_output = NULL;
-    uint32_t id_layout_surface = 0;
-    uint32_t id_layout_layer = 0;
 
-    wl_list_for_each(iviscrn, &shell->list_screen, link) {
-        resource_output = wl_resource_find_for_client(
-                &iviscrn->output->resource_list, client);
-        if (resource_output == NULL) {
+
+    wl_list_for_each(iviscrn, &ctrl->shell->list_screen, link) {
+        if (weston_output != iviscrn->output) {
             continue;
         }
 
-        screen_resource = wl_resource_create(client, &ivi_controller_screen_interface, 1, 0);
+        screen_resource = wl_resource_create(client, &ivi_manager_screen_interface, 1, id);
         if (screen_resource == NULL) {
-            weston_log("couldn't new screen controller object");
+            wl_resource_post_no_memory(resource);
             return;
         }
 
@@ -1039,23 +939,84 @@ add_client_to_resources(struct ivishell *shell,
 
         wl_list_insert(&iviscrn->resource_list, wl_resource_get_link(screen_resource));
 
-        ivi_controller_send_screen(controller->resource,
-                                   wl_resource_get_id(resource_output),
-                                   screen_resource);
-    }
-    wl_list_for_each_reverse(ivilayer, &shell->list_layer, link) {
-        id_layout_layer = lyt->get_id_of_layer(ivilayer->layout_layer);
-
-        ivi_controller_send_layer(controller->resource,
-                                  id_layout_layer);
-    }
-    wl_list_for_each_reverse(ivisurf, &shell->list_surface, link) {
-        id_layout_surface = lyt->get_id_of_surface(ivisurf->layout_surface);
-
-        ivi_controller_send_surface(controller->resource,
-                                    id_layout_surface);
+        ivi_manager_screen_send_screen_id(screen_resource,
+                                   iviscrn->id_screen);
     }
 }
+
+static void
+controller_create_layer(struct wl_client *client,
+                        struct wl_resource *resource,
+                        uint32_t id)
+{
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    struct ivilayer *ivilayer = NULL;
+    uint32_t layer_id = 0;
+
+    if (ctrl->layer_resource) {
+        wl_resource_post_error(resource, IVI_MANAGER_ERROR_LAYER_EXISTS,
+                               "the manager already has a controller"
+                               " layer object associated");
+        return;
+    }
+
+    ctrl->layer_resource = wl_resource_create(client, &ivi_manager_layer_interface, 1, id);
+    if (!ctrl->layer_resource) {
+        wl_resource_post_no_memory(resource);
+        return;
+    }
+
+    wl_resource_set_implementation(ctrl->layer_resource,
+                                   &controller_layer_implementation,
+                                   ctrl, destroy_ivicontroller_layer);
+
+    wl_list_for_each_reverse(ivilayer, &ctrl->shell->list_layer, link) {
+        layer_id = lyt->get_id_of_layer(ivilayer->layout_layer);
+        ivi_manager_layer_send_created(ctrl->layer_resource, layer_id);
+    }
+}
+
+static void
+controller_create_surface(struct wl_client *client,
+                          struct wl_resource *resource,
+                          uint32_t id)
+{
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    struct ivisurface *ivisurf = NULL;
+    uint32_t surface_id = 0;
+
+    if (ctrl->surface_resource) {
+        wl_resource_post_error(resource, IVI_MANAGER_ERROR_SURFACE_EXISTS,
+                               "the manager already has a controller"
+                               " surface object associated");
+        return;
+    }
+
+    ctrl->surface_resource = wl_resource_create(client,
+                               &ivi_manager_surface_interface, 1, id);
+    if (!ctrl->surface_resource) {
+        wl_resource_post_no_memory(resource);
+        return;
+    }
+
+    wl_resource_set_implementation(ctrl->surface_resource,
+                                   &controller_surface_implementation,
+                                   ctrl, destroy_ivicontroller_surface);
+
+    wl_list_for_each_reverse(ivisurf, &ctrl->shell->list_surface, link) {
+        surface_id = lyt->get_id_of_surface(ivisurf->layout_surface);
+        ivi_manager_surface_send_created(ctrl->surface_resource, surface_id);
+    }
+}
+
+static const struct ivi_manager_interface controller_implementation = {
+    controller_commit_changes,
+    controller_create_screen,
+    controller_create_layer,
+    controller_create_surface
+};
 
 static void
 bind_ivi_controller(struct wl_client *client, void *data,
