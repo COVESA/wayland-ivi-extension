@@ -31,22 +31,18 @@
 #include "ilm_common.h"
 #include "ilm_control_platform.h"
 #include "wayland-util.h"
-#include "ivi-controller-client-protocol.h"
+#include "ivi-manager-client-protocol.h"
 #include "ivi-input-client-protocol.h"
 
 struct layer_context {
     struct wl_list link;
 
-    struct ivi_controller_layer *controller;
     t_ilm_uint id_layer;
 
     struct ilmLayerProperties prop;
     layerNotificationFunc notification;
 
-    struct {
-        struct wl_list list_surface;
-        struct wl_list link;
-    } order;
+    struct wl_array render_order;
 
     struct wayland_context *ctx;
 };
@@ -55,16 +51,14 @@ struct screen_context {
     struct wl_list link;
 
     struct wl_output *output;
-    struct ivi_controller_screen *controller;
-    t_ilm_uint id_from_server;
+    struct ivi_manager_screen *controller;
     t_ilm_uint id_screen;
+    t_ilm_uint name;
     int32_t transform;
 
     struct ilmScreenProperties prop;
 
-    struct {
-        struct wl_list list_layer;
-    } order;
+    struct wl_array render_order;
 
     struct ilm_control_context *ctx;
 };
