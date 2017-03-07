@@ -2634,5 +2634,21 @@ ilm_commitChanges(void)
     return returnValue;
 }
 
+ILM_EXPORT ilmErrorTypes
+ilm_getError(void)
+{
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *const ctx = &ilm_context;
+
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1)
+        {
+            returnValue = ctx->wl.error_flag;
+            ctx->wl.error_flag = ILM_SUCCESS;
+        }
+    }
+    unlock_context(ctx);
+
     return returnValue;
 }
