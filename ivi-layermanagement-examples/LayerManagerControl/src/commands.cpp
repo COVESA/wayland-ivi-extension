@@ -320,6 +320,25 @@ COMMAND("set layer|surface <id> visibility <visibility>")
 }
 
 //=============================================================================
+//=============================================================================
+COMMAND("set surface <surfaceid> type <type>")
+//=============================================================================
+{
+    t_ilm_uint id = input->getUint("surfaceid");
+    ilmSurfaceType type = (ilmSurfaceType)input->getInt("type");
+
+    ilmErrorTypes callResult = ilm_surfaceSetType(id, type);
+    if (ILM_SUCCESS != callResult)
+    {
+        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
+        cout << "Failed to set type " << type << " for surface with ID " << id << "\n";
+        return;
+    }
+
+    ilm_commitChanges();
+}
+
+//=============================================================================
 COMMAND("set screen|layer <id> render order [<idarray>]")
 //=============================================================================
 {
