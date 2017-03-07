@@ -767,21 +767,73 @@ controller_screen_clear(struct wl_client *client,
                 struct wl_resource *resource)
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = iviscrn->shell->interface;
+    const struct ivi_layout_interface *lyt;
     (void)client;
+
+    if (!iviscrn) {
+        ivi_manager_screen_send_error(resource, IVI_MANAGER_SCREEN_ERROR_NO_SCREEN,
+                                      "the output is already destroyed");
+        return;
+    }
+
+    lyt = iviscrn->shell->interface;
     lyt->screen_set_render_order(iviscrn->output, NULL, 0);
 }
 
 static void
 controller_screen_add_layer(struct wl_client *client,
                 struct wl_resource *resource,
-                struct wl_resource *layer)
+                uint32_t layer_id)
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = iviscrn->shell->interface;
-    struct ivilayer *ivilayer = wl_resource_get_user_data(layer);
+    const struct ivi_layout_interface *lyt;
     (void)client;
-    lyt->screen_add_layer(iviscrn->output, ivilayer->layout_layer);
+    struct ivi_layout_layer *layout_layer;
+
+    if (!iviscrn) {
+        ivi_manager_screen_send_error(resource, IVI_MANAGER_SCREEN_ERROR_NO_SCREEN,
+                                      "the output is already destroyed");
+        return;
+    }
+
+    lyt = iviscrn->shell->interface;
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_screen_send_error(resource, IVI_MANAGER_SCREEN_ERROR_NO_LAYER,
+                                      "the layer with given id does not exist");
+        weston_log("ivi-controller: an ivi-layer with id: %d does not exist\n", layer_id);
+        return;
+    }
+
+    lyt->screen_add_layer(iviscrn->output, layout_layer);
+}
+
+static void
+controller_screen_remove_layer(struct wl_client *client,
+                struct wl_resource *resource,
+                uint32_t layer_id)
+{
+    struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt;
+    (void)client;
+    struct ivi_layout_layer *layout_layer;
+
+    if (!iviscrn) {
+        ivi_manager_screen_send_error(resource, IVI_MANAGER_SCREEN_ERROR_NO_SCREEN,
+                                      "the output is already destroyed");
+        return;
+    }
+
+    lyt = iviscrn->shell->interface;
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_screen_send_error(resource, IVI_MANAGER_SCREEN_ERROR_NO_LAYER,
+                                      "the layer with given id does not exist");
+        weston_log("ivi-controller: an ivi-layer with id: %d does not exist\n", layer_id);
+        return;
+    }
+
+    lyt->screen_remove_layer(iviscrn->output, layout_layer);
 }
 
 static void
@@ -837,15 +889,22 @@ controller_screen_screenshot(struct wl_client *client,
     struct screenshot_frame_listener *l;
     (void)client;
 
+    if (!iviscrn) {
+        ivi_manager_screen_send_error(resource, IVI_MANAGER_SCREEN_ERROR_NO_SCREEN,
+                                      "the output is already destroyed");
+        return;
+    }
+
     l = malloc(sizeof *l);
     if(l == NULL) {
-        fprintf(stderr, "fails to allocate memory\n");
+        wl_resource_post_no_memory(resource);
         return;
     }
 
     l->filename = strdup(filename);
     if(l->filename == NULL) {
-        fprintf(stderr, "fails to allocate memory\n");
+        wl_resource_post_no_memory(resource);
+        return;
         free(l);
         return;
     }
@@ -858,41 +917,45 @@ controller_screen_screenshot(struct wl_client *client,
 }
 
 static void
-controller_screen_set_render_order(struct wl_client *client,
-                struct wl_resource *resource,
-                struct wl_array *id_layers)
+controller_screen_get(struct wl_client *client,
+                       struct wl_resource *resource,
+                       int32_t param)
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = iviscrn->shell->interface;
-    struct ivi_layout_layer **layoutlayer_array = NULL;
-    struct ivilayer *ivilayer = NULL;
-    uint32_t *id_layer = NULL;
-    uint32_t id_layout_layer = 0;
-    int i = 0;
+    const struct ivi_layout_interface *lyt;
     (void)client;
+    struct ivi_layout_layer **layer_list = NULL;
+    int32_t layer_count, i;
+    uint32_t id;
 
-    layoutlayer_array = (struct ivi_layout_layer**)calloc(
-                           id_layers->size, sizeof(void*));
+    lyt = iviscrn->shell->interface;
 
-    wl_array_for_each(id_layer, id_layers) {
-        layoutlayer_array[i] = lyt->get_layer_from_id(*id_layer);
-
-        if (layoutlayer_array[i])
-            i++;
+    if (!iviscrn) {
+        ivi_manager_screen_send_error(resource, IVI_MANAGER_SCREEN_ERROR_NO_SCREEN,
+                                      "the output is already destroyed");
+        return;
     }
 
-    lyt->screen_set_render_order(iviscrn->output,
-                                    layoutlayer_array, i);
-    free(layoutlayer_array);
+    if (param & IVI_MANAGER_PARAM_RENDER_ORDER) {
+        lyt->get_layers_on_screen(iviscrn->output, &layer_count, &layer_list);
+
+        for (i = 0; i < layer_count; i++) {
+            id = lyt->get_id_of_layer(layer_list[i]);
+            ivi_manager_screen_send_layer_added(resource, id);
+	}
+
+        free(layer_list);
+    }
 }
 
 static const
-struct ivi_controller_screen_interface controller_screen_implementation = {
+struct ivi_manager_screen_interface controller_screen_implementation = {
     controller_screen_destroy,
     controller_screen_clear,
     controller_screen_add_layer,
+    controller_screen_remove_layer,
     controller_screen_screenshot,
-    controller_screen_set_render_order
+    controller_screen_get
 };
 
 static void
