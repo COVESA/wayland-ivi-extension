@@ -431,6 +431,10 @@ add_ordersurface_to_layer(struct surface_context *ctx_surf,
 
     ctx_layer = ivi_controller_layer_get_user_data(layer);
 
+    /* Control if the surface is already added to a layer */
+    if(!wl_list_empty(&ctx_surf->order.link))
+        return;
+
     wl_list_for_each(link, &ctx_layer->order.list_surface, order.link) {
         if (link == ctx_surf) {
             found = 1;
