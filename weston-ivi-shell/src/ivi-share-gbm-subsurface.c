@@ -22,8 +22,6 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include <gbm.h>
-#include <weston/compositor.h>
-#include <wayland-server.h>
 #include <wayland-egl.h>
 #include <fcntl.h>
 
