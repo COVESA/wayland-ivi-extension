@@ -30,26 +30,6 @@ struct udev_input {
 };
 /***********************************************/
 
-/* copied from compositor-drm.h of weston-1.11.0 */
-struct weston_drm_backend_output_config {
-        struct weston_backend_output_config base;
-
-        /** The pixel format to be used by the output. Valid values are:
-         * - NULL - The format set at backend creation time will be used;
-         * - "xrgb8888";
-         * - "rgb565"
-         * - "xrgb2101010"
-         */
-        char *gbm_format;
-        /** The seat to be used by the output. Set to NULL to use the
-         * default seat. */
-        char *seat;
-        /** The modeline to be used by the output. Refer to the documentation
-         * of WESTON_DRM_BACKEND_OUTPUT_PREFERRED for details. */
-        char *modeline;
-};
-/***********************************************/
-
 /* copied from compositor-drm.c of weston-1.11.0 */
 struct drm_backend {
 	struct weston_backend base;
@@ -97,16 +77,6 @@ struct drm_backend {
 	int32_t cursor_width;
 	int32_t cursor_height;
 
-        /** Callback used to configure the outputs.
-	 *
-         * This function will be called by the backend when a new DRM
-         * output needs to be configured.
-         */
-        enum weston_drm_backend_output_mode
-	(*configure_output)(struct weston_compositor *compositor,
-			    bool use_current_mode,
-			    const char *name,
-			    struct weston_drm_backend_output_config *output_config);
 	bool use_current_mode;
 };
 /***********************************************/
