@@ -60,7 +60,7 @@ struct screen_context {
 
     struct wl_array render_order;
 
-    struct ilm_control_context *ctx;
+    struct wayland_context *ctx;
 };
 
 static inline void lock_context(struct ilm_control_context *ctx)
@@ -660,6 +660,69 @@ static struct ivi_controller_surface_listener controller_surface_listener=
     controller_surface_listener_stats,
     controller_surface_listener_destroyed,
     controller_surface_listener_content
+static void
+controller_screen_listener_screen_id(void *data,
+                  struct ivi_manager_screen *controller,
+                  uint32_t screen_id)
+{
+    struct screen_context *ctx_screen = data;
+
+    ctx_screen->id_screen = screen_id;
+}
+
+static void
+controller_screen_listener_layer_added(void *data,
+                                       struct ivi_manager_screen *controller,
+                                       uint32_t layer_id)
+{
+    struct screen_context *ctx_screen = data;
+    (void) controller;
+
+    uint32_t *add_id = wl_array_add(&ctx_screen->render_order, sizeof(*add_id));
+    *add_id = layer_id;
+}
+
+static void
+controller_screen_listener_error(void *data,
+                                       struct ivi_manager_screen *controller,
+                                       uint32_t code, const char *message)
+{
+    struct screen_context *ctx_screen = data;
+    ilmErrorTypes error_code;
+
+    switch (code) {
+    case IVI_MANAGER_SCREEN_ERROR_NO_LAYER:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "A non-existing layer is used with the screen: %d\n",
+                ctx_screen->id_screen);
+        break;
+    case IVI_MANAGER_SCREEN_ERROR_NO_SCREEN:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The screen with id: %d does not exist\n",
+                ctx_screen->id_screen);
+        break;
+    case IVI_MANAGER_SCREEN_ERROR_BAD_PARAM:
+        error_code = ILM_ERROR_INVALID_ARGUMENTS;
+        fprintf(stderr, "The screen with id: %d is used with invalid parameter\n",
+                         ctx_screen->id_screen);
+        break;
+    default:
+        error_code = ILM_ERROR_ON_CONNECTION;
+        break;
+    }
+
+    fprintf(stderr, message);
+    fprintf(stderr, "\n");
+
+    if (ctx_screen->ctx->error_flag == ILM_SUCCESS)
+        ctx_screen->ctx->error_flag = error_code;
+}
+
+static struct ivi_manager_screen_listener controller_screen_listener=
+{
+    controller_screen_listener_screen_id,
+    controller_screen_listener_layer_added,
+    controller_screen_listener_error
 };
 
 static struct seat_context *
