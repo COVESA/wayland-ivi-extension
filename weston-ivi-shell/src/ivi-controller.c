@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <weston/compositor.h>
+#include <weston.h>
 #include <weston/ivi-layout-export.h>
 #include "ivi-controller-server-protocol.h"
 #include "bitmap.h"
@@ -1486,7 +1486,7 @@ load_input_module(struct weston_compositor *ec,
                   const struct ivi_layout_interface *interface,
                   size_t interface_version)
 {
-    struct weston_config *config = ec->config;
+    struct weston_config *config = wet_get_config(ec);
     struct weston_config_section *section;
     char *input_module = NULL;
 
@@ -1503,7 +1503,7 @@ load_input_module(struct weston_compositor *ec,
         return 0;
     }
 
-    input_module_init = weston_load_module(input_module, "input_controller_module_init");
+    input_module_init = wet_load_module_entrypoint(input_module, "input_controller_module_init");
     if (!input_module_init)
         return -1;
 
