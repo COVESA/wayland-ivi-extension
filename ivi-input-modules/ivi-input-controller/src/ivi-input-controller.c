@@ -181,42 +181,37 @@ set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
               ctx->ivi_layout_interface;
 
     /* Assume one view per surface */
-	w_surface = interface->surface_get_weston_surface(surface_ctx->layout_surface);
+    w_surface = interface->surface_get_weston_surface(surface_ctx->layout_surface);
     view = wl_container_of(w_surface->views.next, view, surface_link);
-	if ((focus & ILM_INPUT_DEVICE_POINTER) &&
-		 (pointer != NULL)){
-		if ( (view != NULL) && enabled) {
-	        weston_view_to_global_fixed(view, wl_fixed_from_int(0),
-	            wl_fixed_from_int(0), &x, &y);
-	        // move pointer to local (0,0) of the view
-	        pointer_move(pointer, x, y);
-		    weston_pointer_set_focus(pointer, view,
-		        wl_fixed_from_int(0), wl_fixed_from_int(0));
-		} else if (pointer->focus == view){
+    if ((focus & ILM_INPUT_DEVICE_POINTER) && (pointer != NULL)){
+        if ( (view != NULL) && enabled) {
+            weston_view_to_global_fixed(view, wl_fixed_from_int(0),
+            wl_fixed_from_int(0), &x, &y);
+            // move pointer to local (0,0) of the view
+            pointer_move(pointer, x, y);
+            weston_pointer_set_focus(pointer, view,
+            wl_fixed_from_int(0), wl_fixed_from_int(0));
+        } else if (pointer->focus == view) {
             weston_pointer_set_focus(pointer, NULL,
-                wl_fixed_from_int(0), wl_fixed_from_int(0));
-		}
-	}
+            wl_fixed_from_int(0), wl_fixed_from_int(0));
+        }
+    }
 
-	if ((focus & ILM_INPUT_DEVICE_KEYBOARD) &&
-		 (keyboard != NULL)) {
-		if (w_surface) {
-	        surface_client = wl_resource_get_client(w_surface->resource);
-	        serial = wl_display_next_serial(ctx->compositor->wl_display);
-	        wl_resource_for_each(resource, &keyboard->resource_list) {
-	            if (wl_resource_get_client(resource) != surface_client)
-	                continue;
+    if ((focus & ILM_INPUT_DEVICE_KEYBOARD) && (keyboard != NULL)) {
+        surface_client = wl_resource_get_client(w_surface->resource);
+        serial = wl_display_next_serial(ctx->compositor->wl_display);
+        resource = wl_resource_find_for_client(&keyboard->resource_list,
+                                               surface_client);
 
-	            if (!enabled) {
-	                wl_keyboard_send_leave(resource, serial,
-	                         w_surface->resource);
-	            } else {
-                    wl_keyboard_send_enter(resource, serial, w_surface->resource,
-                            &keyboard->keys);
-	            }
-	        }
-		}
-	}
+        if (!resource)
+            return;
+
+        if (!enabled)
+            wl_keyboard_send_leave(resource, serial, w_surface->resource);
+        else
+            wl_keyboard_send_enter(resource, serial, w_surface->resource,
+                                   &keyboard->keys);
+    }
 }
 
 static void
@@ -244,19 +239,17 @@ keyboard_grab_key(struct weston_keyboard_grab *grab, uint32_t time,
         surface_client = wl_resource_get_client(surface->resource);
         serial = wl_display_next_serial(display);
 
-        wl_resource_for_each(resource, &grab->keyboard->resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
+        resource = wl_resource_find_for_client(&grab->keyboard->resource_list,
+                                               surface_client);
+        if (resource) {
             wl_keyboard_send_key(resource, serial, time, key, state);
+            continue;
         }
 
-        wl_resource_for_each(resource, &grab->keyboard->focus_resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
+        resource = wl_resource_find_for_client(&grab->keyboard->focus_resource_list,
+                                               surface_client);
+        if (resource)
             wl_keyboard_send_key(resource, serial, time, key, state);
-        }
     }
 }
 
@@ -289,21 +282,17 @@ keyboard_grab_modifiers(struct weston_keyboard_grab *grab, uint32_t serial,
         surface_client = wl_resource_get_client(surface->resource);
         serial = wl_display_next_serial(display);
 
-        wl_resource_for_each(resource, &grab->keyboard->resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
+        resource = wl_resource_find_for_client(&grab->keyboard->resource_list,
+                                               surface_client);
+        if (resource)
             wl_keyboard_send_modifiers(resource, serial, mods_depressed,
-			               mods_latched, mods_locked, group);
-        }
+                                       mods_latched, mods_locked, group);
 
-        wl_resource_for_each(resource, &grab->keyboard->focus_resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
+        resource = wl_resource_find_for_client(&grab->keyboard->focus_resource_list,
+                                               surface_client);
+        if (resource)
             wl_keyboard_send_modifiers(resource, serial, mods_depressed,
-			               mods_latched, mods_locked, group);
-        }
+                                       mods_latched, mods_locked, group);
     }
 }
 
@@ -544,23 +533,19 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
 
         surface_client = wl_resource_get_client(send_surf->resource);
         serial = wl_display_next_serial(display);
-        wl_resource_for_each(resource, &grab->touch->resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
 
+        resource = wl_resource_find_for_client(&grab->touch->resource_list,
+                                               surface_client);
+        if (resource)
             wl_touch_send_down(resource, serial, time, send_surf->resource,
                                touch_id, sx, sy);
-        }
-        wl_resource_for_each(resource, &grab->touch->focus_resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
 
+        resource = wl_resource_find_for_client(&grab->touch->focus_resource_list,
+                                               surface_client);
+        if (resource)
             wl_touch_send_down(resource, serial, time, send_surf->resource,
                                touch_id, sx, sy);
-        }
     }
-
-
 }
 
 static void
@@ -599,21 +584,6 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
                 }
             }
         }
-        surface_client = wl_resource_get_client(send_surf->resource);
-
-        wl_resource_for_each(resource, &grab->touch->resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
-            wl_touch_send_up(resource, serial, time, touch_id);
-        }
-
-        wl_resource_for_each(resource, &grab->touch->focus_resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
-            wl_touch_send_up(resource, serial, time, touch_id);
-        }
 
         /* Touches unset touch focus */
         if (grab->touch->num_tp == 0) {
@@ -623,6 +593,19 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
                                  interface->get_id_of_surface(surf_ctx->layout_surface),
                                  ILM_INPUT_DEVICE_TOUCH, ILM_FALSE);
         }
+
+        surface_client = wl_resource_get_client(send_surf->resource);
+
+        resource = wl_resource_find_for_client(&grab->touch->resource_list,
+                                               surface_client);
+        if (resource)
+            wl_touch_send_up(resource, serial, time, touch_id);
+
+        resource = wl_resource_find_for_client(&grab->touch->focus_resource_list,
+                                               surface_client);
+        if (resource)
+            wl_touch_send_up(resource, serial, time, touch_id);
+
     }
 }
 
@@ -667,19 +650,15 @@ touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
         }
         surface_client = wl_resource_get_client(send_surf->resource);
 
-        wl_resource_for_each(resource, &grab->touch->resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
+        resource = wl_resource_find_for_client(&grab->touch->resource_list,
+                                               surface_client);
+        if (resource)
             wl_touch_send_motion(resource, time, touch_id, sx, sy);
-        }
 
-        wl_resource_for_each(resource, &grab->touch->focus_resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
+        resource = wl_resource_find_for_client(&grab->touch->focus_resource_list,
+                                               surface_client);
+        if (resource)
             wl_touch_send_motion(resource, time, touch_id, sx, sy);
-        }
     }
 }
 
@@ -705,19 +684,16 @@ touch_grab_frame(struct weston_touch_grab *grab)
 
         surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
         surface_client = wl_resource_get_client(surf->resource);
-        wl_resource_for_each(resource, &grab->touch->resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
 
+        resource = wl_resource_find_for_client(&grab->touch->resource_list,
+                                               surface_client);
+        if (resource)
             wl_touch_send_frame(resource);
-        }
 
-        wl_resource_for_each(resource, &grab->touch->focus_resource_list) {
-            if (wl_resource_get_client(resource) != surface_client)
-                continue;
-
+        resource = wl_resource_find_for_client(&grab->touch->focus_resource_list,
+                                               surface_client);
+        if (resource)
             wl_touch_send_frame(resource);
-        }
     }
 }
 
