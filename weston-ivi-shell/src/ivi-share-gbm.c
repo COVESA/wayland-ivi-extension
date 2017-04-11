@@ -30,7 +30,6 @@
 #include <libudev.h>
 
 #include "wayland-server.h"
-#include "weston/compositor.h"
 #include "ivi-share-server-protocol.h"
 #include "ivi-share.h"
 
