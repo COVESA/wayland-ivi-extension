@@ -430,10 +430,16 @@ remove_ordersurface_from_layer(struct surface_context *ctx_surf)
 
 static void
 controller_surface_listener_visibility(void *data,
-                            struct ivi_controller_surface *controller,
+                            struct ivi_manager_surface *controller,
+                            uint32_t surface_id,
                             int32_t visibility)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.visibility = (t_ilm_bool)visibility;
 
@@ -446,10 +452,16 @@ controller_surface_listener_visibility(void *data,
 
 static void
 controller_surface_listener_opacity(void *data,
-                         struct ivi_controller_surface *controller,
+                         struct ivi_manager_surface *controller,
+                         uint32_t surface_id,
                          wl_fixed_t opacity)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
 
@@ -462,11 +474,17 @@ controller_surface_listener_opacity(void *data,
 
 static void
 controller_surface_listener_configuration(void *data,
-                           struct ivi_controller_surface *controller,
+                           struct ivi_manager_surface *controller,
+                           uint32_t surface_id,
                            int32_t width,
                            int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
     ctx_surf->prop.origSourceHeight = (t_ilm_uint)height;
@@ -480,13 +498,19 @@ controller_surface_listener_configuration(void *data,
 
 static void
 controller_surface_listener_source_rectangle(void *data,
-                                  struct ivi_controller_surface *controller,
+                                  struct ivi_manager_surface *controller,
+                                  uint32_t surface_id,
                                   int32_t x,
                                   int32_t y,
                                   int32_t width,
                                   int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.sourceX = (t_ilm_uint)x;
     ctx_surf->prop.sourceY = (t_ilm_uint)y;
@@ -502,13 +526,19 @@ controller_surface_listener_source_rectangle(void *data,
 
 static void
 controller_surface_listener_destination_rectangle(void *data,
-                   struct ivi_controller_surface *controller,
+                   struct ivi_manager_surface *controller,
+                   uint32_t surface_id,
                    int32_t x,
                    int32_t y,
                    int32_t width,
                    int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.destX = (t_ilm_uint)x;
     ctx_surf->prop.destY = (t_ilm_uint)y;
@@ -524,23 +554,29 @@ controller_surface_listener_destination_rectangle(void *data,
 
 static void
 controller_surface_listener_orientation(void *data,
-                             struct ivi_controller_surface *controller,
+                             struct ivi_manager_surface *controller,
+                             uint32_t surface_id,
                              int32_t orientation)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
     ilmOrientation ilmorientation = ILM_ZERO;
 
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
+
     switch (orientation) {
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES:
+    case IVI_MANAGER_SURFACE_ORIENTATION_0_DEGREES:
         ilmorientation = ILM_ZERO;
         break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES:
+    case IVI_MANAGER_SURFACE_ORIENTATION_90_DEGREES:
         ilmorientation = ILM_NINETY;
         break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES:
+    case IVI_MANAGER_SURFACE_ORIENTATION_180_DEGREES:
         ilmorientation = ILM_ONEHUNDREDEIGHTY;
         break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES:
+    case IVI_MANAGER_SURFACE_ORIENTATION_270_DEGREES:
         ilmorientation = ILM_TWOHUNDREDSEVENTY;
         break;
     default:
@@ -557,40 +593,22 @@ controller_surface_listener_orientation(void *data,
 }
 
 static void
-controller_surface_listener_pixelformat(void *data,
-                             struct ivi_controller_surface *controller,
-                             int32_t pixelformat)
-{
-    struct surface_context *ctx_surf = data;
-
-    ctx_surf->prop.pixelformat = (t_ilm_uint)pixelformat;
-}
-
-static void
-controller_surface_listener_layer(void *data,
-                                  struct ivi_controller_surface *controller,
-                                  struct ivi_controller_layer *layer)
-{
-    struct surface_context *ctx_surf = data;
-
-    if (layer == NULL) {
-        remove_ordersurface_from_layer(ctx_surf);
-    } else {
-        add_ordersurface_to_layer(ctx_surf, layer);
-    }
-}
-
-static void
 controller_surface_listener_stats(void *data,
-                                  struct ivi_controller_surface *controller,
+                                  struct ivi_manager_surface *controller,
+                                  uint32_t surface_id,
                                   uint32_t redraw_count,
                                   uint32_t frame_count,
                                   uint32_t update_count,
                                   uint32_t pid,
                                   const char *process_name)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
     (void)process_name;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.drawCounter = (t_ilm_uint)redraw_count;
     ctx_surf->prop.frameCounter = (t_ilm_uint)frame_count;
@@ -599,11 +617,48 @@ controller_surface_listener_stats(void *data,
 }
 
 static void
-controller_surface_listener_destroyed(void *data,
-                  struct ivi_controller_surface *controller)
+controller_surface_listener_created(void *data,
+                  struct ivi_manager_surface *controller,
+                  uint32_t surface_id)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(ctx_surf)
+        return;
+
+    ctx_surf = calloc(1, sizeof *ctx_surf);
+    if (ctx_surf == NULL) {
+        fprintf(stderr, "Failed to allocate memory for surface_context\n");
+        return;
+    }
+
+    ctx_surf->id_surface = surface_id;
+    ctx_surf->ctx = ctx;
+
+    wl_list_insert(&ctx->list_surface, &ctx_surf->link);
+    wl_list_init(&ctx_surf->list_accepted_seats);
+
+    if (ctx->notification != NULL) {
+        ilmObjectType surface = ILM_SURFACE;
+        ctx->notification(surface, ctx_surf->id_surface, ILM_TRUE,
+                          ctx->notification_user_data);
+    }
+}
+
+static void
+controller_surface_listener_destroyed(void *data,
+                  struct ivi_manager_surface *controller,
+                  uint32_t surface_id)
+{
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
     struct accepted_seat *seat, *seat_next;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     if (ctx_surf->notification != NULL) {
         ctx_surf->notification(ctx_surf->id_surface,
@@ -617,37 +672,52 @@ controller_surface_listener_destroyed(void *data,
                                     ctx_surf->ctx->notification_user_data);
     }
 
-    ivi_controller_surface_destroy(controller, 1);
-
     wl_list_for_each_safe(seat, seat_next, &ctx_surf->list_accepted_seats, link) {
         wl_list_remove(&seat->link);
         free(seat->seat_name);
         free(seat);
     }
 
-    wl_list_remove(&ctx_surf->order.link);
     wl_list_remove(&ctx_surf->link);
     free(ctx_surf);
 }
 
 static void
-controller_surface_listener_content(void *data,
-                   struct ivi_controller_surface *controller,
-                   int32_t content_state)
+controller_surface_listener_error(void *data,
+                                struct ivi_manager_surface *controller,
+                                uint32_t object_id, uint32_t code,
+                                const char *message)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    ilmErrorTypes error_code;
 
-    if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_AVAILABLE == content_state)
-    {
-        if (ctx_surf->notification != NULL) {
-            ctx_surf->notification(ctx_surf->id_surface,
-                                    &ctx_surf->prop,
-                                    ILM_NOTIFICATION_CONTENT_AVAILABLE);
-        }
+    switch (code) {
+    case IVI_MANAGER_SURFACE_ERROR_NO_SURFACE:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The surface with id: %d does not exist\n", object_id);
+        break;
+    case IVI_MANAGER_SURFACE_ERROR_NOT_SUPPORTED:
+        error_code = ILM_ERROR_NOT_IMPLEMENTED;
+        fprintf(stderr, "The surface with id: %d is used for unsupported operation\n", object_id);
+        break;
+    case IVI_MANAGER_SURFACE_ERROR_BAD_PARAM:
+        error_code = ILM_ERROR_INVALID_ARGUMENTS;
+        fprintf(stderr, "The surface with id: %d is used with invalid parameter\n",
+                object_id);
+        break;
+    default:
+        error_code = ILM_ERROR_ON_CONNECTION;
+        break;
     }
+
+    fprintf(stderr, message);
+    fprintf(stderr, "\n");
+
+    if (ctx->error_flag == ILM_SUCCESS)
+        ctx->error_flag = error_code;
 }
 
-static struct ivi_controller_surface_listener controller_surface_listener=
+static struct ivi_manager_surface_listener controller_surface_listener=
 {
     controller_surface_listener_visibility,
     controller_surface_listener_opacity,
@@ -655,11 +725,12 @@ static struct ivi_controller_surface_listener controller_surface_listener=
     controller_surface_listener_destination_rectangle,
     controller_surface_listener_configuration,
     controller_surface_listener_orientation,
-    controller_surface_listener_pixelformat,
-    controller_surface_listener_layer,
     controller_surface_listener_stats,
+    controller_surface_listener_created,
     controller_surface_listener_destroyed,
-    controller_surface_listener_content
+    controller_surface_listener_error
+};
+
 static void
 controller_screen_listener_screen_id(void *data,
                   struct ivi_manager_screen *controller,
