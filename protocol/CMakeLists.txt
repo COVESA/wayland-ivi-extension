@@ -52,27 +52,27 @@ add_custom_command(
 )
 
 add_custom_command(
-    OUTPUT  ivi-controller-client-protocol.h
+    OUTPUT  ivi-manager-client-protocol.h
     COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-client-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-manager.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-manager-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-manager.xml
 )
 
 add_custom_command(
-    OUTPUT  ivi-controller-server-protocol.h
+    OUTPUT  ivi-manager-server-protocol.h
     COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-server-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-manager.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-manager-server-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-manager.xml
 )
 
 add_custom_command(
-    OUTPUT  ivi-controller-protocol.c
+    OUTPUT  ivi-manager-protocol.c
     COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-protocol.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-controller.xml
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-manager.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-manager-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-manager.xml
 )
 
 add_custom_command(
@@ -138,9 +138,9 @@ add_library(${PROJECT_NAME} STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-server-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-client-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-server-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-manager-client-protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-manager-server-protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/ivi-manager-protocol.c
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
@@ -201,13 +201,13 @@ add_custom_target(ivi-application-doc
 )
 
 #=============================================================================================
-# generate documentation ivi-controller API
+# generate documentation ivi-manager API
 #=============================================================================================
-SET(IVI_CTL_XML      ${CMAKE_CURRENT_SOURCE_DIR}/ivi-controller.xml)
-SET(IVI_CTL_CLIENT_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-client.h)
-SET(IVI_CTL_SERVER_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-controller-server.h)
+SET(IVI_CTL_XML      ${CMAKE_CURRENT_SOURCE_DIR}/ivi-manager.xml)
+SET(IVI_CTL_CLIENT_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-manager-client.h)
+SET(IVI_CTL_SERVER_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-manager-server.h)
 
-add_custom_target(ivi-controller-doc
+add_custom_target(ivi-manager-doc
                   COMMAND wayland-scanner client-header < ${IVI_CTL_XML} > ${IVI_CTL_CLIENT_H}
                   COMMAND wayland-scanner server-header < ${IVI_CTL_XML} > ${IVI_CTL_SERVER_H}
 
@@ -215,17 +215,17 @@ add_custom_target(ivi-controller-doc
                           | sed 's!___DOC_NAME___!IVI Controller API!'
                           | sed 's!___DOC_VERSION___!${IVI_EXTENSION_VERSION}!'
                           | sed 's!___INPUT_FILE___!${IVI_CTL_CLIENT_H} ${IVI_CTL_SERVER_H}!'
-                          | sed 's!___OUTPUT_DIR___!ivi-controller-tmp!'
+                          | sed 's!___OUTPUT_DIR___!ivi-manager-tmp!'
                           | doxygen -
 
-                  COMMAND make --silent -C ivi-controller-tmp/latex
+                  COMMAND make --silent -C ivi-manager-tmp/latex
 
-                  COMMAND cp ivi-controller-tmp/latex/refman.pdf
-                             ${CMAKE_BINARY_DIR}/ivi-controller-api-${IVI_EXTENSION_VERSION}.pdf
+                  COMMAND cp ivi-manager-tmp/latex/refman.pdf
+                             ${CMAKE_BINARY_DIR}/ivi-manager-api-${IVI_EXTENSION_VERSION}.pdf
 
                   DEPENDS ${IVI_CTL_XML}
 
-                  COMMENT "Generating ivi-controller-api-${IVI_EXTENSION_VERSION}.pdf"
+                  COMMENT "Generating ivi-manager-api-${IVI_EXTENSION_VERSION}.pdf"
 )
 
 #=============================================================================================
