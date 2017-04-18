@@ -357,6 +357,29 @@ ilmErrorTypes ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId, t_ilm_
 ilmErrorTypes ilm_surfaceSetOrientation(t_ilm_surface surfaceId, ilmOrientation orientation);
 
 /**
+ * \brief Set the type of a surface. If a surface is not visible it will not be rendered.
+ * If a surface is restricted type, visible contents of the surface is strictly
+ * controlled by the compositor. Its content is not allowed to be go out of
+ * its destination region. If the application resizes its buffers or uses
+ * wp_viewporter protocol to scale its contents, the old destination region
+ * would causes visible glitches.
+ * To avoid these issues, the controller process mark a surface as desktop
+ * compatible. Source and destination regions of a desktop compatible
+ * surface will be modified accordingly,when application sends a request
+ * for resizing or scaling its contents. Therefore, applications contents
+ * will be drawn according to application's wishes.
+ * On the other hand, source and destination regions will be strictly
+ * enforced, when the surface's type is restricted. The default type for
+ * a surface is restricted.
+ * \ingroup ilmControl
+ * \param[in] surfaceId Id of the surface to set the type of
+ * \param[in] type Type of the surface
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type);
+
+/**
  * \brief Gets the orientation of a surface.
  * \ingroup ilmControl
  * \param[in]  surfaceId Id of surface.
