@@ -57,8 +57,8 @@ EGLWLMockNavigation:
 
 How to test
 ====================================
-1. Build the testsuite by setting BUILD_ILM_API_TESTS and INSTALL_ILM_API_TESTS options.
-   Example: cmake -DBUILD_ILM_API_TESTS -DINSTALL_ILM_API_TESTS
+1. Build the testsuite by setting BUILD_ILM_API_TESTS option.
+   Example: cmake -DBUILD_ILM_API_TESTS
 2. After starting up Weston run the testsuite.
    Example: <your installation path>/bin/ivi-layermanagement-api-test
             <your installation path>/bin/ivi-input-api-test
