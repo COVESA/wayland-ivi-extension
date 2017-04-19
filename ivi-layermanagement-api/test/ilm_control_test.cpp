@@ -1057,7 +1057,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_duplicates) {
     t_ilm_surface duplicateRenderOrder[] = {renderOrder[0], renderOrder[1], renderOrder[0], renderOrder[1], renderOrder[0]};
     t_ilm_int duplicateSurfaceCount = sizeof(duplicateRenderOrder) / sizeof(duplicateRenderOrder[0]);
 
-    t_ilm_layer layer;
+    t_ilm_layer layer = 0xFFFFFFFF;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 300, 300));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
@@ -1094,7 +1094,7 @@ TEST_F(IlmCommandTest, LayerSetRenderOrder_empty) {
         ivi_surfaces[i] = (struct ivi_surface*) ivi_application_surface_create(iviApp, renderOrder[i], wlSurfaces[i]);
     }
 
-    t_ilm_layer layer;
+    t_ilm_layer layer = 0xFFFFFFFF;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 300, 300));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
