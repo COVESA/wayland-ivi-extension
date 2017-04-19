@@ -941,7 +941,7 @@ input_listener_input_acceptance(void *data,
         return;
     }
 
-    accepted_seat = calloc(1, sizeof(accepted_seat));
+    accepted_seat = calloc(1, sizeof(*accepted_seat));
     if (accepted_seat == NULL) {
         fprintf(stderr, "Failed to allocate memory for accepted seat\n");
         return;
