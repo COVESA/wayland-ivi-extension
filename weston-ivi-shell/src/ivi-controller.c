@@ -148,7 +148,12 @@ destroy_ivicontroller_surface(struct wl_resource *resource)
 static void
 destroy_ivicontroller_layer(struct wl_resource *resource)
 {
-    wl_list_remove(wl_resource_get_link(resource));
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+
+    if (ctrl) {
+        clear_notification_list(&ctrl->layer_notifications);
+        ctrl->layer_resource = NULL;
+    }
 }
 
 static void
@@ -566,192 +571,382 @@ struct ivi_controller_surface_interface controller_surface_implementation = {
 };
 
 static void
+controller_layer_destroy(struct wl_client *client,
+                                      struct wl_resource *resource)
+{
+    wl_resource_destroy(resource);
+}
+
+static void
 controller_layer_set_source_rectangle(struct wl_client *client,
                    struct wl_resource *resource,
+                   uint32_t layer_id,
                    int32_t x,
                    int32_t y,
                    int32_t width,
                    int32_t height)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->layer_set_source_rectangle(ivilayer->layout_layer,
+    struct ivi_layout_layer *layout_layer;
+    const struct ivi_layout_layer_properties *prop;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_set_source_rectangle: the layer with given id does not exist");
+        return;
+    }
+
+    prop = lyt->get_properties_of_layer(layout_layer);
+
+    if (x < 0)
+        x = prop->source_x;
+    if (y < 0)
+        y = prop->source_y;
+    if (width < 0)
+        width = prop->source_width;
+    if (height < 0)
+        height = prop->source_height;
+
+    lyt->layer_set_source_rectangle(layout_layer,
            (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
 
 static void
 controller_layer_set_destination_rectangle(struct wl_client *client,
                  struct wl_resource *resource,
+                 uint32_t layer_id,
                  int32_t x,
                  int32_t y,
                  int32_t width,
                  int32_t height)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->layer_set_destination_rectangle(ivilayer->layout_layer,
+    struct ivi_layout_layer *layout_layer;
+    const struct ivi_layout_layer_properties *prop;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_set_destination_rectangle: the layer with given id does not exist");
+        return;
+    }
+
+    prop = lyt->get_properties_of_layer(layout_layer);
+
+    if (x < 0)
+        x = prop->dest_x;
+    if (y < 0)
+        y = prop->dest_y;
+    if (width < 0)
+        width = prop->dest_width;
+    if (height < 0)
+        height = prop->dest_height;
+
+    lyt->layer_set_destination_rectangle(layout_layer,
             (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
 
 static void
 controller_layer_set_visibility(struct wl_client *client,
                     struct wl_resource *resource,
+                    uint32_t layer_id,
                     uint32_t visibility)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->layer_set_visibility(ivilayer->layout_layer, visibility);
+    struct ivi_layout_layer *layout_layer;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_set_visibility: the layer with given id does not exist");
+        return;
+    }
+
+    lyt->layer_set_visibility(layout_layer, visibility);
 }
 
 static void
 controller_layer_set_opacity(struct wl_client *client,
                  struct wl_resource *resource,
+                 uint32_t layer_id,
                  wl_fixed_t opacity)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->layer_set_opacity(ivilayer->layout_layer, opacity);
-}
+    struct ivi_layout_layer *layout_layer;
 
-static void
-controller_layer_set_configuration(struct wl_client *client,
-                 struct wl_resource *resource,
-                 int32_t width,
-                 int32_t height)
-{
-    /* This interface has been supported yet. */
-    (void)client;
-    (void)resource;
-    (void)width;
-    (void)height;
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_set_opacity: the layer with given id does not exist");
+        return;
+    }
+
+    lyt->layer_set_opacity(layout_layer, opacity);
 }
 
 static void
 controller_layer_set_orientation(struct wl_client *client,
                  struct wl_resource *resource,
+                 uint32_t layer_id,
                  int32_t orientation)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->layer_set_orientation(ivilayer->layout_layer, (uint32_t)orientation);
+    struct ivi_layout_layer *layout_layer;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_set_orientation: the layer with given id does not exist");
+        return;
+    }
+
+    lyt->layer_set_orientation(layout_layer, (uint32_t)orientation);
 }
 
 static void
-controller_layer_clear_surfaces(struct wl_client *client,
-                    struct wl_resource *resource)
+controller_layer_clear(struct wl_client *client,
+                    struct wl_resource *resource,
+                    uint32_t layer_id)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->layer_set_render_order(ivilayer->layout_layer, NULL, 0);
+    struct ivi_layout_layer *layout_layer;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_clear: the layer with given id does not exist");
+        return;
+    }
+
+    lyt->layer_set_render_order(layout_layer, NULL, 0);
 }
 
 static void
 controller_layer_add_surface(struct wl_client *client,
                  struct wl_resource *resource,
-                 struct wl_resource *surface)
+                 uint32_t layer_id,
+                 uint32_t surface_id)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    struct ivisurface *ivisurf = wl_resource_get_user_data(surface);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->layer_add_surface(ivilayer->layout_layer, ivisurf->layout_surface);
+    struct ivi_layout_layer *layout_layer;
+    struct ivi_layout_surface *layout_surface;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_add_surface: the layer with given id does not exist");
+        return;
+    }
+
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_layer_send_error(resource, surface_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_SURFACE,
+                                     "layer_add_surface: the surface with given id does not exist");
+        return;
+    }
+
+    lyt->layer_add_surface(layout_layer, layout_surface);
 }
 
 static void
 controller_layer_remove_surface(struct wl_client *client,
                     struct wl_resource *resource,
-                    struct wl_resource *surface)
+                    uint32_t layer_id,
+                    uint32_t surface_id)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    struct ivisurface *ivisurf = wl_resource_get_user_data(surface);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->layer_remove_surface(ivilayer->layout_layer, ivisurf->layout_surface);
-}
+    struct ivi_layout_layer *layout_layer;
+    struct ivi_layout_surface *layout_surface;
 
-static void
-controller_layer_screenshot(struct wl_client *client,
-                struct wl_resource *resource,
-                const char *filename)
-{
-    (void)client;
-    (void)resource;
-    (void)filename;
-}
-
-static void
-controller_layer_set_render_order(struct wl_client *client,
-                                  struct wl_resource *resource,
-                                  struct wl_array *id_surfaces)
-{
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
-    struct ivi_layout_surface **layoutsurf_array = NULL;
-    uint32_t *id_surface = NULL;
-    int i = 0;
-    (void)client;
-
-    layoutsurf_array = (struct ivi_layout_surface**)calloc(
-                           id_surfaces->size, sizeof(void*));
-
-    wl_array_for_each(id_surface, id_surfaces) {
-        layoutsurf_array[i] = lyt->get_surface_from_id(*id_surface);
-
-        if (layoutsurf_array[i])
-            i++;
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_remove_surface: the layer with given id does not exist");
+        return;
     }
 
-    lyt->layer_set_render_order(ivilayer->layout_layer,
-                                   layoutsurf_array, i);
-    free(layoutsurf_array);
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_layer_send_error(resource, surface_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_SURFACE,
+                                     "layer_remove_surface: the surface with given id does not exist");
+        return;
+    }
+
+    lyt->layer_remove_surface(layout_layer, layout_surface);
 }
 
 static void
-controller_layer_destroy(struct wl_client *client,
-              struct wl_resource *resource,
-              int32_t destroy_scene_object)
+controller_layer_sync(struct wl_client *client,
+                      struct wl_resource *resource,
+                      uint32_t layer_id,
+                      int32_t sync_state)
 {
-    struct ivilayer *ivilayer = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    struct ivi_layout_layer *layout_layer;
+    struct ivilayer *ivilayer;
+    const struct ivi_layout_layer_properties *prop;
+    (void)client;
+    struct notification *not;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer sync: the layer with given id does not exist");
+        return;
+    }
+
+    ivilayer = get_layer(&ctrl->shell->list_layer, layout_layer);
+
+    switch (sync_state) {
+    case IVI_MANAGER_SYNC_ADD:
+        /*Check if a notification for the surface is already initialized*/
+        not= calloc(1, sizeof *not);
+        if (not == NULL) {
+            wl_resource_post_no_memory(resource);
+            return;
+        }
+
+        wl_list_insert(&ctrl->layer_notifications, &not->link);
+        wl_list_insert(&ivilayer->notification_list, &not->layout_link);
+        not->resource = resource;
+        break;
+    case IVI_MANAGER_SYNC_REMOVE:
+        ivilayer = get_layer(&ctrl->shell->list_layer, layout_layer);
+
+        wl_list_for_each(not, &ivilayer->notification_list, layout_link)
+        {
+            if (not->resource == resource) {
+                wl_list_remove(&not->link);
+                wl_list_remove(&not->layout_link);
+                free(not);
+                break;
+            }
+        }
+        break;
+    default:
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_BAD_PARAM,
+                                     "layer sync: invalid sync_state param");
+        return;
+    }
+}
+
+static void
+controller_layer_create_layout_layer(struct wl_client *client,
+                    struct wl_resource *resource, uint32_t layer_id,
+                    int width, int height)
+{
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
 
-    if (destroy_scene_object) {
-        if (ivilayer->layout_layer != NULL) {
-            lyt->layer_destroy(ivilayer->layout_layer);
-            ivilayer->layout_layer = NULL;
+     if(lyt->layer_create_with_dimension(layer_id, width, height) == NULL) {
+         wl_resource_post_no_memory(resource);
+     }
+}
+
+static void
+controller_layer_destroy_layout_layer(struct wl_client *client,
+                    struct wl_resource *resource,
+                    uint32_t layer_id)
+{
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    (void)client;
+    struct ivi_layout_layer *layout_layer;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "destroy_layout_layer: the layer with given id does not exist");
+        return;
+    }
+
+    lyt->layer_destroy(layout_layer);
+}
+
+static void
+controller_layer_get(struct wl_client *client, struct wl_resource *resource,
+                     uint32_t layer_id, int32_t param)
+{
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    (void)client;
+    struct ivi_layout_layer *layout_layer;
+    const struct ivi_layout_layer_properties *prop;
+    enum ivi_layout_notification_mask mask;
+    struct ivi_layout_surface **surf_list = NULL;
+    int32_t surface_count, i;
+    uint32_t id;
+
+    layout_layer = lyt->get_layer_from_id(layer_id);
+    if (!layout_layer) {
+        ivi_manager_layer_send_error(resource, layer_id,
+                                     IVI_MANAGER_LAYER_ERROR_NO_LAYER,
+                                     "layer_get: the layer with given id does not exist");
+        return;
+    }
+
+    mask = convert_protocol_enum(param);
+    prop = lyt->get_properties_of_layer(layout_layer);
+    send_layer_event(ctrl, layout_layer, layer_id, prop, mask);
+
+    if (param & IVI_MANAGER_PARAM_RENDER_ORDER) {
+        lyt->get_surfaces_on_layer(layout_layer, &surface_count, &surf_list);
+        for (i = 0; i < surface_count; i++) {
+            id = lyt->get_id_of_surface(surf_list[i]);
+            ivi_manager_layer_send_surface_added(ctrl->layer_resource, layer_id, id);
         }
 
-        wl_resource_destroy(resource);
-
-        if (wl_list_empty(&ivilayer->resource_list)) {
-            wl_list_remove(&ivilayer->link);
-            free(ivilayer);
-        }
-    } else {
-        wl_resource_destroy(resource);
+        free(surf_list);
     }
 }
 
 static const
-struct ivi_controller_layer_interface controller_layer_implementation = {
+struct ivi_manager_layer_interface controller_layer_implementation = {
+    controller_layer_destroy,
     controller_layer_set_visibility,
     controller_layer_set_opacity,
     controller_layer_set_source_rectangle,
     controller_layer_set_destination_rectangle,
-    controller_layer_set_configuration,
     controller_layer_set_orientation,
-    controller_layer_screenshot,
-    controller_layer_clear_surfaces,
+    controller_layer_clear,
     controller_layer_add_surface,
     controller_layer_remove_surface,
-    controller_layer_set_render_order,
-    controller_layer_destroy
+    controller_layer_sync,
+    controller_layer_create_layout_layer,
+    controller_layer_destroy_layout_layer,
+    controller_layer_get
 };
 
 static void
