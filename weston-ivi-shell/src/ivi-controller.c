@@ -142,7 +142,12 @@ clear_notification_list(struct wl_list* notification_list)
 static void
 destroy_ivicontroller_surface(struct wl_resource *resource)
 {
-    wl_list_remove(wl_resource_get_link(resource));
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+
+    if (ctrl) {
+        clear_notification_list(&ctrl->surface_notifications);
+        ctrl->surface_resource = NULL;
+    }
 }
 
 static void
@@ -351,99 +356,175 @@ send_layer_prop(struct wl_listener *listener, void *data)
 }
 
 static void
+controller_surface_destroy(struct wl_client *client,
+                           struct wl_resource *resource)
+{
+    wl_resource_destroy(resource);
+}
+
+static void
 controller_surface_set_opacity(struct wl_client *client,
                    struct wl_resource *resource,
+                   uint32_t surface_id,
                    wl_fixed_t opacity)
 {
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->surface_set_opacity(ivisurf->layout_surface, opacity);
+    struct ivi_layout_surface *layout_surface;
+
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_set_opacity: the surface with given id does not exist");
+        return;
+    }
+
+    lyt->surface_set_opacity(layout_surface, opacity);
 }
 
 static void
 controller_surface_set_source_rectangle(struct wl_client *client,
                    struct wl_resource *resource,
+                   uint32_t surface_id,
                    int32_t x,
                    int32_t y,
                    int32_t width,
                    int32_t height)
 {
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->surface_set_source_rectangle(ivisurf->layout_surface,
+    struct ivi_layout_surface *layout_surface;
+    const struct ivi_layout_surface_properties *prop;
+
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_set_source_rectangle: the surface with given id does not exist");
+        return;
+    }
+
+    prop = lyt->get_properties_of_surface(layout_surface);
+
+    if (x < 0)
+        x = prop->source_x;
+    if (y < 0)
+        y = prop->source_y;
+    if (width < 0)
+        width = prop->source_width;
+    if (height < 0)
+        height = prop->source_height;
+
+    lyt->surface_set_source_rectangle(layout_surface,
             (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
 
 static void
 controller_surface_set_destination_rectangle(struct wl_client *client,
                      struct wl_resource *resource,
+                     uint32_t surface_id,
                      int32_t x,
                      int32_t y,
                      int32_t width,
                      int32_t height)
 {
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
+    struct ivi_layout_surface *layout_surface;
+    const struct ivi_layout_surface_properties *prop;
+
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_set_destination_rectangle: the surface with given id does not exist");
+        return;
+    }
+
+    prop = lyt->get_properties_of_surface(layout_surface);
 
     // TODO: create set transition type protocol
-    lyt->surface_set_transition(ivisurf->layout_surface,
+    lyt->surface_set_transition(layout_surface,
                                      IVI_LAYOUT_TRANSITION_NONE,
                                      300); // ms
 
-    lyt->surface_set_destination_rectangle(ivisurf->layout_surface,
+    if (x < 0)
+        x = prop->dest_x;
+    if (y < 0)
+        y = prop->dest_y;
+    if (width < 0)
+        width = prop->dest_width;
+    if (height < 0)
+        height = prop->dest_height;
+
+
+    lyt->surface_set_destination_rectangle(layout_surface,
             (uint32_t)x, (uint32_t)y, (uint32_t)width, (uint32_t)height);
 }
 
 static void
 controller_surface_set_visibility(struct wl_client *client,
                       struct wl_resource *resource,
+                      uint32_t surface_id,
                       uint32_t visibility)
 {
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->surface_set_visibility(ivisurf->layout_surface, visibility);
-}
+    struct ivi_layout_surface *layout_surface;
 
-static void
-controller_surface_set_configuration(struct wl_client *client,
-                   struct wl_resource *resource,
-                   int32_t width, int32_t height)
-{
-    /* This interface has been supported yet. */
-    (void)client;
-    (void)resource;
-    (void)width;
-    (void)height;
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_set_visibility: the surface with given id does not exist");
+        return;
+    }
+
+    lyt->surface_set_visibility(layout_surface, visibility);
 }
 
 static void
 controller_surface_set_orientation(struct wl_client *client,
                    struct wl_resource *resource,
+                   uint32_t surface_id,
                    int32_t orientation)
 {
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
-    lyt->surface_set_orientation(ivisurf->layout_surface, (uint32_t)orientation);
+    struct ivi_layout_surface *layout_surface;
+
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_set_orientation: the surface with given id does not exist");
+        return;
+    }
+
+    lyt->surface_set_orientation(layout_surface, (uint32_t)orientation);
 }
 
 static void
 controller_surface_screenshot(struct wl_client *client,
                   struct wl_resource *resource,
+                  uint32_t surface_id,
                   const char *filename)
 {
     int32_t result = IVI_FAILED;
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
     struct weston_surface *weston_surface = NULL;
     int32_t width = 0;
     int32_t height = 0;
     int32_t stride = 0;
     int32_t size = 0;
-    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    struct ivi_layout_surface *layout_surface;
     char *buffer = NULL;
     int32_t image_stride = 0;
     int32_t image_size = 0;
@@ -456,10 +537,20 @@ controller_surface_screenshot(struct wl_client *client,
     int32_t padding = 0;
     int32_t sum_padding = 0;
 
-    result = lyt->surface_get_size(ivisurf->layout_surface, &width,
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_screenshot: the surface with given id does not exist");
+        return;
+    }
+
+    result = lyt->surface_get_size(layout_surface, &width,
                                    &height, &stride);
-    if (result != IVI_SUCCEEDED) {
-        weston_log("failed to get surface size\n");
+    if (!width || !height || !stride) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                       IVI_MANAGER_SURFACE_ERROR_BAD_PARAM,
+                                       "surface_screenshot: surface does not have content");
         return;
     }
 
@@ -472,11 +563,11 @@ controller_surface_screenshot(struct wl_client *client,
     if (buffer == NULL || image_buffer == NULL) {
         free(image_buffer);
         free(buffer);
-        weston_log("failed to allocate memory\n");
+        wl_resource_post_no_memory(resource);
         return;
     }
 
-    weston_surface = lyt->surface_get_weston_surface(ivisurf->layout_surface);
+    weston_surface = lyt->surface_get_weston_surface(layout_surface);
 
     result = lyt->surface_dump(weston_surface, buffer, size, 0, 0,
                                width, height);
@@ -484,7 +575,9 @@ controller_surface_screenshot(struct wl_client *client,
     if (result != IVI_SUCCEEDED) {
         free(image_buffer);
         free(buffer);
-        weston_log("failed to dump surface\n");
+        ivi_manager_surface_send_error(resource, surface_id,
+                                       IVI_MANAGER_SURFACE_ERROR_NOT_SUPPORTED,
+                                       "surface_screenshot: surface dumping is not supported by renderer");
         return;
     }
 
@@ -512,7 +605,9 @@ controller_surface_screenshot(struct wl_client *client,
 
     if (save_as_bitmap(filename, (const char *)image_buffer,
                        image_size, width, height, 24) != 0) {
-        weston_log("failed to take screenshot\n");
+        ivi_manager_surface_send_error(resource, surface_id,
+                                       IVI_MANAGER_SURFACE_ERROR_BAD_PARAM,
+                                       "surface_screenshot: Filename is not valid");
     }
 
     free(image_buffer);
@@ -520,11 +615,11 @@ controller_surface_screenshot(struct wl_client *client,
 
 
 static void
-controller_surface_send_stats(struct wl_client *client,
-                              struct wl_resource *resource)
+send_surface_stats(struct ivicontroller *ctrl,
+                   struct ivi_layout_surface *layout_surface,
+                   uint32_t surface_id)
 {
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     struct weston_surface *surface;
     struct wl_client* target_client;
     pid_t pid;
@@ -532,42 +627,156 @@ controller_surface_send_stats(struct wl_client *client,
     gid_t gid;
 
     /* Get pid that creates surface */
-    surface = lyt->surface_get_weston_surface(ivisurf->layout_surface);
+    surface = lyt->surface_get_weston_surface(layout_surface);
+
     target_client = wl_resource_get_client(surface->resource);
 
     wl_client_get_credentials(target_client, &pid, &uid, &gid);
 
-    ivi_controller_surface_send_stats(resource, 0, 0,
-                                      ivisurf->update_count, pid, "");
+    ivi_manager_surface_send_stats(ctrl->surface_resource, surface_id, 0, 0,
+                                      0, pid, "");
 }
 
 static void
-controller_surface_destroy(struct wl_client *client,
-              struct wl_resource *resource,
-              int32_t destroy_scene_object)
+controller_surface_sync(struct wl_client *client,
+                              struct wl_resource *resource,
+                              uint32_t surface_id,
+                              int32_t sync_state)
 {
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    struct ivi_layout_surface *layout_surface;
+    struct ivisurface *ivisurf;
+    const struct ivi_layout_surface_properties *prop;
     (void)client;
-    struct ivisurface *ivisurf = wl_resource_get_user_data(resource);
+    struct notification *not;
 
-    wl_resource_destroy(resource);
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_sync: the surface with given id does not exist");
+        return;
+    }
 
-    if (wl_list_empty(&ivisurf->resource_list) && destroy_scene_object) {
-        wl_list_remove(&ivisurf->link);
-        free(ivisurf);
+    ivisurf = get_surface(&ctrl->shell->list_surface, layout_surface);
+
+    switch (sync_state) {
+    case IVI_MANAGER_SYNC_ADD:
+        /*Check if a notification for the surface is already initialized*/
+        not= calloc(1, sizeof *not);
+        if (not == NULL) {
+            wl_resource_post_no_memory(resource);
+            return;
+        }
+
+        wl_list_insert(&ctrl->surface_notifications, &not->link);
+        wl_list_insert(&ivisurf->notification_list, &not->layout_link);
+        not->resource = resource;
+        break;
+    case IVI_MANAGER_SYNC_REMOVE:
+        wl_list_for_each(not, &ivisurf->notification_list, layout_link)
+        {
+            if (not->resource == resource) {
+                wl_list_remove(&not->link);
+                wl_list_remove(&not->layout_link);
+                free(not);
+                break;
+            }
+        }
+        break;
+    default:
+        ivi_manager_surface_send_error(resource, surface_id,
+                                       IVI_MANAGER_SURFACE_ERROR_BAD_PARAM,
+                                       "surface_sync: invalid sync_state parameter");
     }
 }
 
+static void
+controller_surface_set_type(struct wl_client *client, struct wl_resource *resource,
+                            uint32_t surface_id, int32_t type)
+{
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    (void)client;
+    struct ivi_layout_surface *layout_surface;
+    struct ivisurface *ivisurf;
+
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_set_type: the surface with given id does not exist");
+        return;
+    }
+
+    ivisurf = get_surface(&ctrl->shell->list_surface, layout_surface);
+    ivisurf->type = type;
+}
+
+static int32_t
+convert_protocol_enum(int32_t param)
+{
+    int32_t mask = 0;
+
+    if (param & IVI_MANAGER_PARAM_OPACITY)
+        mask |= IVI_NOTIFICATION_OPACITY;
+
+    if (param & IVI_MANAGER_PARAM_VISIBILITY)
+        mask |= IVI_NOTIFICATION_VISIBILITY;
+
+    if (param & IVI_MANAGER_PARAM_ORIENTATION)
+        mask |= IVI_NOTIFICATION_ORIENTATION;
+
+    if (param & IVI_MANAGER_PARAM_SIZE) {
+        mask |= IVI_NOTIFICATION_SOURCE_RECT;
+        mask |= IVI_NOTIFICATION_DEST_RECT;
+        mask |= IVI_NOTIFICATION_CONFIGURE;
+    }
+
+    return mask;
+}
+
+static void
+controller_surface_get(struct wl_client *client, struct wl_resource *resource,
+                            uint32_t surface_id, int32_t param)
+{
+    struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
+    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    (void)client;
+    struct ivi_layout_surface *layout_surface;
+    struct ivisurface *ivisurf;
+    enum ivi_layout_notification_mask mask;
+    const struct ivi_layout_surface_properties *prop;
+
+    mask = convert_protocol_enum(param);
+
+    layout_surface = lyt->get_surface_from_id(surface_id);
+    if (!layout_surface) {
+        ivi_manager_surface_send_error(resource, surface_id,
+                                     IVI_MANAGER_SURFACE_ERROR_NO_SURFACE,
+                                     "surface_get: the surface with given id does not exist");
+        return;
+    }
+
+    prop = lyt->get_properties_of_surface(layout_surface);
+
+    send_surface_event(ctrl, layout_surface, surface_id, prop, mask);
+    send_surface_stats(ctrl, layout_surface, surface_id);
+}
+
 static const
-struct ivi_controller_surface_interface controller_surface_implementation = {
+struct ivi_manager_surface_interface controller_surface_implementation = {
+    controller_surface_destroy,
     controller_surface_set_visibility,
     controller_surface_set_opacity,
     controller_surface_set_source_rectangle,
     controller_surface_set_destination_rectangle,
-    controller_surface_set_configuration,
     controller_surface_set_orientation,
     controller_surface_screenshot,
-    controller_surface_send_stats,
-    controller_surface_destroy
+    controller_surface_sync,
+    controller_surface_set_type,
+    controller_surface_get
 };
 
 static void
