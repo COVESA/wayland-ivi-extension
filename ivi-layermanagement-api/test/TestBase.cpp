@@ -78,6 +78,7 @@ TestBase::~TestBase()
     }
     wlSurfaces.clear();
     wl_compositor_destroy(wlCompositor);
+    ivi_application_destroy(iviApp);
     wl_registry_destroy(wlRegistry);
     wl_display_disconnect(wlDisplay);
 }
