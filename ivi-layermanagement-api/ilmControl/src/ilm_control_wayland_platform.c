@@ -1032,7 +1032,7 @@ static void destroy_control_resources(void)
     struct ilm_control_context *ctx = &ilm_context;
 
     // free resources of output objects
-    if (! ctx->wl.controller) {
+    if (ctx->wl.controller) {
         struct screen_context *ctx_scrn;
         struct screen_context *next;
 
