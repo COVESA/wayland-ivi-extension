@@ -934,7 +934,7 @@ input_listener_input_acceptance(void *data,
         return;
     }
 
-    accepted_seat = calloc(1, sizeof(accepted_seat));
+    accepted_seat = calloc(1, sizeof(*accepted_seat));
     if (accepted_seat == NULL) {
         fprintf(stderr, "Failed to allocate memory for accepted seat\n");
         return;
@@ -1032,7 +1032,7 @@ static void destroy_control_resources(void)
     struct ilm_control_context *ctx = &ilm_context;
 
     // free resources of output objects
-    if (! ctx->wl.controller) {
+    if (ctx->wl.controller) {
         struct screen_context *ctx_scrn;
         struct screen_context *next;
 
