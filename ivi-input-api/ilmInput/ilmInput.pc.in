@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/ilm
+
+Name: ilmInput
+Description: Library for ilm input handling
+Version: @ILM_API_VERSION@
+Requires: ilmCommon
+Requires.private: wayland-client ilmControl
+Libs: -L${libdir} -lilmInput
+Cflags: -I${includedir}
