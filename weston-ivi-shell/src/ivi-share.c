@@ -150,16 +150,17 @@ share_surface_redirect_touch_down(struct wl_client *client,
             uint32_t new_serial =
                 wl_display_next_serial(client_link->parent->shell_ext->wc->wl_display);
             wl_touch_send_down(target_resource, new_serial, time, surface_resource, id, x, y);
+
+            redirect_target = malloc(sizeof *redirect_target);
+            redirect_target->client = client;
+            redirect_target->resource = resource;
+            redirect_target->target_resource = target_resource;
+            redirect_target->id = id;
+            wl_list_insert(&client_link->parent->shell_ext->list_redirect_target, &redirect_target->link);
+
             break;
         }
     }
-
-    redirect_target = malloc(sizeof *redirect_target);
-    redirect_target->client = client;
-    redirect_target->resource = resource;
-    redirect_target->target_resource = target_resource;
-    redirect_target->id = id;
-    wl_list_insert(&client_link->parent->shell_ext->list_redirect_target, &redirect_target->link);
 }
 
 static void
