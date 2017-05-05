@@ -121,8 +121,10 @@ struct wayland_context {
     struct wl_registry *registry;
     struct wl_event_queue *queue;
     struct wl_compositor *compositor;
-    struct ivi_controller *controller;
-    uint32_t num_screen;
+
+    struct ivi_manager *controller;
+    struct ivi_manager_surface *controller_surface;
+    struct ivi_manager_layer *controller_layer;
 
     struct wl_list list_surface;
     struct wl_list list_layer;
@@ -130,6 +132,8 @@ struct wayland_context {
     struct wl_list list_seat;
     notificationFunc notification;
     void *notification_user_data;
+
+    ilmErrorTypes error_flag;
 
     struct ivi_input *input_controller;
 };
@@ -160,20 +164,12 @@ struct accepted_seat {
 struct surface_context {
     struct wl_list link;
 
-    struct ivi_surface *surface;
-    struct ivi_controller_surface *controller;
-
     t_ilm_uint id_surface;
     struct ilmSurfaceProperties prop;
     struct wl_list list_accepted_seats;
     surfaceNotificationFunc notification;
 
-    struct {
-        struct wl_list link;
-    } order;
-
     struct wayland_context *ctx;
-    bool is_surface_creation_noticed;
 };
 
 ilmErrorTypes impl_sync_and_acquire_instance(struct ilm_control_context *ctx);
