@@ -88,3 +88,18 @@ add_custom_target(ilm-input-doc
                              ${CMAKE_BINARY_DIR}/ilm-input-api-${ILM_API_VERSION}.pdf
                   COMMENT "Generating ilm-input-api-${ILM_API_VERSION}.pdf"
 )
+
+#=============================================================================================
+# generate pkg-config file for ilmInput API
+#=============================================================================================
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/ilmInput.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ilmInput.pc"
+    @ONLY
+)
+
+install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/ilmInput.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)

@@ -89,3 +89,17 @@ add_custom_target(ilm-control-doc
                   COMMENT "Generating ilm-control-api-${ILM_API_VERSION}.pdf"
 )
 
+#=============================================================================================
+# generate pkg-config file for ilmControl API
+#=============================================================================================
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/ilmControl.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ilmControl.pc"
+    @ONLY
+)
+
+install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/ilmControl.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)
