@@ -954,19 +954,16 @@ registry_handle_control(void *data,
     struct wayland_context *ctx = data;
     (void)version;
 
-    if (strcmp(interface, "ivi_controller") == 0) {
+    if (strcmp(interface, "ivi_wm") == 0) {
         ctx->controller = wl_registry_bind(registry, name,
-                                           &ivi_controller_interface, 1);
+                                           &ivi_wm_interface, 1);
         if (ctx->controller == NULL) {
-            fprintf(stderr, "Failed to registry bind ivi_controller\n");
+            fprintf(stderr, "Failed to registry bind ivi_wm\n");
             return;
         }
-        if (ivi_controller_add_listener(ctx->controller,
-                                       &controller_listener,
-                                       ctx)) {
-            fprintf(stderr, "Failed to add ivi_controller listener\n");
-            return;
-        }
+
+        ivi_wm_add_listener(ctx->controller, &wm_listener, ctx);
+
     } else if (strcmp(interface, "ivi_input") == 0) {
         ctx->input_controller =
             wl_registry_bind(registry, name, &ivi_input_interface, 1);
@@ -975,11 +972,8 @@ registry_handle_control(void *data,
             fprintf(stderr, "Failed to registry bind input controller\n");
             return;
         }
-        if (ivi_input_add_listener(ctx->input_controller,
-                                              &input_listener, ctx)) {
-            fprintf(stderr, "Failed to add ivi_input listener\n");
-            return;
-        }
+        ivi_input_add_listener(ctx->input_controller, &input_listener, ctx);
+
     } else if (strcmp(interface, "wl_output") == 0) {
         struct screen_context *ctx_scrn = calloc(1, sizeof *ctx_scrn);
         struct wl_proxy *pxy = NULL;
@@ -1004,19 +998,47 @@ registry_handle_control(void *data,
             return;
         }
 
-        pxy = (struct wl_proxy*)ctx_scrn->output;
-        ctx_scrn->id_from_server = wl_proxy_get_id(pxy);
-        ctx_scrn->id_screen = ctx->num_screen;
-        ctx->num_screen++;
-        wl_list_init(&ctx_scrn->order.list_layer);
+        if (ctx->controller) {
+            ctx_scrn->controller = ivi_wm_create_screen(ctx->controller, ctx_scrn->output);
+            ivi_wm_screen_add_listener(ctx_scrn->controller, &wm_screen_listener,
+                                       ctx_scrn);
+        }
+
+        ctx_scrn->ctx = ctx;
+        ctx_scrn->name = name;
         wl_list_insert(&ctx->list_screen, &ctx_scrn->link);
+    }
+}
+
+static void
+registry_handle_control_remove(void *data, struct wl_registry *registry, uint32_t name)
+{
+    struct wayland_context *ctx = data;
+    struct screen_context *ctx_scrn, *next;
+
+    /*remove wl_output and corresponding screen context*/
+    wl_list_for_each_safe(ctx_scrn, next, &ctx->list_screen, link) {
+        if(ctx_scrn->name == name)
+        { fprintf(stderr,"output_removed \n");
+            if (ctx_scrn->controller != NULL) {
+                ivi_wm_screen_destroy(ctx_scrn->controller);
+            }
+
+            if (ctx_scrn->output != NULL) {
+                wl_output_destroy(ctx_scrn->output);
+            }
+
+            wl_list_remove(&ctx_scrn->link);
+            wl_array_release(&ctx_scrn->render_order);
+            free(ctx_scrn);
+        }
     }
 }
 
 static const struct wl_registry_listener
 registry_control_listener= {
     registry_handle_control,
-    NULL
+    registry_handle_control_remove
 };
 
 struct ilm_control_context ilm_context;
@@ -1031,11 +1053,16 @@ static void destroy_control_resources(void)
         struct screen_context *next;
 
         wl_list_for_each_safe(ctx_scrn, next, &ctx->wl.list_screen, link) {
+            if (ctx_scrn->controller != NULL) {
+                ivi_wm_screen_destroy(ctx_scrn->controller);
+            }
+
             if (ctx_scrn->output != NULL) {
                 wl_output_destroy(ctx_scrn->output);
             }
 
             wl_list_remove(&ctx_scrn->link);
+            wl_array_release(&ctx_scrn->render_order);
             free(ctx_scrn);
         }
     }
@@ -1053,8 +1080,6 @@ static void destroy_control_resources(void)
                 }
 
                 wl_list_remove(&l->link);
-                wl_list_remove(&l->order.link);
-                ivi_controller_surface_destroy(l->controller, 0);
                 free(l);
             }
         }
@@ -1064,28 +1089,12 @@ static void destroy_control_resources(void)
             struct layer_context *n;
             wl_list_for_each_safe(l, n, &ctx->wl.list_layer, link) {
                 wl_list_remove(&l->link);
-                wl_list_remove(&l->order.link);
-                ivi_controller_layer_destroy(l->controller, 0);
+                wl_array_release(&l->render_order);
                 free(l);
             }
         }
 
-        {
-            struct screen_context *ctx_scrn;
-            struct screen_context *next;
-
-            wl_list_for_each_safe(ctx_scrn, next, &ctx->wl.list_screen, link) {
-                if (ctx_scrn->output != NULL) {
-                    wl_output_destroy(ctx_scrn->output);
-                }
-
-                wl_list_remove(&ctx_scrn->link);
-                ivi_controller_screen_destroy(ctx_scrn->controller);
-                free(ctx_scrn);
-            }
-        }
-
-        ivi_controller_destroy(ctx->wl.controller);
+        ivi_wm_destroy(ctx->wl.controller);
         ctx->wl.controller = NULL;
     }
 
@@ -1276,6 +1285,7 @@ init_control(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     struct wayland_context *wl = &ctx->wl;
+    struct screen_context *ctx_scrn;
     int ret = 0;
 
     wl->queue = wl_display_create_queue(wl->display);
@@ -1300,13 +1310,8 @@ init_control(void)
         return -1;
     }
 
-    if (
-       // first level objects; ivi_controller
-       wl_display_roundtrip_queue(wl->display, wl->queue) == -1 ||
-       // second level object: ivi_controller_surfaces/layers
-       wl_display_roundtrip_queue(wl->display, wl->queue) == -1 ||
-       // third level objects: ivi_controller_surfaces/layers properties
-       wl_display_roundtrip_queue(wl->display, wl->queue) == -1)
+    // get globals
+    if (wl_display_roundtrip_queue(wl->display, wl->queue) == -1)
     {
         fprintf(stderr, "Failed to initialize wayland connection: %s\n", strerror(errno));
         return -1;
@@ -1314,8 +1319,16 @@ init_control(void)
 
     if (! wl->controller)
     {
-        fprintf(stderr, "ivi_controller not available\n");
+        fprintf(stderr, "ivi_wm not available\n");
         return -1;
+    }
+
+    wl_list_for_each(ctx_scrn, &ctx->wl.list_screen, link) {
+        if (!ctx_scrn->controller) {
+            ctx_scrn->controller = ivi_wm_create_screen(wl->controller, ctx_scrn->output);
+            ivi_wm_screen_add_listener(ctx_scrn->controller, &wm_screen_listener,
+                                       ctx_scrn);
+        }
     }
 
     ctx->shutdown_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
