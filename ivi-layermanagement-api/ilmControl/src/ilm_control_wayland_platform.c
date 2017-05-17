@@ -679,117 +679,65 @@ static struct ivi_controller_surface_listener controller_surface_listener=
 };
 
 static void
-controller_listener_layer(void *data,
-                          struct ivi_controller *controller,
-                          uint32_t id_layer)
+wm_screen_listener_screen_id(void *data, struct ivi_wm_screen *controller,
+                             uint32_t screen_id)
 {
-   struct wayland_context *ctx = data;
+    struct screen_context *ctx_screen = data;
 
-   if (wayland_controller_is_inside_layer_list(&ctx->list_layer, id_layer))
-   {
-      return;
-   }
-
-   (void) create_controller_layer(ctx, 0, 0, id_layer);
+    ctx_screen->id_screen = screen_id;
 }
 
 static void
-controller_listener_surface(void *data,
-                            struct ivi_controller *controller,
-                            uint32_t id_surface)
+wm_screen_listener_layer_added(void *data, struct ivi_wm_screen *controller,
+                               uint32_t layer_id)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
+    struct screen_context *ctx_screen = data;
+    (void) controller;
 
-    ctx_surf = get_surface_context(ctx, id_surface);
-    if (ctx_surf != NULL) {
-        if (!ctx_surf->is_surface_creation_noticed) {
-            ctx_surf->controller = ivi_controller_surface_create(
-                                       controller, id_surface);
-            ivi_controller_surface_add_listener(ctx_surf->controller,
-                                       &controller_surface_listener, ctx_surf);
-            if (ctx_surf->notification != NULL) {
-                ctx_surf->notification(ctx_surf->id_surface,
-                                       &ctx_surf->prop,
-                                       ILM_NOTIFICATION_CONTENT_AVAILABLE);
-                ctx_surf->is_surface_creation_noticed = true;
-            }
-        }
-        else {
-            fprintf(stderr, "invalid id_surface in controller_listener_surface\n");
-        }
-        return;
-    }
-
-    ctx_surf = calloc(1, sizeof *ctx_surf);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Failed to allocate memory for surface_context\n");
-        return;
-    }
-
-    ctx_surf->controller = ivi_controller_surface_create(
-                               controller, id_surface);
-    if (ctx_surf->controller == NULL) {
-        free(ctx_surf);
-        fprintf(stderr, "Failed to create controller surface\n");
-        return;
-    }
-    ctx_surf->id_surface = id_surface;
-    ctx_surf->ctx = ctx;
-    ctx_surf->is_surface_creation_noticed = true;
-
-    wl_list_insert(&ctx->list_surface, &ctx_surf->link);
-    wl_list_init(&ctx_surf->order.link);
-    wl_list_init(&ctx_surf->list_accepted_seats);
-    ivi_controller_surface_add_listener(ctx_surf->controller,
-                                        &controller_surface_listener, ctx_surf);
-
-    if (ctx->notification != NULL) {
-        ilmObjectType surface = ILM_SURFACE;
-        ctx->notification(surface, ctx_surf->id_surface, ILM_TRUE,
-                          ctx->notification_user_data);
-    }
+    uint32_t *add_id = wl_array_add(&ctx_screen->render_order, sizeof(*add_id));
+    *add_id = layer_id;
 }
 
 static void
-controller_listener_error(void *data,
-                          struct ivi_controller *ivi_controller,
-	                  int32_t object_id,
-	                  int32_t object_type,
-	                  int32_t error_code,
-	                  const char *error_text)
+wm_screen_listener_error(void *data, struct ivi_wm_screen *controller,
+                         uint32_t code, const char *message)
 {
-    (void)data;
-    (void)ivi_controller;
-    (void)object_id;
-    (void)object_type;
-    (void)error_code;
-    (void)error_text;
-}
+    struct screen_context *ctx_screen = data;
+    ilmErrorTypes error_code;
 
-static void
-controller_listener_screen(void *data,
-                           struct ivi_controller *ivi_controller,
-                           uint32_t id_screen,
-                           struct ivi_controller_screen *controller_screen)
-{
-    struct wayland_context *ctx = data;
-    struct screen_context *ctx_screen;
-    (void)ivi_controller;
-
-    ctx_screen = get_screen_context_by_serverid(ctx, id_screen);
-    if (ctx_screen == NULL) {
-        fprintf(stderr, "Failed to allocate memory for screen_context\n");
-        return;
+    switch (code) {
+    case IVI_WM_SCREEN_ERROR_NO_LAYER:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "A non-existing layer is used with the screen: %d\n",
+                ctx_screen->id_screen);
+        break;
+    case IVI_WM_SCREEN_ERROR_NO_SCREEN:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The screen with id: %d does not exist\n",
+                ctx_screen->id_screen);
+        break;
+    case IVI_WM_SCREEN_ERROR_BAD_PARAM:
+        error_code = ILM_ERROR_INVALID_ARGUMENTS;
+        fprintf(stderr, "The screen with id: %d is used with invalid parameter\n",
+                         ctx_screen->id_screen);
+        break;
+    default:
+        error_code = ILM_ERROR_ON_CONNECTION;
+        break;
     }
-    ctx_screen->controller = controller_screen;
+
+    fprintf(stderr, message);
+    fprintf(stderr, "\n");
+
+    if (ctx_screen->ctx->error_flag == ILM_SUCCESS)
+        ctx_screen->ctx->error_flag = error_code;
 }
 
-static struct ivi_controller_listener controller_listener= {
-    controller_listener_screen,
-    controller_listener_layer,
-    controller_listener_surface,
-    controller_listener_error
+static struct ivi_wm_screen_listener wm_screen_listener=
+{
+    wm_screen_listener_screen_id,
+    wm_screen_listener_layer_added,
+    wm_screen_listener_error
 };
 
 static struct seat_context *
