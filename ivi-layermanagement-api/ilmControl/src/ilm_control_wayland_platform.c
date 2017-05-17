@@ -2059,6 +2059,9 @@ ilm_layerAddNotification(t_ilm_layer layer,
         returnValue = ILM_ERROR_INVALID_ARGUMENTS;
     } else {
         ctx_layer->notification = callback;
+        ivi_wm_layer_sync(ctx->wl.controller, layer, IVI_WM_SYNC_ADD);
+        if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1)
+            fprintf(stderr, "wl_display_roundtrip queue failed\n");
 
         returnValue = ILM_SUCCESS;
     }
@@ -2070,7 +2073,26 @@ ilm_layerAddNotification(t_ilm_layer layer,
 ILM_EXPORT ilmErrorTypes
 ilm_layerRemoveNotification(t_ilm_layer layer)
 {
-   return ilm_layerAddNotification(layer, NULL);
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct layer_context *ctx_layer = NULL;
+
+    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
+                    &ctx->wl, (uint32_t)layer);
+    if (ctx_layer != NULL) {
+        if (ctx_layer->notification != NULL) {
+            ivi_wm_layer_sync(ctx->wl.controller, layer, IVI_WM_SYNC_REMOVE);
+            wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+
+            ctx_layer->notification = NULL;
+            returnValue = ILM_SUCCESS;
+        } else {
+            returnValue = ILM_ERROR_INVALID_ARGUMENTS;
+        }
+    }
+
+    release_instance();
+    return returnValue;
 }
 
 static struct surface_context *
@@ -2086,10 +2108,8 @@ create_surface_context(struct wayland_context *ctx, uint32_t id_surface)
 
     ctx_surf->id_surface = id_surface;
     ctx_surf->ctx = ctx;
-    ctx_surf->is_surface_creation_noticed = false;
 
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
-    wl_list_init(&ctx_surf->order.link);
     wl_list_init(&ctx_surf->list_accepted_seats);
 
     return ctx_surf;
@@ -2106,15 +2126,11 @@ ilm_registerNotification(notificationFunc callback, void *user_data)
     ctx->wl.notification_user_data = user_data;
     if (callback != NULL) {
         wl_list_for_each(ctx_layer, &ctx->wl.list_layer, link) {
-            if (ctx_layer->controller) {
-                 callback(ILM_LAYER, ctx_layer->id_layer, ILM_TRUE, user_data);
-            }
+            callback(ILM_LAYER, ctx_layer->id_layer, ILM_TRUE, user_data);
         }
 
         wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
-            if (ctx_surf->controller) {
-                 callback(ILM_SURFACE, ctx_surf->id_surface, ILM_TRUE, user_data);
-            }
+            callback(ILM_SURFACE, ctx_surf->id_surface, ILM_TRUE, user_data);
         }
     }
     release_instance();
@@ -2137,6 +2153,7 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
 
     ctx_surf = (struct surface_context*)get_surface_context(
                     &ctx->wl, (uint32_t)surface);
+
     if (ctx_surf == NULL) {
         if (callback != NULL) {
             callback((uint32_t)surface, NULL, ILM_NOTIFICATION_CONTENT_REMOVED);
@@ -2145,10 +2162,13 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
     }
     else {
         if (callback != NULL) {
+            ctx_surf->notification = callback;
+            ivi_wm_surface_sync(ctx->wl.controller, surface, IVI_WM_SYNC_ADD);
+            if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1)
+                fprintf(stderr, "wl_display_roundtrip queue failed\n");
+
             callback(ctx_surf->id_surface,
-                     &ctx_surf->prop,
-                     (ctx_surf->controller) ? ILM_NOTIFICATION_CONTENT_AVAILABLE
-                                            : ILM_NOTIFICATION_CONTENT_REMOVED);
+                     &ctx_surf->prop, ILM_NOTIFICATION_CONTENT_AVAILABLE);
         }
     }
 
@@ -2175,6 +2195,9 @@ ilm_surfaceRemoveNotification(t_ilm_surface surface)
                     &ctx->wl, (uint32_t)surface);
     if (ctx_surf != NULL) {
         if (ctx_surf->notification != NULL) {
+            ivi_wm_surface_sync(ctx->wl.controller, surface, IVI_WM_SYNC_REMOVE);
+            wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+
             ctx_surf->notification = NULL;
             returnValue = ILM_SUCCESS;
         } else {
