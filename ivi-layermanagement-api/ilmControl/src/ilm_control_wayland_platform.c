@@ -79,8 +79,6 @@ static struct surface_context* get_surface_context(struct wayland_context *, uin
 
 void release_instance(void);
 
-static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
-
 static int32_t
 wayland_controller_is_inside_layer_list(struct wl_list *list,
                                         uint32_t id_layer)
@@ -190,53 +188,16 @@ static struct wl_output_listener output_listener = {
     output_listener_scale
 };
 
-static struct screen_context*
-get_screen_context_by_serverid(struct wayland_context *ctx,
-                               uint32_t id_screen)
-{
-    struct screen_context *ctx_scrn = NULL;
-
-    wl_list_for_each(ctx_scrn, &ctx->list_screen, link) {
-        if (ctx_scrn->id_from_server == id_screen) {
-            return ctx_scrn;
-        }
-    }
-    return NULL;
-}
-
 static void
-add_orderlayer_to_screen(struct layer_context *ctx_layer,
-                         struct wl_output* output)
+wm_listener_layer_visibility(void *data, struct ivi_wm *controller,
+                             uint32_t layer_id, int32_t visibility)
 {
-    struct screen_context *ctx_scrn = wl_output_get_user_data(output);
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
 
-    int found = 0;
-    struct layer_context *layer_link;
-    wl_list_for_each(layer_link, &ctx_scrn->order.list_layer, order.link) {
-        if (layer_link == ctx_layer) {
-            found = 1;
-            break;
-        }
-    }
-
-    if (found == 0) {
-        wl_list_insert(&ctx_scrn->order.list_layer, &ctx_layer->order.link);
-    }
-}
-
-static void
-remove_orderlayer_from_screen(struct layer_context *ctx_layer)
-{
-    wl_list_remove(&ctx_layer->order.link);
-    wl_list_init(&ctx_layer->order.link);
-}
-
-static void
-controller_layer_listener_visibility(void *data,
-                            struct ivi_controller_layer *controller,
-                            int32_t visibility)
-{
-    struct layer_context *ctx_layer = data;
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
     ctx_layer->prop.visibility = (t_ilm_bool)visibility;
 
@@ -248,11 +209,15 @@ controller_layer_listener_visibility(void *data,
 }
 
 static void
-controller_layer_listener_opacity(void *data,
-                       struct ivi_controller_layer *controller,
-                       wl_fixed_t opacity)
+wm_listener_layer_opacity(void *data, struct ivi_wm *controller,
+                          uint32_t layer_id, wl_fixed_t opacity)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
+
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
     ctx_layer->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
 
@@ -264,14 +229,16 @@ controller_layer_listener_opacity(void *data,
 }
 
 static void
-controller_layer_listener_source_rectangle(void *data,
-                                struct ivi_controller_layer *controller,
-                                int32_t x,
-                                int32_t y,
-                                int32_t width,
-                                int32_t height)
+wm_listener_layer_source_rectangle(void *data, struct ivi_wm *controller,
+                                   uint32_t layer_id, int32_t x, int32_t y,
+                                   int32_t width, int32_t height)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
+
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
     ctx_layer->prop.sourceX = (t_ilm_uint)x;
     ctx_layer->prop.sourceY = (t_ilm_uint)y;
@@ -292,14 +259,16 @@ controller_layer_listener_source_rectangle(void *data,
 }
 
 static void
-controller_layer_listener_destination_rectangle(void *data,
-                                     struct ivi_controller_layer *controller,
-                                     int32_t x,
-                                     int32_t y,
-                                     int32_t width,
-                                     int32_t height)
+wm_listener_layer_destination_rectangle(void *data, struct ivi_wm *controller,
+                                        uint32_t layer_id, int32_t x, int32_t y,
+                                        int32_t width, int32_t height)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
+
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
     ctx_layer->prop.destX = (t_ilm_uint)x;
     ctx_layer->prop.destY = (t_ilm_uint)y;
@@ -314,85 +283,44 @@ controller_layer_listener_destination_rectangle(void *data,
 }
 
 static void
-controller_layer_listener_configuration(void *data,
-                          struct ivi_controller_layer *controller,
-                          int32_t width,
-                          int32_t height)
+wm_listener_layer_created(void *data, struct ivi_wm *controller, uint32_t layer_id)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
 
-    ctx_layer->prop.sourceWidth = (t_ilm_uint)width;
-    ctx_layer->prop.sourceHeight = (t_ilm_uint)height;
-}
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(ctx_layer)
+        return;
 
-static void
-controller_layer_listener_orientation(void *data,
-                             struct ivi_controller_layer *controller,
-                             int32_t orientation)
-{
-    ilmOrientation ilmorientation = ILM_ZERO;
-    struct layer_context *ctx_layer = data;
-
-    switch(orientation) {
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES:
-        ilmorientation = ILM_ZERO;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES:
-        ilmorientation = ILM_NINETY;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES:
-        ilmorientation = ILM_ONEHUNDREDEIGHTY;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES:
-        ilmorientation = ILM_TWOHUNDREDSEVENTY;
-        break;
-    default:
-        break;
+    ctx_layer = calloc(1, sizeof *ctx_layer);
+    if (!ctx_layer) {
+        fprintf(stderr, "Failed to allocate memory for layer_context\n");
+        return;
     }
 
-    ctx_layer->prop.orientation = ilmorientation;
+    ctx_layer->id_layer = layer_id;
+    ctx_layer->ctx = ctx;
 
-    if (ctx_layer->notification != NULL) {
-        ctx_layer->notification(ctx_layer->id_layer,
-                                &ctx_layer->prop,
-                                ILM_NOTIFICATION_ORIENTATION);
+    wl_list_insert(&ctx->list_layer, &ctx_layer->link);
+
+    if (ctx->notification != NULL) {
+       ilmObjectType layer = ILM_LAYER;
+       ctx->notification(layer, ctx_layer->id_layer, ILM_TRUE,
+                         ctx->notification_user_data);
     }
 }
 
 static void
-controller_layer_listener_screen(void *data,
-                                 struct ivi_controller_layer *controller,
-                                 struct wl_output *output)
+wm_listener_layer_destroyed(void *data, struct ivi_wm *controller, uint32_t layer_id)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
 
-    if (output == NULL) {
-        remove_orderlayer_from_screen(ctx_layer);
-    } else {
-        add_orderlayer_to_screen(ctx_layer, output);
-    }
-}
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
-static void
-remove_ordersurface_from_layer(struct surface_context *ctx_surf);
-
-static void
-controller_layer_listener_destroyed(void *data,
-                                    struct ivi_controller_layer *controller)
-{
-    struct layer_context *ctx_layer = data;
-    struct surface_context *ctx_surf = NULL;
-    struct surface_context *ctx_surf_next = NULL;
-
-    ivi_controller_layer_destroy(controller, 1);
-
-    wl_list_remove(&ctx_layer->order.link);
     wl_list_remove(&ctx_layer->link);
-
-    wl_list_for_each_safe(ctx_surf, ctx_surf_next,
-                          &ctx_layer->order.list_surface, order.link) {
-        remove_ordersurface_from_layer(ctx_surf);
-    }
 
     if (ctx_layer->ctx->notification != NULL) {
         ilmObjectType layer = ILM_LAYER;
@@ -403,53 +331,65 @@ controller_layer_listener_destroyed(void *data,
     free(ctx_layer);
 }
 
-static struct ivi_controller_layer_listener controller_layer_listener =
-{
-    controller_layer_listener_visibility,
-    controller_layer_listener_opacity,
-    controller_layer_listener_source_rectangle,
-    controller_layer_listener_destination_rectangle,
-    controller_layer_listener_configuration,
-    controller_layer_listener_orientation,
-    controller_layer_listener_screen,
-    controller_layer_listener_destroyed
-};
-
 static void
-add_ordersurface_to_layer(struct surface_context *ctx_surf,
-                          struct ivi_controller_layer *layer)
+wm_listener_layer_surface_added(void *data, struct ivi_wm *controller,
+                                uint32_t layer_id, uint32_t surface_id)
 {
-    struct layer_context *ctx_layer = NULL;
-    struct surface_context *link = NULL;
-    int found = 0;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
+    (void)controller;
 
-    ctx_layer = ivi_controller_layer_get_user_data(layer);
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
-    wl_list_for_each(link, &ctx_layer->order.list_surface, order.link) {
-        if (link == ctx_surf) {
-            found = 1;
-            break;
-        }
-    }
-
-    if (found == 0) {
-        wl_list_insert(&ctx_layer->order.list_surface, &ctx_surf->order.link);
-    }
+    uint32_t *add_id = wl_array_add(&ctx_layer->render_order, sizeof(*add_id));
+    *add_id = surface_id;
 }
 
 static void
-remove_ordersurface_from_layer(struct surface_context *ctx_surf)
+wm_listener_layer_error(void *data, struct ivi_wm *controller, uint32_t object_id,
+                        uint32_t code, const char *message)
 {
-    wl_list_remove(&ctx_surf->order.link);
-    wl_list_init(&ctx_surf->order.link);
+    struct wayland_context *ctx = data;
+    ilmErrorTypes error_code;
+
+    switch (code) {
+    case IVI_WM_LAYER_ERROR_NO_SURFACE:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The surface with id: %d does not exist\n", object_id);
+        break;
+    case IVI_WM_LAYER_ERROR_NO_LAYER:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The layer with id: %d does not exist\n", object_id);
+        break;
+    case IVI_WM_LAYER_ERROR_BAD_PARAM:
+        error_code = ILM_ERROR_INVALID_ARGUMENTS;
+        fprintf(stderr, "The layer with id: %d is used with invalid parameter\n",
+                object_id);
+        break;
+    default:
+        error_code = ILM_ERROR_ON_CONNECTION;
+    }
+
+    fprintf(stderr, message);
+    fprintf(stderr, "\n");
+
+    /*Do not override old error message*/
+    if (ctx->error_flag == ILM_SUCCESS)
+        ctx->error_flag = error_code;
 }
 
 static void
-controller_surface_listener_visibility(void *data,
-                            struct ivi_controller_surface *controller,
-                            int32_t visibility)
+wm_listener_surface_visibility(void *data, struct ivi_wm *controller,
+                               uint32_t surface_id, int32_t visibility)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.visibility = (t_ilm_bool)visibility;
 
@@ -461,11 +401,15 @@ controller_surface_listener_visibility(void *data,
 }
 
 static void
-controller_surface_listener_opacity(void *data,
-                         struct ivi_controller_surface *controller,
-                         wl_fixed_t opacity)
+wm_listener_surface_opacity(void *data, struct ivi_wm *controller,
+                            uint32_t surface_id, wl_fixed_t opacity)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
 
@@ -477,12 +421,15 @@ controller_surface_listener_opacity(void *data,
 }
 
 static void
-controller_surface_listener_configuration(void *data,
-                           struct ivi_controller_surface *controller,
-                           int32_t width,
-                           int32_t height)
+wm_listener_surface_size(void *data, struct ivi_wm *controller,
+                         uint32_t surface_id, int32_t width, int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
     ctx_surf->prop.origSourceHeight = (t_ilm_uint)height;
@@ -495,14 +442,16 @@ controller_surface_listener_configuration(void *data,
 }
 
 static void
-controller_surface_listener_source_rectangle(void *data,
-                                  struct ivi_controller_surface *controller,
-                                  int32_t x,
-                                  int32_t y,
-                                  int32_t width,
-                                  int32_t height)
+wm_listener_surface_source_rectangle(void *data, struct ivi_wm *controller,
+                                     uint32_t surface_id, int32_t x, int32_t y,
+                                     int32_t width, int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.sourceX = (t_ilm_uint)x;
     ctx_surf->prop.sourceY = (t_ilm_uint)y;
@@ -517,14 +466,16 @@ controller_surface_listener_source_rectangle(void *data,
 }
 
 static void
-controller_surface_listener_destination_rectangle(void *data,
-                   struct ivi_controller_surface *controller,
-                   int32_t x,
-                   int32_t y,
-                   int32_t width,
-                   int32_t height)
+wm_listener_surface_destination_rectangle(void *data, struct ivi_wm *controller,
+                                          uint32_t surface_id, int32_t x,
+                                          int32_t y, int32_t width, int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.destX = (t_ilm_uint)x;
     ctx_surf->prop.destY = (t_ilm_uint)y;
@@ -539,74 +490,18 @@ controller_surface_listener_destination_rectangle(void *data,
 }
 
 static void
-controller_surface_listener_orientation(void *data,
-                             struct ivi_controller_surface *controller,
-                             int32_t orientation)
+wm_listener_surface_stats(void *data, struct ivi_wm *controller,
+                          uint32_t surface_id, uint32_t redraw_count,
+                          uint32_t frame_count, uint32_t update_count,
+                          uint32_t pid, const char *process_name)
 {
-    struct surface_context *ctx_surf = data;
-    ilmOrientation ilmorientation = ILM_ZERO;
-
-    switch (orientation) {
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES:
-        ilmorientation = ILM_ZERO;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES:
-        ilmorientation = ILM_NINETY;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES:
-        ilmorientation = ILM_ONEHUNDREDEIGHTY;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES:
-        ilmorientation = ILM_TWOHUNDREDSEVENTY;
-        break;
-    default:
-        break;
-    }
-
-    ctx_surf->prop.orientation = ilmorientation;
-
-    if (ctx_surf->notification != NULL) {
-        ctx_surf->notification(ctx_surf->id_surface,
-                                &ctx_surf->prop,
-                                ILM_NOTIFICATION_ORIENTATION);
-    }
-}
-
-static void
-controller_surface_listener_pixelformat(void *data,
-                             struct ivi_controller_surface *controller,
-                             int32_t pixelformat)
-{
-    struct surface_context *ctx_surf = data;
-
-    ctx_surf->prop.pixelformat = (t_ilm_uint)pixelformat;
-}
-
-static void
-controller_surface_listener_layer(void *data,
-                                  struct ivi_controller_surface *controller,
-                                  struct ivi_controller_layer *layer)
-{
-    struct surface_context *ctx_surf = data;
-
-    if (layer == NULL) {
-        remove_ordersurface_from_layer(ctx_surf);
-    } else {
-        add_ordersurface_to_layer(ctx_surf, layer);
-    }
-}
-
-static void
-controller_surface_listener_stats(void *data,
-                                  struct ivi_controller_surface *controller,
-                                  uint32_t redraw_count,
-                                  uint32_t frame_count,
-                                  uint32_t update_count,
-                                  uint32_t pid,
-                                  const char *process_name)
-{
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
     (void)process_name;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.drawCounter = (t_ilm_uint)redraw_count;
     ctx_surf->prop.frameCounter = (t_ilm_uint)frame_count;
@@ -615,11 +510,46 @@ controller_surface_listener_stats(void *data,
 }
 
 static void
-controller_surface_listener_destroyed(void *data,
-                  struct ivi_controller_surface *controller)
+wm_listener_surface_created(void *data, struct ivi_wm *controller,
+                            uint32_t surface_id)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(ctx_surf)
+        return;
+
+    ctx_surf = calloc(1, sizeof *ctx_surf);
+    if (ctx_surf == NULL) {
+        fprintf(stderr, "Failed to allocate memory for surface_context\n");
+        return;
+    }
+
+    ctx_surf->id_surface = surface_id;
+    ctx_surf->ctx = ctx;
+
+    wl_list_insert(&ctx->list_surface, &ctx_surf->link);
+    wl_list_init(&ctx_surf->list_accepted_seats);
+
+    if (ctx->notification != NULL) {
+        ilmObjectType surface = ILM_SURFACE;
+        ctx->notification(surface, ctx_surf->id_surface, ILM_TRUE,
+                          ctx->notification_user_data);
+    }
+}
+
+static void
+wm_listener_surface_destroyed(void *data, struct ivi_wm *controller,
+                              uint32_t surface_id)
+{
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
     struct accepted_seat *seat, *seat_next;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     if (ctx_surf->notification != NULL) {
         ctx_surf->notification(ctx_surf->id_surface,
@@ -633,49 +563,68 @@ controller_surface_listener_destroyed(void *data,
                                     ctx_surf->ctx->notification_user_data);
     }
 
-    ivi_controller_surface_destroy(controller, 1);
-
     wl_list_for_each_safe(seat, seat_next, &ctx_surf->list_accepted_seats, link) {
         wl_list_remove(&seat->link);
         free(seat->seat_name);
         free(seat);
     }
 
-    wl_list_remove(&ctx_surf->order.link);
     wl_list_remove(&ctx_surf->link);
     free(ctx_surf);
 }
 
 static void
-controller_surface_listener_content(void *data,
-                   struct ivi_controller_surface *controller,
-                   int32_t content_state)
+wm_listener_surface_error(void *data, struct ivi_wm *controller,
+                          uint32_t object_id, uint32_t code, const char *message)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    ilmErrorTypes error_code;
 
-    if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_AVAILABLE == content_state)
-    {
-        if (ctx_surf->notification != NULL) {
-            ctx_surf->notification(ctx_surf->id_surface,
-                                    &ctx_surf->prop,
-                                    ILM_NOTIFICATION_CONTENT_AVAILABLE);
-        }
+    switch (code) {
+    case IVI_WM_SURFACE_ERROR_NO_SURFACE:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The surface with id: %d does not exist\n", object_id);
+        break;
+    case IVI_WM_SURFACE_ERROR_NOT_SUPPORTED:
+        error_code = ILM_ERROR_NOT_IMPLEMENTED;
+        fprintf(stderr, "The surface with id: %d is used for unsupported operation\n", object_id);
+        break;
+    case IVI_WM_SURFACE_ERROR_BAD_PARAM:
+        error_code = ILM_ERROR_INVALID_ARGUMENTS;
+        fprintf(stderr, "The surface with id: %d is used with invalid parameter\n",
+                object_id);
+        break;
+    default:
+        error_code = ILM_ERROR_ON_CONNECTION;
+        break;
     }
+
+    fprintf(stderr, message);
+    fprintf(stderr, "\n");
+
+    if (ctx->error_flag == ILM_SUCCESS)
+        ctx->error_flag = error_code;
 }
 
-static struct ivi_controller_surface_listener controller_surface_listener=
+static struct ivi_wm_listener wm_listener=
 {
-    controller_surface_listener_visibility,
-    controller_surface_listener_opacity,
-    controller_surface_listener_source_rectangle,
-    controller_surface_listener_destination_rectangle,
-    controller_surface_listener_configuration,
-    controller_surface_listener_orientation,
-    controller_surface_listener_pixelformat,
-    controller_surface_listener_layer,
-    controller_surface_listener_stats,
-    controller_surface_listener_destroyed,
-    controller_surface_listener_content
+    wm_listener_surface_visibility,
+    wm_listener_layer_visibility,
+    wm_listener_surface_opacity,
+    wm_listener_layer_opacity,
+    wm_listener_surface_source_rectangle,
+    wm_listener_layer_source_rectangle,
+    wm_listener_surface_destination_rectangle,
+    wm_listener_layer_destination_rectangle,
+    wm_listener_surface_created,
+    wm_listener_layer_created,
+    wm_listener_surface_destroyed,
+    wm_listener_layer_destroyed,
+    wm_listener_surface_error,
+    wm_listener_layer_error,
+    wm_listener_surface_size,
+    wm_listener_surface_stats,
+    wm_listener_layer_surface_added,
 };
 
 static void
