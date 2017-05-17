@@ -65,3 +65,18 @@ install (
 )
 
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_API_VERSION} SOVERSION ${ILM_API_VERSION})
+
+#=============================================================================================
+# generate pkg-config file for ilmCommon API
+#=============================================================================================
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/ilmCommon.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ilmCommon.pc"
+    @ONLY
+)
+
+install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/ilmCommon.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)

@@ -255,3 +255,18 @@ add_custom_target(ivi-input-doc
 
                   COMMENT "Generating ivi-input-api-${IVI_EXTENSION_VERSION}.pdf"
 )
+
+#=============================================================================================
+# generate pkg-config file for ivi-application API
+#=============================================================================================
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/ivi-application.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ivi-application.pc"
+    @ONLY
+)
+
+install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/ivi-application.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)
