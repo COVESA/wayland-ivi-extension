@@ -1863,66 +1863,13 @@ ilm_layerSetDestinationRectangle(t_ilm_layer layerId,
 ILM_EXPORT ilmErrorTypes
 ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-    int32_t iviorientation = 0;
-
-    do {
-        switch(orientation) {
-        case ILM_ZERO:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES;
-            break;
-        case ILM_NINETY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES;
-            break;
-        case ILM_ONEHUNDREDEIGHTY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES;
-            break;
-        case ILM_TWOHUNDREDSEVENTY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES;
-            break;
-        default:
-            returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-            break;
-        }
-
-        ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer == NULL) {
-            returnValue = ILM_FAILED;
-            break;
-        }
-
-        ivi_controller_layer_set_orientation(ctx_layer->controller,
-                                             iviorientation);
-
-        returnValue = ILM_SUCCESS;
-    } while(0);
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
 ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    if (pOrientation != NULL) {
-        ctx_layer = (struct layer_context*)
-                    wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer != NULL) {
-            *pOrientation = ctx_layer->prop.orientation;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2045,84 +1992,21 @@ ILM_EXPORT ilmErrorTypes
 ilm_surfaceSetOrientation(t_ilm_surface surfaceId,
                               ilmOrientation orientation)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
-    int32_t iviorientation = 0;
-
-    do {
-        switch(orientation) {
-        case ILM_ZERO:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES;
-            break;
-        case ILM_NINETY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES;
-            break;
-        case ILM_ONEHUNDREDEIGHTY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES;
-            break;
-        case ILM_TWOHUNDREDSEVENTY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES;
-            break;
-        default:
-            returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-            break;
-        }
-
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf == NULL) {
-            returnValue = ILM_FAILED;
-            break;
-        }
-
-        ivi_controller_surface_set_orientation(ctx_surf->controller,
-                                               iviorientation);
-
-        returnValue = ILM_SUCCESS;
-    } while(0);
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
 ilm_surfaceGetOrientation(t_ilm_surface surfaceId,
                               ilmOrientation *pOrientation)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pOrientation != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
-            *pOrientation = ctx_surf->prop.orientation;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
 ilm_surfaceGetPixelformat(t_ilm_layer surfaceId,
                               ilmPixelFormat *pPixelformat)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pPixelformat != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
-            *pPixelformat = ctx_surf->prop.pixelformat;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2171,21 +2055,7 @@ ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
 ILM_EXPORT ilmErrorTypes
 ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerid);
-    if (ctx_layer != NULL) {
-        ivi_controller_layer_screenshot(ctx_layer->controller,
-                                        filename);
-        wl_display_flush(ctx->wl.display);
-        returnValue = ILM_SUCCESS;
-    }
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
