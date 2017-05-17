@@ -483,6 +483,23 @@ ilmErrorTypes ilm_registerNotification(notificationFunc callback, void *user_dat
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_unregisterNotification();
+
+/**
+ * \brief returns the global error flag.
+ * When compositor sends an error, the error flag is set to appropriate error code
+ * value. No other errors are recorded until ilm_getError is called. Calling this
+ * API sets the error flag to ILM_SUCCESS.
+ * \ingroup ilmControl
+ * \return ILM_SUCCESS if there is no error
+ * \return ILM_FAILED if the method call has failed
+ * \return ILM_ERROR_INVALID_ARGUMENTS, if an invalid arguments error has occurred
+ * \return ILM_ERROR_ON_CONNECTION, if a connection error has occurred
+ * \return ILM_ERROR_RESOURCE_ALREADY_INUSE, if resource is already in use
+ * \return ILM_ERROR_RESOURCE_NOT_FOUND, if resource was not found
+ * \return ILM_ERROR_NOT_IMPLEMENTED, if feature is not implemented
+ * \return ILM_ERROR_UNEXPECTED_MESSAGE, if received message has unexpected type
+ */
+ilmErrorTypes ilm_getError();
 #ifdef __cplusplus
 } /**/
 #endif /* __cplusplus */
