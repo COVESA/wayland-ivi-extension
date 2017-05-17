@@ -1963,6 +1963,37 @@ ilm_surfaceSetOrientation(t_ilm_surface surfaceId,
 }
 
 ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type)
+{
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *const ctx = &ilm_context;
+    int32_t ivitype = 0;
+
+    switch(type) {
+    case ILM_SURFACETYPE_RESTRICTED:
+        ivitype = IVI_WM_SURFACE_TYPE_RESTRICTED;
+        break;
+    case ILM_SURFACETYPE_DESKTOP:
+        ivitype = IVI_WM_SURFACE_TYPE_DESKTOP;
+        break;
+    default:
+        ivitype = -1;
+        returnValue = ILM_ERROR_INVALID_ARGUMENTS;
+        break;
+    }
+
+    lock_context(ctx);
+    if ((ivitype >= 0) && ctx->wl.controller) {
+        ivi_wm_set_surface_type(ctx->wl.controller, surfaceId, type);
+        wl_display_flush(ctx->wl.display);
+        returnValue = ILM_SUCCESS;
+    }
+    unlock_context(ctx);
+
+    return returnValue;
+}
+
+ILM_EXPORT ilmErrorTypes
 ilm_surfaceGetOrientation(t_ilm_surface surfaceId,
                               ilmOrientation *pOrientation)
 {
