@@ -170,6 +170,11 @@ install(
     DESTINATION include/ilm
 )
 
+install(
+    FILES ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+    DESTINATION share/wayland-protocols/stable/ivi-application
+)
+
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_API_VERSION} SOVERSION ${ILM_API_VERSION})
 
 #=============================================================================================
