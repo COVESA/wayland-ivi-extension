@@ -214,9 +214,7 @@ bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
         m_wlContextStruct.iviSurface = ivi_application_surface_create(m_wlContextStruct.iviApp,
                                                                   m_surfaceId,
                                                                   m_wlContextStruct.wlSurface);
-    }
-
-    if (m_wlContextStruct.wlShell) {
+    } else if (m_wlContextStruct.wlShell) {
         m_wlContextStruct.wlShellSurface = wl_shell_get_shell_surface(m_wlContextStruct.wlShell,
                                                                       m_wlContextStruct.wlSurface);
     }
