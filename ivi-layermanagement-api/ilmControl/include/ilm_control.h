@@ -391,17 +391,6 @@ ilmErrorTypes ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type);
 ilmErrorTypes ilm_surfaceGetOrientation(t_ilm_surface surfaceId, ilmOrientation *pOrientation) ILM_DEPRECATED;
 
 /**
- * \brief Gets the pixelformat of a surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of surface.
- * \param[out] pPixelformat Pointer where the pixelformat of the surface should be stored
- * \note ilmPixelFormat for information about pixel format values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceGetPixelformat(t_ilm_layer surfaceId, ilmPixelFormat *pPixelformat) ILM_DEPRECATED;
-
-/**
  * \brief Sets render order of layers on a display
  * \ingroup ilmControl
  * \param[in] display Id of display to set the given order of layers.

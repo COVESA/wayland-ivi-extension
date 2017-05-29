@@ -2002,13 +2002,6 @@ ilm_surfaceGetOrientation(t_ilm_surface surfaceId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceGetPixelformat(t_ilm_layer surfaceId,
-                              ilmPixelFormat *pPixelformat)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_displaySetRenderOrder(t_ilm_display display,
                           t_ilm_layer *pLayerId, const t_ilm_uint number)
 {
