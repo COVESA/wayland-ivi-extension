@@ -1832,18 +1832,6 @@ ilm_layerSetDestinationRectangle(t_ilm_layer layerId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_layerSetRenderOrder(t_ilm_layer layerId,
                         t_ilm_surface *pSurfaceId,
                         t_ilm_int number)
@@ -1957,13 +1945,6 @@ ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceSetOrientation(t_ilm_surface surfaceId,
-                              ilmOrientation orientation)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -1992,13 +1973,6 @@ ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type)
     unlock_context(ctx);
 
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceGetOrientation(t_ilm_surface surfaceId,
-                              ilmOrientation *pOrientation)
-{
-    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes

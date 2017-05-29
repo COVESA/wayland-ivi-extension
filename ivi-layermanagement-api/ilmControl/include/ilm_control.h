@@ -241,28 +241,6 @@ ilmErrorTypes ilm_layerSetSourceRectangle(t_ilm_layer layerId, t_ilm_uint x, t_i
 ilmErrorTypes ilm_layerSetDestinationRectangle(t_ilm_layer layerId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
 /**
- * \brief Sets the orientation of a layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[in] orientation Orientation of the layer.
- * \note ilmOrientation for more information on orientation values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation) ILM_DEPRECATED;
-
-/**
- * \brief Gets the orientation of a layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[out] pOrientation Address where orientation of the layer should be stored.
- * \note ilmOrientation for more information on orientation values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation) ILM_DEPRECATED;
-
-/**
  * \brief Sets render order of surfaces within one layer
  * \ingroup ilmControl
  * \param[in] layerId Id of layer.
@@ -346,17 +324,6 @@ ilmErrorTypes ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId, t_ilm_int x
 ilmErrorTypes ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
 /**
- * \brief Sets the orientation of a surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of surface.
- * \param[in] orientation Orientation of the surface.
- * \note ilmOrientation for information about orientation values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceSetOrientation(t_ilm_surface surfaceId, ilmOrientation orientation) ILM_DEPRECATED;
-
-/**
  * \brief Set the type of a surface. If a surface is not visible it will not be rendered.
  * If a surface is restricted type, visible contents of the surface is strictly
  * controlled by the compositor. Its content is not allowed to be go out of
@@ -378,17 +345,6 @@ ilmErrorTypes ilm_surfaceSetOrientation(t_ilm_surface surfaceId, ilmOrientation 
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type);
-
-/**
- * \brief Gets the orientation of a surface.
- * \ingroup ilmControl
- * \param[in]  surfaceId Id of surface.
- * \param[out] pOrientation Address where orientation of the surface should be stored.
- * \note ilmOrientation for information about orientation values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceGetOrientation(t_ilm_surface surfaceId, ilmOrientation *pOrientation) ILM_DEPRECATED;
 
 /**
  * \brief Sets render order of layers on a display
