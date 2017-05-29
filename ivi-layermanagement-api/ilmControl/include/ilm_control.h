@@ -424,17 +424,6 @@ ilmErrorTypes ilm_displaySetRenderOrder(t_ilm_display display, t_ilm_layer *pLay
 ilmErrorTypes ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename);
 
 /**
- * \brief Take a screenshot of a certain layer
- * The screenshot is saved as bmp file with the corresponding filename.
- * \ingroup ilmControl
- * \param[in] filename Location where the screenshot should be stored
- * \param[in] layerid Identifier of the layer to take the screenshot of
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid);
-
-/**
  * \brief Take a screenshot of a certain surface
  * The screenshot is saved as bmp file with the corresponding filename.
  * \ingroup ilmControl

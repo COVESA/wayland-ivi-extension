@@ -2054,12 +2054,6 @@ ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
                               t_ilm_surface surfaceid)
 {
