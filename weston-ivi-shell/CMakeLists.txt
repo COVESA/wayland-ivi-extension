@@ -38,10 +38,15 @@ if (IVI_SHARE)
     )
 endif (IVI_SHARE)
 
+INCLUDE (CheckFunctionExists)
+
+configure_file(src/config.h.cmake config.h)
+
 GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
 
 include_directories(
     src
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${IVI_EXTENSION_INCLUDE_DIRS}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
