@@ -40,6 +40,8 @@ endif (IVI_SHARE)
 
 INCLUDE (CheckFunctionExists)
 
+CHECK_FUNCTION_EXISTS(posix_fallocate HAVE_POSIX_FALLOCATE)
+
 configure_file(src/config.h.cmake config.h)
 
 GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
