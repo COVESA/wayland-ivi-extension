@@ -2168,11 +2168,11 @@ ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
         if (scrshot) {
             ivi_screenshot_add_listener(scrshot, &screenshot_listener,
                                         &ctx_scrshot);
-            // roundtrip until filename has been reset in done or error callback
+            // dispatch until filename has been reset in done or error callback
             int ret;
             do {
                 ret =
-                    wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+                    wl_display_dispatch_queue(ctx->wl.display, ctx->wl.queue);
             } while ((ret != -1) && ctx_scrshot.filename);
 
             returnValue = ctx_scrshot.result;
@@ -2208,11 +2208,11 @@ ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
         if (scrshot) {
             ivi_screenshot_add_listener(scrshot, &screenshot_listener,
                                         &ctx_scrshot);
-            // roundtrip until filename has been reset in done or error callback
+            // dispatch until filename has been reset in done or error callback
             int ret;
             do {
                 ret =
-                    wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+                    wl_display_dispatch_queue(ctx->wl.display, ctx->wl.queue);
             } while ((ret != -1) && ctx_scrshot.filename);
 
             returnValue = ctx_scrshot.result;
