@@ -431,9 +431,9 @@ controller_set_surface_visibility(struct wl_client *client,
 
 static void
 controller_surface_screenshot(struct wl_client *client,
-                  struct wl_resource *resource,
-                  uint32_t surface_id,
-                  const char *filename)
+                              struct wl_resource *resource,
+                              uint32_t screenshot_id,
+                              uint32_t surface_id)
 {
     int32_t result = IVI_FAILED;
     struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
@@ -500,35 +500,10 @@ controller_surface_screenshot(struct wl_client *client,
         return;
     }
 
-    /* When width is not multiple of 4, calculate padding. */
-    if (width % 4 != 0)
-        padding = (4 - ((width * 3) % 4));
 
-    for (row = 0; row < height; ++row) {
-        for (col = 0; col < width; ++col) {
-            offset = (height - row - 1) * width + col;
-            image_offset = (row * width + col) * 3 + sum_padding;
 
-            image_buffer[image_offset] = buffer[offset * 4 + 2];
-            image_buffer[image_offset + 1] = buffer[offset * 4 + 1];
-            image_buffer[image_offset + 2] = buffer[offset * 4];
-        }
-        for (i = 1; i <= padding; ++i) {
-            image_buffer[image_offset + 2 + i] = 0;
-            sum_padding++;
-         }
-
-    }
 
     free(buffer);
-
-    if (save_as_bitmap(filename, (const char *)image_buffer,
-                       image_size, width, height, 24) != 0) {
-        ivi_wm_send_surface_error(resource, surface_id,
-                                  IVI_WM_SURFACE_ERROR_BAD_PARAM,
-                                  "surface_screenshot: Filename is not valid");
-    }
-
     free(image_buffer);
 }
 
@@ -1099,7 +1074,6 @@ controller_screenshot_notify(struct wl_listener *listener, void *data)
 {
     struct screenshot_frame_listener *l =
         wl_container_of(listener, l, listener);
-    char *filename = l->filename;
 
     struct weston_output *output = data;
     int32_t width = 0;
@@ -1117,7 +1091,6 @@ controller_screenshot_notify(struct wl_listener *listener, void *data)
     readpixs = malloc(stride * height);
     if (readpixs == NULL) {
         weston_log("fails to allocate memory\n");
-        free(l->filename);
         free(l);
         return;
     }
@@ -1131,17 +1104,14 @@ controller_screenshot_notify(struct wl_listener *listener, void *data)
             width,
             height);
 
-    save_as_bitmap(filename, (const char*)readpixs, stride * height, width, height,
-                   PIXMAN_FORMAT_BPP(output->compositor->read_format));
     free(readpixs);
-    free(l->filename);
     free(l);
 }
 
 static void
 controller_screen_screenshot(struct wl_client *client,
-                struct wl_resource *resource,
-                const char *filename)
+                             struct wl_resource *resource,
+                             uint32_t id)
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
     struct screenshot_frame_listener *l;
@@ -1159,7 +1129,6 @@ controller_screen_screenshot(struct wl_client *client,
         return;
     }
 
-    l->filename = strdup(filename);
     if(l->filename == NULL) {
         wl_resource_post_no_memory(resource);
         return;
