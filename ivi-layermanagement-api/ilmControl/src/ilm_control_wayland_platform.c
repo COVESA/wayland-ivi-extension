@@ -27,8 +27,10 @@
 #include <unistd.h>
 #include <poll.h>
 
+#include <sys/mman.h>
 #include <sys/eventfd.h>
 
+#include "bitmap.h"
 #include "ilm_common.h"
 #include "ilm_control_platform.h"
 #include "wayland-util.h"
@@ -62,6 +64,11 @@ struct screen_context {
     struct wl_array render_order;
 
     struct wayland_context *ctx;
+};
+
+struct screenshot_context {
+    const char *filename;
+    ilmErrorTypes result;
 };
 
 static inline void lock_context(struct ilm_control_context *ctx)
@@ -2034,6 +2041,113 @@ ilm_displaySetRenderOrder(t_ilm_display display,
     return returnValue;
 }
 
+static void screenshot_done(void *data, struct ivi_screenshot *ivi_screenshot,
+                            int32_t fd, int32_t width, int32_t height,
+                            int32_t stride, uint32_t format, uint32_t timestamp)
+{
+    struct screenshot_context *ctx_scrshot = data;
+    char *buffer;
+    int32_t image_stride = 0;
+    int32_t image_size = 0;
+    char *image_buffer = NULL;
+    int32_t row = 0;
+    int32_t col = 0;
+    int32_t image_offset = 0;
+    int32_t offset = 0;
+    int32_t i = 0;
+    int32_t j = 0;
+    int32_t padding = 0;
+    int32_t sum_padding = 0;
+    size_t size = stride * height;
+    int bytes_per_pixel;
+    bool flip_order;
+    bool has_alpha;
+    const char *filename = ctx_scrshot->filename;
+
+    ctx_scrshot->filename = NULL;
+    ivi_screenshot_destroy(ivi_screenshot);
+
+    switch (format) {
+    case WL_SHM_FORMAT_ARGB8888:
+        flip_order = false;
+        has_alpha = true;
+        break;
+    case WL_SHM_FORMAT_XRGB8888:
+        flip_order = false;
+        has_alpha = false;
+        break;
+    case WL_SHM_FORMAT_ABGR8888:
+        flip_order = true;
+        has_alpha = true;
+        break;
+    case WL_SHM_FORMAT_XBGR8888:
+        flip_order = true;
+        has_alpha = false;
+        break;
+    default:
+        fprintf(stderr, "unsupported pixelformat 0x%x\n", format);
+        return;
+    }
+
+    buffer = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+    close(fd);
+
+    if (buffer == MAP_FAILED) {
+        fprintf(stderr, "failed to mmap screenshot file: %m\n");
+        return;
+    }
+
+    bytes_per_pixel = has_alpha ? 4 : 3;
+    image_stride = (((width * bytes_per_pixel) + 3) & ~3);
+    image_size = image_stride * height;
+
+    image_buffer = malloc(image_size);
+    if (image_buffer == NULL) {
+        fprintf(stderr, "failed to allocate %d bytes for image buffer: %m\n",
+                image_size);
+        munmap(buffer, size);
+        return;
+    }
+
+    for (row = 0; row < height; ++row) {
+        for (col = 0; col < width; ++col) {
+            offset = (height - row - 1) * width + col;
+            image_offset = row * image_stride + col * bytes_per_pixel;
+            for (i = 0; i < 3; ++i) {
+                j = flip_order ? 2 - i : i;
+                image_buffer[image_offset + i] = buffer[offset * 4 + j];
+            }
+            if (has_alpha)
+                image_buffer[image_offset + 3] = buffer[offset * 4 + 3];
+        }
+    }
+
+    munmap(buffer, size);
+
+    if (save_as_bitmap(filename, (const char *)image_buffer,
+                       image_size, width, height, bytes_per_pixel * 8) == 0) {
+        ctx_scrshot->result = ILM_SUCCESS;
+    } else {
+        fprintf(stderr, "failed to write screenshot file: %m\n");
+    }
+
+    free(image_buffer);
+}
+
+static void screenshot_error(void *data, struct ivi_screenshot *ivi_screenshot,
+                             uint32_t error, const char *message)
+{
+    struct screenshot_context *ctx_scrshot = data;
+    ctx_scrshot->filename = NULL;
+    ivi_screenshot_destroy(ivi_screenshot);
+    fprintf(stderr, "screenshot failed, error 0x%x: %s\n", error, message);
+}
+
+static struct ivi_screenshot_listener screenshot_listener = {
+    screenshot_done,
+    screenshot_error,
+};
+
 ILM_EXPORT ilmErrorTypes
 ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
 {
@@ -2044,6 +2158,25 @@ ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
     lock_context(ctx);
     ctx_scrn = get_screen_context_by_id(&ctx->wl, (uint32_t)screen);
     if (ctx_scrn != NULL) {
+        struct screenshot_context ctx_scrshot = {
+            .filename = filename,
+            .result = ILM_FAILED,
+        };
+
+        struct ivi_screenshot *scrshot =
+            ivi_wm_screen_screenshot(ctx_scrn->controller);
+        if (scrshot) {
+            ivi_screenshot_add_listener(scrshot, &screenshot_listener,
+                                        &ctx_scrshot);
+            // dispatch until filename has been reset in done or error callback
+            int ret;
+            do {
+                ret =
+                    wl_display_dispatch_queue(ctx->wl.display, ctx->wl.queue);
+            } while ((ret != -1) && ctx_scrshot.filename);
+
+            returnValue = ctx_scrshot.result;
+        }
     }
     unlock_context(ctx);
 
@@ -2065,6 +2198,25 @@ ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
 
     lock_context(ctx);
     if (ctx->wl.controller) {
+          struct screenshot_context ctx_scrshot = {
+            .filename = filename,
+            .result = ILM_FAILED,
+        };
+
+        struct ivi_screenshot *scrshot =
+            ivi_wm_surface_screenshot(ctx->wl.controller, surfaceid);
+        if (scrshot) {
+            ivi_screenshot_add_listener(scrshot, &screenshot_listener,
+                                        &ctx_scrshot);
+            // dispatch until filename has been reset in done or error callback
+            int ret;
+            do {
+                ret =
+                    wl_display_dispatch_queue(ctx->wl.display, ctx->wl.queue);
+            } while ((ret != -1) && ctx_scrshot.filename);
+
+            returnValue = ctx_scrshot.result;
+        }
     }
     unlock_context(ctx);
 
