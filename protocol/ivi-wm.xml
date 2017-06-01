@@ -60,9 +60,10 @@
 
     <request name="screenshot">
      <description summary="take screenshot of screen">
-       Store a screenshot of the screen content in the file provided by argument filename.
+        An ivi_screenshot object is created which will receive the screenshot
+        data of the specified output.
      </description>
-     <arg name="filename" type="string"/>
+     <arg name="screenshot" type="new_id" interface="ivi_screenshot"/>
     </request>
 
     <request name="get">
@@ -102,6 +103,49 @@
        <arg name="error" type="uint" summary="error code"/>
        <arg name="message" type="string" summary="error description"/>
      </event>
+  </interface>
+
+  <interface name="ivi_screenshot" version="1">
+    <description summary="screenshot of an output or a surface">
+      An ivi_screenshot object receives a single "done" or "error" event.
+      The server will destroy this resource after the event has been send,
+      so the client shall then destroy its proxy too.
+    </description>
+
+    <event name="done">
+      <description summary="screenshot finished">
+        This event contains a filedescriptor for a file with raw image data. 
+        Furthermore size, stride, format and timestamp of screenshot are 
+        provided.
+      </description>
+      <arg name="fd" type="fd" summary="fd for file containing image data"/>
+      <arg name="width" type="int" summary="image width in pixels"/>
+      <arg name="height" type="int" summary="image height in pixels"/>
+      <arg name="stride" type="int" summary="number of bytes per pixel row"/>
+      <arg name="format" type="uint" summary="image format of type wl_shm.format"/>
+      <arg name="timestamp" type="uint" summary="timestamp in milliseconds"/>
+    </event>
+
+    <enum name="error">
+      <entry name="io_error" value="0"
+             summary="screenshot file could not be created"/>
+      <entry name="not_supported" value="1"
+             summary="screenshot can not be read"/>
+      <entry name="no_output" value="2"
+             summary="output has been destroyed"/>
+      <entry name="no_surface" value="3"
+             summary="surface has been destroyed"/>
+      <entry name="no_content" value="4"
+             summary="surface has no content"/>
+    </enum>
+
+    <event name="error">
+      <description summary="error event">
+        The error event is sent when the screenshot could not be created.
+      </description>
+      <arg name="error" type="uint" enum="error" summary="error code"/>
+      <arg name="message" type="string" summary="error description"/>
+    </event>
   </interface>
 
   <interface name="ivi_wm" version="1">
@@ -286,10 +330,13 @@
 
     <request name="surface_screenshot">
       <description summary="take screenshot of surface">
-        Store a screenshot of the surface content in the file provided by argument filename.
+        An ivi_screenshot object is created which will receive an image of the
+        buffer currently attached to the surface with the given id. If there
+        is no surface with such name the server will respond with an
+        ivi_screenshot.error event.
       </description>
+      <arg name="screenshot" type="new_id" interface="ivi_screenshot"/>
       <arg name="surface_id" type="uint"/>
-      <arg name="filename" type="string"/>
     </request>
 
     <enum name="surface_type">

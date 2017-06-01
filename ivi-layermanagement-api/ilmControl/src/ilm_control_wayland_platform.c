@@ -2044,9 +2044,6 @@ ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
     lock_context(ctx);
     ctx_scrn = get_screen_context_by_id(&ctx->wl, (uint32_t)screen);
     if (ctx_scrn != NULL) {
-        ivi_wm_screen_screenshot(ctx_scrn->controller, filename);
-        wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
-        returnValue = ILM_SUCCESS;
     }
     unlock_context(ctx);
 
@@ -2068,9 +2065,6 @@ ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
 
     lock_context(ctx);
     if (ctx->wl.controller) {
-        ivi_wm_surface_screenshot(ctx->wl.controller, surfaceid, filename);
-        wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
-        returnValue = ILM_SUCCESS;
     }
     unlock_context(ctx);
 
