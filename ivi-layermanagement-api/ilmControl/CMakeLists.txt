@@ -40,6 +40,7 @@ link_directories(
 
 add_library(${PROJECT_NAME} SHARED
     src/ilm_control_wayland_platform.c
+    src/bitmap.c
 )
 
 add_dependencies(${PROJECT_NAME}
