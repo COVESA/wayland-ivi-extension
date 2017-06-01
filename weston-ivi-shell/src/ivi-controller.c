@@ -32,7 +32,6 @@
 #include <weston.h>
 #include <weston/ivi-layout-export.h>
 #include "ivi-wm-server-protocol.h"
-#include "bitmap.h"
 
 #include "wayland-util.h"
 #ifdef IVI_SHARE_ENABLE
