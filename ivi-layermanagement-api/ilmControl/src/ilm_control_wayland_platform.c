@@ -1,6 +1,7 @@
 /**************************************************************************
  *
  * Copyright (C) 2013 DENSO CORPORATION
+ * Copyright (C) 2017 Advanced Driver Information Technology Joint Venture GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,22 +32,18 @@
 #include "ilm_common.h"
 #include "ilm_control_platform.h"
 #include "wayland-util.h"
-#include "ivi-controller-client-protocol.h"
+#include "ivi-wm-client-protocol.h"
 #include "ivi-input-client-protocol.h"
 
 struct layer_context {
     struct wl_list link;
 
-    struct ivi_controller_layer *controller;
     t_ilm_uint id_layer;
 
     struct ilmLayerProperties prop;
     layerNotificationFunc notification;
 
-    struct {
-        struct wl_list list_surface;
-        struct wl_list link;
-    } order;
+    struct wl_array render_order;
 
     struct wayland_context *ctx;
 };
@@ -55,18 +52,16 @@ struct screen_context {
     struct wl_list link;
 
     struct wl_output *output;
-    struct ivi_controller_screen *controller;
-    t_ilm_uint id_from_server;
+    struct ivi_wm_screen *controller;
     t_ilm_uint id_screen;
+    t_ilm_uint name;
     int32_t transform;
 
     struct ilmScreenProperties prop;
 
-    struct {
-        struct wl_list list_layer;
-    } order;
+    struct wl_array render_order;
 
-    struct ilm_control_context *ctx;
+    struct wayland_context *ctx;
 };
 
 static inline void lock_context(struct ilm_control_context *ctx)
@@ -84,8 +79,6 @@ static int init_control(void);
 static struct surface_context* get_surface_context(struct wayland_context *, uint32_t);
 
 void release_instance(void);
-
-static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid);
 
 static int32_t
 wayland_controller_is_inside_layer_list(struct wl_list *list,
@@ -196,53 +189,16 @@ static struct wl_output_listener output_listener = {
     output_listener_scale
 };
 
-static struct screen_context*
-get_screen_context_by_serverid(struct wayland_context *ctx,
-                               uint32_t id_screen)
-{
-    struct screen_context *ctx_scrn = NULL;
-
-    wl_list_for_each(ctx_scrn, &ctx->list_screen, link) {
-        if (ctx_scrn->id_from_server == id_screen) {
-            return ctx_scrn;
-        }
-    }
-    return NULL;
-}
-
 static void
-add_orderlayer_to_screen(struct layer_context *ctx_layer,
-                         struct wl_output* output)
+wm_listener_layer_visibility(void *data, struct ivi_wm *controller,
+                             uint32_t layer_id, int32_t visibility)
 {
-    struct screen_context *ctx_scrn = wl_output_get_user_data(output);
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
 
-    int found = 0;
-    struct layer_context *layer_link;
-    wl_list_for_each(layer_link, &ctx_scrn->order.list_layer, order.link) {
-        if (layer_link == ctx_layer) {
-            found = 1;
-            break;
-        }
-    }
-
-    if (found == 0) {
-        wl_list_insert(&ctx_scrn->order.list_layer, &ctx_layer->order.link);
-    }
-}
-
-static void
-remove_orderlayer_from_screen(struct layer_context *ctx_layer)
-{
-    wl_list_remove(&ctx_layer->order.link);
-    wl_list_init(&ctx_layer->order.link);
-}
-
-static void
-controller_layer_listener_visibility(void *data,
-                            struct ivi_controller_layer *controller,
-                            int32_t visibility)
-{
-    struct layer_context *ctx_layer = data;
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
     ctx_layer->prop.visibility = (t_ilm_bool)visibility;
 
@@ -254,11 +210,15 @@ controller_layer_listener_visibility(void *data,
 }
 
 static void
-controller_layer_listener_opacity(void *data,
-                       struct ivi_controller_layer *controller,
-                       wl_fixed_t opacity)
+wm_listener_layer_opacity(void *data, struct ivi_wm *controller,
+                          uint32_t layer_id, wl_fixed_t opacity)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
+
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
     ctx_layer->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
 
@@ -270,14 +230,16 @@ controller_layer_listener_opacity(void *data,
 }
 
 static void
-controller_layer_listener_source_rectangle(void *data,
-                                struct ivi_controller_layer *controller,
-                                int32_t x,
-                                int32_t y,
-                                int32_t width,
-                                int32_t height)
+wm_listener_layer_source_rectangle(void *data, struct ivi_wm *controller,
+                                   uint32_t layer_id, int32_t x, int32_t y,
+                                   int32_t width, int32_t height)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
+
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
     ctx_layer->prop.sourceX = (t_ilm_uint)x;
     ctx_layer->prop.sourceY = (t_ilm_uint)y;
@@ -298,14 +260,16 @@ controller_layer_listener_source_rectangle(void *data,
 }
 
 static void
-controller_layer_listener_destination_rectangle(void *data,
-                                     struct ivi_controller_layer *controller,
-                                     int32_t x,
-                                     int32_t y,
-                                     int32_t width,
-                                     int32_t height)
+wm_listener_layer_destination_rectangle(void *data, struct ivi_wm *controller,
+                                        uint32_t layer_id, int32_t x, int32_t y,
+                                        int32_t width, int32_t height)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
+
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
     ctx_layer->prop.destX = (t_ilm_uint)x;
     ctx_layer->prop.destY = (t_ilm_uint)y;
@@ -320,85 +284,44 @@ controller_layer_listener_destination_rectangle(void *data,
 }
 
 static void
-controller_layer_listener_configuration(void *data,
-                          struct ivi_controller_layer *controller,
-                          int32_t width,
-                          int32_t height)
+wm_listener_layer_created(void *data, struct ivi_wm *controller, uint32_t layer_id)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
 
-    ctx_layer->prop.sourceWidth = (t_ilm_uint)width;
-    ctx_layer->prop.sourceHeight = (t_ilm_uint)height;
-}
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(ctx_layer)
+        return;
 
-static void
-controller_layer_listener_orientation(void *data,
-                             struct ivi_controller_layer *controller,
-                             int32_t orientation)
-{
-    ilmOrientation ilmorientation = ILM_ZERO;
-    struct layer_context *ctx_layer = data;
-
-    switch(orientation) {
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES:
-        ilmorientation = ILM_ZERO;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES:
-        ilmorientation = ILM_NINETY;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES:
-        ilmorientation = ILM_ONEHUNDREDEIGHTY;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES:
-        ilmorientation = ILM_TWOHUNDREDSEVENTY;
-        break;
-    default:
-        break;
+    ctx_layer = calloc(1, sizeof *ctx_layer);
+    if (!ctx_layer) {
+        fprintf(stderr, "Failed to allocate memory for layer_context\n");
+        return;
     }
 
-    ctx_layer->prop.orientation = ilmorientation;
+    ctx_layer->id_layer = layer_id;
+    ctx_layer->ctx = ctx;
 
-    if (ctx_layer->notification != NULL) {
-        ctx_layer->notification(ctx_layer->id_layer,
-                                &ctx_layer->prop,
-                                ILM_NOTIFICATION_ORIENTATION);
+    wl_list_insert(&ctx->list_layer, &ctx_layer->link);
+
+    if (ctx->notification != NULL) {
+       ilmObjectType layer = ILM_LAYER;
+       ctx->notification(layer, ctx_layer->id_layer, ILM_TRUE,
+                         ctx->notification_user_data);
     }
 }
 
 static void
-controller_layer_listener_screen(void *data,
-                                 struct ivi_controller_layer *controller,
-                                 struct wl_output *output)
+wm_listener_layer_destroyed(void *data, struct ivi_wm *controller, uint32_t layer_id)
 {
-    struct layer_context *ctx_layer = data;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
 
-    if (output == NULL) {
-        remove_orderlayer_from_screen(ctx_layer);
-    } else {
-        add_orderlayer_to_screen(ctx_layer, output);
-    }
-}
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
-static void
-remove_ordersurface_from_layer(struct surface_context *ctx_surf);
-
-static void
-controller_layer_listener_destroyed(void *data,
-                                    struct ivi_controller_layer *controller)
-{
-    struct layer_context *ctx_layer = data;
-    struct surface_context *ctx_surf = NULL;
-    struct surface_context *ctx_surf_next = NULL;
-
-    ivi_controller_layer_destroy(controller, 1);
-
-    wl_list_remove(&ctx_layer->order.link);
     wl_list_remove(&ctx_layer->link);
-
-    wl_list_for_each_safe(ctx_surf, ctx_surf_next,
-                          &ctx_layer->order.list_surface, order.link) {
-        remove_ordersurface_from_layer(ctx_surf);
-    }
 
     if (ctx_layer->ctx->notification != NULL) {
         ilmObjectType layer = ILM_LAYER;
@@ -409,53 +332,65 @@ controller_layer_listener_destroyed(void *data,
     free(ctx_layer);
 }
 
-static struct ivi_controller_layer_listener controller_layer_listener =
-{
-    controller_layer_listener_visibility,
-    controller_layer_listener_opacity,
-    controller_layer_listener_source_rectangle,
-    controller_layer_listener_destination_rectangle,
-    controller_layer_listener_configuration,
-    controller_layer_listener_orientation,
-    controller_layer_listener_screen,
-    controller_layer_listener_destroyed
-};
-
 static void
-add_ordersurface_to_layer(struct surface_context *ctx_surf,
-                          struct ivi_controller_layer *layer)
+wm_listener_layer_surface_added(void *data, struct ivi_wm *controller,
+                                uint32_t layer_id, uint32_t surface_id)
 {
-    struct layer_context *ctx_layer = NULL;
-    struct surface_context *link = NULL;
-    int found = 0;
+    struct wayland_context *ctx = data;
+    struct layer_context *ctx_layer;
+    (void)controller;
 
-    ctx_layer = ivi_controller_layer_get_user_data(layer);
+    ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
+    if(!ctx_layer)
+        return;
 
-    wl_list_for_each(link, &ctx_layer->order.list_surface, order.link) {
-        if (link == ctx_surf) {
-            found = 1;
-            break;
-        }
-    }
-
-    if (found == 0) {
-        wl_list_insert(&ctx_layer->order.list_surface, &ctx_surf->order.link);
-    }
+    uint32_t *add_id = wl_array_add(&ctx_layer->render_order, sizeof(*add_id));
+    *add_id = surface_id;
 }
 
 static void
-remove_ordersurface_from_layer(struct surface_context *ctx_surf)
+wm_listener_layer_error(void *data, struct ivi_wm *controller, uint32_t object_id,
+                        uint32_t code, const char *message)
 {
-    wl_list_remove(&ctx_surf->order.link);
-    wl_list_init(&ctx_surf->order.link);
+    struct wayland_context *ctx = data;
+    ilmErrorTypes error_code;
+
+    switch (code) {
+    case IVI_WM_LAYER_ERROR_NO_SURFACE:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The surface with id: %d does not exist\n", object_id);
+        break;
+    case IVI_WM_LAYER_ERROR_NO_LAYER:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The layer with id: %d does not exist\n", object_id);
+        break;
+    case IVI_WM_LAYER_ERROR_BAD_PARAM:
+        error_code = ILM_ERROR_INVALID_ARGUMENTS;
+        fprintf(stderr, "The layer with id: %d is used with invalid parameter\n",
+                object_id);
+        break;
+    default:
+        error_code = ILM_ERROR_ON_CONNECTION;
+    }
+
+    fprintf(stderr, message);
+    fprintf(stderr, "\n");
+
+    /*Do not override old error message*/
+    if (ctx->error_flag == ILM_SUCCESS)
+        ctx->error_flag = error_code;
 }
 
 static void
-controller_surface_listener_visibility(void *data,
-                            struct ivi_controller_surface *controller,
-                            int32_t visibility)
+wm_listener_surface_visibility(void *data, struct ivi_wm *controller,
+                               uint32_t surface_id, int32_t visibility)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.visibility = (t_ilm_bool)visibility;
 
@@ -467,11 +402,15 @@ controller_surface_listener_visibility(void *data,
 }
 
 static void
-controller_surface_listener_opacity(void *data,
-                         struct ivi_controller_surface *controller,
-                         wl_fixed_t opacity)
+wm_listener_surface_opacity(void *data, struct ivi_wm *controller,
+                            uint32_t surface_id, wl_fixed_t opacity)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
 
@@ -483,12 +422,15 @@ controller_surface_listener_opacity(void *data,
 }
 
 static void
-controller_surface_listener_configuration(void *data,
-                           struct ivi_controller_surface *controller,
-                           int32_t width,
-                           int32_t height)
+wm_listener_surface_size(void *data, struct ivi_wm *controller,
+                         uint32_t surface_id, int32_t width, int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
     ctx_surf->prop.origSourceHeight = (t_ilm_uint)height;
@@ -501,14 +443,16 @@ controller_surface_listener_configuration(void *data,
 }
 
 static void
-controller_surface_listener_source_rectangle(void *data,
-                                  struct ivi_controller_surface *controller,
-                                  int32_t x,
-                                  int32_t y,
-                                  int32_t width,
-                                  int32_t height)
+wm_listener_surface_source_rectangle(void *data, struct ivi_wm *controller,
+                                     uint32_t surface_id, int32_t x, int32_t y,
+                                     int32_t width, int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.sourceX = (t_ilm_uint)x;
     ctx_surf->prop.sourceY = (t_ilm_uint)y;
@@ -523,14 +467,16 @@ controller_surface_listener_source_rectangle(void *data,
 }
 
 static void
-controller_surface_listener_destination_rectangle(void *data,
-                   struct ivi_controller_surface *controller,
-                   int32_t x,
-                   int32_t y,
-                   int32_t width,
-                   int32_t height)
+wm_listener_surface_destination_rectangle(void *data, struct ivi_wm *controller,
+                                          uint32_t surface_id, int32_t x,
+                                          int32_t y, int32_t width, int32_t height)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.destX = (t_ilm_uint)x;
     ctx_surf->prop.destY = (t_ilm_uint)y;
@@ -545,74 +491,18 @@ controller_surface_listener_destination_rectangle(void *data,
 }
 
 static void
-controller_surface_listener_orientation(void *data,
-                             struct ivi_controller_surface *controller,
-                             int32_t orientation)
+wm_listener_surface_stats(void *data, struct ivi_wm *controller,
+                          uint32_t surface_id, uint32_t redraw_count,
+                          uint32_t frame_count, uint32_t update_count,
+                          uint32_t pid, const char *process_name)
 {
-    struct surface_context *ctx_surf = data;
-    ilmOrientation ilmorientation = ILM_ZERO;
-
-    switch (orientation) {
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES:
-        ilmorientation = ILM_ZERO;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES:
-        ilmorientation = ILM_NINETY;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES:
-        ilmorientation = ILM_ONEHUNDREDEIGHTY;
-        break;
-    case IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES:
-        ilmorientation = ILM_TWOHUNDREDSEVENTY;
-        break;
-    default:
-        break;
-    }
-
-    ctx_surf->prop.orientation = ilmorientation;
-
-    if (ctx_surf->notification != NULL) {
-        ctx_surf->notification(ctx_surf->id_surface,
-                                &ctx_surf->prop,
-                                ILM_NOTIFICATION_ORIENTATION);
-    }
-}
-
-static void
-controller_surface_listener_pixelformat(void *data,
-                             struct ivi_controller_surface *controller,
-                             int32_t pixelformat)
-{
-    struct surface_context *ctx_surf = data;
-
-    ctx_surf->prop.pixelformat = (t_ilm_uint)pixelformat;
-}
-
-static void
-controller_surface_listener_layer(void *data,
-                                  struct ivi_controller_surface *controller,
-                                  struct ivi_controller_layer *layer)
-{
-    struct surface_context *ctx_surf = data;
-
-    if (layer == NULL) {
-        remove_ordersurface_from_layer(ctx_surf);
-    } else {
-        add_ordersurface_to_layer(ctx_surf, layer);
-    }
-}
-
-static void
-controller_surface_listener_stats(void *data,
-                                  struct ivi_controller_surface *controller,
-                                  uint32_t redraw_count,
-                                  uint32_t frame_count,
-                                  uint32_t update_count,
-                                  uint32_t pid,
-                                  const char *process_name)
-{
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
     (void)process_name;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     ctx_surf->prop.drawCounter = (t_ilm_uint)redraw_count;
     ctx_surf->prop.frameCounter = (t_ilm_uint)frame_count;
@@ -621,11 +511,46 @@ controller_surface_listener_stats(void *data,
 }
 
 static void
-controller_surface_listener_destroyed(void *data,
-                  struct ivi_controller_surface *controller)
+wm_listener_surface_created(void *data, struct ivi_wm *controller,
+                            uint32_t surface_id)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(ctx_surf)
+        return;
+
+    ctx_surf = calloc(1, sizeof *ctx_surf);
+    if (ctx_surf == NULL) {
+        fprintf(stderr, "Failed to allocate memory for surface_context\n");
+        return;
+    }
+
+    ctx_surf->id_surface = surface_id;
+    ctx_surf->ctx = ctx;
+
+    wl_list_insert(&ctx->list_surface, &ctx_surf->link);
+    wl_list_init(&ctx_surf->list_accepted_seats);
+
+    if (ctx->notification != NULL) {
+        ilmObjectType surface = ILM_SURFACE;
+        ctx->notification(surface, ctx_surf->id_surface, ILM_TRUE,
+                          ctx->notification_user_data);
+    }
+}
+
+static void
+wm_listener_surface_destroyed(void *data, struct ivi_wm *controller,
+                              uint32_t surface_id)
+{
+    struct wayland_context *ctx = data;
+    struct surface_context *ctx_surf;
     struct accepted_seat *seat, *seat_next;
+
+    ctx_surf = get_surface_context(ctx, surface_id);
+    if(!ctx_surf)
+        return;
 
     if (ctx_surf->notification != NULL) {
         ctx_surf->notification(ctx_surf->id_surface,
@@ -639,163 +564,130 @@ controller_surface_listener_destroyed(void *data,
                                     ctx_surf->ctx->notification_user_data);
     }
 
-    ivi_controller_surface_destroy(controller, 1);
-
     wl_list_for_each_safe(seat, seat_next, &ctx_surf->list_accepted_seats, link) {
         wl_list_remove(&seat->link);
         free(seat->seat_name);
         free(seat);
     }
 
-    wl_list_remove(&ctx_surf->order.link);
     wl_list_remove(&ctx_surf->link);
     free(ctx_surf);
 }
 
 static void
-controller_surface_listener_content(void *data,
-                   struct ivi_controller_surface *controller,
-                   int32_t content_state)
+wm_listener_surface_error(void *data, struct ivi_wm *controller,
+                          uint32_t object_id, uint32_t code, const char *message)
 {
-    struct surface_context *ctx_surf = data;
+    struct wayland_context *ctx = data;
+    ilmErrorTypes error_code;
 
-    if (IVI_CONTROLLER_SURFACE_CONTENT_STATE_CONTENT_AVAILABLE == content_state)
-    {
-        if (ctx_surf->notification != NULL) {
-            ctx_surf->notification(ctx_surf->id_surface,
-                                    &ctx_surf->prop,
-                                    ILM_NOTIFICATION_CONTENT_AVAILABLE);
-        }
+    switch (code) {
+    case IVI_WM_SURFACE_ERROR_NO_SURFACE:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The surface with id: %d does not exist\n", object_id);
+        break;
+    case IVI_WM_SURFACE_ERROR_NOT_SUPPORTED:
+        error_code = ILM_ERROR_NOT_IMPLEMENTED;
+        fprintf(stderr, "The surface with id: %d is used for unsupported operation\n", object_id);
+        break;
+    case IVI_WM_SURFACE_ERROR_BAD_PARAM:
+        error_code = ILM_ERROR_INVALID_ARGUMENTS;
+        fprintf(stderr, "The surface with id: %d is used with invalid parameter\n",
+                object_id);
+        break;
+    default:
+        error_code = ILM_ERROR_ON_CONNECTION;
+        break;
     }
+
+    fprintf(stderr, message);
+    fprintf(stderr, "\n");
+
+    if (ctx->error_flag == ILM_SUCCESS)
+        ctx->error_flag = error_code;
 }
 
-static struct ivi_controller_surface_listener controller_surface_listener=
+static struct ivi_wm_listener wm_listener=
 {
-    controller_surface_listener_visibility,
-    controller_surface_listener_opacity,
-    controller_surface_listener_source_rectangle,
-    controller_surface_listener_destination_rectangle,
-    controller_surface_listener_configuration,
-    controller_surface_listener_orientation,
-    controller_surface_listener_pixelformat,
-    controller_surface_listener_layer,
-    controller_surface_listener_stats,
-    controller_surface_listener_destroyed,
-    controller_surface_listener_content
+    wm_listener_surface_visibility,
+    wm_listener_layer_visibility,
+    wm_listener_surface_opacity,
+    wm_listener_layer_opacity,
+    wm_listener_surface_source_rectangle,
+    wm_listener_layer_source_rectangle,
+    wm_listener_surface_destination_rectangle,
+    wm_listener_layer_destination_rectangle,
+    wm_listener_surface_created,
+    wm_listener_layer_created,
+    wm_listener_surface_destroyed,
+    wm_listener_layer_destroyed,
+    wm_listener_surface_error,
+    wm_listener_layer_error,
+    wm_listener_surface_size,
+    wm_listener_surface_stats,
+    wm_listener_layer_surface_added,
 };
 
 static void
-controller_listener_layer(void *data,
-                          struct ivi_controller *controller,
-                          uint32_t id_layer)
+wm_screen_listener_screen_id(void *data, struct ivi_wm_screen *controller,
+                             uint32_t screen_id)
 {
-   struct wayland_context *ctx = data;
+    struct screen_context *ctx_screen = data;
 
-   if (wayland_controller_is_inside_layer_list(&ctx->list_layer, id_layer))
-   {
-      return;
-   }
-
-   (void) create_controller_layer(ctx, 0, 0, id_layer);
+    ctx_screen->id_screen = screen_id;
 }
 
 static void
-controller_listener_surface(void *data,
-                            struct ivi_controller *controller,
-                            uint32_t id_surface)
+wm_screen_listener_layer_added(void *data, struct ivi_wm_screen *controller,
+                               uint32_t layer_id)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *ctx_surf = NULL;
+    struct screen_context *ctx_screen = data;
+    (void) controller;
 
-    ctx_surf = get_surface_context(ctx, id_surface);
-    if (ctx_surf != NULL) {
-        if (!ctx_surf->is_surface_creation_noticed) {
-            ctx_surf->controller = ivi_controller_surface_create(
-                                       controller, id_surface);
-            ivi_controller_surface_add_listener(ctx_surf->controller,
-                                       &controller_surface_listener, ctx_surf);
-            if (ctx_surf->notification != NULL) {
-                ctx_surf->notification(ctx_surf->id_surface,
-                                       &ctx_surf->prop,
-                                       ILM_NOTIFICATION_CONTENT_AVAILABLE);
-                ctx_surf->is_surface_creation_noticed = true;
-            }
-        }
-        else {
-            fprintf(stderr, "invalid id_surface in controller_listener_surface\n");
-        }
-        return;
-    }
-
-    ctx_surf = calloc(1, sizeof *ctx_surf);
-    if (ctx_surf == NULL) {
-        fprintf(stderr, "Failed to allocate memory for surface_context\n");
-        return;
-    }
-
-    ctx_surf->controller = ivi_controller_surface_create(
-                               controller, id_surface);
-    if (ctx_surf->controller == NULL) {
-        free(ctx_surf);
-        fprintf(stderr, "Failed to create controller surface\n");
-        return;
-    }
-    ctx_surf->id_surface = id_surface;
-    ctx_surf->ctx = ctx;
-    ctx_surf->is_surface_creation_noticed = true;
-
-    wl_list_insert(&ctx->list_surface, &ctx_surf->link);
-    wl_list_init(&ctx_surf->order.link);
-    wl_list_init(&ctx_surf->list_accepted_seats);
-    ivi_controller_surface_add_listener(ctx_surf->controller,
-                                        &controller_surface_listener, ctx_surf);
-
-    if (ctx->notification != NULL) {
-        ilmObjectType surface = ILM_SURFACE;
-        ctx->notification(surface, ctx_surf->id_surface, ILM_TRUE,
-                          ctx->notification_user_data);
-    }
+    uint32_t *add_id = wl_array_add(&ctx_screen->render_order, sizeof(*add_id));
+    *add_id = layer_id;
 }
 
 static void
-controller_listener_error(void *data,
-                          struct ivi_controller *ivi_controller,
-	                  int32_t object_id,
-	                  int32_t object_type,
-	                  int32_t error_code,
-	                  const char *error_text)
+wm_screen_listener_error(void *data, struct ivi_wm_screen *controller,
+                         uint32_t code, const char *message)
 {
-    (void)data;
-    (void)ivi_controller;
-    (void)object_id;
-    (void)object_type;
-    (void)error_code;
-    (void)error_text;
-}
+    struct screen_context *ctx_screen = data;
+    ilmErrorTypes error_code;
 
-static void
-controller_listener_screen(void *data,
-                           struct ivi_controller *ivi_controller,
-                           uint32_t id_screen,
-                           struct ivi_controller_screen *controller_screen)
-{
-    struct wayland_context *ctx = data;
-    struct screen_context *ctx_screen;
-    (void)ivi_controller;
-
-    ctx_screen = get_screen_context_by_serverid(ctx, id_screen);
-    if (ctx_screen == NULL) {
-        fprintf(stderr, "Failed to allocate memory for screen_context\n");
-        return;
+    switch (code) {
+    case IVI_WM_SCREEN_ERROR_NO_LAYER:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "A non-existing layer is used with the screen: %d\n",
+                ctx_screen->id_screen);
+        break;
+    case IVI_WM_SCREEN_ERROR_NO_SCREEN:
+        error_code = ILM_ERROR_RESOURCE_NOT_FOUND;
+        fprintf(stderr, "The screen with id: %d does not exist\n",
+                ctx_screen->id_screen);
+        break;
+    case IVI_WM_SCREEN_ERROR_BAD_PARAM:
+        error_code = ILM_ERROR_INVALID_ARGUMENTS;
+        fprintf(stderr, "The screen with id: %d is used with invalid parameter\n",
+                         ctx_screen->id_screen);
+        break;
+    default:
+        error_code = ILM_ERROR_ON_CONNECTION;
+        break;
     }
-    ctx_screen->controller = controller_screen;
+
+    fprintf(stderr, message);
+    fprintf(stderr, "\n");
+
+    if (ctx_screen->ctx->error_flag == ILM_SUCCESS)
+        ctx_screen->ctx->error_flag = error_code;
 }
 
-static struct ivi_controller_listener controller_listener= {
-    controller_listener_screen,
-    controller_listener_layer,
-    controller_listener_surface,
-    controller_listener_error
+static struct ivi_wm_screen_listener wm_screen_listener=
+{
+    wm_screen_listener_screen_id,
+    wm_screen_listener_layer_added,
+    wm_screen_listener_error
 };
 
 static struct seat_context *
@@ -960,19 +852,16 @@ registry_handle_control(void *data,
     struct wayland_context *ctx = data;
     (void)version;
 
-    if (strcmp(interface, "ivi_controller") == 0) {
+    if (strcmp(interface, "ivi_wm") == 0) {
         ctx->controller = wl_registry_bind(registry, name,
-                                           &ivi_controller_interface, 1);
+                                           &ivi_wm_interface, 1);
         if (ctx->controller == NULL) {
-            fprintf(stderr, "Failed to registry bind ivi_controller\n");
+            fprintf(stderr, "Failed to registry bind ivi_wm\n");
             return;
         }
-        if (ivi_controller_add_listener(ctx->controller,
-                                       &controller_listener,
-                                       ctx)) {
-            fprintf(stderr, "Failed to add ivi_controller listener\n");
-            return;
-        }
+
+        ivi_wm_add_listener(ctx->controller, &wm_listener, ctx);
+
     } else if (strcmp(interface, "ivi_input") == 0) {
         ctx->input_controller =
             wl_registry_bind(registry, name, &ivi_input_interface, 1);
@@ -981,11 +870,8 @@ registry_handle_control(void *data,
             fprintf(stderr, "Failed to registry bind input controller\n");
             return;
         }
-        if (ivi_input_add_listener(ctx->input_controller,
-                                              &input_listener, ctx)) {
-            fprintf(stderr, "Failed to add ivi_input listener\n");
-            return;
-        }
+        ivi_input_add_listener(ctx->input_controller, &input_listener, ctx);
+
     } else if (strcmp(interface, "wl_output") == 0) {
         struct screen_context *ctx_scrn = calloc(1, sizeof *ctx_scrn);
         struct wl_proxy *pxy = NULL;
@@ -1010,19 +896,47 @@ registry_handle_control(void *data,
             return;
         }
 
-        pxy = (struct wl_proxy*)ctx_scrn->output;
-        ctx_scrn->id_from_server = wl_proxy_get_id(pxy);
-        ctx_scrn->id_screen = ctx->num_screen;
-        ctx->num_screen++;
-        wl_list_init(&ctx_scrn->order.list_layer);
+        if (ctx->controller) {
+            ctx_scrn->controller = ivi_wm_create_screen(ctx->controller, ctx_scrn->output);
+            ivi_wm_screen_add_listener(ctx_scrn->controller, &wm_screen_listener,
+                                       ctx_scrn);
+        }
+
+        ctx_scrn->ctx = ctx;
+        ctx_scrn->name = name;
         wl_list_insert(&ctx->list_screen, &ctx_scrn->link);
+    }
+}
+
+static void
+registry_handle_control_remove(void *data, struct wl_registry *registry, uint32_t name)
+{
+    struct wayland_context *ctx = data;
+    struct screen_context *ctx_scrn, *next;
+
+    /*remove wl_output and corresponding screen context*/
+    wl_list_for_each_safe(ctx_scrn, next, &ctx->list_screen, link) {
+        if(ctx_scrn->name == name)
+        { fprintf(stderr,"output_removed \n");
+            if (ctx_scrn->controller != NULL) {
+                ivi_wm_screen_destroy(ctx_scrn->controller);
+            }
+
+            if (ctx_scrn->output != NULL) {
+                wl_output_destroy(ctx_scrn->output);
+            }
+
+            wl_list_remove(&ctx_scrn->link);
+            wl_array_release(&ctx_scrn->render_order);
+            free(ctx_scrn);
+        }
     }
 }
 
 static const struct wl_registry_listener
 registry_control_listener= {
     registry_handle_control,
-    NULL
+    registry_handle_control_remove
 };
 
 struct ilm_control_context ilm_context;
@@ -1037,11 +951,16 @@ static void destroy_control_resources(void)
         struct screen_context *next;
 
         wl_list_for_each_safe(ctx_scrn, next, &ctx->wl.list_screen, link) {
+            if (ctx_scrn->controller != NULL) {
+                ivi_wm_screen_destroy(ctx_scrn->controller);
+            }
+
             if (ctx_scrn->output != NULL) {
                 wl_output_destroy(ctx_scrn->output);
             }
 
             wl_list_remove(&ctx_scrn->link);
+            wl_array_release(&ctx_scrn->render_order);
             free(ctx_scrn);
         }
     }
@@ -1059,8 +978,6 @@ static void destroy_control_resources(void)
                 }
 
                 wl_list_remove(&l->link);
-                wl_list_remove(&l->order.link);
-                ivi_controller_surface_destroy(l->controller, 0);
                 free(l);
             }
         }
@@ -1070,28 +987,12 @@ static void destroy_control_resources(void)
             struct layer_context *n;
             wl_list_for_each_safe(l, n, &ctx->wl.list_layer, link) {
                 wl_list_remove(&l->link);
-                wl_list_remove(&l->order.link);
-                ivi_controller_layer_destroy(l->controller, 0);
+                wl_array_release(&l->render_order);
                 free(l);
             }
         }
 
-        {
-            struct screen_context *ctx_scrn;
-            struct screen_context *next;
-
-            wl_list_for_each_safe(ctx_scrn, next, &ctx->wl.list_screen, link) {
-                if (ctx_scrn->output != NULL) {
-                    wl_output_destroy(ctx_scrn->output);
-                }
-
-                wl_list_remove(&ctx_scrn->link);
-                ivi_controller_screen_destroy(ctx_scrn->controller);
-                free(ctx_scrn);
-            }
-        }
-
-        ivi_controller_destroy(ctx->wl.controller);
+        ivi_wm_destroy(ctx->wl.controller);
         ctx->wl.controller = NULL;
     }
 
@@ -1282,6 +1183,7 @@ init_control(void)
 {
     struct ilm_control_context *ctx = &ilm_context;
     struct wayland_context *wl = &ctx->wl;
+    struct screen_context *ctx_scrn;
     int ret = 0;
 
     wl->queue = wl_display_create_queue(wl->display);
@@ -1306,13 +1208,8 @@ init_control(void)
         return -1;
     }
 
-    if (
-       // first level objects; ivi_controller
-       wl_display_roundtrip_queue(wl->display, wl->queue) == -1 ||
-       // second level object: ivi_controller_surfaces/layers
-       wl_display_roundtrip_queue(wl->display, wl->queue) == -1 ||
-       // third level objects: ivi_controller_surfaces/layers properties
-       wl_display_roundtrip_queue(wl->display, wl->queue) == -1)
+    // get globals
+    if (wl_display_roundtrip_queue(wl->display, wl->queue) == -1)
     {
         fprintf(stderr, "Failed to initialize wayland connection: %s\n", strerror(errno));
         return -1;
@@ -1320,8 +1217,16 @@ init_control(void)
 
     if (! wl->controller)
     {
-        fprintf(stderr, "ivi_controller not available\n");
+        fprintf(stderr, "ivi_wm not available\n");
         return -1;
+    }
+
+    wl_list_for_each(ctx_scrn, &ctx->wl.list_screen, link) {
+        if (!ctx_scrn->controller) {
+            ctx_scrn->controller = ivi_wm_create_screen(wl->controller, ctx_scrn->output);
+            ivi_wm_screen_add_listener(ctx_scrn->controller, &wm_screen_listener,
+                                       ctx_scrn);
+        }
     }
 
     ctx->shutdown_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
@@ -1436,22 +1341,33 @@ ilm_getPropertiesOfLayer(t_ilm_uint layerID,
                          struct ilmLayerProperties* pLayerProperties)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
     struct layer_context *ctx_layer = NULL;
+    int32_t mask;
+
+    mask |= IVI_WM_PARAM_OPACITY;
+    mask |= IVI_WM_PARAM_VISIBILITY;
+    mask |= IVI_WM_PARAM_SIZE;
 
     if (pLayerProperties != NULL) {
+        lock_context(ctx);
+
+        ivi_wm_layer_get(ctx->wl.controller, layerID, mask);
+        int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
 
         ctx_layer = (struct layer_context*)
                     wayland_controller_get_layer_context(
                         &ctx->wl, (uint32_t)layerID);
 
-        if (ctx_layer != NULL) {
+        if ((ret != -1) && (ctx_layer != NULL))
+        {
             *pLayerProperties = ctx_layer->prop;
             returnValue = ILM_SUCCESS;
         }
+
+        unlock_context(ctx);
     }
 
-    release_instance();
     return returnValue;
 }
 
@@ -1459,27 +1375,33 @@ static void
 create_layerids(struct screen_context *ctx_screen,
                 t_ilm_layer **layer_ids, t_ilm_uint *layer_count)
 {
-    struct layer_context *ctx_layer = NULL;
     t_ilm_layer *ids = NULL;
+    uint32_t *id = NULL;
 
-    *layer_count = wl_list_length(&ctx_screen->order.list_layer);
-    if (*layer_count == 0) {
+    if (ctx_screen->render_order.size == 0) {
         *layer_ids = NULL;
-        return;
-    }
-
-    *layer_ids = malloc(*layer_count * sizeof(t_ilm_layer));
-    if (*layer_ids == NULL) {
-        fprintf(stderr, "memory insufficient for layerids\n");
         *layer_count = 0;
         return;
     }
 
-    ids = *layer_ids;
-    wl_list_for_each_reverse(ctx_layer, &ctx_screen->order.list_layer, order.link) {
-        *ids = (t_ilm_layer)ctx_layer->id_layer;
-        ids++;
+    *layer_ids = malloc(ctx_screen->render_order.size);
+    if (*layer_ids == NULL) {
+        fprintf(stderr, "memory insufficient for layerids\n");
+        *layer_count = 0;
+        wl_array_release(&ctx_screen->render_order);
+        wl_array_init(&ctx_screen->render_order);
+        return;
     }
+
+    ids = *layer_ids;
+    wl_array_for_each(id, &ctx_screen->render_order) {
+        *ids = (t_ilm_layer) *id;
+        ids++;
+        (*layer_count)++;
+    }
+
+    wl_array_release(&ctx_screen->render_order);
+    wl_array_init(&ctx_screen->render_order);
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -1487,24 +1409,28 @@ ilm_getPropertiesOfScreen(t_ilm_display screenID,
                               struct ilmScreenProperties* pScreenProperties)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *const ctx = &ilm_context;
 
     if (! pScreenProperties)
     {
         return ILM_ERROR_INVALID_ARGUMENTS;
     }
 
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
+    lock_context(ctx);
     struct screen_context *ctx_screen = NULL;
     ctx_screen = get_screen_context_by_id(&ctx->wl, (uint32_t)screenID);
     if (ctx_screen != NULL) {
-        *pScreenProperties = ctx_screen->prop;
-        create_layerids(ctx_screen, &pScreenProperties->layerIds,
-                                    &pScreenProperties->layerCount);
-        returnValue = ILM_SUCCESS;
+        ivi_wm_screen_get(ctx_screen->controller, IVI_WM_PARAM_RENDER_ORDER);
+
+        if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1 ) {
+            *pScreenProperties = ctx_screen->prop;
+            create_layerids(ctx_screen, &pScreenProperties->layerIds,
+                                        &pScreenProperties->layerCount);
+            returnValue = ILM_SUCCESS;
+        }
     }
 
-    release_instance();
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -1598,41 +1524,23 @@ ilm_getLayerIDsOnScreen(t_ilm_uint screenId,
                             t_ilm_layer** ppArray)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
 
     if ((pLength != NULL) && (ppArray != NULL)) {
+        lock_context(ctx);
         struct screen_context *ctx_screen = NULL;
         ctx_screen = get_screen_context_by_id(&ctx->wl, screenId);
         if (ctx_screen != NULL) {
-            struct layer_context *ctx_layer = NULL;
-            t_ilm_int length = wl_list_length(&ctx_screen->order.list_layer);
+            ivi_wm_screen_get(ctx_screen->controller, IVI_WM_PARAM_RENDER_ORDER);
 
-            if (0 < length)
-            {
-                *ppArray = (t_ilm_layer*)malloc(length * sizeof **ppArray);
-                if (*ppArray != NULL) {
-                    // compositor sends layers in opposite order
-                    // write ids from back to front to turn them around
-                    t_ilm_layer* ids = *ppArray;
-                    wl_list_for_each_reverse(ctx_layer, &ctx_screen->order.list_layer, order.link)
-                    {
-                        *ids = ctx_layer->id_layer;
-                        ++ids;
-                    }
-
-                }
+            if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1 ) {
+                create_layerids(ctx_screen, ppArray, pLength);
+                returnValue = ILM_SUCCESS;
             }
-            else
-            {
-                *ppArray = NULL;
-            }
-
-            *pLength = length;
-            returnValue = ILM_SUCCESS;
         }
     }
 
-    release_instance();
+    unlock_context(ctx);
     return returnValue;
 }
 
@@ -1669,76 +1577,59 @@ ilm_getSurfaceIDsOnLayer(t_ilm_layer layer,
                              t_ilm_int* pLength,
                              t_ilm_surface** ppArray)
 {
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
     struct layer_context *ctx_layer = NULL;
     struct surface_context *ctx_surf = NULL;
     t_ilm_uint length = 0;
     t_ilm_surface* ids = NULL;
+    uint32_t *id = NULL;
 
     if ((pLength == NULL) || (ppArray == NULL)) {
         release_instance();
         return ILM_FAILED;
     }
 
+    lock_context(ctx);
+
     ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
                     &ctx->wl, (uint32_t)layer);
 
     if (ctx_layer == NULL) {
-        release_instance();
+        unlock_context(ctx);
         return ILM_FAILED;
     }
 
-    length = wl_list_length(&ctx_layer->order.list_surface);
-    *ppArray = (t_ilm_surface*)malloc(length * sizeof **ppArray);
+    ivi_wm_layer_get(ctx->wl.controller, layer, IVI_WM_PARAM_RENDER_ORDER);
+    int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+
+    if (ret < 0) {
+        wl_array_release(&ctx_layer->render_order);
+        wl_array_init(&ctx_layer->render_order);
+        unlock_context(ctx);
+        return ILM_FAILED;
+    }
+
+    *ppArray = (t_ilm_surface*)malloc(ctx_layer->render_order.size);
     if (*ppArray == NULL) {
-        release_instance();
+        wl_array_release(&ctx_layer->render_order);
+        wl_array_init(&ctx_layer->render_order);
+        unlock_context(ctx);
         return ILM_FAILED;
     }
 
     ids = *ppArray;
-    wl_list_for_each_reverse(ctx_surf, &ctx_layer->order.list_surface, order.link) {
-        *ids = (t_ilm_surface)ctx_surf->id_surface;
+    wl_array_for_each(id, &ctx_layer->render_order) {
+        *ids = (t_ilm_surface) *id;
         ids++;
+        length++;
     }
+
+    wl_array_release(&ctx_layer->render_order);
+    wl_array_init(&ctx_layer->render_order);
     *pLength = length;
 
-    release_instance();
+    unlock_context(ctx);
     return ILM_SUCCESS;
-}
-
-static int create_controller_layer(struct wayland_context *ctx, t_ilm_uint width, t_ilm_uint height, t_ilm_layer layerid)
-{
-     struct layer_context *ctx_layer = calloc(1, sizeof *ctx_layer);
-     if (ctx_layer == NULL) {
-         fprintf(stderr, "Failed to allocate memory for layer_context\n");
-         return -1;
-     }
-
-     ctx_layer->controller = ivi_controller_layer_create(
-                                 ctx->controller,
-                                 layerid, width, height);
-     if (ctx_layer->controller == NULL) {
-         fprintf(stderr, "Failed to create layer\n");
-         free(ctx_layer);
-         return -1;
-     }
-     ctx_layer->id_layer = layerid;
-     ctx_layer->ctx = ctx;
-
-     wl_list_insert(&ctx->list_layer, &ctx_layer->link);
-     wl_list_init(&ctx_layer->order.link);
-     wl_list_init(&ctx_layer->order.list_surface);
-
-     ivi_controller_layer_add_listener(ctx_layer->controller,
-                                   &controller_layer_listener, ctx_layer);
-
-     if (ctx->notification != NULL) {
-        ilmObjectType layer = ILM_LAYER;
-        ctx->notification(layer, ctx_layer->id_layer, ILM_TRUE,
-                          ctx->notification_user_data);
-     }
-
-     return 0;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -1772,10 +1663,10 @@ ilm_layerCreateWithDimension(t_ilm_layer* pLayerId,
             *pLayerId = layerid;
         }
 
-        if (create_controller_layer(&ctx->wl, width, height, layerid) == 0)
-        {
-           returnValue = ILM_SUCCESS;
-        }
+        ivi_wm_create_layout_layer(ctx->wl.controller, layerid, width, height);
+        wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+
+        returnValue = ILM_SUCCESS;
     } while(0);
 
     release_instance();
@@ -1786,33 +1677,16 @@ ILM_EXPORT ilmErrorTypes
 ilm_layerRemove(t_ilm_layer layerId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-    struct layer_context *ctx_next = NULL;
-    struct surface_context *ctx_surf = NULL;
-    struct surface_context *ctx_surf_next = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    wl_list_for_each_safe(ctx_layer, ctx_next,
-            &ctx->wl.list_layer, link) {
-        if (ctx_layer->id_layer == layerId) {
-            ivi_controller_layer_destroy(ctx_layer->controller, 1);
-
-            wl_list_remove(&ctx_layer->order.link);
-            wl_list_remove(&ctx_layer->link);
-
-            wl_list_for_each_safe(ctx_surf, ctx_surf_next,
-                                  &ctx_layer->order.list_surface, order.link) {
-                remove_ordersurface_from_layer(ctx_surf);
-            }
-
-            free(ctx_layer);
-
-            returnValue = ILM_SUCCESS;
-            break;
-        }
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_destroy_layout_layer(ctx->wl.controller, layerId);
+        wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+        returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -1820,23 +1694,21 @@ ILM_EXPORT ilmErrorTypes
 ilm_layerSetVisibility(t_ilm_layer layerId, t_ilm_bool newVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
+    uint32_t visibility = 0;
 
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerId);
-
-    if (ctx_layer != NULL) {
-        uint32_t visibility = 0;
-        if (newVisibility == ILM_TRUE) {
-            visibility = 1;
-        }
-        ivi_controller_layer_set_visibility(ctx_layer->controller,
-                                            visibility);
-        returnValue = ILM_SUCCESS;
+    if (newVisibility == ILM_TRUE) {
+        visibility = 1;
     }
 
-    release_instance();
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_set_layer_visibility(ctx->wl.controller, layerId, visibility);
+        wl_display_flush(ctx->wl.display);
+        returnValue = ILM_SUCCESS;
+    }
+    unlock_context(ctx);
+
     return returnValue;
 }
 
@@ -1844,22 +1716,28 @@ ILM_EXPORT ilmErrorTypes
 ilm_layerGetVisibility(t_ilm_layer layerId, t_ilm_bool *pVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
+    struct layer_context *ctx_layer = NULL;
 
     if (pVisibility != NULL) {
-        struct layer_context *ctx_layer = NULL;
+        lock_context(ctx);
+
+        ivi_wm_layer_get(ctx->wl.controller, layerId, IVI_WM_PARAM_VISIBILITY);
+        int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
 
         ctx_layer = (struct layer_context*)
                     wayland_controller_get_layer_context(
                         &ctx->wl, (uint32_t)layerId);
 
-        if (ctx_layer != NULL) {
+        if ((ret != -1) && (ctx_layer != NULL))
+        {
             *pVisibility = ctx_layer->prop.visibility;
             returnValue = ILM_SUCCESS;
         }
+
+        unlock_context(ctx);
     }
 
-    release_instance();
     return returnValue;
 }
 
@@ -1867,20 +1745,17 @@ ILM_EXPORT ilmErrorTypes
 ilm_layerSetOpacity(t_ilm_layer layerId, t_ilm_float opacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
+    wl_fixed_t opacity_fixed = wl_fixed_from_double((double)opacity);
 
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerId);
-
-    if (ctx_layer != NULL) {
-        wl_fixed_t opacity_fixed = wl_fixed_from_double((double)opacity);
-        ivi_controller_layer_set_opacity(ctx_layer->controller,
-                                         opacity_fixed);
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_set_layer_opacity(ctx->wl.controller, layerId, opacity_fixed);
+        wl_display_flush(ctx->wl.display);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -1888,22 +1763,28 @@ ILM_EXPORT ilmErrorTypes
 ilm_layerGetOpacity(t_ilm_layer layerId, t_ilm_float *pOpacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
+    struct layer_context *ctx_layer = NULL;
 
     if (pOpacity != NULL) {
-        struct layer_context *ctx_layer = NULL;
+        lock_context(ctx);
+
+        ivi_wm_layer_get(ctx->wl.controller, layerId, IVI_WM_PARAM_OPACITY);
+        int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
 
         ctx_layer = (struct layer_context*)
                     wayland_controller_get_layer_context(
                         &ctx->wl, (uint32_t)layerId);
 
-        if (ctx_layer != NULL) {
+        if ((ret != -1) && (ctx_layer != NULL))
+        {
             *pOpacity = ctx_layer->prop.opacity;
             returnValue = ILM_SUCCESS;
         }
+
+        unlock_context(ctx);
     }
 
-    release_instance();
     return returnValue;
 }
 
@@ -1913,22 +1794,18 @@ ilm_layerSetSourceRectangle(t_ilm_layer layerId,
                                 t_ilm_uint width, t_ilm_uint height)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerId);
-
-    if (ctx_layer != NULL) {
-        ivi_controller_layer_set_source_rectangle(ctx_layer->controller,
-                                                  (uint32_t)x,
-                                                  (uint32_t)y,
-                                                  (uint32_t)width,
-                                                  (uint32_t)height);
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_set_layer_source_rectangle(ctx->wl.controller, layerId,
+                                          (uint32_t)x, (uint32_t)y,
+                                          (uint32_t)width, (uint32_t)height);
+        wl_display_flush(ctx->wl.display);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -1938,87 +1815,32 @@ ilm_layerSetDestinationRectangle(t_ilm_layer layerId,
                                  t_ilm_int width, t_ilm_int height)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerId);
-    if (ctx_layer != NULL) {
-        ivi_controller_layer_set_destination_rectangle(
-                                         ctx_layer->controller,
-                                         (uint32_t)x, (uint32_t)y,
-                                         (uint32_t)width,
-                                         (uint32_t)height);
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_set_layer_destination_rectangle(ctx->wl.controller,
+                                               layerId, (uint32_t)x,
+                                               (uint32_t)y, (uint32_t)width,
+                                               (uint32_t)height);
+        wl_display_flush(ctx->wl.display);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
 ILM_EXPORT ilmErrorTypes
 ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-    int32_t iviorientation = 0;
-
-    do {
-        switch(orientation) {
-        case ILM_ZERO:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES;
-            break;
-        case ILM_NINETY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES;
-            break;
-        case ILM_ONEHUNDREDEIGHTY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES;
-            break;
-        case ILM_TWOHUNDREDSEVENTY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES;
-            break;
-        default:
-            returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-            break;
-        }
-
-        ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer == NULL) {
-            returnValue = ILM_FAILED;
-            break;
-        }
-
-        ivi_controller_layer_set_orientation(ctx_layer->controller,
-                                             iviorientation);
-
-        returnValue = ILM_SUCCESS;
-    } while(0);
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
 ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    if (pOrientation != NULL) {
-        ctx_layer = (struct layer_context*)
-                    wayland_controller_get_layer_context(
-                        &ctx->wl, (uint32_t)layerId);
-        if (ctx_layer != NULL) {
-            *pOrientation = ctx_layer->prop.orientation;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2027,25 +1849,23 @@ ilm_layerSetRenderOrder(t_ilm_layer layerId,
                         t_ilm_int number)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
+    t_ilm_uint i;
 
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerId);
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_layer_clear(ctx->wl.controller, layerId);
 
-    if (ctx_layer)
-    {
-        struct wl_array ids;
-        wl_array_init(&ids);
-        uint32_t *pids = wl_array_add(&ids, number * sizeof *pids);
-        t_ilm_uint i;
-        for (i = 0; i < number; i++) pids[i] = (uint32_t)pSurfaceId[i];
-        ivi_controller_layer_set_render_order(ctx_layer->controller, &ids);
-        wl_array_release(&ids);
+        for (i = 0; i < number; i++) {
+            ivi_wm_layer_add_surface(ctx->wl.controller, layerId,
+                                     (uint32_t)pSurfaceId[i]);
+        }
+
+        wl_display_flush(ctx->wl.display);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2053,23 +1873,21 @@ ILM_EXPORT ilmErrorTypes
 ilm_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
     uint32_t visibility = 0;
 
     if (newVisibility == ILM_TRUE) {
         visibility = 1;
     }
-    ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-    if (ctx_surf) {
-        if (ctx_surf->controller != NULL) {
-            ivi_controller_surface_set_visibility(ctx_surf->controller,
-                                                  visibility);
-            returnValue = ILM_SUCCESS;
-        }
-    }
 
-    release_instance();
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_set_surface_visibility(ctx->wl.controller, surfaceId, visibility);
+        wl_display_flush(ctx->wl.display);
+        returnValue = ILM_SUCCESS;
+    }
+    unlock_context(ctx);
+
     return returnValue;
 }
 
@@ -2077,21 +1895,17 @@ ILM_EXPORT ilmErrorTypes
 ilm_surfaceSetOpacity(t_ilm_surface surfaceId, t_ilm_float opacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
-    wl_fixed_t opacity_fixed = 0;
+    struct ilm_control_context *const ctx = &ilm_context;
+    wl_fixed_t opacity_fixed = wl_fixed_from_double((double)opacity);
 
-    opacity_fixed = wl_fixed_from_double((double)opacity);
-    ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-    if (ctx_surf) {
-        if (ctx_surf->controller != NULL) {
-            ivi_controller_surface_set_opacity(ctx_surf->controller,
-                                               opacity_fixed);
-            returnValue = ILM_SUCCESS;
-        }
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_set_surface_opacity(ctx->wl.controller, surfaceId, opacity_fixed);
+        wl_display_flush(ctx->wl.display);
+        returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2099,18 +1913,26 @@ ILM_EXPORT ilmErrorTypes
 ilm_surfaceGetOpacity(t_ilm_surface surfaceId, t_ilm_float *pOpacity)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
+    struct surface_context *ctx_surf = NULL;
 
     if (pOpacity != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
+        lock_context(ctx);
+
+        ivi_wm_surface_get(ctx->wl.controller, surfaceId, IVI_WM_PARAM_OPACITY);
+        int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+
+        ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceId);
+
+        if ((ret != -1) && (ctx_surf != NULL))
+        {
             *pOpacity = ctx_surf->prop.opacity;
             returnValue = ILM_SUCCESS;
         }
+
+        unlock_context(ctx);
     }
 
-    release_instance();
     return returnValue;
 }
 
@@ -2120,20 +1942,17 @@ ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
                                    t_ilm_int width, t_ilm_int height)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-    if (ctx_surf) {
-        if (ctx_surf->controller != NULL) {
-            ivi_controller_surface_set_destination_rectangle(
-                                                 ctx_surf->controller,
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_set_surface_destination_rectangle(ctx->wl.controller, surfaceId,
                                                  x, y, width, height);
-            returnValue = ILM_SUCCESS;
-        }
+        wl_display_flush(ctx->wl.display);
+        returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2141,43 +1960,37 @@ ILM_EXPORT ilmErrorTypes
 ilm_surfaceSetOrientation(t_ilm_surface surfaceId,
                               ilmOrientation orientation)
 {
+    return ILM_FAILED;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type)
+{
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
-    int32_t iviorientation = 0;
+    struct ilm_control_context *const ctx = &ilm_context;
+    int32_t ivitype = 0;
 
-    do {
-        switch(orientation) {
-        case ILM_ZERO:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_0_DEGREES;
-            break;
-        case ILM_NINETY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_90_DEGREES;
-            break;
-        case ILM_ONEHUNDREDEIGHTY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_180_DEGREES;
-            break;
-        case ILM_TWOHUNDREDSEVENTY:
-            iviorientation = IVI_CONTROLLER_SURFACE_ORIENTATION_270_DEGREES;
-            break;
-        default:
-            returnValue = ILM_ERROR_INVALID_ARGUMENTS;
-            break;
-        }
+    switch(type) {
+    case ILM_SURFACETYPE_RESTRICTED:
+        ivitype = IVI_WM_SURFACE_TYPE_RESTRICTED;
+        break;
+    case ILM_SURFACETYPE_DESKTOP:
+        ivitype = IVI_WM_SURFACE_TYPE_DESKTOP;
+        break;
+    default:
+        ivitype = -1;
+        returnValue = ILM_ERROR_INVALID_ARGUMENTS;
+        break;
+    }
 
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf == NULL) {
-            returnValue = ILM_FAILED;
-            break;
-        }
-
-        ivi_controller_surface_set_orientation(ctx_surf->controller,
-                                               iviorientation);
-
+    lock_context(ctx);
+    if ((ivitype >= 0) && ctx->wl.controller) {
+        ivi_wm_set_surface_type(ctx->wl.controller, surfaceId, type);
+        wl_display_flush(ctx->wl.display);
         returnValue = ILM_SUCCESS;
-    } while(0);
+    }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2185,40 +1998,14 @@ ILM_EXPORT ilmErrorTypes
 ilm_surfaceGetOrientation(t_ilm_surface surfaceId,
                               ilmOrientation *pOrientation)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pOrientation != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
-            *pOrientation = ctx_surf->prop.orientation;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
 ilm_surfaceGetPixelformat(t_ilm_layer surfaceId,
                               ilmPixelFormat *pPixelformat)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-
-    if (pPixelformat != NULL) {
-        struct surface_context *ctx_surf = NULL;
-        ctx_surf = get_surface_context(&ctx->wl, surfaceId);
-        if (ctx_surf) {
-            *pPixelformat = ctx_surf->prop.pixelformat;
-            returnValue = ILM_SUCCESS;
-        }
-    }
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2226,22 +2013,24 @@ ilm_displaySetRenderOrder(t_ilm_display display,
                           t_ilm_layer *pLayerId, const t_ilm_uint number)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
     struct screen_context *ctx_scrn = NULL;
+    t_ilm_uint i;
 
+    lock_context(ctx);
     ctx_scrn = get_screen_context_by_id(&ctx->wl, (uint32_t)display);
     if (ctx_scrn != NULL) {
-        struct wl_array ids;
-        wl_array_init(&ids);
-        uint32_t *pids = wl_array_add(&ids, number * sizeof *pids);
-        t_ilm_uint i;
-        for (i = 0; i < number; i++) pids[i] = (uint32_t)pLayerId[i];
-        ivi_controller_screen_set_render_order(ctx_scrn->controller, &ids);
-        wl_array_release(&ids);
+        ivi_wm_screen_clear(ctx_scrn->controller);
+
+        for (i = 0; i < number; i++) {
+            ivi_wm_screen_add_layer(ctx_scrn->controller, (uint32_t)pLayerId[i]);
+        }
+
+        wl_display_flush(ctx->wl.display);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2249,39 +2038,25 @@ ILM_EXPORT ilmErrorTypes
 ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
     struct screen_context *ctx_scrn = NULL;
 
+    lock_context(ctx);
     ctx_scrn = get_screen_context_by_id(&ctx->wl, (uint32_t)screen);
     if (ctx_scrn != NULL) {
-        ivi_controller_screen_screenshot(ctx_scrn->controller,
-                                        filename);
-        wl_display_flush(ctx->wl.display);
+        ivi_wm_screen_screenshot(ctx_scrn->controller, filename);
+        wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
 ILM_EXPORT ilmErrorTypes
 ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerid);
-    if (ctx_layer != NULL) {
-        ivi_controller_layer_screenshot(ctx_layer->controller,
-                                        filename);
-        wl_display_flush(ctx->wl.display);
-        returnValue = ILM_SUCCESS;
-    }
-
-    release_instance();
-    return returnValue;
+    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2289,18 +2064,16 @@ ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
                               t_ilm_surface surfaceid)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceid);
-    if (ctx_surf) {
-        ivi_controller_surface_screenshot(ctx_surf->controller,
-                                          filename);
-        wl_display_flush(ctx->wl.display);
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_surface_screenshot(ctx->wl.controller, surfaceid, filename);
+        wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2318,6 +2091,9 @@ ilm_layerAddNotification(t_ilm_layer layer,
         returnValue = ILM_ERROR_INVALID_ARGUMENTS;
     } else {
         ctx_layer->notification = callback;
+        ivi_wm_layer_sync(ctx->wl.controller, layer, IVI_WM_SYNC_ADD);
+        if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1)
+            fprintf(stderr, "wl_display_roundtrip queue failed\n");
 
         returnValue = ILM_SUCCESS;
     }
@@ -2329,7 +2105,26 @@ ilm_layerAddNotification(t_ilm_layer layer,
 ILM_EXPORT ilmErrorTypes
 ilm_layerRemoveNotification(t_ilm_layer layer)
 {
-   return ilm_layerAddNotification(layer, NULL);
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct layer_context *ctx_layer = NULL;
+
+    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
+                    &ctx->wl, (uint32_t)layer);
+    if (ctx_layer != NULL) {
+        if (ctx_layer->notification != NULL) {
+            ivi_wm_layer_sync(ctx->wl.controller, layer, IVI_WM_SYNC_REMOVE);
+            wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+
+            ctx_layer->notification = NULL;
+            returnValue = ILM_SUCCESS;
+        } else {
+            returnValue = ILM_ERROR_INVALID_ARGUMENTS;
+        }
+    }
+
+    release_instance();
+    return returnValue;
 }
 
 static struct surface_context *
@@ -2345,10 +2140,8 @@ create_surface_context(struct wayland_context *ctx, uint32_t id_surface)
 
     ctx_surf->id_surface = id_surface;
     ctx_surf->ctx = ctx;
-    ctx_surf->is_surface_creation_noticed = false;
 
     wl_list_insert(&ctx->list_surface, &ctx_surf->link);
-    wl_list_init(&ctx_surf->order.link);
     wl_list_init(&ctx_surf->list_accepted_seats);
 
     return ctx_surf;
@@ -2365,15 +2158,11 @@ ilm_registerNotification(notificationFunc callback, void *user_data)
     ctx->wl.notification_user_data = user_data;
     if (callback != NULL) {
         wl_list_for_each(ctx_layer, &ctx->wl.list_layer, link) {
-            if (ctx_layer->controller) {
-                 callback(ILM_LAYER, ctx_layer->id_layer, ILM_TRUE, user_data);
-            }
+            callback(ILM_LAYER, ctx_layer->id_layer, ILM_TRUE, user_data);
         }
 
         wl_list_for_each(ctx_surf, &ctx->wl.list_surface, link) {
-            if (ctx_surf->controller) {
-                 callback(ILM_SURFACE, ctx_surf->id_surface, ILM_TRUE, user_data);
-            }
+            callback(ILM_SURFACE, ctx_surf->id_surface, ILM_TRUE, user_data);
         }
     }
     release_instance();
@@ -2396,6 +2185,7 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
 
     ctx_surf = (struct surface_context*)get_surface_context(
                     &ctx->wl, (uint32_t)surface);
+
     if (ctx_surf == NULL) {
         if (callback != NULL) {
             callback((uint32_t)surface, NULL, ILM_NOTIFICATION_CONTENT_REMOVED);
@@ -2404,10 +2194,13 @@ ilm_surfaceAddNotification(t_ilm_surface surface,
     }
     else {
         if (callback != NULL) {
+            ctx_surf->notification = callback;
+            ivi_wm_surface_sync(ctx->wl.controller, surface, IVI_WM_SYNC_ADD);
+            if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) == -1)
+                fprintf(stderr, "wl_display_roundtrip queue failed\n");
+
             callback(ctx_surf->id_surface,
-                     &ctx_surf->prop,
-                     (ctx_surf->controller) ? ILM_NOTIFICATION_CONTENT_AVAILABLE
-                                            : ILM_NOTIFICATION_CONTENT_REMOVED);
+                     &ctx_surf->prop, ILM_NOTIFICATION_CONTENT_AVAILABLE);
         }
     }
 
@@ -2434,6 +2227,9 @@ ilm_surfaceRemoveNotification(t_ilm_surface surface)
                     &ctx->wl, (uint32_t)surface);
     if (ctx_surf != NULL) {
         if (ctx_surf->notification != NULL) {
+            ivi_wm_surface_sync(ctx->wl.controller, surface, IVI_WM_SYNC_REMOVE);
+            wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+
             ctx_surf->notification = NULL;
             returnValue = ILM_SUCCESS;
         } else {
@@ -2450,30 +2246,31 @@ ilm_getPropertiesOfSurface(t_ilm_uint surfaceID,
                         struct ilmSurfaceProperties* pSurfaceProperties)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
+    struct surface_context *ctx_surface = NULL;
+    int32_t mask = 0;
+
+    mask |= IVI_WM_PARAM_OPACITY;
+    mask |= IVI_WM_PARAM_VISIBILITY;
+    mask |= IVI_WM_PARAM_SIZE;
 
     if (pSurfaceProperties != NULL) {
-        struct surface_context *ctx_surf = NULL;
+        lock_context(ctx);
 
-        ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceID);
-        if (ctx_surf != NULL) {
-            // request statistics for surface
-            ivi_controller_surface_send_stats(ctx_surf->controller);
-            // force submission
-            int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+        ivi_wm_surface_get(ctx->wl.controller, surfaceID, mask);
+        int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
 
-            // If we got an error here, there is really no sense
-            // in returning the properties as something is fundamentally
-            // broken.
-            if (ret != -1)
-            {
-               *pSurfaceProperties = ctx_surf->prop;
-               returnValue = ILM_SUCCESS;
-            }
+        ctx_surface = get_surface_context(&ctx->wl, (uint32_t)surfaceID);
+
+        if ((ret != -1) && (ctx_surface != NULL))
+        {
+            *pSurfaceProperties = ctx_surface->prop;
+            returnValue = ILM_SUCCESS;
         }
+
+        unlock_context(ctx);
     }
 
-    release_instance();
     return returnValue;
 }
 
@@ -2482,20 +2279,16 @@ ilm_layerAddSurface(t_ilm_layer layerId,
                         t_ilm_surface surfaceId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-    struct surface_context *ctx_surf = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerId);
-    ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceId);
-    if ((ctx_layer != NULL) && (ctx_surf != NULL)) {
-        ivi_controller_layer_add_surface(ctx_layer->controller,
-                                         ctx_surf->controller);
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_layer_add_surface(ctx->wl.controller, layerId, surfaceId);
+        wl_display_flush(ctx->wl.display);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2504,20 +2297,16 @@ ilm_layerRemoveSurface(t_ilm_layer layerId,
                            t_ilm_surface surfaceId)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct layer_context *ctx_layer = NULL;
-    struct surface_context *ctx_surf = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    ctx_layer = (struct layer_context*)wayland_controller_get_layer_context(
-                    &ctx->wl, (uint32_t)layerId);
-    ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceId);
-    if ((ctx_layer != NULL) && (ctx_surf != NULL)) {
-        ivi_controller_layer_remove_surface(ctx_layer->controller,
-                                            ctx_surf->controller);
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_layer_remove_surface(ctx->wl.controller, layerId, surfaceId);
+        wl_display_flush(ctx->wl.display);
         returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2526,18 +2315,26 @@ ilm_surfaceGetVisibility(t_ilm_surface surfaceId,
                              t_ilm_bool *pVisibility)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
     struct surface_context *ctx_surf = NULL;
 
     if (pVisibility != NULL) {
+        lock_context(ctx);
+
+        ivi_wm_surface_get(ctx->wl.controller, surfaceId, IVI_WM_PARAM_VISIBILITY);
+        int ret = wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue);
+
         ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceId);
-        if (ctx_surf != NULL) {
+
+        if ((ret != -1) && (ctx_surf != NULL))
+        {
             *pVisibility = (t_ilm_bool)ctx_surf->prop.visibility;
             returnValue = ILM_SUCCESS;
         }
+
+        unlock_context(ctx);
     }
 
-    release_instance();
     return returnValue;
 }
 
@@ -2547,20 +2344,18 @@ ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId,
                                   t_ilm_int width, t_ilm_int height)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
-    struct surface_context *ctx_surf = NULL;
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    ctx_surf = get_surface_context(&ctx->wl, (uint32_t)surfaceId);
-    if (ctx_surf != NULL) {
-        if (ctx_surf->controller != NULL) {
-            ivi_controller_surface_set_source_rectangle(
-                    ctx_surf->controller,
-                    x, y, width, height);
-            returnValue = ILM_SUCCESS;
-        }
+
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_set_surface_source_rectangle(ctx->wl.controller, surfaceId, x, y,
+                                            width, height);
+        wl_display_flush(ctx->wl.display);
+        returnValue = ILM_SUCCESS;
     }
+    unlock_context(ctx);
 
-    release_instance();
     return returnValue;
 }
 
@@ -2568,18 +2363,37 @@ ILM_EXPORT ilmErrorTypes
 ilm_commitChanges(void)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *ctx = sync_and_acquire_instance();
+    struct ilm_control_context *const ctx = &ilm_context;
 
-    if (ctx->wl.controller != NULL) {
-        ivi_controller_commit_changes(ctx->wl.controller);
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        ivi_wm_commit_changes(ctx->wl.controller);
 
         if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1)
         {
             returnValue = ILM_SUCCESS;
         }
     }
+    unlock_context(ctx);
 
-    release_instance();
+    return returnValue;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_getError(void)
+{
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *const ctx = &ilm_context;
+
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1)
+        {
+            returnValue = ctx->wl.error_flag;
+            ctx->wl.error_flag = ILM_SUCCESS;
+        }
+    }
+    unlock_context(ctx);
 
     return returnValue;
 }

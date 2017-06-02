@@ -92,7 +92,8 @@ TEST_F(IlmCommandTest, SetGetSurfaceOpacity_InvalidInput) {
     t_ilm_uint surface = 0xdeadbeef;
     t_ilm_float opacity;
 
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.88));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(surface, 0.88));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
     ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetOpacity(surface, &opacity));
 }
 
@@ -119,7 +120,8 @@ TEST_F(IlmCommandTest, SetGetLayerOpacity_InvalidInput) {
     t_ilm_layer layer = 0xdeadbeef;
     t_ilm_float opacity;
 
-    ASSERT_NE(ILM_SUCCESS, ilm_layerSetOpacity(layer, 0.88));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetOpacity(layer, 0.88));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
     ASSERT_NE(ILM_SUCCESS, ilm_layerGetOpacity(layer, &opacity));
 }
 
@@ -153,8 +155,10 @@ TEST_F(IlmCommandTest, SetGetSurfaceVisibility_InvalidInput) {
     t_ilm_bool visibility;
 
     ASSERT_NE(ILM_SUCCESS, ilm_surfaceGetVisibility(surface, &visibility));
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_TRUE));
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_FALSE));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_TRUE));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(surface, ILM_FALSE));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
 }
 
 TEST_F(IlmCommandTest, SetGetLayerVisibility) {
@@ -184,8 +188,10 @@ TEST_F(IlmCommandTest, SetGetLayerVisibility_InvalidInput) {
     t_ilm_bool visibility;
 
     ASSERT_NE(ILM_SUCCESS, ilm_layerGetVisibility(layer, &visibility));
-    ASSERT_NE(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_TRUE));
-    ASSERT_NE(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_FALSE));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_TRUE));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(layer, ILM_FALSE));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
 }
 
 TEST_F(IlmCommandTest, SetSurfaceSourceRectangle) {
@@ -207,7 +213,8 @@ TEST_F(IlmCommandTest, SetSurfaceSourceRectangle) {
 }
 
 TEST_F(IlmCommandTest, SetSurfaceSourceRectangle_InvalidInput) {
-    ASSERT_NE(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(0xdeadbeef, 89, 6538, 638, 4));
+    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(0xdeadbeef, 89, 6538, 638, 4));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenIDs) {
@@ -398,7 +405,8 @@ TEST_F(IlmCommandTest, ilm_layerCreate_Remove) {
 }
 
 TEST_F(IlmCommandTest, ilm_layerRemove_InvalidInput) {
-    ASSERT_NE(ILM_SUCCESS, ilm_layerRemove(0xdeadbeef));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(0xdeadbeef));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
 }
 
 TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
@@ -426,7 +434,8 @@ TEST_F(IlmCommandTest, ilm_layerRemove_InvalidUse) {
     ASSERT_EQ(length, orig_length);
 
     // try to remove the same layer once more
-    ASSERT_NE(ILM_SUCCESS, ilm_layerRemove(layer));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(layer));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
 }
 
 TEST_F(IlmCommandTest, ilm_layerAddSurface_ilm_layerRemoveSurface_ilm_getSurfaceIDsOnLayer) {
@@ -632,6 +641,7 @@ TEST_F(IlmCommandTest, ilm_takeScreenshot) {
     }
 
     ASSERT_EQ(ILM_SUCCESS, ilm_takeScreenshot(0, outputFile));
+    ASSERT_EQ(ILM_SUCCESS, ilm_getError());
 
     sleep(1);
     f = fopen(outputFile, "r");
@@ -710,6 +720,7 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot) {
         ivi_application_surface_create(iviApp, surface, wlSurfaces[0]);
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, surface));
+    ASSERT_EQ(ILM_SUCCESS, ilm_getError());
 
     sleep(1);
     f = fopen(outputFile, "r");
@@ -729,7 +740,8 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
     }
 
     // try to dump an non-existing screen
-    ASSERT_NE(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, 0xdeadbeef));
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, 0xdeadbeef));
+    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
 
     // make sure, no screen dump file was created for invalid screen
     ASSERT_NE(0, remove(outputFile));

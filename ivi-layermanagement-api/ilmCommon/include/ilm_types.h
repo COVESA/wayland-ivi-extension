@@ -142,6 +142,16 @@ typedef enum e_ilmOrientation
 } ilmOrientation;
 
 /**
+ * \brief Enumeration for supported surface types
+ * \ingroup ilmControl
+ **/
+typedef enum e_ilmSurfaceType
+{
+    ILM_SURFACETYPE_RESTRICTED = 0,                       /*!< SurfaceType value, to describe an IVI type surface*/
+    ILM_SURFACETYPE_DESKTOP = 1,                     /*!< SurfaceType value, to describe a desktop compatible surface*/
+} ilmSurfaceType;
+
+/**
  * \brief Identifier of different input device types. Can be used as a bitmask.
  * \ingroup ilmClient
  */
