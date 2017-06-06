@@ -86,3 +86,17 @@ add_custom_target(ilm-client-doc
                   COMMENT "Generating ilm-client-api-${ILM_API_VERSION}.pdf"
 )
 
+#=============================================================================================
+# generate pkg-config file for ilmClient API
+#=============================================================================================
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/ilmClient.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ilmClient.pc"
+    @ONLY
+)
+
+install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/ilmClient.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)
