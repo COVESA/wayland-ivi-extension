@@ -635,8 +635,6 @@ touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
 
         /* Assume one view per surface */
         surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
-        view = wl_container_of(surf->views.next, view, surface_link);
-        weston_view_from_global_fixed(view, x, y, &sx, &sy);
 
         /* Find a focused surface from subsurface list */
         send_surf = surf;
@@ -648,6 +646,10 @@ touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
                 }
             }
         }
+
+        view = wl_container_of(send_surf->views.next, view, surface_link);
+        weston_view_from_global_fixed(view, x, y, &sx, &sy);
+
         surface_client = wl_resource_get_client(send_surf->resource);
 
         resource = wl_resource_find_for_client(&grab->touch->resource_list,
