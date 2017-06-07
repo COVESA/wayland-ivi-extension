@@ -1229,6 +1229,13 @@ init_control(void)
         }
     }
 
+    // get screen-ids
+    if (wl_display_roundtrip_queue(wl->display, wl->queue) == -1)
+    {
+        fprintf(stderr, "Failed to do roundtrip queue: %s\n", strerror(errno));
+        return -1;
+    }
+
     ctx->shutdown_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 
     if (ctx->shutdown_fd == -1)
