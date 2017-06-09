@@ -114,8 +114,8 @@
 
     <event name="done">
       <description summary="screenshot finished">
-        This event contains a filedescriptor for a file with raw image data. 
-        Furthermore size, stride, format and timestamp of screenshot are 
+        This event contains a filedescriptor for a file with raw image data.
+        Furthermore size, stride, format and timestamp of screenshot are
         provided.
       </description>
       <arg name="fd" type="fd" summary="fd for file containing image data"/>
