@@ -27,6 +27,7 @@ pkg_check_modules(GLESv2 glesv2 REQUIRED)
 pkg_check_modules(EGL egl REQUIRED)
 pkg_check_modules(WAYLAND_EGL wayland-egl REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
+pkg_check_modules(WAYLAND_CURSOR wayland-cursor REQUIRED)
 
 GET_TARGET_PROPERTY(ILM_CLIENT_INCLUDE_DIRS  ilmClient  INCLUDE_DIRECTORIES)
 
@@ -35,6 +36,7 @@ include_directories(
     ${GLESv2_INCLUDE_DIR}
     ${EGL_INCLUDE_DIR}
     ${WAYLAND_CLIENT_INCLUDE_DIR}
+    ${WAYLAND_CURSOR_INCLUDE_DIR}
     ${FFI_INCLUDE_DIR}
     "include"
 )
@@ -43,6 +45,7 @@ link_directories(
     ${GLESv2_LIBRARY_DIRS}
     ${EGL_LIBRARY_DIRS}
     ${WAYLAND_CLIENT_LIBRARY_DIRS}
+    ${WAYLAND_CURSOR_LIBRARY_DIRS}
 )
 
 set (HEADER_FILES
@@ -70,6 +73,7 @@ add_executable(EGLWLInputEventExample
 
 add_dependencies(EGLWLInputEventExample
     wayland-client
+    wayland-cursor
     wayland-egl
     ivi-application
     ${LIBS}
@@ -79,6 +83,7 @@ set(LIBS
     ${LIBS}
     ${GLESv2_LIBRARIES}
     ${WAYLAND_CLIENT_LIBRARIES}
+    ${WAYLAND_CURSOR_LIBRARIES}
     ${WAYLAND_EGL_LIBRARIES}
     ${FFI_LIBRARIES}
     ${EGL_LIBRARIES}
