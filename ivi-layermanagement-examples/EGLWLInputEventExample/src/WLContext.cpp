@@ -124,6 +124,14 @@ WLContext::RegistryHandleGlobal(void* data,
                                                           1));
         }
 
+        if (!strcmp(interface, "wl_shm")){
+            surface->SetWLShm(
+                (struct wl_shm*)wl_registry_bind(registry,
+                                                          name,
+                                                          &wl_shm_interface,
+                                                          1));
+        }
+
         if (!strcmp(interface, "wl_seat")){
             struct seat_data *seat_data = (struct seat_data *)calloc(1, sizeof *seat_data);
             seat_data->ctx = surface;
