@@ -25,6 +25,7 @@
 #include "WLEyes.h"
 #include "WLEyesRenderer.h"
 #include <poll.h>
+#include <wayland-cursor.h>
 
 #define WL_UNUSED(A) (A)=(A)
 
@@ -93,16 +94,57 @@ void WaitForEvent(struct wl_display* wlDisplay, int fd)
 
 //////////////////////////////////////////////////////////////////////////////
 
+static void
+set_pointer_image(struct seat_data* context)
+{
+    struct wl_cursor *cursor = NULL;
+    struct wl_cursor_image *image = NULL;
+    struct wl_buffer *buffer = NULL;
+
+    if (!context->wlPointer || !context->ctx->GetWLCursor()) {
+        fprintf(stderr, "no wlPointer or no wlCursors\n");
+        return;
+    }
+
+    cursor = context->ctx->GetWLCursor();
+    if (!cursor) {
+        fprintf(stderr, "no cursor pointer set\n");
+        return;
+    }
+
+    image = cursor->images[0];
+    buffer = wl_cursor_image_get_buffer(image);
+
+    if (!buffer) {
+        fprintf(stderr, "buffer for cursor not available\n");
+        return;
+    }
+
+    wl_pointer_set_cursor(context->wlPointer, NULL,
+                  context->ctx->GetPointerSurface(),
+                  image->hotspot_x, image->hotspot_y);
+
+    wl_surface_attach(context->ctx->GetPointerSurface(), buffer, 0, 0);
+
+    wl_surface_damage(context->ctx->GetPointerSurface(), 0, 0,
+                  image->width, image->height);
+
+    wl_surface_commit(context->ctx->GetPointerSurface());
+}
+
 void
 PointerHandleEnter(void* data, struct wl_pointer* wlPointer, uint32_t serial,
                    struct wl_surface* wlSurface, wl_fixed_t sx, wl_fixed_t sy)
 {
-    WL_UNUSED(data);
     WL_UNUSED(wlPointer);
-    WL_UNUSED(serial);
     WL_UNUSED(wlSurface);
     WL_UNUSED(sx);
     WL_UNUSED(sy);
+
+    struct seat_data* context =
+                   static_cast<struct seat_data*>(data);
+
+    set_pointer_image(context);
     printf("ENTER EGLWLINPUT PointerHandleEnter: x(%d), y(%d)\n",
            wl_fixed_to_int(sx), wl_fixed_to_int(sy));
 }
