@@ -25,15 +25,17 @@
 #include <ivi-application-client-protocol.h>
 #include <wayland-cursor.h>
 
+
+struct seat_data {
+    struct wl_seat *wlSeat;
+    struct wl_keyboard *wlKeyboard;
+    struct wl_pointer *wlPointer;
+    struct wl_touch *wlTouch;
+    class WLContext *ctx;
+};
+
 class WLContext
 {
-	struct seat_data {
-		struct wl_seat *wlSeat;
-		struct wl_keyboard *wlKeyboard;
-		struct wl_pointer *wlPointer;
-		struct wl_touch *wlTouch;
-		class WLContext *ctx;
-	};
 // properties
 private:
     struct wl_display*    m_wlDisplay;

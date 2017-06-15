@@ -125,7 +125,7 @@ WLContext::RegistryHandleGlobal(void* data,
         }
 
         if (!strcmp(interface, "wl_seat")){
-            struct WLContext::seat_data *seat_data = (struct WLContext::seat_data *)calloc(1, sizeof *seat_data);
+            struct seat_data *seat_data = (struct seat_data *)calloc(1, sizeof *seat_data);
             seat_data->ctx = surface;
             seat_data->wlSeat = (wl_seat*)wl_registry_bind(
                                  registry, name, &wl_seat_interface, 1);
@@ -138,8 +138,8 @@ WLContext::RegistryHandleGlobal(void* data,
 void
 WLContext::SeatHandleCapabilities(void* data, struct wl_seat* seat, uint32_t caps)
 {
-	struct WLContext::seat_data* context =
-			static_cast<struct WLContext::seat_data*>(data);
+	struct seat_data* context =
+			static_cast<struct seat_data*>(data);
     assert(context);
 
     if ((caps & WL_SEAT_CAPABILITY_POINTER) && !context->wlPointer){
