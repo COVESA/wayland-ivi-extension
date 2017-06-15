@@ -57,6 +57,43 @@ WLContext::~WLContext()
 
 //////////////////////////////////////////////////////////////////////////////
 
+/*
+ * The following correspondences between file names and cursors was copied
+ * from: https://bugs.kde.org/attachment.cgi?id=67313
+ */
+
+static const char *left_ptrs[] = {
+	"left_ptr",
+	"default",
+	"top_left_arrow",
+	"left-arrow"
+};
+
+static void
+create_cursors(WLContext* wlContext)
+{
+	int size = 32;
+	unsigned int j;
+	struct wl_cursor *cursor = NULL;
+
+	wlContext->SetWLCursorTheme(wl_cursor_theme_load(NULL, size, wlContext->GetWLShm()));
+	if (!wlContext->GetWLCursorTheme()) {
+		fprintf(stderr, "could not load default theme\n");
+		return;
+	}
+	wlContext->SetWLCursor(
+			(wl_cursor*) malloc(sizeof wlContext->GetWLCursor()));
+
+	for (j = 0; !cursor && j < 4; ++j)
+		cursor = wl_cursor_theme_get_cursor(wlContext->GetWLCursorTheme(),
+				left_ptrs[j]);
+
+	if (!cursor)
+		fprintf(stderr, "could not load cursor '%s'\n", left_ptrs[j]);
+
+	wlContext->SetWLCursor(cursor);
+}
+
 void
 WLContext::RegistryHandleGlobal(void* data,
                                 struct wl_registry* registry,
@@ -110,6 +147,9 @@ WLContext::SeatHandleCapabilities(void* data, struct wl_seat* seat, uint32_t cap
         wl_pointer_set_user_data(context->wlPointer, data);
         wl_pointer_add_listener(context->wlPointer,
                                 context->ctx->GetWLPointerListener(), data);
+        // create cursors
+        create_cursors(context->ctx);
+        context->ctx->SetPointerSurface(wl_compositor_create_surface(context->ctx->GetWLCompositor()));
     } else
     if (!(caps & WL_SEAT_CAPABILITY_POINTER) && context->wlPointer){
         wl_pointer_destroy(context->wlPointer);
