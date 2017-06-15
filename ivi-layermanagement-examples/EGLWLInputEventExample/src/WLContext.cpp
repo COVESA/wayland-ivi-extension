@@ -47,6 +47,9 @@ WLContext::WLContext()
 , m_wlPointerListener(NULL)
 , m_wlKeyboardListener(NULL)
 , m_wlTouchListener(NULL)
+, m_wlCursorTheme(NULL)
+, m_wlCursor(NULL)
+, m_wlShm(NULL)
 {
 }
 
@@ -162,6 +165,17 @@ WLContext::SeatHandleCapabilities(void* data, struct wl_seat* seat, uint32_t cap
     if (!(caps & WL_SEAT_CAPABILITY_POINTER) && context->wlPointer){
         wl_pointer_destroy(context->wlPointer);
         context->wlPointer = NULL;
+
+        if (context->ctx->GetPointerSurface()){
+            wl_surface_destroy(context->ctx->GetPointerSurface());
+            context->ctx->SetPointerSurface(NULL);
+        }
+
+        if (context->ctx->GetWLCursorTheme())
+            wl_cursor_theme_destroy(context->ctx->GetWLCursorTheme());
+
+        if (context->ctx->GetWLCursor())
+            free(context->ctx->GetWLCursor());
     }
 
     if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !context->wlKeyboard){
@@ -216,6 +230,17 @@ WLContext::DestroyWLContext()
 
     if (m_wlCompositor)
         wl_compositor_destroy(m_wlCompositor);
+
+    if (m_pointerSurface){
+        wl_surface_destroy(m_pointerSurface);
+        m_pointerSurface = NULL;
+    }
+
+    if (m_wlCursorTheme)
+        wl_cursor_theme_destroy(m_wlCursorTheme);
+
+    if (m_wlCursor)
+        free(m_wlCursor);
 
     wl_registry_destroy(m_wlRegistry);
     wl_display_flush(m_wlDisplay);
