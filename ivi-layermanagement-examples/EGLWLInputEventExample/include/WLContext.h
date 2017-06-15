@@ -44,6 +44,11 @@ private:
     struct wl_keyboard_listener* m_wlKeyboardListener;
     struct wl_touch_listener*    m_wlTouchListener;
 
+    struct wl_cursor_theme* m_wlCursorTheme;
+    struct wl_cursor* m_wlCursor;
+    struct wl_shm* m_wlShm;
+    struct wl_surface *m_pointerSurface;
+
 // methods
 public:
     WLContext();
@@ -60,6 +65,10 @@ public:
     struct wl_keyboard_listener* GetWLKeyboardListener() const;
     struct wl_touch_listener* GetWLTouchListener() const;
     struct ivi_application* GetIviApp() const;
+    struct wl_cursor_theme* GetWLCursorTheme() const;
+    struct wl_cursor* GetWLCursor() const;
+    struct wl_shm* GetWLShm() const;
+    struct wl_surface* GetPointerSurface() const;
 
     void SetEventMask(uint32_t mask);
     void SetWLCompositor(struct wl_compositor* wlCompositor);
@@ -68,6 +77,10 @@ public:
     void SetWLPointer(struct wl_pointer* wlPointer);
     void SetWLKeyboard(struct wl_keyboard* wlKeyboard);
     void SetWLTouch(struct wl_touch* wlTouch);
+    void SetWLCursorTheme(struct wl_cursor_theme* wlCursorTheme);
+    void SetWLCursor(struct wl_cursor* wlCursor);
+    void SetWLShm(struct wl_shm* wlShm);
+    void SetPointerSurface(struct wl_surface* pointerSurface);
 
     static void RegistryHandleGlobal(void* data,
                                      struct wl_registry* registry,
@@ -93,9 +106,21 @@ inline struct wl_keyboard_listener* WLContext::GetWLKeyboardListener() const
 inline struct wl_touch_listener* WLContext::GetWLTouchListener() const
     { return m_wlTouchListener; }
 inline struct ivi_application* WLContext::GetIviApp() const { return m_iviApp; }
+inline struct wl_cursor_theme* WLContext::GetWLCursorTheme() const { return m_wlCursorTheme; }
+inline struct wl_cursor* WLContext::GetWLCursor() const { return m_wlCursor; }
+inline struct wl_shm* WLContext::GetWLShm() const { return m_wlShm; }
+inline struct wl_surface* WLContext::GetPointerSurface() const
+    { return m_pointerSurface; }
 inline void WLContext::SetWLCompositor(struct wl_compositor* wlCompositor)
     { m_wlCompositor = wlCompositor; }
 inline void WLContext::SetIviApp(struct ivi_application* iviApp)
     { m_iviApp = iviApp; }
+inline void WLContext::SetWLCursorTheme(struct wl_cursor_theme* wlCursorTheme)
+    { m_wlCursorTheme = wlCursorTheme; }
+inline void WLContext::SetWLCursor(struct wl_cursor* wlCursor)
+    { m_wlCursor = wlCursor; }
+inline void WLContext::SetWLShm(struct wl_shm* wlShm) { m_wlShm = wlShm; }
+inline void WLContext::SetPointerSurface(struct wl_surface* pointerSurface)
+    { m_pointerSurface = pointerSurface; }
 
 #endif /* _WLCONTEXT_H_ */
