@@ -1166,6 +1166,27 @@ controller_screenshot_notify(struct wl_listener *listener, void *data)
 
     --output->disable_planes;
 
+    // map to shm buffer format
+    switch (format) {
+    case PIXMAN_a8r8g8b8:
+        shm_format = WL_SHM_FORMAT_ARGB8888;
+        break;
+    case PIXMAN_x8r8g8b8:
+        shm_format = WL_SHM_FORMAT_XRGB8888;
+        break;
+    case PIXMAN_a8b8g8r8:
+        shm_format = WL_SHM_FORMAT_ABGR8888;
+        break;
+    case PIXMAN_x8b8g8r8:
+        shm_format = WL_SHM_FORMAT_XBGR8888;
+        break;
+    default:
+        ivi_screenshot_send_error(l->screenshot,
+                                  IVI_SCREENSHOT_ERROR_NOT_SUPPORTED,
+                                  "unsupported pixel format");
+        goto err_fd;
+    }
+
     width = output->current_mode->width;
     height = output->current_mode->height;
     stride = width * (PIXMAN_FORMAT_BPP(format) / 8);
@@ -1198,27 +1219,6 @@ controller_screenshot_notify(struct wl_listener *listener, void *data)
 
     if (output->compositor->capabilities & WESTON_CAP_CAPTURE_YFLIP)
         flip_y(stride, height, readpixs);
-
-    // map to shm buffer format
-    switch (format) {
-    case PIXMAN_a8r8g8b8:
-        shm_format = WL_SHM_FORMAT_ARGB8888;
-        break;
-    case PIXMAN_x8r8g8b8:
-        shm_format = WL_SHM_FORMAT_XRGB8888;
-        break;
-    case PIXMAN_a8b8g8r8:
-        shm_format = WL_SHM_FORMAT_ABGR8888;
-        break;
-    case PIXMAN_x8b8g8r8:
-        shm_format = WL_SHM_FORMAT_XBGR8888;
-        break;
-    default:
-        ivi_screenshot_send_error(l->screenshot,
-                                  IVI_SCREENSHOT_ERROR_NOT_SUPPORTED,
-                                  "unsupported pixel format");
-        goto err_readpix;
-    }
 
     ivi_screenshot_send_done(l->screenshot, fd, width, height, stride,
                              shm_format, output->frame_time);
