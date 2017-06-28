@@ -97,8 +97,6 @@ void printScreenProperties(unsigned int screenid, const char* prefix)
     cout << prefix << "- resolution:           x=" << screenProperties.screenWidth << ", y="
             << screenProperties.screenHeight << "\n";
 
-    cout << prefix << "- hardware layer count: " << screenProperties.harwareLayerCount << "\n";
-
     cout << prefix << "- layer render order:   ";
 
     for (t_ilm_uint layerIndex = 0; layerIndex < screenProperties.layerCount; ++layerIndex)
@@ -125,10 +123,6 @@ void printLayerProperties(unsigned int layerid, const char* prefix)
         return;
     }
 
-    cout << prefix << "- created by pid:       " << p.creatorPid << "\n";
-
-    cout << prefix << "- original size:        x=" << p.origSourceWidth
-            << ", y=" << p.origSourceHeight << "\n";
     cout << prefix << "- destination region:   x=" << p.destX << ", y="
             << p.destY << ", w=" << p.destWidth << ", h=" << p.destHeight
             << "\n";
@@ -138,23 +132,6 @@ void printLayerProperties(unsigned int layerid, const char* prefix)
 
     cout << prefix << "- opacity:              " << p.opacity << "\n";
     cout << prefix << "- visibility:           " << p.visibility << "\n";
-
-    cout << prefix << "- type:                 " << p.type << " (";
-    switch (p.type)
-    {
-    case 1/*Hardware*/:
-        cout << "hardware)\n";
-        break;
-    case 2/*Software_2D*/:
-        cout << "software 2d)\n";
-        break;
-    case 3/*Software_2_5D*/:
-        cout << "software 2.5d)\n";
-        break;
-    default:
-        cout << "unknown)\n";
-        break;
-    }
 
     cout << prefix << "- surface render order: ";
 
@@ -244,37 +221,6 @@ void printSurfaceProperties(unsigned int surfaceid, const char* prefix)
 
     cout << prefix << "- opacity:            " << p.opacity << "\n";
     cout << prefix << "- visibility:         " << p.visibility << "\n";
-
-    cout << prefix << "- pixel format:       " << p.pixelformat << " (";
-    switch (p.pixelformat)
-    {
-    case 0/*PIXELFORMAT_R8*/:
-        cout << "R-8)\n";
-        break;
-    case 1/*PIXELFORMAT_RGB888*/:
-        cout << "RGB-888)\n";
-        break;
-    case 2/*PIXELFORMAT_RGBA8888*/:
-        cout << "RGBA-8888)\n";
-        break;
-    case 3/*PIXELFORMAT_RGB565*/:
-        cout << "RGB-565)\n";
-        break;
-    case 4/*PIXELFORMAT_RGBA5551*/:
-        cout << "RGBA-5551)\n";
-        break;
-    case 5/*PIXELFORMAT_RGBA6661*/:
-        cout << "RGBA-6661)\n";
-        break;
-    case 6/*PIXELFORMAT_RGBA4444*/:
-        cout << "RGBA-4444)\n";
-        break;
-    default:
-        cout << "unknown)\n";
-        break;
-    }
-
-    cout << prefix << "- native surface:     " << p.nativeSurface << "\n";
 
     cout << prefix << "- counters:           frame=" << p.frameCounter
             << ", draw=" << p.drawCounter << ", update=" << p.updateCounter
