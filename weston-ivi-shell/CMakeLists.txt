@@ -38,10 +38,17 @@ if (IVI_SHARE)
     )
 endif (IVI_SHARE)
 
+INCLUDE (CheckFunctionExists)
+
+CHECK_FUNCTION_EXISTS(posix_fallocate HAVE_POSIX_FALLOCATE)
+
+configure_file(src/config.h.cmake config.h)
+
 GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
 
 include_directories(
     src
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${IVI_EXTENSION_INCLUDE_DIRS}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
@@ -56,7 +63,6 @@ link_directories(
 
 add_library(${PROJECT_NAME} MODULE
     src/ivi-controller.c
-    src/bitmap.c
     ${BUFFER_SHARING_SRC_FILES}
 )
 
