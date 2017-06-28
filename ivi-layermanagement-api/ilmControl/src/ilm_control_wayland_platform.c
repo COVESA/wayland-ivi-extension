@@ -245,12 +245,6 @@ wm_listener_layer_source_rectangle(void *data, struct ivi_wm *controller,
     ctx_layer->prop.sourceY = (t_ilm_uint)y;
     ctx_layer->prop.sourceWidth = (t_ilm_uint)width;
     ctx_layer->prop.sourceHeight = (t_ilm_uint)height;
-    if (ctx_layer->prop.origSourceWidth == 0) {
-        ctx_layer->prop.origSourceWidth = (t_ilm_uint)width;
-    }
-    if (ctx_layer->prop.origSourceHeight == 0) {
-        ctx_layer->prop.origSourceHeight = (t_ilm_uint)height;
-    }
 
     if (ctx_layer->notification != NULL) {
         ctx_layer->notification(ctx_layer->id_layer,
