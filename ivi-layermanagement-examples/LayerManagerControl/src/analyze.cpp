@@ -542,22 +542,22 @@ t_ilm_bool analyzeCheckRendered(t_ilm_surface targetSurfaceId, t_scene_data& sce
     return onLayer && layerOnScreen;
 }
 
-t_ilm_bool analyzeUpdateCounter(t_ilm_surface targetSurfaceId, t_scene_data& scene)
+t_ilm_bool analyzeFrameCounter(t_ilm_surface targetSurfaceId, t_scene_data& scene)
 {
     ilmSurfaceProperties& targetSurfaceProperties = scene.surfaceProperties[targetSurfaceId];
 
-    t_ilm_bool problem = targetSurfaceProperties.updateCounter == 0;
+    t_ilm_bool problem = targetSurfaceProperties.frameCounter == 0;
     string tag;
     string flag;
     char description[300] = "";
 
-    tag = "Update Counter";
+    tag = "Frame Counter";
     //check if surface counter was updated since its creation
     if (problem)
     {
         flag = "PROBLEM";
-        sprintf(description, "Surface %i update counter is %i, no content was added to the surface since its creation",
-                targetSurfaceId, targetSurfaceProperties.updateCounter);
+        sprintf(description, "Surface %i frame counter is %i, no content was added to the surface since its creation",
+                targetSurfaceId, targetSurfaceProperties.frameCounter);
     }
     else
     {
@@ -596,7 +596,7 @@ t_ilm_bool analyzeSurface(t_ilm_surface targetSurfaceId)
     analyzeOcclusion(targetSurfaceId, scene);
 
     //check if the surface has been updated (if it has any content)
-    analyzeUpdateCounter(targetSurfaceId, scene);
+    analyzeFrameCounter(targetSurfaceId, scene);
 
     return ILM_TRUE;
 }

@@ -48,7 +48,6 @@ void captureSceneDataHelper(t_ilm_surface surfaceId, t_scene_data* pSceneData, I
     pSurface->set("destWidth", props.destWidth);
     pSurface->set("destX", props.destX);
     pSurface->set("destY", props.destY);
-    pSurface->set("drawCounter", props.drawCounter);
     pSurface->set("frameCounter", props.frameCounter);
     pSurface->set("opacity", props.opacity);
     pSurface->set("origSourceHeight", props.origSourceHeight);
@@ -57,7 +56,6 @@ void captureSceneDataHelper(t_ilm_surface surfaceId, t_scene_data* pSceneData, I
     pSurface->set("sourceWidth", props.sourceWidth);
     pSurface->set("sourceX", props.sourceX);
     pSurface->set("sourceY", props.sourceY);
-    pSurface->set("updateCounter", props.updateCounter);
     pSurface->set("visibility", props.visibility);
 }
 
@@ -279,7 +277,6 @@ ilmSurfaceProperties getSurfaceProperties(IlmSurface* pIlmsurface)
     pIlmsurface->get("destWidth", &(props.destWidth));
     pIlmsurface->get("destX", &(props.destX));
     pIlmsurface->get("destY", &(props.destY));
-    pIlmsurface->get("drawCounter", &(props.drawCounter));
     pIlmsurface->get("frameCounter", &(props.frameCounter));
     pIlmsurface->get("opacity", &(props.opacity));
     pIlmsurface->get("origSourceHeight", &(props.origSourceHeight));
@@ -288,7 +285,6 @@ ilmSurfaceProperties getSurfaceProperties(IlmSurface* pIlmsurface)
     pIlmsurface->get("sourceWidth", &(props.sourceWidth));
     pIlmsurface->get("sourceX", &(props.sourceX));
     pIlmsurface->get("sourceY", &(props.sourceY));
-    pIlmsurface->get("updateCounter", &(props.updateCounter));
     pIlmsurface->get("visibility", &(props.visibility));
 
     return props;
