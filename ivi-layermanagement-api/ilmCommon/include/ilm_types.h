@@ -231,6 +231,7 @@ struct ilmScreenProperties
     t_ilm_layer* layerIds;          /*!< array of layer ids */
     t_ilm_uint screenWidth;         /*!< width value of screen in pixels */
     t_ilm_uint screenHeight;        /*!< height value of screen in pixels */
+    t_ilm_char connectorName[256]; /* name of the connector of the screen */
 };
 
 /**
