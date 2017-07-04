@@ -650,6 +650,16 @@ wm_screen_listener_layer_added(void *data, struct ivi_wm_screen *controller,
 }
 
 static void
+wm_screen_listener_connector_name(void *data, struct ivi_wm_screen *controller,
+                                  const char *connector_name)
+{
+    struct screen_context *ctx_screen = data;
+    (void) controller;
+
+    strcpy(ctx_screen->prop.connectorName, connector_name);
+}
+
+static void
 wm_screen_listener_error(void *data, struct ivi_wm_screen *controller,
                          uint32_t code, const char *message)
 {
@@ -688,6 +698,7 @@ static struct ivi_wm_screen_listener wm_screen_listener=
 {
     wm_screen_listener_screen_id,
     wm_screen_listener_layer_added,
+    wm_screen_listener_connector_name,
     wm_screen_listener_error
 };
 
