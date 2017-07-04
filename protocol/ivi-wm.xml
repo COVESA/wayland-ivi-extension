@@ -87,6 +87,13 @@
       <arg name="layer_id" type="uint"/>
     </event>
 
+    <event name="connector_name">
+      <description summary="advertise connector name of the corresponding output">
+        Sent immediately after creating the ivi_wm_screen object.
+      </description>
+      <arg name="process_name" type="string"/>
+    </event>
+
     <enum name="error">
        <entry name="no_layer" value="0"
               summary="the layer with given id does not exist"/>
