@@ -26,6 +26,11 @@
 
 #include <weston.h>
 #include <weston/ivi-layout-export.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "plugin-registry.h"
 #include "ilm_types.h"
 
@@ -296,6 +301,32 @@ input_ctrl_kbd_snd_event_resource(struct seat_ctx *ctx_seat,
     switch(kbd_data->kbd_evt)
     {
     case KEYBOARD_ENTER:
+        if (wl_resource_get_version(resource) >=
+                WL_KEYBOARD_REPEAT_INFO_SINCE_VERSION) {
+            wl_keyboard_send_repeat_info(resource,
+                             seat->compositor->kb_repeat_rate,
+                             seat->compositor->kb_repeat_delay);
+        }
+
+        if (seat->compositor->use_xkbcommon) {
+            wl_keyboard_send_keymap(resource,
+                        WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
+                        keyboard->xkb_info->keymap_fd,
+                        keyboard->xkb_info->keymap_size);
+        } else {
+            int null_fd = open("/dev/null", O_RDONLY);
+            wl_keyboard_send_keymap(resource,
+                        WL_KEYBOARD_KEYMAP_FORMAT_NO_KEYMAP,
+                        null_fd,
+                        0);
+            close(null_fd);
+        }
+        wl_keyboard_send_modifiers(resource,
+                       kbd_data->serial,
+                       keyboard->modifiers.mods_depressed,
+                       keyboard->modifiers.mods_latched,
+                       keyboard->modifiers.mods_locked,
+                       keyboard->modifiers.group);
         wl_keyboard_send_enter(resource, kbd_data->serial, surf_resource,
                 &keyboard->keys);
 
