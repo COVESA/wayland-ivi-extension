@@ -292,6 +292,24 @@ input_ctrl_get_surf_ctx_from_id(struct input_context *ctx,
     return input_ctrl_get_surf_ctx(ctx, lyt_surf);
 }
 
+
+static struct surface_ctx *
+input_ctrl_get_surf_ctx_from_surf(struct input_context *ctx,
+        struct weston_surface *west_surf)
+{
+    struct weston_surface *main_surface;
+    struct ivi_layout_surface *layout_surf;
+    struct surface_ctx *surf_ctx = NULL;
+    const struct ivi_layout_interface *lyt_if = ctx->ivi_layout_interface;
+    main_surface = weston_surface_get_main_surface(west_surf);
+
+    if (NULL != main_surface) {
+        layout_surf = lyt_if->get_surface(main_surface);
+        surf_ctx = input_ctrl_get_surf_ctx(ctx, layout_surf);
+    }
+    return surf_ctx;
+}
+
 static void
 input_ctrl_kbd_snd_event_resource(struct seat_ctx *ctx_seat,
         struct weston_keyboard *keyboard, struct wl_resource *resource,
