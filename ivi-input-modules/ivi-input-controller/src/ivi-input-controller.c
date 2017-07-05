@@ -79,7 +79,26 @@ struct input_context {
     struct wl_listener compositor_destroy_listener;
 };
 
-static int
+enum kbd_events {
+    KEYBOARD_ENTER,
+    KEYBOARD_LEAVE,
+    KEYBOARD_KEY,
+    KEYBOARD_MODIFIER
+};
+
+struct wl_keyboard_data {
+    enum kbd_events kbd_evt;
+    uint32_t time;
+    uint32_t key;
+    uint32_t state;
+    uint32_t mods_depressed;
+    uint32_t mods_latched;
+    uint32_t mods_locked;
+    uint32_t group;
+    uint32_t serial;
+};
+
+static struct seat_focus *
 get_accepted_seat(struct surface_ctx *surface, const char *seat)
 {
     struct seat_focus *st_focus;
@@ -154,6 +173,7 @@ remove_accepted_seat(struct surface_ctx *surface, const char *seat)
     }
     return ret;
 }
+
 
 static void
 send_input_acceptance(struct input_context *ctx, uint32_t surface_id, const char *seat, int32_t accepted)
@@ -255,42 +275,198 @@ input_ctrl_get_surf_ctx(struct input_context *ctx,
     return ret_ctx;
 }
 
+
+static struct surface_ctx *
+input_ctrl_get_surf_ctx_from_id(struct input_context *ctx,
+        uint32_t ivi_surf_id)
+{
+    const struct ivi_layout_interface *interface = ctx->ivi_layout_interface;
+    struct ivi_layout_surface *lyt_surf;
+    lyt_surf = interface->get_surface_from_id(ivi_surf_id);
+
+    return input_ctrl_get_surf_ctx(ctx, lyt_surf);
+}
+
+static void
+input_ctrl_kbd_snd_event_resource(struct seat_ctx *ctx_seat,
+        struct weston_keyboard *keyboard, struct wl_resource *resource,
+        struct wl_resource *surf_resource, struct wl_keyboard_data *kbd_data)
+{
+    struct weston_seat *seat = ctx_seat->west_seat;
+    switch(kbd_data->kbd_evt)
+    {
+    case KEYBOARD_ENTER:
+        wl_keyboard_send_enter(resource, kbd_data->serial, surf_resource,
+                &keyboard->keys);
+
+        break;
+    case KEYBOARD_LEAVE:
+        wl_keyboard_send_leave(resource, kbd_data->serial, surf_resource);
+        break;
+    case KEYBOARD_KEY:
+        wl_keyboard_send_key(resource, kbd_data->serial, kbd_data->time,
+                kbd_data->key, kbd_data->state);
+        break;
+    case KEYBOARD_MODIFIER:
+        wl_keyboard_send_modifiers(resource,
+                       kbd_data->serial,
+                       kbd_data->mods_depressed,
+                       kbd_data->mods_latched,
+                       kbd_data->mods_locked,
+                       kbd_data->group);
+        break;
+    default:
+        weston_log("%s: error:  Uknown keyboard event %d", __FUNCTION__,
+                kbd_data->kbd_evt);
+        break;
+    }
+}
+
+
+static void
+input_ctrl_kbd_wl_snd_event(struct seat_ctx *ctx_seat,
+        struct weston_surface *send_surf, struct weston_keyboard *keyboard,
+        struct wl_keyboard_data *kbd_data)
+{
+    struct wl_resource *resource;
+    struct input_context *ctx = ctx_seat->input_ctx;
+    struct wl_client *surface_client;
+    struct wl_client *client;
+    struct wl_list *resource_list;
+
+    surface_client = wl_resource_get_client(send_surf->resource);
+    resource_list = &keyboard->focus_resource_list;
+    wl_resource_for_each(resource, resource_list) {
+        client = wl_resource_get_client(resource);
+        if (surface_client == client){
+            input_ctrl_kbd_snd_event_resource(ctx_seat, keyboard, resource,
+                    send_surf->resource, kbd_data);
+        }
+    }
+
+    resource_list = &keyboard->resource_list;
+    wl_resource_for_each(resource, resource_list) {
+        client = wl_resource_get_client(resource);
+        if (surface_client == client){
+            input_ctrl_kbd_snd_event_resource(ctx_seat, keyboard, resource,
+                    send_surf->resource, kbd_data);
+        }
+    }
+}
+
+
+static void
+input_ctrl_kbd_leave_surf(struct seat_ctx *ctx_seat,
+        struct surface_ctx *surf_ctx, struct weston_surface *w_surf)
+{
+    struct wl_keyboard_data kbd_data;
+    struct input_context *ctx = ctx_seat->input_ctx;
+    const struct ivi_layout_interface *interface = ctx->ivi_layout_interface;
+    struct seat_focus *st_focus;
+
+
+    st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
+
+    if ((NULL != st_focus)
+        && ((st_focus->focus & ILM_INPUT_DEVICE_KEYBOARD))) {
+
+        kbd_data.kbd_evt = KEYBOARD_LEAVE;
+        kbd_data.serial = wl_display_next_serial(
+                                ctx->compositor->wl_display);;
+        input_ctrl_kbd_wl_snd_event(ctx_seat, w_surf,
+                ctx_seat->keyboard_grab.keyboard, &kbd_data);
+
+        st_focus->focus &= ~ILM_INPUT_DEVICE_KEYBOARD;
+        send_input_focus(ctx,
+                interface->get_id_of_surface(surf_ctx->layout_surface),
+                ILM_INPUT_DEVICE_KEYBOARD, ILM_FALSE);
+    }
+}
+
+static void
+input_ctrl_kbd_enter_surf(struct seat_ctx *ctx_seat,
+        struct surface_ctx *surf_ctx, struct weston_surface *w_surf)
+{
+    struct wl_keyboard_data kbd_data;
+    struct input_context *ctx = ctx_seat->input_ctx;
+    struct seat_focus *st_focus;
+    const struct ivi_layout_interface *interface = ctx->ivi_layout_interface;
+    uint32_t serial;
+
+    st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
+    if ((NULL != st_focus) &&
+        (!(st_focus->focus & ILM_INPUT_DEVICE_KEYBOARD))) {
+        serial = wl_display_next_serial(ctx->compositor->wl_display);
+
+        kbd_data.kbd_evt = KEYBOARD_ENTER;
+        kbd_data.serial = serial;
+        input_ctrl_kbd_wl_snd_event(ctx_seat, w_surf,
+                ctx_seat->keyboard_grab.keyboard, &kbd_data);
+
+        st_focus->focus |= ILM_INPUT_DEVICE_KEYBOARD;
+        send_input_focus(ctx,
+                interface->get_id_of_surface(surf_ctx->layout_surface),
+                ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE);
+
+    }
+}
+
+static void
+input_ctrl_kbd_set_focus_surf(struct seat_ctx *ctx_seat,
+        uint32_t ivi_surf_id, int32_t enabled)
+{
+    struct input_context *ctx = ctx_seat->input_ctx;
+    struct surface_ctx *surf_ctx;
+    const struct ivi_layout_interface *interface = ctx->ivi_layout_interface;
+    struct weston_surface *w_surf;
+
+    struct weston_keyboard *keyboard = weston_seat_get_keyboard(
+                                            ctx_seat->west_seat);
+
+
+    if (NULL != keyboard) {
+        surf_ctx = input_ctrl_get_surf_ctx_from_id(ctx, ivi_surf_id);
+        w_surf = interface->surface_get_weston_surface(
+                surf_ctx->layout_surface);
+
+        if (ILM_TRUE == enabled) {
+            input_ctrl_kbd_enter_surf(ctx_seat, surf_ctx, w_surf);
+        } else {
+            input_ctrl_kbd_leave_surf(ctx_seat, surf_ctx, w_surf);
+        }
+    }
+}
+
 static void
 keyboard_grab_key(struct weston_keyboard_grab *grab, uint32_t time,
                   uint32_t key, uint32_t state)
 {
     struct seat_ctx *seat_ctx = wl_container_of(grab, seat_ctx, keyboard_grab);
     struct surface_ctx *surf_ctx;
-    struct wl_display *display = grab->keyboard->seat->compositor->wl_display;
+    struct seat_focus *st_focus;
+    struct wl_keyboard_data kbd_data;
+    struct weston_surface *surface;
     const struct ivi_layout_interface *interface =
         seat_ctx->input_ctx->ivi_layout_interface;
 
+    kbd_data.kbd_evt = KEYBOARD_KEY;
+    kbd_data.time = time;
+    kbd_data.key = key;
+    kbd_data.state = state;
+    kbd_data.serial = wl_display_next_serial(grab->keyboard->seat->
+                                            compositor->wl_display);
+
     wl_list_for_each(surf_ctx, &seat_ctx->input_ctx->surface_list, link) {
-        struct weston_surface *surface;
-        struct wl_resource *resource;
-        struct wl_client *surface_client;
-        uint32_t serial;
-        if (!(surf_ctx->focus & ILM_INPUT_DEVICE_KEYBOARD))
+
+        st_focus = get_accepted_seat(surf_ctx, grab->keyboard->seat->seat_name);
+        if (NULL == st_focus)
             continue;
 
-        if (!get_accepted_seat(surf_ctx, grab->keyboard->seat->seat_name))
+        if (!(st_focus->focus & ILM_INPUT_DEVICE_KEYBOARD))
             continue;
 
         surface = interface->surface_get_weston_surface(surf_ctx->layout_surface);
-        surface_client = wl_resource_get_client(surface->resource);
-        serial = wl_display_next_serial(display);
-
-        resource = wl_resource_find_for_client(&grab->keyboard->resource_list,
-                                               surface_client);
-        if (resource) {
-            wl_keyboard_send_key(resource, serial, time, key, state);
-            continue;
-        }
-
-        resource = wl_resource_find_for_client(&grab->keyboard->focus_resource_list,
-                                               surface_client);
-        if (resource)
-            wl_keyboard_send_key(resource, serial, time, key, state);
+        input_ctrl_kbd_wl_snd_event(seat_ctx, surface, grab->keyboard, &kbd_data);
     }
 }
 
@@ -301,39 +477,33 @@ keyboard_grab_modifiers(struct weston_keyboard_grab *grab, uint32_t serial,
 {
     struct seat_ctx *seat_ctx = wl_container_of(grab, seat_ctx, keyboard_grab);
     struct surface_ctx *surf_ctx;
-    struct wl_display *display = grab->keyboard->seat->compositor->wl_display;
+    struct seat_focus *st_focus;
+    struct weston_surface *surface;
+    struct wl_keyboard_data kbd_data;
     const struct ivi_layout_interface *interface =
         seat_ctx->input_ctx->ivi_layout_interface;
 
+    kbd_data.kbd_evt = KEYBOARD_MODIFIER;
+    kbd_data.serial = serial;
+    kbd_data.mods_depressed = mods_depressed;
+    kbd_data.mods_latched = mods_latched;
+    kbd_data.mods_locked = mods_locked;
+    kbd_data.group = group;
+
     wl_list_for_each(surf_ctx, &seat_ctx->input_ctx->surface_list, link) {
-        struct weston_surface *surface;
-        struct wl_resource *resource;
-        struct wl_client *surface_client;
-        uint32_t serial;
+
+        st_focus = get_accepted_seat(surf_ctx, grab->keyboard->seat->seat_name);
+        if (NULL == st_focus)
+            continue;
 
         /* Keyboard modifiers go to surfaces with pointer focus as well */
-        if (!(surf_ctx->focus
+        if (!(st_focus->focus
               & (ILM_INPUT_DEVICE_KEYBOARD | ILM_INPUT_DEVICE_POINTER)))
             continue;
 
-        if (!get_accepted_seat(surf_ctx, grab->keyboard->seat->seat_name))
-            continue;
-
         surface = interface->surface_get_weston_surface(surf_ctx->layout_surface);
-        surface_client = wl_resource_get_client(surface->resource);
-        serial = wl_display_next_serial(display);
 
-        resource = wl_resource_find_for_client(&grab->keyboard->resource_list,
-                                               surface_client);
-        if (resource)
-            wl_keyboard_send_modifiers(resource, serial, mods_depressed,
-                                       mods_latched, mods_locked, group);
-
-        resource = wl_resource_find_for_client(&grab->keyboard->focus_resource_list,
-                                               surface_client);
-        if (resource)
-            wl_keyboard_send_modifiers(resource, serial, mods_depressed,
-                                       mods_latched, mods_locked, group);
+        input_ctrl_kbd_wl_snd_event(seat_ctx, surface, grab->keyboard, &kbd_data);
     }
 }
 
