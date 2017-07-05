@@ -43,6 +43,15 @@ struct seat_ctx {
     struct weston_pointer_grab pointer_grab;
     struct weston_touch_grab touch_grab;
     struct weston_seat *west_seat;
+
+    /* pointer focus can be forced to specific surfaces
+     * when there are no motion events at all. motion
+     * event will re-evaulate the focus. A rotary knob
+     * is one of the examples, where it is used as pointer
+     * axis.*/
+    uint32_t forced_ptr_focus_surf;
+    int32_t  forced_surf_enabled;
+
     struct wl_listener updated_caps_listener;
     struct wl_listener destroy_listener;
     struct wl_list seat_node;
@@ -180,6 +189,20 @@ remove_accepted_seat(struct surface_ctx *surface, const char *seat)
 }
 
 
+struct seat_ctx*
+input_ctrl_get_seat_ctx(struct input_context *ctx, const char *nm_seat)
+{
+    struct seat_ctx *ctx_seat;
+    struct seat_ctx *ret_ctx = NULL;
+    wl_list_for_each(ctx_seat, &ctx->seat_list, seat_node) {
+        if (0 == strcmp(ctx_seat->name_seat, nm_seat)) {
+            ret_ctx = ctx_seat;
+            break;
+        }
+    }
+    return ret_ctx;
+}
+
 static void
 send_input_acceptance(struct input_context *ctx, uint32_t surface_id, const char *seat, int32_t accepted)
 {
@@ -199,69 +222,6 @@ send_input_focus(struct input_context *ctx, t_ilm_surface surface_id,
     wl_list_for_each(controller, &ctx->controller_list, link) {
         ivi_input_send_input_focus(controller->resource, surface_id,
                                    device, enabled);
-    }
-}
-
-static void
-pointer_move(struct weston_pointer *pointer, wl_fixed_t x, wl_fixed_t y)
-{
-    struct weston_pointer_motion_event event;
-
-    event.x = x;
-    event.y = y;
-    event.dx = 0;
-    event.dy = 0;
-    event.mask = WESTON_POINTER_MOTION_ABS;
-
-    weston_pointer_move(pointer, &event);
-}
-
-static void
-set_weston_focus(struct input_context *ctx, struct surface_ctx *surface_ctx,
-                 ilmInputDevice focus, struct weston_seat *seat, t_ilm_bool enabled)
-{
-    struct weston_surface *w_surface;
-    struct weston_view *view;
-    struct wl_resource *resource;
-    struct wl_client *surface_client;
-    uint32_t serial;
-    wl_fixed_t x, y;
-    struct weston_pointer *pointer = weston_seat_get_pointer(seat);
-    struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
-    const struct ivi_layout_interface *interface =
-              ctx->ivi_layout_interface;
-
-    /* Assume one view per surface */
-    w_surface = interface->surface_get_weston_surface(surface_ctx->layout_surface);
-    view = wl_container_of(w_surface->views.next, view, surface_link);
-    if ((focus & ILM_INPUT_DEVICE_POINTER) && (pointer != NULL)){
-        if ( (view != NULL) && enabled) {
-            weston_view_to_global_fixed(view, wl_fixed_from_int(0),
-            wl_fixed_from_int(0), &x, &y);
-            // move pointer to local (0,0) of the view
-            pointer_move(pointer, x, y);
-            weston_pointer_set_focus(pointer, view,
-            wl_fixed_from_int(0), wl_fixed_from_int(0));
-        } else if (pointer->focus == view) {
-            weston_pointer_set_focus(pointer, NULL,
-            wl_fixed_from_int(0), wl_fixed_from_int(0));
-        }
-    }
-
-    if ((focus & ILM_INPUT_DEVICE_KEYBOARD) && (keyboard != NULL)) {
-        surface_client = wl_resource_get_client(w_surface->resource);
-        serial = wl_display_next_serial(ctx->compositor->wl_display);
-        resource = wl_resource_find_for_client(&keyboard->resource_list,
-                                               surface_client);
-
-        if (!resource)
-            return;
-
-        if (!enabled)
-            wl_keyboard_send_leave(resource, serial, w_surface->resource);
-        else
-            wl_keyboard_send_enter(resource, serial, w_surface->resource,
-                                   &keyboard->keys);
     }
 }
 
@@ -568,6 +528,31 @@ static struct weston_keyboard_grab_interface keyboard_grab_interface = {
 };
 
 static void
+input_ctrl_ptr_leave_west_focus(struct seat_ctx *ctx_seat,
+        struct weston_pointer *pointer)
+{
+    struct surface_ctx *surf_ctx;
+    struct input_context *ctx = ctx_seat->input_ctx;
+    const struct ivi_layout_interface *lyt_if = ctx->ivi_layout_interface;
+    struct seat_focus *st_focus;
+
+    if (NULL != pointer->focus) {
+        surf_ctx = input_ctrl_get_surf_ctx_from_surf(ctx,
+                pointer->focus->surface);
+        st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
+        if (st_focus != NULL) {
+            /* Send focus lost event to the surface which has lost the focus*/
+            st_focus->focus &= ~ILM_INPUT_DEVICE_POINTER;
+            send_input_focus(ctx,
+                    lyt_if->get_id_of_surface(surf_ctx->layout_surface),
+                             ILM_INPUT_DEVICE_POINTER, ILM_FALSE);
+        }
+
+        weston_pointer_clear_focus(pointer);
+    }
+}
+
+static void
 input_ctrl_ptr_set_west_focus(struct seat_ctx *ctx_seat,
         struct weston_pointer *pointer, struct weston_view *w_view,
         int rel_x, int rel_y)
@@ -626,22 +611,91 @@ input_ctrl_ptr_set_west_focus(struct seat_ctx *ctx_seat,
     }
 }
 
+static bool
+input_ctrl_ptr_is_focus_emtpy(struct seat_ctx *ctx_seat)
+{
+    return (NULL == ctx_seat->pointer_grab.pointer->focus);
+}
+
+static void
+input_ctrl_ptr_clear_focus(struct seat_ctx *ctx_seat)
+{
+    if (!input_ctrl_ptr_is_focus_emtpy(ctx_seat)) {
+        input_ctrl_ptr_leave_west_focus(ctx_seat,
+                ctx_seat->pointer_grab.pointer);
+        ctx_seat->forced_ptr_focus_surf = 0;
+    }
+}
+
+static void
+input_ctrl_ptr_set_focus_surf(struct seat_ctx *ctx_seat,
+        uint32_t surface, int32_t enabled)
+{
+    struct weston_pointer *pointer;
+    pointer = weston_seat_get_pointer(ctx_seat->west_seat);
+    if (NULL != pointer) {
+        if (ILM_TRUE == enabled) {
+            if (ctx_seat->forced_ptr_focus_surf != surface) {
+                ctx_seat->forced_ptr_focus_surf = surface;
+                ctx_seat->forced_surf_enabled = ILM_TRUE;
+                ctx_seat->pointer_grab.interface->focus(
+                                    &ctx_seat->pointer_grab);
+            }
+        } else {
+            if (ctx_seat->forced_ptr_focus_surf == surface) {
+                ctx_seat->forced_surf_enabled = ILM_FALSE;
+                ctx_seat->pointer_grab.interface->focus(
+                                    &ctx_seat->pointer_grab);
+            }
+        }
+    }
+}
+
 static void
 pointer_grab_focus(struct weston_pointer_grab *grab)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
     struct weston_pointer *pointer = grab->pointer;
+    struct weston_surface *forced_west_surf = NULL;
+    struct weston_view *w_view;
+    struct ivi_layout_surface *layout_surf;
+    struct input_context *ctx = seat->input_ctx;
 
     if (pointer->button_count > 0) {
         return;
     }
-    input_ctrl_ptr_set_west_focus(seat, pointer, NULL, 0, 0);
+
+    if (seat->forced_ptr_focus_surf > 0) {
+        /*When we want to force pointer focus to
+         * a certain surface*/
+        layout_surf = ctx->ivi_layout_interface->
+                            get_surface_from_id(seat->forced_ptr_focus_surf);
+        forced_west_surf = ctx->ivi_layout_interface->
+                            surface_get_weston_surface(layout_surf);
+
+        if (seat->forced_surf_enabled == ILM_TRUE) {
+            w_view = wl_container_of(forced_west_surf->views.next,
+                    w_view, surface_link);
+            input_ctrl_ptr_set_west_focus(seat, pointer, w_view, 0, 0);
+        } else if (NULL != pointer->focus) {
+            if(pointer->focus->surface == forced_west_surf) {
+                input_ctrl_ptr_leave_west_focus(seat, pointer);
+            }
+            seat->forced_ptr_focus_surf = 0;
+        }
+
+    } else {
+        input_ctrl_ptr_set_west_focus(seat, pointer, NULL, 0, 0);
+    }
 }
 
 static void
 pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
                     struct weston_pointer_motion_event *event)
 {
+    struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
+    /*Motion results in re-evaluation of pointer focus*/
+    seat->forced_ptr_focus_surf = 0;
     weston_pointer_send_motion(grab->pointer, time, event);
 }
 
@@ -726,6 +780,48 @@ input_ctrl_touch_set_west_focus(struct seat_ctx *ctx_seat,
         } else {
             weston_touch_set_focus(touch, NULL);
         }
+    }
+}
+
+static void
+input_ctrl_touch_west_send_cancel(struct weston_touch *touch)
+{
+    struct wl_resource *resource;
+
+    if (!weston_touch_has_focus_resource(touch))
+        return;
+
+    wl_resource_for_each(resource, &touch->focus_resource_list)
+        wl_touch_send_cancel(resource);
+
+}
+
+static void
+input_ctrl_touch_clear_focus(struct seat_ctx *ctx_seat)
+{
+    struct input_context *ctx = ctx_seat->input_ctx;
+    struct weston_touch *touch = ctx_seat->touch_grab.touch;
+    struct surface_ctx *surf_ctx;
+    struct seat_focus *st_focus = NULL;
+    const struct ivi_layout_interface *interface = ctx->ivi_layout_interface;
+
+    if (touch->focus != NULL) {
+
+        surf_ctx = input_ctrl_get_surf_ctx_from_surf(ctx,
+                                touch->focus->surface);
+
+        st_focus = get_accepted_seat(surf_ctx, touch->seat->seat_name);
+
+        input_ctrl_touch_west_send_cancel(touch);
+
+        weston_touch_set_focus(touch, NULL);
+    }
+
+    if (st_focus != NULL) {
+        st_focus->focus &= ~ILM_INPUT_DEVICE_TOUCH;
+        send_input_focus(ctx,
+                interface->get_id_of_surface(surf_ctx->layout_surface),
+                ILM_INPUT_DEVICE_TOUCH, ILM_FALSE);
     }
 }
 
@@ -987,19 +1083,18 @@ unbind_resource_controller(struct wl_resource *resource)
 }
 
 static void
-input_set_input_focus(struct wl_client *client,
-                                 struct wl_resource *resource,
-                                 uint32_t surface, uint32_t device,
-                                 int32_t enabled)
+setup_input_focus(struct input_context *ctx, uint32_t surface,
+        uint32_t device, int32_t enabled)
 {
-    struct input_controller *controller = wl_resource_get_user_data(resource);
-    struct input_context *ctx = controller->input_context;
     struct surface_ctx *surf, *current_surf = NULL;
     struct weston_seat *seat;
+    struct weston_surface *w_surf;
     const struct ivi_layout_interface *interface =
-	ctx->ivi_layout_interface;
+                            ctx->ivi_layout_interface;
     uint32_t caps;
     struct ivi_layout_surface *current_layout_surface;
+    struct seat_focus *st_focus;
+    struct seat_ctx *ctx_seat;
 
     current_layout_surface = interface->get_surface_from_id(surface);
 
@@ -1008,62 +1103,113 @@ input_set_input_focus(struct wl_client *client,
         return;
     }
 
-    wl_list_for_each(surf, &ctx->surface_list, link) {
-        if (current_layout_surface == surf->layout_surface) {
-            current_surf = surf;
-            if (enabled == ILM_TRUE) {
-                surf->focus |= device;
-            } else {
-                surf->focus &= ~device;
+    surf = input_ctrl_get_surf_ctx_from_id(ctx, surface);
+    if (NULL != surf) {
+        wl_list_for_each(st_focus, &surf->accepted_seat_list, link) {
+            ctx_seat = input_ctrl_get_seat_ctx(ctx, st_focus->seat_name);
+            if (device & ILM_INPUT_DEVICE_POINTER) {
+                input_ctrl_ptr_set_focus_surf(ctx_seat, surface, enabled);
             }
-
-            send_input_focus(ctx, surface, device, enabled);
-
-            wl_list_for_each(seat, &ctx->compositor->seat_list, link) {
-                if (get_accepted_seat(surf, seat->seat_name) == NULL)
-                    continue;
-
-                caps = get_seat_capabilities(seat);
-
-                if (!(caps | device))
-                    continue;
-
-                set_weston_focus(ctx, surf, device, seat, enabled);
+            if (device & ILM_INPUT_DEVICE_KEYBOARD) {
+                input_ctrl_kbd_set_focus_surf(ctx_seat, surface, enabled);
             }
-
-            break;
-        }
-    }
-
-    /* If focus is enabled for one of these devices, every other surface
-     * must have focus unset */
-    if ((device != ILM_INPUT_DEVICE_KEYBOARD) && enabled) {
-        wl_list_for_each(surf, &ctx->surface_list, link) {
-            if (surf == current_surf)
-                continue;
-
-            /* We do not need to unset the focus, if the surface does not have it*/
-            if (!(surf->focus | device))
-                continue;
-
-            wl_list_for_each(seat, &ctx->compositor->seat_list, link) {
-                /*if both of surfaces have acceptance to same seat */
-                if ((get_accepted_seat(surf, seat->seat_name) == NULL) ||
-                   (get_accepted_seat(current_surf, seat->seat_name) == NULL))
-                    continue;
-
-                caps = get_seat_capabilities(seat);
-
-                if (!(caps | device))
-                    continue;
-
-                surf->focus &= ~(device);
-                send_input_focus(ctx, interface->get_id_of_surface(surf->layout_surface),
-                     device, ILM_FALSE);
-                set_weston_focus(ctx, surf, device, seat, ILM_FALSE);
+            if (device & ILM_INPUT_DEVICE_TOUCH) {
+                /*Touch focus cannot be forced to a particular surface.
+                 * Preserve the old behaviour by sending it to controller.
+                 * TODO: Should we just remove focus setting for touch?*/
+                send_input_focus(ctx, surface, device, enabled);
             }
         }
     }
+}
+
+static void
+input_set_input_focus(struct wl_client *client,
+                                 struct wl_resource *resource,
+                                 uint32_t surface, uint32_t device,
+                                 int32_t enabled)
+{
+    struct input_controller *controller = wl_resource_get_user_data(resource);
+    struct input_context *ctx = controller->input_context;
+    setup_input_focus(ctx, surface, device, enabled);
+}
+
+static void
+setup_input_acceptance(struct input_context *ctx,
+                       uint32_t surface, const char *seat,
+                       int32_t accepted)
+{
+    struct surface_ctx *surface_ctx;
+    struct seat_ctx *ctx_seat;
+    struct weston_surface *w_surf;
+    int found_seat = 0;
+    const struct ivi_layout_interface *interface =
+        ctx->ivi_layout_interface;
+    struct weston_pointer *pointer;
+    struct weston_touch *touch;
+    struct weston_keyboard *keyboard;
+    struct seat_focus *st_focus;
+
+    ctx_seat = input_ctrl_get_seat_ctx(ctx, seat);
+
+    if (NULL == ctx_seat) {
+        weston_log("%s: seat: %s was not found\n", __FUNCTION__, seat);
+        return;
+    }
+
+    surface_ctx = input_ctrl_get_surf_ctx_from_id(ctx, surface);
+
+    if (NULL != surface_ctx) {
+        if (accepted == ILM_TRUE) {
+            found_seat = add_accepted_seat(surface_ctx, seat);
+
+            pointer = weston_seat_get_pointer(ctx_seat->west_seat);
+            if (NULL != pointer) {
+                /*if seat is having NULL pointer focus, now it may be
+                 * possible that this surface can hold the focus as it
+                 * accepts events from that seat*/
+                if (input_ctrl_ptr_is_focus_emtpy(ctx_seat)) {
+                    pointer->grab->interface->focus(pointer->grab);
+                }
+            }
+        } else {
+            st_focus = get_accepted_seat(surface_ctx, seat);
+
+            if (NULL != st_focus) {
+                w_surf = interface->surface_get_weston_surface(surface_ctx->
+                                                               layout_surface);
+
+                pointer = weston_seat_get_pointer(ctx_seat->west_seat);
+                if (NULL != pointer) {
+                    if ((st_focus->focus & ILM_INPUT_DEVICE_POINTER)
+                            == ILM_INPUT_DEVICE_POINTER) {
+                        input_ctrl_ptr_clear_focus(ctx_seat);
+                    }
+                }
+                touch = weston_seat_get_touch(ctx_seat->west_seat);
+                if (NULL != touch) {
+                    if ((st_focus->focus & ILM_INPUT_DEVICE_TOUCH)
+                            == ILM_INPUT_DEVICE_TOUCH) {
+                        input_ctrl_touch_clear_focus(ctx_seat);
+                    }
+                }
+                keyboard = weston_seat_get_keyboard(ctx_seat->west_seat);
+
+                if (NULL != keyboard) {
+                    if ((st_focus->focus & ILM_INPUT_DEVICE_KEYBOARD)
+                            == ILM_INPUT_DEVICE_KEYBOARD) {
+                        input_ctrl_kbd_leave_surf(ctx_seat,
+                                surface_ctx, w_surf);
+                    }
+                }
+
+                found_seat = remove_accepted_seat(surface_ctx, seat);
+            }
+        }
+    }
+
+    if (found_seat)
+        send_input_acceptance(ctx, surface, seat, accepted);
 }
 
 static void
@@ -1074,42 +1220,7 @@ input_set_input_acceptance(struct wl_client *client,
 {
     struct input_controller *controller = wl_resource_get_user_data(resource);
     struct input_context *ctx = controller->input_context;
-    struct surface_ctx *surface_ctx;
-    int found_seat = 0;
-    int found_weston_seat = 0;
-    struct weston_seat *w_seat = NULL;
-    const struct ivi_layout_interface *interface =
-        ctx->ivi_layout_interface;
-
-    wl_list_for_each(w_seat, &ctx->compositor->seat_list, link) {
-        if(strcmp(seat,w_seat->seat_name) == 0) {
-            found_weston_seat = 1;
-            break;
-        }
-    }
-
-    if (!found_weston_seat) {
-        weston_log("%s: seat: %s was not found\n", __FUNCTION__, seat);
-        return;
-    }
-
-    wl_list_for_each(surface_ctx, &ctx->surface_list, link) {
-        if (interface->get_id_of_surface(surface_ctx->layout_surface) == surface) {
-            if (accepted == ILM_TRUE) {
-                found_seat = add_accepted_seat(surface_ctx, seat);
-                if (found_weston_seat)
-                    set_weston_focus(ctx, surface_ctx, surface_ctx->focus, w_seat, ILM_TRUE);
-            } else {
-                if (found_weston_seat)
-                    set_weston_focus(ctx, surface_ctx, surface_ctx->focus, w_seat, ILM_FALSE);
-                found_seat = remove_accepted_seat(surface_ctx, seat);
-            }
-            break;
-        }
-    }
-
-    if (found_seat)
-        send_input_acceptance(ctx, surface, seat, accepted);
+    setup_input_acceptance(ctx, surface, seat, accepted);
 }
 
 static const struct ivi_input_interface input_implementation = {
