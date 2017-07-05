@@ -638,123 +638,24 @@ pointer_grab_focus(struct weston_pointer_grab *grab)
     input_ctrl_ptr_set_west_focus(seat, pointer, NULL, 0, 0);
 }
 
-
 static void
 pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
                     struct weston_pointer_motion_event *event)
 {
-    struct weston_pointer *pointer = grab->pointer;
-    struct weston_compositor *compositor = pointer->seat->compositor;
-    struct wl_list *resource_list;
-    struct wl_resource *resource;
-    struct weston_view *picked_view;
-    wl_fixed_t x, y;
-    wl_fixed_t sx, sy;
-    wl_fixed_t old_sx = pointer->sx;
-    wl_fixed_t old_sy = pointer->sy;
-
-    weston_pointer_move(pointer, event);
-
-    if (pointer->focus) {
-        weston_pointer_motion_to_abs(pointer, event, &x, &y);
-        picked_view = weston_compositor_pick_view(compositor, x, y,
-                                           &sx, &sy);
-
-       if (picked_view != pointer->focus)
-           return;
-
-        pointer->sx = sx;
-        pointer->sy = sy;
-    }
-
-    if (pointer->focus_client &&
-        (old_sx != pointer->sx || old_sy != pointer->sy)) {
-        resource_list = &pointer->focus_client->pointer_resources;
-        wl_resource_for_each(resource, resource_list) {
-            wl_pointer_send_motion(resource, time,
-                            pointer->sx, pointer->sy);
-        }
-    }
+    weston_pointer_send_motion(grab->pointer, time, event);
 }
 
 static void
 pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
                     uint32_t button, uint32_t state)
 {
-    struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
     struct weston_pointer *pointer = grab->pointer;
-    struct weston_compositor *compositor = pointer->seat->compositor;
-    struct wl_display *display = compositor->wl_display;
-    struct surface_ctx *surf_ctx;
-    wl_fixed_t sx, sy;
-    struct weston_view *picked_view, *w_view, *old_focus;
-    struct weston_surface *w_surf, *send_surf;
-    struct weston_subsurface *sub;
-    struct wl_resource *resource;
-    struct wl_list *resource_list = NULL;
-    uint32_t serial;
-    const struct ivi_layout_interface *interface =
-        seat->input_ctx->ivi_layout_interface;
 
-    picked_view = weston_compositor_pick_view(compositor, pointer->x, pointer->y,
-                                       &sx, &sy);
-    if (picked_view == NULL)
-        return;
+    weston_pointer_send_button(pointer, time, button, state);
 
-    /* If a button press, set pointer focus to this surface */
-    if ((grab->pointer->focus != picked_view) &&
-        (state == WL_POINTER_BUTTON_STATE_PRESSED)){
-        old_focus = grab->pointer->focus;
-        /* search for the picked view in layout surfaces */
-        wl_list_for_each(surf_ctx, &seat->input_ctx->surface_list, link) {
-            w_surf = interface->surface_get_weston_surface(surf_ctx->layout_surface);
-
-            /* Find a focused surface from subsurface list */
-            send_surf = w_surf;
-            if (!wl_list_empty(&w_surf->subsurface_list)) {
-                wl_list_for_each(sub, &w_surf->subsurface_list, parent_link) {
-                    if (sub->surface == picked_view->surface) {
-                        send_surf = sub->surface;
-                        break;
-                    }
-                }
-            }
-
-            w_view = wl_container_of(send_surf->views.next, w_view, surface_link);
-
-            if (get_accepted_seat(surf_ctx, grab->pointer->seat->seat_name) == NULL)
-                continue;
-
-            if (picked_view->surface == send_surf) {
-                /* Correct layout surface is found*/
-                surf_ctx->focus |= ILM_INPUT_DEVICE_POINTER;
-                send_input_focus(seat->input_ctx,
-                                 interface->get_id_of_surface(surf_ctx->layout_surface),
-                                 ILM_INPUT_DEVICE_POINTER, ILM_TRUE);
-
-                weston_pointer_set_focus(grab->pointer, picked_view, sx, sy);
-
-            } else if (old_focus == w_view){
-                /* Send focus lost event to the surface which has lost the focus*/
-                surf_ctx->focus &= ~ILM_INPUT_DEVICE_POINTER;
-                send_input_focus(seat->input_ctx,
-                                 interface->get_id_of_surface(surf_ctx->layout_surface),
-                                 ILM_INPUT_DEVICE_POINTER, ILM_FALSE);
-            }
-        }
-    }
-
-    if (pointer->focus_client)
-        resource_list = &pointer->focus_client->pointer_resources;
-    if (resource_list && !wl_list_empty(resource_list)) {
-        resource_list = &pointer->focus_client->pointer_resources;
-        serial = wl_display_next_serial(display);
-        wl_resource_for_each(resource, resource_list)
-            wl_pointer_send_button(resource,
-                           serial,
-                           time,
-                           button,
-                           state);
+    if (pointer->button_count == 0 &&
+        state == WL_POINTER_BUTTON_STATE_RELEASED) {
+        grab->interface->focus(grab);
     }
 }
 
