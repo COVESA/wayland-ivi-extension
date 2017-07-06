@@ -593,16 +593,22 @@ input_ctrl_ptr_set_west_focus(struct seat_ctx *ctx_seat,
 
         }
 
-        surf_ctx = input_ctrl_get_surf_ctx_from_surf(ctx, view->surface);
-        st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
-        if (st_focus != NULL) {
-            st_focus->focus |= ILM_INPUT_DEVICE_POINTER;
-            send_input_focus(ctx,
-                             lyt_if->get_id_of_surface(surf_ctx->layout_surface),
-                             ILM_INPUT_DEVICE_POINTER, ILM_TRUE);
+        if (NULL != view) {
+            surf_ctx = input_ctrl_get_surf_ctx_from_surf(ctx, view->surface);
+            st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
+            if (st_focus != NULL) {
+                st_focus->focus |= ILM_INPUT_DEVICE_POINTER;
+                send_input_focus(ctx,
+                         lyt_if->get_id_of_surface(surf_ctx->layout_surface),
+                         ILM_INPUT_DEVICE_POINTER, ILM_TRUE);
 
-            weston_pointer_set_focus(pointer, view, sx, sy);
+                weston_pointer_set_focus(pointer, view, sx, sy);
 
+            } else {
+                if (pointer->focus != NULL) {
+                    weston_pointer_clear_focus(pointer);
+                }
+            }
         } else {
             if (pointer->focus != NULL) {
                 weston_pointer_clear_focus(pointer);
@@ -1431,3 +1437,4 @@ input_controller_module_init(struct weston_compositor *ec,
     }
     return ret;
 }
+
