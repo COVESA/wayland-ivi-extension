@@ -584,11 +584,8 @@
         logging and tracing support in IVI systems.
       </description>
       <arg name="surface_id" type="uint"/>
-      <arg name="redraw_count" type="uint"/>
       <arg name="frame_count" type="uint"/>
-      <arg name="update_count" type="uint"/>
       <arg name="pid" type="uint"/>
-      <arg name="process_name" type="string" allow-null="true"/>
     </event>
 
     <event name="layer_surface_added">

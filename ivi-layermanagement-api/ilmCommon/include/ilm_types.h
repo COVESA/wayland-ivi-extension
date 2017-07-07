@@ -197,8 +197,6 @@ struct ilmSurfaceProperties
     t_ilm_uint destHeight;                  /*!< destination height value of the surface */
     t_ilm_bool visibility;                  /*!< visibility value of the surface */
     t_ilm_uint frameCounter;                /*!< already rendered frames of surface */
-    t_ilm_uint drawCounter;                 /*!< content updates of surface */
-    t_ilm_uint updateCounter;               /*!< content updates of surface */
     t_ilm_int  creatorPid;                  /*!< process id of application that created this surface */
     ilmInputDevice focus;                   /*!< bitmask of every type of device that this surface has focus in */
 };

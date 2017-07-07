@@ -493,21 +493,17 @@ wm_listener_surface_destination_rectangle(void *data, struct ivi_wm *controller,
 
 static void
 wm_listener_surface_stats(void *data, struct ivi_wm *controller,
-                          uint32_t surface_id, uint32_t redraw_count,
-                          uint32_t frame_count, uint32_t update_count,
-                          uint32_t pid, const char *process_name)
+                          uint32_t surface_id, uint32_t frame_count,
+                          uint32_t pid)
 {
     struct wayland_context *ctx = data;
     struct surface_context *ctx_surf;
-    (void)process_name;
 
     ctx_surf = get_surface_context(ctx, surface_id);
     if(!ctx_surf)
         return;
 
-    ctx_surf->prop.drawCounter = (t_ilm_uint)redraw_count;
     ctx_surf->prop.frameCounter = (t_ilm_uint)frame_count;
-    ctx_surf->prop.updateCounter = (t_ilm_uint)update_count;
     ctx_surf->prop.creatorPid = (t_ilm_uint)pid;
 }
 
