@@ -47,6 +47,9 @@ WLContext::WLContext()
 , m_wlPointerListener(NULL)
 , m_wlKeyboardListener(NULL)
 , m_wlTouchListener(NULL)
+, m_wlCursorTheme(NULL)
+, m_wlCursor(NULL)
+, m_wlShm(NULL)
 {
 }
 
@@ -56,6 +59,43 @@ WLContext::~WLContext()
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+/*
+ * The following correspondences between file names and cursors was copied
+ * from: https://bugs.kde.org/attachment.cgi?id=67313
+ */
+
+static const char *left_ptrs[] = {
+	"left_ptr",
+	"default",
+	"top_left_arrow",
+	"left-arrow"
+};
+
+static void
+create_cursors(WLContext* wlContext)
+{
+	int size = 32;
+	unsigned int j;
+	struct wl_cursor *cursor = NULL;
+
+	wlContext->SetWLCursorTheme(wl_cursor_theme_load(NULL, size, wlContext->GetWLShm()));
+	if (!wlContext->GetWLCursorTheme()) {
+		fprintf(stderr, "could not load default theme\n");
+		return;
+	}
+	wlContext->SetWLCursor(
+			(wl_cursor*) malloc(sizeof wlContext->GetWLCursor()));
+
+	for (j = 0; !cursor && j < 4; ++j)
+		cursor = wl_cursor_theme_get_cursor(wlContext->GetWLCursorTheme(),
+				left_ptrs[j]);
+
+	if (!cursor)
+		fprintf(stderr, "could not load cursor '%s'\n", left_ptrs[j]);
+
+	wlContext->SetWLCursor(cursor);
+}
 
 void
 WLContext::RegistryHandleGlobal(void* data,
@@ -87,8 +127,16 @@ WLContext::RegistryHandleGlobal(void* data,
                                                           1));
         }
 
+        if (!strcmp(interface, "wl_shm")){
+            surface->SetWLShm(
+                (struct wl_shm*)wl_registry_bind(registry,
+                                                          name,
+                                                          &wl_shm_interface,
+                                                          1));
+        }
+
         if (!strcmp(interface, "wl_seat")){
-            struct WLContext::seat_data *seat_data = (struct WLContext::seat_data *)calloc(1, sizeof *seat_data);
+            struct seat_data *seat_data = (struct seat_data *)calloc(1, sizeof *seat_data);
             seat_data->ctx = surface;
             seat_data->wlSeat = (wl_seat*)wl_registry_bind(
                                  registry, name, &wl_seat_interface, 1);
@@ -101,8 +149,8 @@ WLContext::RegistryHandleGlobal(void* data,
 void
 WLContext::SeatHandleCapabilities(void* data, struct wl_seat* seat, uint32_t caps)
 {
-	struct WLContext::seat_data* context =
-			static_cast<struct WLContext::seat_data*>(data);
+	struct seat_data* context =
+			static_cast<struct seat_data*>(data);
     assert(context);
 
     if ((caps & WL_SEAT_CAPABILITY_POINTER) && !context->wlPointer){
@@ -110,10 +158,24 @@ WLContext::SeatHandleCapabilities(void* data, struct wl_seat* seat, uint32_t cap
         wl_pointer_set_user_data(context->wlPointer, data);
         wl_pointer_add_listener(context->wlPointer,
                                 context->ctx->GetWLPointerListener(), data);
+        // create cursors
+        create_cursors(context->ctx);
+        context->ctx->SetPointerSurface(wl_compositor_create_surface(context->ctx->GetWLCompositor()));
     } else
     if (!(caps & WL_SEAT_CAPABILITY_POINTER) && context->wlPointer){
         wl_pointer_destroy(context->wlPointer);
         context->wlPointer = NULL;
+
+        if (context->ctx->GetPointerSurface()){
+            wl_surface_destroy(context->ctx->GetPointerSurface());
+            context->ctx->SetPointerSurface(NULL);
+        }
+
+        if (context->ctx->GetWLCursorTheme())
+            wl_cursor_theme_destroy(context->ctx->GetWLCursorTheme());
+
+        if (context->ctx->GetWLCursor())
+            free(context->ctx->GetWLCursor());
     }
 
     if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !context->wlKeyboard){
@@ -168,6 +230,17 @@ WLContext::DestroyWLContext()
 
     if (m_wlCompositor)
         wl_compositor_destroy(m_wlCompositor);
+
+    if (m_pointerSurface){
+        wl_surface_destroy(m_pointerSurface);
+        m_pointerSurface = NULL;
+    }
+
+    if (m_wlCursorTheme)
+        wl_cursor_theme_destroy(m_wlCursorTheme);
+
+    if (m_wlCursor)
+        free(m_wlCursor);
 
     wl_registry_destroy(m_wlRegistry);
     wl_display_flush(m_wlDisplay);
