@@ -1382,6 +1382,7 @@ controller_create_screen(struct wl_client *client,
         wl_list_insert(&iviscrn->resource_list, wl_resource_get_link(screen_resource));
 
         ivi_wm_screen_send_screen_id(screen_resource, iviscrn->id_screen);
+        ivi_wm_screen_send_connector_name(screen_resource, iviscrn->output->name);
     }
 }
 
