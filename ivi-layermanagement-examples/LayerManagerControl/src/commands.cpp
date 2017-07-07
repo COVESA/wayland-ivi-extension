@@ -143,7 +143,7 @@ COMMAND("get screen|layer|surface <id>")
 }
 
 //=============================================================================
-COMMAND("dump screen|layer|surface <id> to <file>")
+COMMAND("dump screen|surface <id> to <file>")
 //=============================================================================
 {
     if (input->contains("screen"))
@@ -154,17 +154,6 @@ COMMAND("dump screen|layer|surface <id> to <file>")
         {
             cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
             cout << "Failed to take screenshot of screen with ID " << input->getUint("id") << "\n";
-            return;
-        }
-    }
-    else if (input->contains("layer"))
-    {
-        ilmErrorTypes callResult = ilm_takeLayerScreenshot(input->getString("file").c_str(),
-                                                            input->getUint("id"));
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to take screenshot of layer with ID " << input->getUint("id") << "\n";
             return;
         }
     }

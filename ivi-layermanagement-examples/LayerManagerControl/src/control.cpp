@@ -53,11 +53,6 @@ void layerNotificationCallback(t_ilm_layer layer, struct ilmLayerProperties* pro
         cout << "\topacity = " << properties->opacity << "\n";
     }
 
-    if (ILM_NOTIFICATION_ORIENTATION & mask)
-    {
-        cout << "\torientation = " << properties->orientation << "\n";
-    }
-
     if (ILM_NOTIFICATION_SOURCE_RECT & mask)
     {
         cout << "\tsource rect = x:" << properties->sourceX
@@ -165,11 +160,6 @@ void surfaceNotificationCallback(t_ilm_layer surface, struct ilmSurfacePropertie
     if (ILM_NOTIFICATION_OPACITY & mask)
     {
         cout << "\topacity = " << properties->opacity << "\n";
-    }
-
-    if (ILM_NOTIFICATION_ORIENTATION & mask)
-    {
-        cout << "\torientation = " << properties->orientation << "\n";
     }
 
     if (ILM_NOTIFICATION_SOURCE_RECT & mask)

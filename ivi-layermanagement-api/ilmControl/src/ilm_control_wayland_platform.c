@@ -252,12 +252,6 @@ wm_listener_layer_source_rectangle(void *data, struct ivi_wm *controller,
     ctx_layer->prop.sourceY = (t_ilm_uint)y;
     ctx_layer->prop.sourceWidth = (t_ilm_uint)width;
     ctx_layer->prop.sourceHeight = (t_ilm_uint)height;
-    if (ctx_layer->prop.origSourceWidth == 0) {
-        ctx_layer->prop.origSourceWidth = (t_ilm_uint)width;
-    }
-    if (ctx_layer->prop.origSourceHeight == 0) {
-        ctx_layer->prop.origSourceHeight = (t_ilm_uint)height;
-    }
 
     if (ctx_layer->notification != NULL) {
         ctx_layer->notification(ctx_layer->id_layer,
@@ -1846,18 +1840,6 @@ ilm_layerSetDestinationRectangle(t_ilm_layer layerId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_layerSetRenderOrder(t_ilm_layer layerId,
                         t_ilm_surface *pSurfaceId,
                         t_ilm_int number)
@@ -1971,13 +1953,6 @@ ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId,
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_surfaceSetOrientation(t_ilm_surface surfaceId,
-                              ilmOrientation orientation)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
 ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
@@ -2006,20 +1981,6 @@ ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type)
     unlock_context(ctx);
 
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceGetOrientation(t_ilm_surface surfaceId,
-                              ilmOrientation *pOrientation)
-{
-    return ILM_FAILED;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_surfaceGetPixelformat(t_ilm_layer surfaceId,
-                              ilmPixelFormat *pPixelformat)
-{
-    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes
@@ -2188,12 +2149,6 @@ ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
     unlock_context(ctx);
 
     return returnValue;
-}
-
-ILM_EXPORT ilmErrorTypes
-ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid)
-{
-    return ILM_FAILED;
 }
 
 ILM_EXPORT ilmErrorTypes

@@ -265,20 +265,6 @@ void analyzeLayerDimensions(t_ilm_surface targetSurfaceId, t_scene_data& scene)
 
     analyzePrintHelper(tag, flag, description);
 
-    tag = "Layer original width";
-    if (targetLayerProperties.origSourceWidth <= minDimension)
-    {
-        flag = "PROBLEM";
-        sprintf(description, "Layer %i has [origSourceWidth=%i]", targetSurfaceLayer, targetLayerProperties.origSourceWidth);
-    }
-    else
-    {
-        flag = "OK";
-        sprintf(description, "%s", "");
-    }
-
-    analyzePrintHelper(tag, flag, description);
-
     tag = "Layer dest height";
     if (targetLayerProperties.destHeight <= minDimension)
     {
@@ -298,20 +284,6 @@ void analyzeLayerDimensions(t_ilm_surface targetSurfaceId, t_scene_data& scene)
     {
         flag = "PROBLEM";
         sprintf(description, "Layer %i has [sourceHeight=%i]", targetSurfaceLayer, targetLayerProperties.sourceHeight);
-    }
-    else
-    {
-        flag = "OK";
-        sprintf(description, "%s", "");
-    }
-
-    analyzePrintHelper(tag, flag, description);
-
-    tag = "Layer original source";
-    if (targetLayerProperties.origSourceHeight <= minDimension)
-    {
-        flag = "PROBLEM";
-        sprintf(description, "Layer %i has [origSourceHeight=%i]", targetSurfaceLayer, targetLayerProperties.origSourceHeight);
     }
     else
     {
@@ -570,47 +542,6 @@ t_ilm_bool analyzeCheckRendered(t_ilm_surface targetSurfaceId, t_scene_data& sce
     return onLayer && layerOnScreen;
 }
 
-t_ilm_bool analyzeSharedNative(t_ilm_surface targetSurfaceId, t_scene_data& scene)
-{
-    string tag;
-    string flag;
-    char description[300] = "";
-
-    tag = "Shared native";
-
-    t_ilm_bool shared = ILM_FALSE;
-
-    //native of the target surface
-    t_ilm_uint targetNative = scene.surfaceProperties[targetSurfaceId].nativeSurface;
-
-    //iterate all surface properties
-    for (map<t_ilm_surface, ilmSurfaceProperties>::iterator it = scene.surfaceProperties.begin();
-            it != scene.surfaceProperties.end(); ++it)
-    {
-        t_ilm_surface surface = (*it).first;
-        ilmSurfaceProperties& properties = (*it).second;
-        //if there is a surface that has the same surface as the target surface
-        if (surface != targetSurfaceId && properties.nativeSurface == targetNative)
-        {
-            shared = ILM_TRUE;
-
-            flag = "WARNING";
-            sprintf(description, "Surface %i shares native that has ID %i with surface %i",
-                    targetSurfaceId, targetNative, surface);
-            analyzePrintHelper(tag, flag, description);
-        }
-    }
-
-    if (!shared)
-    {
-        flag = "OK";
-        sprintf(description, "%s", "");
-        analyzePrintHelper(tag, flag, description);
-    }
-
-    return !shared;
-}
-
 t_ilm_bool analyzeUpdateCounter(t_ilm_surface targetSurfaceId, t_scene_data& scene)
 {
     ilmSurfaceProperties& targetSurfaceProperties = scene.surfaceProperties[targetSurfaceId];
@@ -666,9 +597,6 @@ t_ilm_bool analyzeSurface(t_ilm_surface targetSurfaceId)
 
     //check if the surface has been updated (if it has any content)
     analyzeUpdateCounter(targetSurfaceId, scene);
-
-    //check if the surface shares the native with another surface
-    analyzeSharedNative(targetSurfaceId, scene);
 
     return ILM_TRUE;
 }
