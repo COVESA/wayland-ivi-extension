@@ -61,8 +61,10 @@ struct ivisurface {
     const struct ivi_layout_surface_properties *prop;
     struct wl_listener property_changed;
     struct wl_listener surface_destroy_listener;
+    struct wl_listener committed;
     struct wl_list notification_list;
     enum ivi_wm_surface_type type;
+    uint32_t frame_count;
 };
 
 struct ivilayer {
@@ -577,11 +579,14 @@ send_surface_stats(struct ivicontroller *ctrl,
                    uint32_t surface_id)
 {
     const struct ivi_layout_interface *lyt = ctrl->shell->interface;
+    struct ivisurface *ivisurf;
     struct weston_surface *surface;
     struct wl_client* target_client;
     pid_t pid;
     uid_t uid;
     gid_t gid;
+
+    ivisurf = get_surface(&ctrl->shell->list_surface, layout_surface);
 
     /* Get pid that creates surface */
     surface = lyt->surface_get_weston_surface(layout_surface);
@@ -590,7 +595,7 @@ send_surface_stats(struct ivicontroller *ctrl,
 
     wl_client_get_credentials(target_client, &pid, &uid, &gid);
 
-    ivi_wm_send_surface_stats(ctrl->resource, surface_id, 0, 0, 0, pid, "");
+    ivi_wm_send_surface_stats(ctrl->resource, surface_id, ivisurf->frame_count, pid);
 }
 
 static void
@@ -1561,6 +1566,15 @@ create_layer(struct ivishell *shell,
     return ivilayer;
 }
 
+static void
+surface_committed(struct wl_listener *listener, void *data)
+{
+    struct ivisurface *ivisurf = wl_container_of(listener, ivisurf, committed);
+    (void)data;
+
+    ivisurf->frame_count++;
+}
+
 static struct ivisurface*
 create_surface(struct ivishell *shell,
                struct ivi_layout_surface *layout_surface,
@@ -1569,6 +1583,7 @@ create_surface(struct ivishell *shell,
     const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
     struct ivicontroller *controller = NULL;
+    struct weston_surface *surface;
 
     ivisurf = calloc(1, sizeof *ivisurf);
     if (ivisurf == NULL) {
@@ -1581,6 +1596,10 @@ create_surface(struct ivishell *shell,
     ivisurf->prop = lyt->get_properties_of_surface(layout_surface);
     wl_list_insert(&shell->list_surface, &ivisurf->link);
     wl_list_init(&ivisurf->notification_list);
+
+    ivisurf->committed.notify = surface_committed;
+    surface = lyt->surface_get_weston_surface(layout_surface);
+    wl_signal_add(&surface->commit_signal, &ivisurf->committed);
 
     wl_list_for_each(controller, &shell->list_controller, link) {
         if (controller->resource)
@@ -1697,6 +1716,7 @@ surface_event_remove(struct wl_listener *listener, void *data)
 
     wl_list_remove(&ivisurf->link);
     wl_list_remove(&ivisurf->property_changed.link);
+    wl_list_remove(&ivisurf->committed.link);
     free(ivisurf);
 
     id_surface = shell->interface->get_id_of_surface(layout_surface);
