@@ -176,6 +176,7 @@ remove_accepted_seat(struct surface_ctx *surface, const char *seat)
     if (NULL != st_focus) {
         ret = 1;
         wl_list_remove(&st_focus->link);
+        free(st_focus->seat_name);
         free(st_focus);
 
     } else {
