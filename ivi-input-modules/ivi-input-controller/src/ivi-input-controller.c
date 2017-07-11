@@ -65,7 +65,6 @@ struct seat_focus {
 
 struct surface_ctx {
     struct wl_list link;
-    ilmInputDevice focus;
     struct ivi_layout_surface *layout_surface;
     struct wl_list accepted_seat_list;
     struct input_context *input_context;
@@ -1245,6 +1244,8 @@ bind_ivi_input(struct wl_client *client, void *data,
     const struct ivi_layout_interface *interface =
         ctx->ivi_layout_interface;
     struct seat_focus *st_focus;
+    uint32_t ivi_surf_id;
+
     controller = calloc(1, sizeof *controller);
     if (controller == NULL) {
         weston_log("%s: Failed to allocate memory for controller\n",
@@ -1271,16 +1272,18 @@ bind_ivi_input(struct wl_client *client, void *data,
     }
     /* Send focus events for all known surfaces to the client */
     wl_list_for_each(surface_ctx, &ctx->surface_list, link) {
-        ivi_input_send_input_focus(controller->resource,
-            interface->get_id_of_surface(surface_ctx->layout_surface),
-            surface_ctx->focus, ILM_TRUE);
+        ivi_surf_id = interface->get_id_of_surface(surface_ctx->layout_surface);
+        wl_list_for_each(st_focus, &surface_ctx->accepted_seat_list, link) {
+            ivi_input_send_input_focus(controller->resource,
+                                ivi_surf_id, st_focus->focus, ILM_TRUE);
+        }
     }
     /* Send acceptance events for all known surfaces to the client */
     wl_list_for_each(surface_ctx, &ctx->surface_list, link) {
+        ivi_surf_id = interface->get_id_of_surface(surface_ctx->layout_surface);
         wl_list_for_each(st_focus, &surface_ctx->accepted_seat_list, link) {
             ivi_input_send_input_acceptance(controller->resource,
-                    interface->get_id_of_surface(surface_ctx->layout_surface),
-                    st_focus->seat_name, ILM_TRUE);
+                                ivi_surf_id, st_focus->seat_name, ILM_TRUE);
 
         }
     }
