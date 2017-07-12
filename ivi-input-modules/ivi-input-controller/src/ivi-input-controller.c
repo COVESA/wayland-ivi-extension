@@ -37,7 +37,7 @@
 #include "ivi-input-server-protocol.h"
 
 struct seat_ctx {
-    const char *name_seat;
+    char *name_seat;
     struct input_context *input_ctx;
     struct weston_keyboard_grab keyboard_grab;
     struct weston_pointer_grab pointer_grab;
@@ -967,6 +967,7 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
                                       seat->seat_name);
     }
     wl_list_remove(&ctx->seat_node);
+    free(ctx->name_seat);
     free(ctx);
 }
 
@@ -1006,6 +1007,23 @@ handle_seat_create(struct wl_listener *listener, void *data)
 }
 
 static void
+input_ctrl_free_surf_ctx(struct surface_ctx *surf_ctx)
+{
+    struct seat_focus *st_focus;
+    struct seat_focus *tmp_st_focus;
+
+    wl_list_remove(&surf_ctx->link);
+
+    wl_list_for_each_safe(st_focus, tmp_st_focus,
+            &surf_ctx->accepted_seat_list, link) {
+        wl_list_remove(&st_focus->link);
+        free(st_focus->seat_name);
+        free(st_focus);
+    }
+    free(surf_ctx);
+}
+
+static void
 handle_surface_destroy(struct wl_listener *listener, void *data)
 {
     struct input_context *ctx =
@@ -1016,23 +1034,13 @@ handle_surface_destroy(struct wl_listener *listener, void *data)
     int surface_removed = 0;
     const struct ivi_layout_interface *interface =
         ctx->ivi_layout_interface;
-    struct seat_focus *st_focus;
-    struct seat_focus *st_focus_tmp;
 
     surf = input_ctrl_get_surf_ctx(ctx, layout_surface);
 
     if (NULL != surf) {
 
-        wl_list_remove(&surf->link);
+        input_ctrl_free_surf_ctx(surf);
 
-        wl_list_for_each_safe(st_focus, st_focus_tmp,
-                &surf->accepted_seat_list, link) {
-            wl_list_remove(&st_focus->link);
-            free(st_focus->seat_name);
-            free(st_focus);
-        }
-
-        free(surf);
         surface_removed = 1;
     }
 
@@ -1295,11 +1303,35 @@ destroy_input_context(struct input_context *ctx)
 {
     struct seat_ctx *seat;
     struct seat_ctx *tmp;
+    struct surface_ctx *surf_ctx;
+    struct surface_ctx *tmp_surf_ctx;
+    struct input_controller *controller;
+    struct input_controller *tmp_controller;
+
+    wl_list_for_each_safe(controller, tmp_controller,
+            &ctx->controller_list, link) {
+        /*We have set destroy function for this resource.
+         * The below api will call unbind_resource_controller and
+         * free up the controller structure*/
+        wl_resource_destroy(controller->resource);
+    }
+
+    wl_list_for_each_safe(surf_ctx, tmp_surf_ctx,
+            &ctx->surface_list, link) {
+
+        input_ctrl_free_surf_ctx(surf_ctx);
+    }
 
     wl_list_for_each_safe(seat, tmp, &ctx->seat_list, seat_node) {
         wl_list_remove(&seat->seat_node);
+        wl_list_remove(&seat->destroy_listener.link);
+        wl_list_remove(&seat->updated_caps_listener.link);
+        free(seat->name_seat);
         free(seat);
     }
+    wl_list_remove(&ctx->seat_create_listener.link);
+    wl_list_remove(&ctx->surface_created.link);
+    wl_list_remove(&ctx->surface_destroyed.link);
     free(ctx);
 }
 
