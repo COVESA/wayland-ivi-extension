@@ -94,6 +94,8 @@ void printScreenProperties(unsigned int screenid, const char* prefix)
         return;
     }
 
+    cout << prefix << "- connector name:       " << screenProperties.connectorName << "\n";
+
     cout << prefix << "- resolution:           x=" << screenProperties.screenWidth << ", y="
             << screenProperties.screenHeight << "\n";
 
