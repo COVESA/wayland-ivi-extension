@@ -26,6 +26,7 @@
 
 #include <weston.h>
 #include <weston/ivi-layout-export.h>
+#include "plugin-registry.h"
 #include "ilm_types.h"
 
 #include "ivi-input-server-protocol.h"
@@ -37,6 +38,7 @@ struct seat_ctx {
     struct weston_touch_grab touch_grab;
     struct wl_listener updated_caps_listener;
     struct wl_listener destroy_listener;
+    struct wl_list seat_node;
 };
 
 struct surface_ctx {
@@ -59,11 +61,14 @@ struct input_context {
     struct wl_listener seat_create_listener;
     struct wl_list controller_list;
     struct wl_list surface_list;
+    struct wl_list seat_list;
     struct weston_compositor *compositor;
     const struct ivi_layout_interface *ivi_layout_interface;
+    int successful_init_stage;
 
     struct wl_listener surface_created;
     struct wl_listener surface_destroyed;
+    struct wl_listener compositor_destroy_listener;
 };
 
 static int
@@ -775,7 +780,7 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
         ivi_input_send_seat_destroyed(controller->resource,
                                       seat->seat_name);
     }
-
+    wl_list_remove(&ctx->seat_node);
     free(ctx);
 }
 
@@ -798,6 +803,7 @@ handle_seat_create(struct wl_listener *listener, void *data)
     ctx->pointer_grab.interface = &pointer_grab_interface;
     ctx->touch_grab.interface= &touch_grab_interface;
 
+    wl_list_insert(&input_ctx->seat_list, &ctx->seat_node);
     ctx->destroy_listener.notify = &handle_seat_destroy;
     wl_signal_add(&seat->destroy_signal, &ctx->destroy_listener);
 
@@ -1072,6 +1078,58 @@ bind_ivi_input(struct wl_client *client, void *data,
     }
 }
 
+static void
+destroy_input_context(struct input_context *ctx)
+{
+    struct seat_ctx *seat;
+    struct seat_ctx *tmp;
+
+    wl_list_for_each_safe(seat, tmp, &ctx->seat_list, seat_node) {
+        wl_list_remove(&seat->seat_node);
+        free(seat);
+    }
+    free(ctx);
+}
+
+static void
+input_controller_deinit(struct input_context *ctx)
+{
+    int deinit_stage;
+    int ret = 0;
+    if (NULL == ctx) {
+        return;
+    }
+
+    for (deinit_stage = ctx->successful_init_stage; deinit_stage >= 0;
+            deinit_stage--) {
+        switch (deinit_stage) {
+        case 1:
+            /*Nothing to free for this stage*/
+            break;
+
+        case 0:
+            destroy_input_context(ctx);
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+static void
+input_controller_destroy(struct wl_listener *listener, void *data)
+{
+    (void)data;
+    if (NULL != listener) {
+        struct input_context *ctx = wl_container_of(listener,
+                ctx, compositor_destroy_listener);
+
+        input_controller_deinit(ctx);
+    }
+}
+
+
 static struct input_context *
 create_input_context(struct weston_compositor *ec,
                      const struct ivi_layout_interface *interface)
@@ -1089,13 +1147,16 @@ create_input_context(struct weston_compositor *ec,
     ctx->ivi_layout_interface = interface;
     wl_list_init(&ctx->controller_list);
     wl_list_init(&ctx->surface_list);
+    wl_list_init(&ctx->seat_list);
 
     /* Add signal handlers for ivi surfaces. */
     ctx->surface_created.notify = handle_surface_create;
     ctx->surface_destroyed.notify = handle_surface_destroy;
+    ctx->compositor_destroy_listener.notify = input_controller_destroy;
 
     interface->add_listener_create_surface(&ctx->surface_created);
     interface->add_listener_remove_surface(&ctx->surface_destroyed);
+    wl_signal_add(&ec->destroy_signal, &ctx->compositor_destroy_listener);
 
     ctx->seat_create_listener.notify = &handle_seat_create;
     wl_signal_add(&ec->seat_created_signal, &ctx->seat_create_listener);
@@ -1108,21 +1169,63 @@ create_input_context(struct weston_compositor *ec,
     return ctx;
 }
 
+
+static int
+input_controller_init(struct weston_compositor *ec,
+		const struct ivi_layout_interface *layout_if)
+{
+    int successful_init_stage = 0;
+    int init_stage;
+    int ret = -1;
+    struct input_context *ctx;
+    bool init_success = false;
+
+    for (init_stage = 0; (init_stage == successful_init_stage);
+            init_stage++) {
+        switch(init_stage)
+        {
+        case 0:
+            ctx = create_input_context(ec, layout_if);
+            if (NULL != ctx)
+                successful_init_stage++;
+            break;
+        case 1:
+            if (wl_global_create(ec->wl_display, &ivi_input_interface, 1,
+                                 ctx, bind_ivi_input) != NULL) {
+                successful_init_stage++;
+            }
+            break;
+        default:
+            init_success = true;
+            break;
+        }
+
+    }
+    if (NULL != ctx) {
+         ctx->successful_init_stage = (successful_init_stage - 1);
+         ret = 0;
+         if (!init_success) {
+             weston_log("Initialization failed at stage: %d\n",\
+                     successful_init_stage);
+             input_controller_deinit(ctx);
+             ret = -1;
+         }
+    }
+    return ret;
+}
+
 WL_EXPORT int
 input_controller_module_init(struct weston_compositor *ec,
                              const struct ivi_layout_interface *interface,
                              size_t interface_version)
 {
-    struct input_context *ctx = create_input_context(ec, interface);
-    if (ctx == NULL) {
-        weston_log("%s: Failed to create input context\n", __FUNCTION__);
-        return -1;
-    }
+    int ret = -1;
 
-    if (wl_global_create(ec->wl_display, &ivi_input_interface, 1,
-                         ctx, bind_ivi_input) == NULL) {
-        return -1;
+    if (NULL != interface) {
+        ret = input_controller_init(ec, interface);
+
+        if (ret >= 0)
+            weston_log("ivi-input-controller module loaded successfully!\n");
     }
-    weston_log("ivi-input-controller module loaded successfully!\n");
-    return 0;
+    return ret;
 }
