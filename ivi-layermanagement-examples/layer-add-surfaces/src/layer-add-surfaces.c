@@ -225,7 +225,10 @@ int main (int argc, char *argv[])
     t_ilm_layer renderOrder[1];
     t_ilm_uint screen_ID;
     renderOrder[0] = layer;
-    ilm_init();
+    if (ilm_init() == ILM_FAILED) {
+        fprintf(stderr, "ilm_init failed\n");
+        return -1;
+    }
 
     screen_ID = choose_screen();
     ilm_layerCreateWithDimension(&layer, screenWidth, screenHeight);
