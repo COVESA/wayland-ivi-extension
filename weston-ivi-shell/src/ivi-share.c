@@ -38,6 +38,7 @@ struct ivi_share_nativesurface_client_link
     bool firstSendConfigureComp;
     struct wl_list link;                         /* ivi_share_nativesurface link */
     struct ivi_share_nativesurface *parent;
+    bool empty;
 };
 
 struct shell_surface
@@ -83,6 +84,13 @@ share_surface_destroy(struct wl_client *client,
     if (NULL == client_link) {
         weston_log("share_surface does not have user data\n");
         return;
+    }
+
+    if (client_link->empty) {
+	if (client_link->parent) {
+	    free(client_link->parent);
+	    client_link->parent = NULL;
+	}
     }
 
     wl_resource_destroy(resource);
@@ -384,7 +392,7 @@ add_nativesurface_client(struct ivi_share_nativesurface *nativesurface,
     link->client = client;
     link->firstSendConfigureComp = false;
     link->parent = nativesurface;
-
+    link->empty = (nativesurface->surface == NULL) ? true : false;
     wl_resource_set_implementation(link->resource, &share_surface_implementation,
                                    link, destroy_client_link);
     wl_list_insert(&nativesurface->client_list, &link->link);
