@@ -27,15 +27,17 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <getopt.h>
 
 #include "ilm_control.h"
 
 t_ilm_uint screenWidth;
 t_ilm_uint screenHeight;
-t_ilm_uint layer;
+static t_ilm_uint layer = 0;
 pthread_mutex_t mutex;
 static pthread_cond_t  waiterVariable = PTHREAD_COND_INITIALIZER;
-static int number_of_surfaces;
+static int number_of_surfaces = 0;
+char display_name[256] = {0};
 
 static void configure_ilm_surface(t_ilm_uint id, t_ilm_uint width, t_ilm_uint height)
 {
@@ -97,7 +99,7 @@ static t_ilm_uint choose_screen(void)
     struct ilmScreenProperties screenProperties;
     t_ilm_uint* screen_IDs = NULL;
     t_ilm_uint screen_ID = 0;
-    t_ilm_uint screen_count = NULL;
+    t_ilm_uint screen_count = 0;
     t_ilm_uint choosen_width = 0;
     t_ilm_uint choosen_height = 0;
     int i;
@@ -107,7 +109,13 @@ static t_ilm_uint choose_screen(void)
     for (i = 0; i<screen_count; i++)
     {
         ilm_getPropertiesOfScreen(screen_IDs[i], &screenProperties);
-        if (screenProperties.screenWidth > choosen_width) {
+        if (!strcmp(screenProperties.connectorName, display_name)) {
+            choosen_width = screenProperties.screenWidth;
+            choosen_height = screenProperties.screenHeight;
+            screen_ID = screen_IDs[i];
+            break;
+        }
+        else if (screenProperties.screenWidth > choosen_width) {
             choosen_width = screenProperties.screenWidth;
             choosen_height = screenProperties.screenHeight;
             screen_ID = screen_IDs[i];
@@ -122,17 +130,76 @@ static t_ilm_uint choose_screen(void)
     return screen_ID;
 }
 
-int main (int argc, const char * argv[])
+static int
+usage(int ret)
+{
+    fprintf(stderr, "    -h,  --help                  display this help and exit.\n"
+                    "    -d,  --display-name          name of the display which will be used,\n"
+                    "                                 e.g.: HDMI-A-1, LVDS1\n"
+                    "                                 If it is not set, display with highest resolution is used.\n"
+                    "    -l,  --layer-id              id of the used ILM layer. It has to be set\n"
+                    "    -s,  --surface-count         number of surfaces which will be added to\n"
+                    "                                 the layer. It has to be set\n");
+    exit(ret);
+}
+
+void parse_options(int argc, char *argv[])
+{
+    int opt;
+    static const struct option options[] = {
+        { "help",              no_argument, NULL, 'h' },
+        { "layer-id",              required_argument, 0, 'l' },
+        { "surface-count",           required_argument, 0, 's' },
+        { "display-name", required_argument, NULL, 'd' },
+        { 0,                   0,           NULL, 0 }
+    };
+
+    while (1) {
+        opt = getopt_long(argc, argv, "hl:s:d:", options, NULL);
+
+        if (opt == -1)
+            break;
+
+        switch (opt) {
+            case 'h':
+                usage(0);
+                break;
+            case 'l':
+                layer = atoi(optarg);
+                printf("%d \n", layer);
+                break;
+            case 's':
+                number_of_surfaces = atoi(optarg);
+                printf("%d \n", number_of_surfaces);
+                break;
+            case 'd':
+                strcpy(display_name, optarg);
+                printf("%s \n", optarg);
+                break;
+            default:
+                usage(-1);
+                break;
+        }
+    }
+}
+
+int main (int argc, char *argv[])
 {
     // Get command-line options
-    if ( argc != 3) {
-        printf("Call layer-add-surface <layerID> <number_of_surfaces>\n");
-        return -1;
+    if ( argc < 3) {
+        usage(-1);
     }
 
-    layer = strtol(argv[1], NULL, 0);
+    // Check the first character of the first parameter
+    if (!strncmp(argv[1], "-", 1)) {
+        parse_options(argc, argv);
+    } else {
+        layer = strtol(argv[1], NULL, 0);
+        number_of_surfaces = strtol(argv[2], NULL, 0);
+    }
 
-    number_of_surfaces = strtol(argv[2], NULL, 0);
+    if (!number_of_surfaces || !layer)
+        usage(-1);
 
     pthread_mutexattr_t a;
     if (pthread_mutexattr_init(&a) != 0)
@@ -158,7 +225,10 @@ int main (int argc, const char * argv[])
     t_ilm_layer renderOrder[1];
     t_ilm_uint screen_ID;
     renderOrder[0] = layer;
-    ilm_init();
+    if (ilm_init() == ILM_FAILED) {
+        fprintf(stderr, "ilm_init failed\n");
+        return -1;
+    }
 
     screen_ID = choose_screen();
     ilm_layerCreateWithDimension(&layer, screenWidth, screenHeight);
