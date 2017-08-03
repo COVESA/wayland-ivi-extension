@@ -1361,8 +1361,8 @@ create_input_context(struct ivishell *shell)
     ctx->surface_destroyed.notify = handle_surface_destroy;
     ctx->compositor_destroy_listener.notify = input_controller_destroy;
 
-    ctx->ivishell->interface->add_listener_create_surface(&ctx->surface_created);
-    ctx->ivishell->interface->add_listener_remove_surface(&ctx->surface_destroyed);
+    wl_signal_add(&ctx->ivishell->ivisurface_created_signal, &ctx->surface_created);
+    wl_signal_add(&ctx->ivishell->ivisurface_removed_signal, &ctx->surface_destroyed);
     wl_signal_add(&ctx->ivishell->compositor->destroy_signal, &ctx->compositor_destroy_listener);
 
     ctx->seat_create_listener.notify = &handle_seat_create;

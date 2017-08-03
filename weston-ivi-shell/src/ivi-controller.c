@@ -1648,6 +1648,8 @@ surface_event_create(struct wl_listener *listener, void *data)
         weston_log("failed to create surface");
         return;
     }
+
+    wl_signal_emit(&shell->ivisurface_created_signal, ivisurf);
 }
 
 static void
@@ -1668,6 +1670,7 @@ surface_event_remove(struct wl_listener *listener, void *data)
         return;
     }
 
+    wl_signal_emit(&shell->ivisurface_removed_signal, ivisurf);
     wl_list_for_each_safe(not, next, &ivisurf->notification_list, layout_link)
     {
         wl_list_remove(&not->link);
@@ -1952,6 +1955,9 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
 
     shell->destroy_listener.notify = ivi_shell_destroy;
     wl_signal_add(&ec->destroy_signal, &shell->destroy_listener);
+
+    wl_signal_init(&shell->ivisurface_created_signal);
+    wl_signal_init(&shell->ivisurface_removed_signal);
 }
 
 int
