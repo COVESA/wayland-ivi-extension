@@ -51,6 +51,9 @@ struct ivishell {
 
     struct wl_list list_controller;
 
+    struct wl_signal ivisurface_created_signal;
+    struct wl_signal ivisurface_removed_signal;
+
     struct wl_listener surface_created;
     struct wl_listener surface_removed;
     struct wl_listener surface_configured;
