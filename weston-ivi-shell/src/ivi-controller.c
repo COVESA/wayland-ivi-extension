@@ -1967,17 +1967,13 @@ setup_ivi_controller_server(struct weston_compositor *compositor,
 }
 
 static int
-load_input_module(struct weston_compositor *ec,
-                  const struct ivi_layout_interface *interface,
-                  size_t interface_version)
+load_input_module(struct ivishell *shell)
 {
-    struct weston_config *config = wet_get_config(ec);
+    struct weston_config *config = wet_get_config(shell->compositor);
     struct weston_config_section *section;
     char *input_module = NULL;
 
-    int (*input_module_init)(struct weston_compositor *ec,
-                             const struct ivi_layout_interface *interface,
-                             size_t interface_version);
+    int (*input_module_init)(struct ivishell *shell);
 
     section = weston_config_get_section(config, "ivi-shell", NULL, NULL);
 
@@ -1992,9 +1988,8 @@ load_input_module(struct weston_compositor *ec,
     if (!input_module_init)
         return -1;
 
-    if (input_module_init(ec, interface,
-                          sizeof(struct ivi_layout_interface)) != 0) {
-        weston_log("ivi-controller: Initialization of input module failes");
+    if (input_module_init(shell) != 0) {
+        weston_log("ivi-controller: Initialization of input module fails");
         return -1;
     }
 
@@ -2038,7 +2033,7 @@ controller_module_init(struct weston_compositor *compositor,
         return -1;
     }
 
-    if (load_input_module(compositor, interface, interface_version) < 0) {
+    if (load_input_module(shell) < 0) {
         destroy_screen_ids(shell);
         free(shell);
         return -1;
