@@ -36,8 +36,8 @@
 #include <sys/mman.h>
 
 #include <weston.h>
-#include <weston/ivi-layout-export.h>
 #include "ivi-wm-server-protocol.h"
+#include "ivi-controller.h"
 
 #include "wayland-util.h"
 #ifdef IVI_SHARE_ENABLE
@@ -51,20 +51,6 @@ struct notification {
     struct wl_list link;
     struct wl_resource *resource;
     struct wl_list layout_link;
-};
-
-struct ivisurface {
-    struct wl_list link;
-    struct ivishell *shell;
-    uint32_t update_count;
-    struct ivi_layout_surface *layout_surface;
-    const struct ivi_layout_surface_properties *prop;
-    struct wl_listener property_changed;
-    struct wl_listener surface_destroy_listener;
-    struct wl_listener committed;
-    struct wl_list notification_list;
-    enum ivi_wm_surface_type type;
-    uint32_t frame_count;
 };
 
 struct ivilayer {
@@ -93,32 +79,6 @@ struct ivicontroller {
 
     struct wl_list layer_notifications;
     struct wl_list surface_notifications;
-};
-
-struct ivishell {
-    struct weston_compositor *compositor;
-    const struct ivi_layout_interface *interface;
-
-    struct wl_list list_surface;
-    struct wl_list list_layer;
-    struct wl_list list_screen;
-
-    struct wl_list list_controller;
-
-    struct wl_listener surface_created;
-    struct wl_listener surface_removed;
-    struct wl_listener surface_configured;
-
-    struct wl_listener layer_created;
-    struct wl_listener layer_removed;
-
-    struct wl_listener output_created;
-    struct wl_listener output_destroyed;
-
-    struct wl_listener destroy_listener;
-
-    struct wl_array screen_ids;
-    uint32_t screen_id_offset;
 };
 
 struct screenshot_frame_listener {
