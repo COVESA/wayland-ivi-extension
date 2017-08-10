@@ -223,7 +223,6 @@ send_surface_prop(struct wl_listener *listener, void *data)
     (void)data;
     enum ivi_layout_notification_mask mask;
     struct ivicontroller *ctrl;
-    const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
     struct notification *not;
     uint32_t surface_id;
 
@@ -578,7 +577,6 @@ controller_surface_sync(struct wl_client *client,
                               int32_t sync_state)
 {
     struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     struct ivi_layout_surface *layout_surface;
     struct ivisurface *ivisurf;
     const struct ivi_layout_surface_properties *prop;
@@ -631,7 +629,6 @@ controller_set_surface_type(struct wl_client *client, struct wl_resource *resour
                             uint32_t surface_id, int32_t type)
 {
     struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
-    const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
     struct ivi_layout_surface *layout_surface;
     struct ivisurface *ivisurf;
@@ -1609,7 +1606,6 @@ layer_event_create(struct wl_listener *listener, void *data)
 static void
 layer_event_remove(struct wl_listener *listener, void *data)
 {
-    struct wl_resource *resource;
     struct ivishell *shell = wl_container_of(listener, shell, layer_removed);
     struct ivilayer *ivilayer = NULL;
     struct ivicontroller *controller = NULL;
@@ -1647,7 +1643,6 @@ layer_event_remove(struct wl_listener *listener, void *data)
 static void
 surface_event_create(struct wl_listener *listener, void *data)
 {
-    struct wl_resource *resource;
     struct ivishell *shell = wl_container_of(listener, shell, surface_created);
     const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
@@ -1669,7 +1664,6 @@ surface_event_create(struct wl_listener *listener, void *data)
 static void
 surface_event_remove(struct wl_listener *listener, void *data)
 {
-    struct wl_resource *resource;
     struct ivishell *shell = wl_container_of(listener, shell, surface_removed);
     struct ivicontroller *controller = NULL;
     struct ivisurface *ivisurf = NULL;
@@ -1708,7 +1702,6 @@ surface_event_remove(struct wl_listener *listener, void *data)
 static void
 surface_event_configure(struct wl_listener *listener, void *data)
 {
-    struct wl_resource *resource;
     struct ivishell *shell = wl_container_of(listener, shell, surface_configured);
     const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
