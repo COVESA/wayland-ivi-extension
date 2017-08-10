@@ -122,8 +122,6 @@ get_accepted_seat(struct ivisurface *surface, const char *seat)
 static int
 add_accepted_seat(struct ivisurface *surface, const char *seat)
 {
-    const struct ivi_layout_interface *interface =
-        surface->shell->interface;
     struct seat_focus *st_focus;
     int ret = 0;
 
@@ -160,8 +158,6 @@ static int
 remove_accepted_seat(struct ivisurface *surface, const char *seat)
 {
     int ret = 0;
-    const struct ivi_layout_interface *interface =
-            surface->shell->interface;
 
     struct seat_focus *st_focus = get_accepted_seat(surface, seat);
 
@@ -361,7 +357,6 @@ input_ctrl_kbd_leave_surf(struct seat_ctx *ctx_seat,
 {
     struct wl_keyboard_data kbd_data;
     struct input_context *ctx = ctx_seat->input_ctx;
-    const struct ivi_layout_interface *interface = ctx->ivishell->interface;
     struct seat_focus *st_focus;
 
 
@@ -390,7 +385,6 @@ input_ctrl_kbd_enter_surf(struct seat_ctx *ctx_seat,
     struct wl_keyboard_data kbd_data;
     struct input_context *ctx = ctx_seat->input_ctx;
     struct seat_focus *st_focus;
-    const struct ivi_layout_interface *interface = ctx->ivishell->interface;
     uint32_t serial;
 
     st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
@@ -524,7 +518,6 @@ input_ctrl_snd_focus_to_controller(struct ivisurface *surf_ctx,
         int32_t enabled)
 {
     struct input_context *ctx = ctx_seat->input_ctx;
-    const struct ivi_layout_interface *lyt_if = ctx->ivishell->interface;
     struct seat_focus *st_focus = NULL;
     uint32_t ivi_surf_id;
 
@@ -552,7 +545,6 @@ input_ctrl_ptr_leave_west_focus(struct seat_ctx *ctx_seat,
 {
     struct ivisurface *surf_ctx;
     struct input_context *ctx = ctx_seat->input_ctx;
-    const struct ivi_layout_interface *lyt_if = ctx->ivishell->interface;
     struct seat_focus *st_focus;
 
     if (NULL != pointer->focus) {
@@ -854,8 +846,6 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
     struct seat_focus *st_focus;
     struct weston_touch *touch = grab->touch;
     struct ivisurface *surf_ctx;
-    const struct ivi_layout_interface *interface =
-        seat->input_ctx->ivishell->interface;
 
     if (NULL != touch->focus) {
         if (touch->num_tp == 0) {
@@ -1018,8 +1008,6 @@ handle_surface_destroy(struct wl_listener *listener, void *data)
     struct input_context *ctx =
             wl_container_of(listener, ctx, surface_destroyed);
     int surface_removed = 0;
-    const struct ivi_layout_interface *interface =
-        ctx->ivishell->interface;
 
     struct ivisurface *surf = (struct ivisurface *) data;
 
@@ -1042,8 +1030,6 @@ handle_surface_create(struct wl_listener *listener, void *data)
     struct input_context *input_ctx =
             wl_container_of(listener, input_ctx, surface_created);
     struct ivisurface *ivisurface = (struct ivisurface *) data;
-    const struct ivi_layout_interface *interface =
-        input_ctx->ivishell->interface;
 
     wl_list_init(&ivisurface->accepted_seat_list);
     add_accepted_seat(ivisurface, "default");
@@ -1216,8 +1202,6 @@ bind_ivi_input(struct wl_client *client, void *data,
     struct input_controller *controller;
     struct weston_seat *seat;
     struct ivisurface *ivisurface;
-    const struct ivi_layout_interface *interface =
-        ctx->ivishell->interface;
     struct seat_focus *st_focus;
     uint32_t ivi_surf_id;
 
