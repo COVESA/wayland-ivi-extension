@@ -1645,20 +1645,22 @@ surface_event_create(struct wl_listener *listener, void *data)
 {
     struct ivishell *shell = wl_container_of(listener, shell, surface_created);
     const struct ivi_layout_interface *lyt = shell->interface;
-    struct ivisurface *ivisurf = NULL;
     struct ivi_layout_surface *layout_surface =
            (struct ivi_layout_surface *) data;
-    uint32_t surface_id = 0;
 
-    surface_id = lyt->get_id_of_surface(layout_surface);
+    uint32_t surface_id = lyt->get_id_of_surface(layout_surface);
 
-    ivisurf = create_surface(shell, layout_surface, surface_id);
-    if (ivisurf == NULL) {
-        weston_log("failed to create surface");
-        return;
+    if (surface_id != IVI_INVALID_ID)
+    {
+        struct ivisurface *ivisurf = NULL;
+        ivisurf = create_surface(shell, layout_surface, surface_id);
+        if (ivisurf == NULL) {
+            weston_log("failed to create surface");
+            return;
+        }
+
+        wl_signal_emit(&shell->ivisurface_created_signal, ivisurf);
     }
-
-    wl_signal_emit(&shell->ivisurface_created_signal, ivisurf);
 }
 
 static void
@@ -1750,7 +1752,8 @@ surface_event_configure(struct wl_listener *listener, void *data)
     uint32_t surface_id;
     surface_id = lyt->get_id_of_surface(layout_surface);
 
-    configure_surface(shell, layout_surface, surface_id);
+    if (surface_id != IVI_INVALID_ID)
+        configure_surface(shell, layout_surface, surface_id);
 }
 
 static int32_t
@@ -1813,9 +1816,10 @@ check_layout_surfaces(struct ivishell *shell)
 
     for (i = 0; i < length; i++) {
         surface_id = lyt->get_id_of_surface(pArray[i]);
-        ivisurf = create_surface(shell, pArray[i], surface_id);
-        if (ivisurf == NULL) {
-            weston_log("failed to create surface");
+        if(surface_id != IVI_INVALID_ID) {
+            ivisurf = create_surface(shell, pArray[i], surface_id);
+            if (ivisurf == NULL)
+                weston_log("failed to create surface");
         }
     }
 
