@@ -27,6 +27,7 @@
 #include <weston/ivi-layout-export.h>
 
 struct ivisurface {
+    uint32_t surface_id;
     struct wl_list link;
     struct ivishell *shell;
     uint32_t update_count;

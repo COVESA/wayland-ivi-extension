@@ -160,7 +160,6 @@ send_surface_configure_event(struct ivicontroller * ctrl,
     struct weston_surface *surface;
     const struct ivi_layout_interface *lyt = ctrl->shell->interface;
 
-
     surface = lyt->surface_get_weston_surface(layout_surface);
 
     if (!surface)
@@ -216,7 +215,7 @@ send_surface_prop(struct wl_listener *listener, void *data)
 
     mask = ivisurf->prop->event_mask;
 
-    surface_id = lyt->get_id_of_surface(ivisurf->layout_surface);
+    surface_id = ivisurf->surface_id;
 
     wl_list_for_each(not, &ivisurf->notification_list, layout_link) {
         ctrl = wl_resource_get_user_data(not->resource);
@@ -989,8 +988,8 @@ controller_layer_get(struct wl_client *client, struct wl_resource *resource,
     const struct ivi_layout_layer_properties *prop;
     enum ivi_layout_notification_mask mask;
     struct ivi_layout_surface **surf_list = NULL;
+    struct ivisurface *ivisurf;
     int32_t surface_count, i;
-    uint32_t id;
 
     layout_layer = lyt->get_layer_from_id(layer_id);
     if (!layout_layer) {
@@ -1007,8 +1006,8 @@ controller_layer_get(struct wl_client *client, struct wl_resource *resource,
     if (param & IVI_WM_PARAM_RENDER_ORDER) {
         lyt->get_surfaces_on_layer(layout_layer, &surface_count, &surf_list);
         for (i = 0; i < surface_count; i++) {
-            id = lyt->get_id_of_surface(surf_list[i]);
-            ivi_wm_send_layer_surface_added(ctrl->resource, layer_id, id);
+            ivisurf = get_surface(&ctrl->shell->list_surface, surf_list[i]);
+            ivi_wm_send_layer_surface_added(ctrl->resource, layer_id, ivisurf->surface_id);
         }
 
         free(surf_list);
@@ -1413,7 +1412,7 @@ bind_ivi_controller(struct wl_client *client, void *data,
     wl_list_init(&controller->layer_notifications);
 
     wl_list_for_each_reverse(ivisurf, &shell->list_surface, link) {
-        surface_id = shell->interface->get_id_of_surface(ivisurf->layout_surface);
+        surface_id = ivisurf->surface_id;
         ivi_wm_send_surface_created(controller->resource, surface_id);
     }
 
@@ -1539,7 +1538,7 @@ surface_committed(struct wl_listener *listener, void *data)
 static struct ivisurface*
 create_surface(struct ivishell *shell,
                struct ivi_layout_surface *layout_surface,
-               uint32_t id_surface)
+               uint32_t surface_id)
 {
     const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
@@ -1555,6 +1554,7 @@ create_surface(struct ivishell *shell,
     ivisurf->shell = shell;
     ivisurf->layout_surface = layout_surface;
     ivisurf->prop = lyt->get_properties_of_surface(layout_surface);
+    ivisurf->surface_id = surface_id;
     wl_list_insert(&shell->list_surface, &ivisurf->link);
     wl_list_init(&ivisurf->notification_list);
 
@@ -1564,7 +1564,7 @@ create_surface(struct ivishell *shell,
 
     wl_list_for_each(controller, &shell->list_controller, link) {
         if (controller->resource)
-            ivi_wm_send_surface_created(controller->resource, id_surface);
+            ivi_wm_send_surface_created(controller->resource, surface_id);
     }
 
      ivisurf->property_changed.notify = send_surface_prop;
@@ -1606,7 +1606,7 @@ layer_event_remove(struct wl_listener *listener, void *data)
 
     ivilayer = get_layer(&shell->list_layer, layout_layer);
     if (ivilayer == NULL) {
-        weston_log("id_surface is not created yet\n");
+        weston_log("surface_id is not created yet\n");
         return;
     }
 
@@ -1639,11 +1639,11 @@ surface_event_create(struct wl_listener *listener, void *data)
     struct ivisurface *ivisurf = NULL;
     struct ivi_layout_surface *layout_surface =
            (struct ivi_layout_surface *) data;
-    uint32_t id_surface = 0;
+    uint32_t surface_id = 0;
 
-    id_surface = lyt->get_id_of_surface(layout_surface);
+    surface_id = lyt->get_id_of_surface(layout_surface);
 
-    ivisurf = create_surface(shell, layout_surface, id_surface);
+    ivisurf = create_surface(shell, layout_surface, surface_id);
     if (ivisurf == NULL) {
         weston_log("failed to create surface");
         return;
@@ -1661,12 +1661,12 @@ surface_event_remove(struct wl_listener *listener, void *data)
     struct ivisurface *ivisurf = NULL;
     struct ivi_layout_surface *layout_surface =
            (struct ivi_layout_surface *) data;
-    uint32_t id_surface = 0;
+    uint32_t surface_id = 0;
     struct notification *not, *next;
 
     ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
-        weston_log("id_surface is not created yet\n");
+        weston_log("surface_id is not created yet\n");
         return;
     }
 
@@ -1678,16 +1678,16 @@ surface_event_remove(struct wl_listener *listener, void *data)
         free(not);
     }
 
+    surface_id = ivisurf->surface_id;
+
     wl_list_remove(&ivisurf->link);
     wl_list_remove(&ivisurf->property_changed.link);
     wl_list_remove(&ivisurf->committed.link);
     free(ivisurf);
 
-    id_surface = shell->interface->get_id_of_surface(layout_surface);
-
     wl_list_for_each(controller, &shell->list_controller, link) {
         if (controller->resource)
-            ivi_wm_send_surface_destroyed(controller->resource, id_surface);
+            ivi_wm_send_surface_destroyed(controller->resource, surface_id);
     }
 }
 
@@ -1707,7 +1707,7 @@ surface_event_configure(struct wl_listener *listener, void *data)
 
     ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
-        weston_log("id_surface is not created yet\n");
+        weston_log("surface_id is not created yet\n");
         return;
     }
 
@@ -1777,7 +1777,7 @@ check_layout_surfaces(struct ivishell *shell)
     struct ivi_layout_surface **pArray = NULL;
     struct ivisurface *ivisurf = NULL;
     const struct ivi_layout_interface *lyt = shell->interface;
-    uint32_t id_surface = 0;
+    uint32_t surface_id = 0;
     int32_t length = 0;
     uint32_t i = 0;
     int32_t ret = 0;
@@ -1794,8 +1794,8 @@ check_layout_surfaces(struct ivishell *shell)
     }
 
     for (i = 0; i < length; i++) {
-        id_surface = lyt->get_id_of_surface(pArray[i]);
-        ivisurf = create_surface(shell, pArray[i], id_surface);
+        surface_id = lyt->get_id_of_surface(pArray[i]);
+        ivisurf = create_surface(shell, pArray[i], surface_id);
         if (ivisurf == NULL) {
             weston_log("failed to create surface");
         }
