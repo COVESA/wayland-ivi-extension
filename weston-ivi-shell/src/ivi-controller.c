@@ -124,6 +124,20 @@ unbind_resource_controller(struct wl_resource *resource)
     controller = NULL;
 }
 
+static struct ivi_layout_surface *
+get_layout_surface_from_id(struct wl_list *list_surf, uint32_t surface_id)
+{
+    struct ivisurface *ivisurf = NULL;
+
+    wl_list_for_each(ivisurf, list_surf, link) {
+        if (ivisurf->surface_id == surface_id) {
+            return ivisurf->layout_surface;
+        }
+    }
+
+    return NULL;
+}
+
 static struct ivisurface*
 get_surface(struct wl_list *list_surf, struct ivi_layout_surface *layout_surface)
 {
@@ -281,7 +295,7 @@ controller_set_surface_opacity(struct wl_client *client,
     (void)client;
     struct ivi_layout_surface *layout_surface;
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_surface_error(resource, surface_id,
                                   IVI_WM_SURFACE_ERROR_NO_SURFACE,
@@ -307,7 +321,7 @@ controller_set_surface_source_rectangle(struct wl_client *client,
     struct ivi_layout_surface *layout_surface;
     const struct ivi_layout_surface_properties *prop;
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_surface_error(resource, surface_id,
                                   IVI_WM_SURFACE_ERROR_NO_SURFACE,
@@ -345,7 +359,7 @@ controller_set_surface_destination_rectangle(struct wl_client *client,
     struct ivi_layout_surface *layout_surface;
     const struct ivi_layout_surface_properties *prop;
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_surface_error(resource, surface_id,
                                   IVI_WM_SURFACE_ERROR_NO_SURFACE,
@@ -385,7 +399,7 @@ controller_set_surface_visibility(struct wl_client *client,
     (void)client;
     struct ivi_layout_surface *layout_surface;
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_surface_error(resource, surface_id,
                                   IVI_WM_SURFACE_ERROR_NO_SURFACE,
@@ -466,7 +480,7 @@ controller_surface_screenshot(struct wl_client *client,
         return;
     }
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_screenshot_send_error(
             screenshot, IVI_SCREENSHOT_ERROR_NO_SURFACE,
@@ -571,7 +585,7 @@ controller_surface_sync(struct wl_client *client,
     (void)client;
     struct notification *not;
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_surface_error(resource, surface_id,
                                   IVI_WM_SURFACE_ERROR_NO_SURFACE,
@@ -622,7 +636,7 @@ controller_set_surface_type(struct wl_client *client, struct wl_resource *resour
     struct ivi_layout_surface *layout_surface;
     struct ivisurface *ivisurf;
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_surface_error(resource, surface_id,
                                   IVI_WM_SURFACE_ERROR_NO_SURFACE,
@@ -668,7 +682,7 @@ controller_surface_get(struct wl_client *client, struct wl_resource *resource,
 
     mask = convert_protocol_enum(param);
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_surface_error(resource, surface_id,
                                   IVI_WM_SURFACE_ERROR_NO_SURFACE,
@@ -843,7 +857,7 @@ controller_layer_add_surface(struct wl_client *client,
         return;
     }
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_layer_error(resource, surface_id,
                                 IVI_WM_LAYER_ERROR_NO_SURFACE,
@@ -874,7 +888,7 @@ controller_layer_remove_surface(struct wl_client *client,
         return;
     }
 
-    layout_surface = lyt->get_surface_from_id(surface_id);
+    layout_surface = get_layout_surface_from_id(&ctrl->shell->list_surface, surface_id);
     if (!layout_surface) {
         ivi_wm_send_layer_error(resource, surface_id,
                                 IVI_WM_LAYER_ERROR_NO_SURFACE,
