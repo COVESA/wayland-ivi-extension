@@ -1700,25 +1700,21 @@ surface_event_remove(struct wl_listener *listener, void *data)
 }
 
 static void
-surface_event_configure(struct wl_listener *listener, void *data)
+configure_surface(struct ivishell *shell, struct ivi_layout_surface *layout_surface,
+        uint32_t surface_id)
 {
-    struct ivishell *shell = wl_container_of(listener, shell, surface_configured);
-    const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
-    struct ivi_layout_surface *layout_surface =
-           (struct ivi_layout_surface *) data;
+    struct weston_surface *w_surface;
     struct ivicontroller *ctrl;
     struct notification *not;
-    uint32_t surface_id;
-    struct weston_surface *w_surface;
+
+    const struct ivi_layout_interface *lyt = shell->interface;
 
     ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
         weston_log("surface_id is not created yet\n");
         return;
     }
-
-    surface_id = lyt->get_id_of_surface(layout_surface);
 
     if (ivisurf->type == IVI_WM_SURFACE_TYPE_DESKTOP) {
         w_surface = lyt->surface_get_weston_surface(layout_surface);
@@ -1740,6 +1736,21 @@ surface_event_configure(struct wl_listener *listener, void *data)
         send_surface_event(ctrl, ivisurf->layout_surface, surface_id, ivisurf->prop,
                            IVI_NOTIFICATION_CONFIGURE);
     }
+}
+
+static void
+surface_event_configure(struct wl_listener *listener, void *data)
+{
+    struct ivishell *shell = wl_container_of(listener, shell,
+            surface_configured);
+    const struct ivi_layout_interface *lyt = shell->interface;
+    struct ivi_layout_surface *layout_surface =
+            (struct ivi_layout_surface *) data;
+
+    uint32_t surface_id;
+    surface_id = lyt->get_id_of_surface(layout_surface);
+
+    configure_surface(shell, layout_surface, surface_id);
 }
 
 static int32_t
