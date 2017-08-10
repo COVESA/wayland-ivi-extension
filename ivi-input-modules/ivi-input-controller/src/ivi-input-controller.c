@@ -140,16 +140,16 @@ add_accepted_seat(struct ivisurface *surface, const char *seat)
             } else {
                 free(st_focus);
                 weston_log("%s Failed to allocate memory for seat addition of surface %d",
-                        __FUNCTION__, interface->get_id_of_surface(surface->layout_surface));
+                        __FUNCTION__, surface->surface_id);
             }
        } else {
             weston_log("%s Failed to allocate memory for seat addition of surface %d",
-                    __FUNCTION__, interface->get_id_of_surface(surface->layout_surface));
+                    __FUNCTION__, surface->surface_id);
         }
     } else {
         weston_log("%s: Warning: seat '%s' is already accepted by surface %d\n",
                    __FUNCTION__, seat,
-                   interface->get_id_of_surface(surface->layout_surface));
+                   surface->surface_id);
         ret = 1;
     }
 
@@ -174,7 +174,7 @@ remove_accepted_seat(struct ivisurface *surface, const char *seat)
     } else {
         weston_log("%s: Warning: seat '%s' not found for surface %u\n",
                   __FUNCTION__, seat,
-                  interface->get_id_of_surface(surface->layout_surface));
+                  surface->surface_id);
     }
     return ret;
 }
@@ -378,7 +378,7 @@ input_ctrl_kbd_leave_surf(struct seat_ctx *ctx_seat,
 
         st_focus->focus &= ~ILM_INPUT_DEVICE_KEYBOARD;
         send_input_focus(ctx,
-                interface->get_id_of_surface(surf_ctx->layout_surface),
+                surf_ctx->surface_id,
                 ILM_INPUT_DEVICE_KEYBOARD, ILM_FALSE);
     }
 }
@@ -405,7 +405,7 @@ input_ctrl_kbd_enter_surf(struct seat_ctx *ctx_seat,
 
         st_focus->focus |= ILM_INPUT_DEVICE_KEYBOARD;
         send_input_focus(ctx,
-                interface->get_id_of_surface(surf_ctx->layout_surface),
+                surf_ctx->surface_id,
                 ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE);
 
     }
@@ -529,7 +529,7 @@ input_ctrl_snd_focus_to_controller(struct ivisurface *surf_ctx,
     uint32_t ivi_surf_id;
 
     if (NULL != surf_ctx) {
-        ivi_surf_id = lyt_if->get_id_of_surface(surf_ctx->layout_surface);
+        ivi_surf_id = surf_ctx->surface_id;
 
         st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
         /* Send focus lost event to the surface which has lost the focus*/
@@ -1032,7 +1032,7 @@ handle_surface_destroy(struct wl_listener *listener, void *data)
 
     if (!surface_removed) {
         weston_log("%s: Warning! surface %d already destroyed\n", __FUNCTION__,
-                   interface->get_id_of_surface((surf->layout_surface)));
+                   surf->surface_id);
     }
 }
 
@@ -1048,7 +1048,7 @@ handle_surface_create(struct wl_listener *listener, void *data)
     wl_list_init(&ivisurface->accepted_seat_list);
     add_accepted_seat(ivisurface, "default");
     send_input_acceptance(input_ctx,
-                          interface->get_id_of_surface(ivisurface->layout_surface),
+                          ivisurface->surface_id,
                           "default", ILM_TRUE);
 }
 
@@ -1247,7 +1247,7 @@ bind_ivi_input(struct wl_client *client, void *data,
     }
     /* Send focus events for all known surfaces to the client */
     wl_list_for_each(ivisurface, &ctx->ivishell->list_surface, link) {
-        ivi_surf_id = interface->get_id_of_surface(ivisurface->layout_surface);
+        ivi_surf_id = ivisurface->surface_id;
         wl_list_for_each(st_focus, &ivisurface->accepted_seat_list, link) {
             ivi_input_send_input_focus(controller->resource,
                                 ivi_surf_id, st_focus->focus, ILM_TRUE);
@@ -1255,7 +1255,7 @@ bind_ivi_input(struct wl_client *client, void *data,
     }
     /* Send acceptance events for all known surfaces to the client */
     wl_list_for_each(ivisurface, &ctx->ivishell->list_surface, link) {
-        ivi_surf_id = interface->get_id_of_surface(ivisurface->layout_surface);
+        ivi_surf_id = ivisurface->surface_id;
         wl_list_for_each(st_focus, &ivisurface->accepted_seat_list, link) {
             ivi_input_send_input_acceptance(controller->resource,
                                 ivi_surf_id, st_focus->seat_name, ILM_TRUE);
