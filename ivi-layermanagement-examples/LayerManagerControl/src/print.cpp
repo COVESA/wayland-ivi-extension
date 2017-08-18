@@ -107,6 +107,8 @@ void printScreenProperties(unsigned int screenid, const char* prefix)
         cout << layerid << "(0x" << hex << layerid << dec << "), ";
     }
     cout << "\n";
+
+    free(screenProperties.layerIds);
 }
 
 void printLayerProperties(unsigned int layerid, const char* prefix)
@@ -154,6 +156,7 @@ void printLayerProperties(unsigned int layerid, const char* prefix)
                 << surfaceArray[surfaceIndex] << dec << "), ";
     }
     cout << "\n";
+    free(surfaceArray);
 
     cout << prefix << "- on screen:            ";
 
@@ -191,8 +194,12 @@ void printLayerProperties(unsigned int layerid, const char* prefix)
                 cout << screenid << "(0x" << hex << screenid << dec << ") ";
             }
         }
+
+        free(layerArray);
     }
     cout << "\n";
+
+    free(screenArray);
 }
 
 void printSurfaceProperties(unsigned int surfaceid, const char* prefix)
@@ -261,8 +268,12 @@ void printSurfaceProperties(unsigned int surfaceid, const char* prefix)
                 cout << layerid << "(0x" << hex << layerid << dec << ") ";
             }
         }
+
+        free(surfaceArray);
     }
     cout << "\n";
+
+    free(layerArray);
 }
 
 void printScene()
@@ -318,6 +329,12 @@ void printScene()
                 printSurfaceProperties(surfaceid, "        ");
                 cout << "\n";
             }
+
+            free(surfaceArray);
         }
+
+        free(layerArray);
     }
+
+    free(screenArray);
 }

@@ -89,6 +89,7 @@ COMMAND("get scene|screens|layers|surfaces")
         }
 
         printArray("Screen", array, count);
+        free(array);
     }
     else if (input->contains("layers"))
     {
@@ -105,6 +106,7 @@ COMMAND("get scene|screens|layers|surfaces")
         }
 
         printArray("Layer", array, count);
+        free(array);
     }
     else if (input->contains("surfaces"))
     {
@@ -121,6 +123,7 @@ COMMAND("get scene|screens|layers|surfaces")
         }
 
         printArray("Surface", array, count);
+        free(array);
     }
 }
 
@@ -349,6 +352,7 @@ COMMAND("set screen|layer <id> render order [<idarray>]")
             }
 
             ilm_commitChanges();
+            delete[] array;
         }
         else
         {
@@ -383,6 +387,7 @@ COMMAND("set screen|layer <id> render order [<idarray>]")
             }
 
             ilm_commitChanges();
+            delete[] array;
         }
         else
         {
@@ -491,6 +496,7 @@ COMMAND("watch layer|surface <idarray>")
         input->getUintArray("idarray", &layerids, &layeridCount);
 
         watchLayer(layerids, layeridCount);
+        delete[] layerids;
     }
     else if (input->contains("surface"))
     {
@@ -499,6 +505,7 @@ COMMAND("watch layer|surface <idarray>")
         input->getUintArray("idarray", &surfaceids, &surfaceidCount);
 
         watchSurface(surfaceids, surfaceidCount);
+        delete[] surfaceids;
     }
 }
 
