@@ -633,6 +633,9 @@ destroy_window(struct window *window)
     if (window->share_surface)
         ivi_share_surface_destroy(window->share_surface);
 
+    if (window->ivi_surface)
+        ivi_surface_destroy(window->ivi_surface);
+
     if (window->surface)
         wl_surface_destroy(window->surface);
 
@@ -648,6 +651,9 @@ destroy_display(struct display *display)
 
     if (display->ivi_application)
         ivi_application_destroy(display->ivi_application);
+
+    if (display->seat)
+        wl_seat_destroy(display->seat);
 
     if (display->compositor)
         wl_compositor_destroy(display->compositor);
