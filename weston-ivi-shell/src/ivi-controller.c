@@ -36,8 +36,8 @@
 #include <sys/mman.h>
 
 #include <weston.h>
-#include <weston/ivi-layout-export.h>
 #include "ivi-wm-server-protocol.h"
+#include "ivi-controller.h"
 
 #include "wayland-util.h"
 #ifdef IVI_SHARE_ENABLE
@@ -51,20 +51,6 @@ struct notification {
     struct wl_list link;
     struct wl_resource *resource;
     struct wl_list layout_link;
-};
-
-struct ivisurface {
-    struct wl_list link;
-    struct ivishell *shell;
-    uint32_t update_count;
-    struct ivi_layout_surface *layout_surface;
-    const struct ivi_layout_surface_properties *prop;
-    struct wl_listener property_changed;
-    struct wl_listener surface_destroy_listener;
-    struct wl_listener committed;
-    struct wl_list notification_list;
-    enum ivi_wm_surface_type type;
-    uint32_t frame_count;
 };
 
 struct ivilayer {
@@ -93,32 +79,6 @@ struct ivicontroller {
 
     struct wl_list layer_notifications;
     struct wl_list surface_notifications;
-};
-
-struct ivishell {
-    struct weston_compositor *compositor;
-    const struct ivi_layout_interface *interface;
-
-    struct wl_list list_surface;
-    struct wl_list list_layer;
-    struct wl_list list_screen;
-
-    struct wl_list list_controller;
-
-    struct wl_listener surface_created;
-    struct wl_listener surface_removed;
-    struct wl_listener surface_configured;
-
-    struct wl_listener layer_created;
-    struct wl_listener layer_removed;
-
-    struct wl_listener output_created;
-    struct wl_listener output_destroyed;
-
-    struct wl_listener destroy_listener;
-
-    struct wl_array screen_ids;
-    uint32_t screen_id_offset;
 };
 
 struct screenshot_frame_listener {
@@ -1688,6 +1648,8 @@ surface_event_create(struct wl_listener *listener, void *data)
         weston_log("failed to create surface");
         return;
     }
+
+    wl_signal_emit(&shell->ivisurface_created_signal, ivisurf);
 }
 
 static void
@@ -1708,6 +1670,7 @@ surface_event_remove(struct wl_listener *listener, void *data)
         return;
     }
 
+    wl_signal_emit(&shell->ivisurface_removed_signal, ivisurf);
     wl_list_for_each_safe(not, next, &ivisurf->notification_list, layout_link)
     {
         wl_list_remove(&not->link);
@@ -1992,6 +1955,9 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
 
     shell->destroy_listener.notify = ivi_shell_destroy;
     wl_signal_add(&ec->destroy_signal, &shell->destroy_listener);
+
+    wl_signal_init(&shell->ivisurface_created_signal);
+    wl_signal_init(&shell->ivisurface_removed_signal);
 }
 
 int
@@ -2007,17 +1973,13 @@ setup_ivi_controller_server(struct weston_compositor *compositor,
 }
 
 static int
-load_input_module(struct weston_compositor *ec,
-                  const struct ivi_layout_interface *interface,
-                  size_t interface_version)
+load_input_module(struct ivishell *shell)
 {
-    struct weston_config *config = wet_get_config(ec);
+    struct weston_config *config = wet_get_config(shell->compositor);
     struct weston_config_section *section;
     char *input_module = NULL;
 
-    int (*input_module_init)(struct weston_compositor *ec,
-                             const struct ivi_layout_interface *interface,
-                             size_t interface_version);
+    int (*input_module_init)(struct ivishell *shell);
 
     section = weston_config_get_section(config, "ivi-shell", NULL, NULL);
 
@@ -2032,9 +1994,8 @@ load_input_module(struct weston_compositor *ec,
     if (!input_module_init)
         return -1;
 
-    if (input_module_init(ec, interface,
-                          sizeof(struct ivi_layout_interface)) != 0) {
-        weston_log("ivi-controller: Initialization of input module failes");
+    if (input_module_init(shell) != 0) {
+        weston_log("ivi-controller: Initialization of input module fails");
         return -1;
     }
 
@@ -2078,7 +2039,7 @@ controller_module_init(struct weston_compositor *compositor,
         return -1;
     }
 
-    if (load_input_module(compositor, interface, interface_version) < 0) {
+    if (load_input_module(shell) < 0) {
         destroy_screen_ids(shell);
         free(shell);
         return -1;
