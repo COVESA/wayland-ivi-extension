@@ -44,6 +44,8 @@
 #  include "ivi-share.h"
 #endif
 
+#define IVI_CLIENT_SURFACE_ID_ENV_NAME "IVI_CLIENT_SURFACE_ID"
+
 struct ivilayer;
 struct iviscreen;
 
@@ -825,6 +827,96 @@ controller_layer_clear(struct wl_client *client,
 }
 
 static void
+calc_trans_matrix(struct weston_geometry *source_rect,
+		   struct weston_geometry *dest_rect,
+		   struct weston_matrix *m)
+{
+    float source_center_x;
+    float source_center_y;
+    float scale_x;
+    float scale_y;
+    float translate_x;
+    float translate_y;
+
+    source_center_x = source_rect->x + source_rect->width * 0.5f;
+    source_center_y = source_rect->y + source_rect->height * 0.5f;
+    weston_matrix_translate(m, -source_center_x, -source_center_y, 0.0f);
+
+    scale_x = ((float)dest_rect->width) / source_rect->width;
+    scale_y = ((float)dest_rect->height) / source_rect->height;
+
+    weston_matrix_scale(m, scale_x, scale_y, 1.0f);
+
+    translate_x = dest_rect->width * 0.5f + dest_rect->x;
+    translate_y = dest_rect->height * 0.5f + dest_rect->y;
+    weston_matrix_translate(m, translate_x, translate_y, 0.0f);
+}
+
+void
+set_bkgnd_surface_prop(struct ivishell *shell)
+{
+    struct weston_view *view;
+    struct weston_compositor *compositor;
+    struct weston_output *output;
+    const struct ivi_layout_interface *lyt = shell->interface;
+    struct weston_surface *w_surface;
+    struct weston_geometry source_rect = {0};
+    struct weston_geometry dest_rect = {0};
+    uint32_t src_width = 0;
+    uint32_t src_height = 0;
+    uint32_t dest_width = 0;
+    uint32_t dest_height = 0;
+    uint32_t count = 0;
+    uint32_t x = 0;
+    uint32_t y = 0;
+    float scale_x;
+    float scale_y;
+
+    view = shell->bkgnd_view;
+    compositor = shell->compositor;
+
+    wl_list_remove(&shell->bkgnd_transform.link);
+    weston_matrix_init(&shell->bkgnd_transform.matrix);
+
+    /*find the available screen's resolution*/
+    wl_list_for_each(output, &compositor->output_list, link) {
+        if (!count)
+        {
+            x = output->x;
+            y = output->y;
+            count++;
+        }
+        dest_width = output->x + output->width;
+        if (output->height > dest_height)
+            dest_height = output->height;
+        weston_log("set_bkgnd_surface_prop: o_name:%s x:%d y:%d o_width:%d o_height:%d\n",
+                   output->name, output->x, output->y, output->width, output->height);
+    }
+
+    w_surface = view->surface;
+    src_width = w_surface->width;
+    src_height = w_surface->height;
+
+    source_rect.width = src_width;
+    source_rect.height = src_height;
+    dest_rect.width = dest_width;
+    dest_rect.height = dest_height;
+
+    calc_trans_matrix(&source_rect, &dest_rect,
+                      &shell->bkgnd_transform.matrix);
+    weston_matrix_translate(&shell->bkgnd_transform.matrix, x, y, 0.0f);
+
+    weston_log("set_bkgnd_surface_prop: x:%d y:%d s_width:%d s_height:%d d_width:%d d_height:%d\n",
+               x, y, src_width, src_height, dest_width, dest_height);
+
+    weston_view_set_mask(view, 0, 0, src_width, src_height);
+    wl_list_insert(&view->geometry.transformation_list,
+                   &shell->bkgnd_transform.link);
+
+    weston_surface_schedule_repaint(w_surface);
+}
+
+static void
 controller_layer_add_surface(struct wl_client *client,
                  struct wl_resource *resource,
                  uint32_t layer_id,
@@ -1483,6 +1575,20 @@ output_destroyed_event(struct wl_listener *listener, void *data)
         if (iviscrn->output == destroyed_output)
             destroy_screen(iviscrn);
     }
+
+    if (shell->bkgnd_view)
+        set_bkgnd_surface_prop(shell);
+    else
+        weston_compositor_schedule_repaint(shell->compositor);
+}
+
+static void
+output_resized_event(struct wl_listener *listener, void *data)
+{
+    struct ivishell *shell = wl_container_of(listener, shell, output_destroyed);
+
+    if (shell->bkgnd_view)
+        set_bkgnd_surface_prop(shell);
 }
 
 static void
@@ -1493,6 +1599,11 @@ output_created_event(struct wl_listener *listener, void *data)
     struct weston_output *created_output = (struct weston_output*)data;
 
     iviscrn = create_screen(shell, created_output);
+
+    if (shell->bkgnd_view)
+        set_bkgnd_surface_prop(shell);
+    else
+        weston_compositor_schedule_repaint(shell->compositor);
 }
 
 static struct ivilayer*
@@ -1555,20 +1666,26 @@ create_surface(struct ivishell *shell,
     ivisurf->shell = shell;
     ivisurf->layout_surface = layout_surface;
     ivisurf->prop = lyt->get_properties_of_surface(layout_surface);
-    wl_list_insert(&shell->list_surface, &ivisurf->link);
     wl_list_init(&ivisurf->notification_list);
 
     ivisurf->committed.notify = surface_committed;
     surface = lyt->surface_get_weston_surface(layout_surface);
     wl_signal_add(&surface->commit_signal, &ivisurf->committed);
 
-    wl_list_for_each(controller, &shell->list_controller, link) {
-        if (controller->resource)
-            ivi_wm_send_surface_created(controller->resource, id_surface);
-    }
+    if (shell->bkgnd_surface_id != id_surface) {
+        wl_list_insert(&shell->list_surface, &ivisurf->link);
 
-     ivisurf->property_changed.notify = send_surface_prop;
-     lyt->surface_add_listener(layout_surface, &ivisurf->property_changed);
+        wl_list_for_each(controller, &shell->list_controller, link) {
+            if (controller->resource)
+                ivi_wm_send_surface_created(controller->resource, id_surface);
+            }
+
+        ivisurf->property_changed.notify = send_surface_prop;
+        lyt->surface_add_listener(layout_surface, &ivisurf->property_changed);
+    }
+    else {
+        shell->bkgnd_surface = ivisurf;
+    }
 
     return ivisurf;
 }
@@ -1649,7 +1766,8 @@ surface_event_create(struct wl_listener *listener, void *data)
         return;
     }
 
-    wl_signal_emit(&shell->ivisurface_created_signal, ivisurf);
+    if (shell->bkgnd_surface_id != id_surface)
+        wl_signal_emit(&shell->ivisurface_created_signal, ivisurf);
 }
 
 static void
@@ -1685,6 +1803,12 @@ surface_event_remove(struct wl_listener *listener, void *data)
 
     id_surface = shell->interface->get_id_of_surface(layout_surface);
 
+    if ((shell->bkgnd_surface_id == id_surface) &&
+         shell->bkgnd_view) {
+        weston_layer_entry_remove(&shell->bkgnd_view->layer_link);
+        weston_view_destroy(shell->bkgnd_view);
+    }
+
     wl_list_for_each(controller, &shell->list_controller, link) {
         if (controller->resource)
             ivi_wm_send_surface_destroyed(controller->resource, id_surface);
@@ -1705,13 +1829,36 @@ surface_event_configure(struct wl_listener *listener, void *data)
     uint32_t surface_id;
     struct weston_surface *w_surface;
 
+    surface_id = lyt->get_id_of_surface(layout_surface);
+    if (shell->bkgnd_surface_id == surface_id) {
+        float red, green, blue, alpha;
+
+        w_surface = lyt->surface_get_weston_surface(layout_surface);
+        if (!shell->bkgnd_view) {
+            w_surface = lyt->surface_get_weston_surface(layout_surface);
+
+            alpha = ((shell->bkgnd_color >> 24) & 0xFF) / 255.0F;
+            red = ((shell->bkgnd_color >> 16) & 0xFF) / 255.0F;
+            green = ((shell->bkgnd_color >> 8) & 0xFF) / 255.0F;
+            blue = (shell->bkgnd_color & 0xFF) / 255.0F;
+
+            weston_surface_set_color(w_surface, red, green, blue, alpha);
+
+            wl_list_init(&shell->bkgnd_transform.link);
+            shell->bkgnd_view = weston_view_create(w_surface);
+            weston_layer_entry_insert(&shell->bkgnd_layer.view_list,
+                                      &shell->bkgnd_view->layer_link);
+        }
+
+        set_bkgnd_surface_prop(shell);
+        return;
+    }
+
     ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
         weston_log("id_surface is not created yet\n");
         return;
     }
-
-    surface_id = lyt->get_id_of_surface(layout_surface);
 
     if (ivisurf->type == IVI_WM_SURFACE_TYPE_DESKTOP) {
         w_surface = lyt->surface_get_weston_surface(layout_surface);
@@ -1820,7 +1967,7 @@ destroy_screen_ids(struct ivishell *shell)
 }
 
 static void
-get_screen_ids(struct weston_compositor *compositor, struct ivishell *shell)
+get_config(struct weston_compositor *compositor, struct ivishell *shell)
 {
 	struct weston_config_section *section = NULL;
 	struct weston_config *config = NULL;
@@ -1838,6 +1985,18 @@ get_screen_ids(struct weston_compositor *compositor, struct ivishell *shell)
 	weston_config_section_get_uint(section,
 				       "screen-id-offset",
 				       &shell->screen_id_offset, 0);
+
+	weston_config_section_get_string(section,
+                       "ivi-client-name",
+                       &shell->ivi_client_name, NULL);
+
+	weston_config_section_get_int(section,
+                       "bkgnd-surface-id",
+                       &shell->bkgnd_surface_id, -1);
+
+	weston_config_section_get_color(section,
+                       "bkgnd-color",
+                       &shell->bkgnd_color, 0xFF000000);
 
 	wl_array_init(&shell->screen_ids);
 
@@ -1949,9 +2108,11 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
 
     shell->output_created.notify = output_created_event;
     shell->output_destroyed.notify = output_destroyed_event;
+    shell->output_resized.notify = output_resized_event;
 
     wl_signal_add(&ec->output_created_signal, &shell->output_created);
     wl_signal_add(&ec->output_destroyed_signal, &shell->output_destroyed);
+    wl_signal_add(&ec->output_resized_signal, &shell->output_resized);
 
     shell->destroy_listener.notify = ivi_shell_destroy;
     wl_signal_add(&ec->destroy_signal, &shell->destroy_listener);
@@ -2004,6 +2165,22 @@ load_input_module(struct ivishell *shell)
     return 0;
 }
 
+static void
+launch_client_process(void *data)
+{
+    struct ivishell *shell =
+            (struct ivishell *)data;
+    char option[128] = {0};
+
+    sprintf(option, "%d", shell->bkgnd_surface_id);
+    setenv(IVI_CLIENT_SURFACE_ID_ENV_NAME, option, 0x1);
+
+    shell->client = weston_client_start(shell->compositor,
+                                        shell->ivi_client_name);
+
+    free(shell->ivi_client_name);
+}
+
 WL_EXPORT int
 controller_module_init(struct weston_compositor *compositor,
 		       int *argc, char *argv[],
@@ -2011,6 +2188,7 @@ controller_module_init(struct weston_compositor *compositor,
 		       size_t interface_version)
 {
     struct ivishell *shell;
+    struct wl_event_loop *loop = NULL;
     (void)argc;
     (void)argv;
 
@@ -2022,7 +2200,14 @@ controller_module_init(struct weston_compositor *compositor,
 
     shell->interface = interface;
 
-    get_screen_ids(compositor, shell);
+    get_config(compositor, shell);
+
+    /* Add background layer*/
+    if (shell->bkgnd_surface_id && shell->ivi_client_name) {
+        weston_layer_init(&shell->bkgnd_layer, compositor);
+        weston_layer_set_position(&shell->bkgnd_layer,
+                                  WESTON_LAYER_POSITION_BACKGROUND);
+    }
 
     init_ivi_shell(compositor, shell);
 
@@ -2043,6 +2228,11 @@ controller_module_init(struct weston_compositor *compositor,
         destroy_screen_ids(shell);
         free(shell);
         return -1;
+    }
+
+    if (shell->bkgnd_surface_id && shell->ivi_client_name) {
+        loop = wl_display_get_event_loop(compositor->wl_display);
+        wl_event_loop_add_idle(loop, launch_client_process, shell);
     }
 
     return 0;
