@@ -45,6 +45,15 @@ public:
     void SetUp()
     {
         ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay));
+
+        iviSurfaces.reserve(10);
+        struct iviSurface surf;
+        for (int i = 0; i < (int)iviSurfaces.capacity(); ++i)
+        {
+            surf.surface = ivi_application_surface_create(iviApp, i+500, wlSurfaces[i]);
+            surf.surface_id = i+500;
+            iviSurfaces.push_back(surf);
+        }
     }
 
     void TearDown()
@@ -58,6 +67,14 @@ public:
             EXPECT_EQ(ILM_SUCCESS, ilm_layerRemove(layers[i]));
         };
         free(layers);
+
+        for (std::vector<iviSurface>::reverse_iterator it = iviSurfaces.rbegin();
+             it != iviSurfaces.rend();
+             ++it)
+        {
+            ivi_surface_destroy((*it).surface);
+        }
+        iviSurfaces.clear();
 
         EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
         EXPECT_EQ(ILM_SUCCESS, ilm_destroy());

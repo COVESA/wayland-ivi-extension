@@ -25,6 +25,11 @@
 class TestBase
 {
 public:
+    struct iviSurface
+    {
+        ivi_surface* surface;
+        int surface_id;
+    };
     TestBase();
     virtual ~TestBase();
     void SetWLCompositor(struct wl_compositor* wlCompositor);
@@ -32,6 +37,7 @@ public:
 
 protected:
     std::vector<wl_surface *> wlSurfaces;
+    std::vector<iviSurface> iviSurfaces;
     wl_display*    wlDisplay;
     ivi_application* iviApp;
 
