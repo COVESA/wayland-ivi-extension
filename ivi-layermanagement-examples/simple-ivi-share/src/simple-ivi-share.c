@@ -245,6 +245,8 @@ handle_share_surface_state(void *data, struct ivi_share_surface *share_surface,
     case IVI_SHARE_SURFACE_SHARE_SURFACE_STATE_NOT_EXIST:
         fprintf(stderr, "Specified surface (ID:%d) does not exist\n",
                 window->share_buffer.share_surface_id);
+        ivi_share_surface_destroy(window->share_surface);
+        window->share_surface = NULL;
         break;
     case IVI_SHARE_SURFACE_SHARE_SURFACE_STATE_INVALID_SURFACE:
         fprintf(stderr, "Specified surface (ID:%d) is invalid\n",
