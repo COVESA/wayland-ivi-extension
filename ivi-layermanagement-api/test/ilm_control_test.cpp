@@ -557,9 +557,7 @@ TEST_F(IlmCommandTest, ilm_takeScreenshot) {
     }
 
     ASSERT_EQ(ILM_SUCCESS, ilm_takeScreenshot(0, outputFile));
-    ASSERT_EQ(ILM_SUCCESS, ilm_getError());
 
-    sleep(1);
     f = fopen(outputFile, "r");
     ASSERT_TRUE(f!=NULL);
     fclose(f);
@@ -595,9 +593,7 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot) {
     uint surface = iviSurfaces[0].surface_id;
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
     ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, surface));
-    ASSERT_EQ(ILM_SUCCESS, ilm_getError());
 
-    sleep(1);
     f = fopen(outputFile, "r");
     ASSERT_TRUE(f!=NULL);
     fclose(f);
