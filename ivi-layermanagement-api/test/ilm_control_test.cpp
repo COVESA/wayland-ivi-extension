@@ -614,8 +614,7 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
     }
 
     // try to dump an non-existing screen
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(outputFile, 0xdeadbeef));
-    ASSERT_EQ(ILM_ERROR_RESOURCE_NOT_FOUND, ilm_getError());
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(outputFile, 0xdeadbeef));
 
     // make sure, no screen dump file was created for invalid screen
     ASSERT_NE(0, remove(outputFile));
