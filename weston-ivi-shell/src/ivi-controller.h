@@ -25,8 +25,12 @@
 
 #include "ivi-wm-server-protocol.h"
 #include <weston/ivi-layout-export.h>
+#include <limits.h>
+
+#define IVI_INVALID_ID UINT_MAX
 
 struct ivisurface {
+    uint32_t surface_id;
     struct wl_list link;
     struct ivishell *shell;
     uint32_t update_count;
