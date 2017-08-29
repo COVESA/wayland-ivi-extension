@@ -95,7 +95,7 @@ void WaitForEvent(struct wl_display* wlDisplay, int fd)
 //////////////////////////////////////////////////////////////////////////////
 
 static void
-set_pointer_image(struct seat_data* context)
+set_pointer_image(struct seat_data* context, uint32_t serial)
 {
     struct wl_cursor *cursor = NULL;
     struct wl_cursor_image *image = NULL;
@@ -120,7 +120,7 @@ set_pointer_image(struct seat_data* context)
         return;
     }
 
-    wl_pointer_set_cursor(context->wlPointer, NULL,
+    wl_pointer_set_cursor(context->wlPointer, serial,
                   context->ctx->GetPointerSurface(),
                   image->hotspot_x, image->hotspot_y);
 
@@ -144,7 +144,7 @@ PointerHandleEnter(void* data, struct wl_pointer* wlPointer, uint32_t serial,
     struct seat_data* context =
                    static_cast<struct seat_data*>(data);
 
-    set_pointer_image(context);
+    set_pointer_image(context, serial);
     printf("ENTER EGLWLINPUT PointerHandleEnter: x(%d), y(%d)\n",
            wl_fixed_to_int(sx), wl_fixed_to_int(sy));
 }
