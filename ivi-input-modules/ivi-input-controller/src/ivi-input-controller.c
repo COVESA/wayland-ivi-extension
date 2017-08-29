@@ -687,9 +687,11 @@ pointer_grab_focus(struct weston_pointer_grab *grab)
                             surface_get_weston_surface(layout_surf);
 
         if (seat->forced_surf_enabled == ILM_TRUE) {
-            w_view = wl_container_of(forced_west_surf->views.next,
-                    w_view, surface_link);
-            input_ctrl_ptr_set_west_focus(seat, pointer, w_view, 0, 0);
+            if ((NULL != forced_west_surf) && !wl_list_empty(&forced_west_surf->views)) {
+                w_view = wl_container_of(forced_west_surf->views.next,
+                        w_view, surface_link);
+                input_ctrl_ptr_set_west_focus(seat, pointer, w_view, 0, 0);
+            }
         } else if (NULL != pointer->focus) {
             if(pointer->focus->surface == forced_west_surf) {
                 input_ctrl_ptr_leave_west_focus(seat, pointer);
