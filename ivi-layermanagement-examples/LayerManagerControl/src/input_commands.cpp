@@ -115,6 +115,8 @@ COMMAND3(51,"set|unset surfaces [<idarray>] input focus pointer|keyboard|touch|a
     {
         cout << "LayerManagerService succeeded" << endl;
     }
+
+    delete[] surfaceIDs;
 }
 
 //=============================================================================
