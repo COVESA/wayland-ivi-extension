@@ -63,11 +63,22 @@ struct ivishell {
 
     struct wl_listener output_created;
     struct wl_listener output_destroyed;
+    struct wl_listener output_resized;
 
     struct wl_listener destroy_listener;
 
     struct wl_array screen_ids;
     uint32_t screen_id_offset;
+
+    int32_t bkgnd_surface_id;
+    uint32_t bkgnd_color;
+    struct ivisurface *bkgnd_surface;
+    struct weston_layer bkgnd_layer;
+    struct weston_view  *bkgnd_view;
+    struct weston_transform bkgnd_transform;
+
+    struct wl_client *client;
+    char *ivi_client_name;
 };
 
 #endif /* WESTON_IVI_SHELL_SRC_IVI_CONTROLLER_H_ */
