@@ -56,6 +56,10 @@ IF(BUILD_ILM_API_TESTS)
         ilm_control_notification_test.cpp
     )
 
+    SET(GCC_SANITIZER_COMPILE_FLAGS "-fsanitize=address -fsanitize=undefined -fno-sanitize-recover -fstack-protector-all")
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_SANITIZER_COMPILE_FLAGS}" )
+    SET( CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -static-libasan -static-libubsan" )
+
     ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_FILES})
 
     TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${LIBS})
