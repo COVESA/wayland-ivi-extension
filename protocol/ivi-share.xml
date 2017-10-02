@@ -23,7 +23,7 @@
         THE SOFTWARE.
     </copyright>
 
-    <interface name="ivi_share" version="1">
+    <interface name="ivi_share" version="2">
         <description summary="get handle to manipulate ivi_surface">
           get handle ID to manipulate shared ivi_surface. The host ivi application
           can get trigger of update of the ivi_surface from client to draw it in host's
@@ -37,7 +37,7 @@
         </request>
     </interface>
 
-    <interface name="ivi_share_surface" version="1">
+    <interface name="ivi_share_surface" version="2">
         <description summary="extension interface for sharing a ivi_surface">
         </description>
 
@@ -135,5 +135,15 @@
             <description summary="state of shared surface"/>
             <arg name="state" type="uint"/>
         </event>
+
+        <!-- Version 2 additions -->
+
+        <request name="release_shared_name" since="2">
+            <description summary="consumer releases shared name">
+              Send when the consumer no longer uses the share name notified by the damage event.
+              Until the consumer notifies the release, the compositor will not release the buffer to the producer.
+            </description>
+            <arg name="name" type="uint"/>
+        </request>
     </interface>
 </protocol>
