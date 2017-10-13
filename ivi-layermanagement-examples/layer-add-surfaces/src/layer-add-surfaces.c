@@ -42,15 +42,18 @@ char display_name[256] = {0};
 static void configure_ilm_surface(t_ilm_uint id, t_ilm_uint width, t_ilm_uint height)
 {
     ilm_surfaceSetDestinationRectangle(id, 0, 0, width, height);
-    printf("SetDestinationRectangle: surface ID (%d), Width (%u), Height (%u)\n", id, width, height);
     ilm_surfaceSetSourceRectangle(id, 0, 0, width, height);
-    printf("SetSourceRectangle     : surface ID (%d), Width (%u), Height (%u)\n", id, width, height);
     ilm_surfaceSetVisibility(id, ILM_TRUE);
-    printf("SetVisibility          : surface ID (%d), ILM_TRUE\n", id);
     ilm_layerAddSurface(layer,id);
-    printf("layerAddSurface        : surface ID (%d) is added to layer ID (%d)\n", id, layer);
+
     ilm_commitChanges();
     pthread_cond_signal( &waiterVariable );
+
+    printf("layer-add-surfaces: surface (%u) configured with:\n"
+           "    dst region: x:0 y:0 w:%u h:%u\n"
+           "    src region: x:0 y:0 w:%u h:%u\n"
+           "    visibility: TRUE\n"
+           "    added to layer (%u)\n", id, width, height, width, height,layer);
 }
 
 static void surfaceCallbackFunction(t_ilm_uint id, struct ilmSurfaceProperties* sp, t_ilm_notification_mask m)
@@ -70,7 +73,7 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
         if (created) {
             if (number_of_surfaces > 0) {
                 number_of_surfaces--;
-                printf("surface                : %d created\n",id);
+                printf("layer-add-surfaces: surface (%d) created\n",id);
                 ilm_getPropertiesOfSurface(id, &sp);
 
                 if ((sp.origSourceWidth != 0) && (sp.origSourceHeight !=0))
@@ -84,12 +87,12 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
             }
         }
         else if(!created)
-            printf("surface: %d destroyed\n",id);
+            printf("layer-add-surfaces: surface (%u) destroyed\n",id);
     } else if (object == ILM_LAYER) {
         if (created)
-            printf("layer: %d created\n",id);
+            printf("layer-add-surfaces: layer (%u) created\n",id);
         else if(!created)
-            printf("layer: %d destroyed\n",id);
+            printf("layer-add-surfaces: layer (%u) destroyed\n",id);
     }
 }
 
@@ -166,21 +169,23 @@ void parse_options(int argc, char *argv[])
                 break;
             case 'l':
                 layer = atoi(optarg);
-                printf("%d \n", layer);
                 break;
             case 's':
                 number_of_surfaces = atoi(optarg);
-                printf("%d \n", number_of_surfaces);
                 break;
             case 'd':
                 strcpy(display_name, optarg);
-                printf("%s \n", optarg);
                 break;
             default:
                 usage(-1);
                 break;
         }
     }
+
+    printf("layer-add-surfaces: layer (%u) on display (%s) created, waiting for %d surfaces ...\n",
+               layer,
+               display_name,
+               number_of_surfaces);
 }
 
 int main (int argc, char *argv[])
@@ -216,7 +221,7 @@ int main (int argc, char *argv[])
     if (pthread_mutex_init(&mutex, &a) != 0)
     {
         pthread_mutexattr_destroy(&a);
-        fprintf(stderr, "failed to initialize pthread_mutex\n");
+        fprintf(stderr, "layer-add-surfaces: failed to initialize pthread_mutex\n");
         return -1;
     }
 
@@ -226,15 +231,15 @@ int main (int argc, char *argv[])
     t_ilm_uint screen_ID;
     renderOrder[0] = layer;
     if (ilm_init() == ILM_FAILED) {
-        fprintf(stderr, "ilm_init failed\n");
+        fprintf(stderr, "layer-add-surfaces: ilm_init failed\n");
         return -1;
     }
 
     screen_ID = choose_screen();
     ilm_layerCreateWithDimension(&layer, screenWidth, screenHeight);
-    printf("CreateWithDimension: layer ID (%d), Width (%u), Height (%u)\n", layer, screenWidth, screenHeight);
+    printf("layer-add-surfaces: layer (%d) destination region: x:0 y:0 w:%u h:%u\n", layer, screenWidth, screenHeight);
     ilm_layerSetVisibility(layer,ILM_TRUE);
-    printf("SetVisibility      : layer ID (%d), ILM_TRUE\n", layer);
+    printf("layer-add-surfaces: layer (%d) visibility TRUE\n", layer);
     ilm_displaySetRenderOrder(screen_ID, renderOrder, 1);
     ilm_commitChanges();
     ilm_registerNotification(callbackFunction, NULL);
