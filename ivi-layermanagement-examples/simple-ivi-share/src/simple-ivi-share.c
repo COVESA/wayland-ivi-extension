@@ -189,7 +189,7 @@ handle_share_surface_damage(void *data, struct ivi_share_surface *share_surface,
 
         window->share_buffer.eglimage =
             pfEglCreateImageKHR(display->egl.egldisplay, EGL_NO_CONTEXT,
-                                EGL_DRM_BUFFER_MESA, (EGLClientBuffer)name,
+                                EGL_DRM_BUFFER_MESA, (EGLClientBuffer) (intptr_t)name,
                                 img_attribs);
         if (window->share_buffer.eglimage == NULL) {
             fprintf(stderr, "failed to create EGLImageKHR: 0x%04x\n",
