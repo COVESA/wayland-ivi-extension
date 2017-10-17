@@ -245,6 +245,8 @@ handle_share_surface_state(void *data, struct ivi_share_surface *share_surface,
     case IVI_SHARE_SURFACE_SHARE_SURFACE_STATE_NOT_EXIST:
         fprintf(stderr, "Specified surface (ID:%d) does not exist\n",
                 window->share_buffer.share_surface_id);
+        ivi_share_surface_destroy(window->share_surface);
+        window->share_surface = NULL;
         break;
     case IVI_SHARE_SURFACE_SHARE_SURFACE_STATE_INVALID_SURFACE:
         fprintf(stderr, "Specified surface (ID:%d) is invalid\n",
@@ -269,12 +271,18 @@ static const struct ivi_share_surface_listener share_surface_listener = {
 static int
 get_share_surface(struct window *window, struct display *display)
 {
-    window->share_surface =
-        ivi_share_get_ivi_share_surface(display->ivi_share,
-                                        window->share_buffer.share_surface_id);
-
-    return ivi_share_surface_add_listener(window->share_surface,
-                                   &share_surface_listener, window);
+    static struct ivi_share_surface *share_surface_latest = NULL;
+    if (!window->share_surface) {
+        window->share_surface =
+            ivi_share_get_ivi_share_surface(display->ivi_share,
+                                            window->share_buffer.share_surface_id);
+        if (share_surface_latest != window->share_surface) {
+            share_surface_latest = window->share_surface;
+            return ivi_share_surface_add_listener(window->share_surface,
+                                           &share_surface_listener, window);
+        }
+    }
+    return 1;
 }
 
 static GLuint
@@ -696,12 +704,6 @@ main(int argc, char **argv)
         return 1;
     }
 
-    if (get_share_surface(&window, &display) < 0) {
-        destroy_window(&window);
-        destroy_display(&display);
-        return 1;
-    }
-
     /* signal settings */
     sigact.sa_handler = signal_handler;
     sigemptyset(&sigact.sa_mask);
@@ -710,6 +712,7 @@ main(int argc, char **argv)
 
     /* run */
     while (running && ret != -1) {
+        get_share_surface(&window, &display);
         ret = wl_display_dispatch_pending(display.display);
         redraw(&window, NULL, 0);
     }
