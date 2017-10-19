@@ -116,14 +116,14 @@ update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface)
     struct gbm_bo *bo = gbm_bo_import(backend->gbm, GBM_BO_IMPORT_WL_BUFFER,
                                       buffer->legacy_buffer, GBM_BO_USE_SCANOUT);
     if (!bo) {
-        weston_log("failed to import gbm_bo\n");
+        weston_log("Texture Sharing Failed to import gbm_bo\n");
         return IVI_SHAREBUFFER_INVALID;
     }
 
     struct drm_gem_flink flink = {0};
     flink.handle = gbm_bo_get_handle(bo).u32;
     if (drmIoctl(gbm_device_get_fd(backend->gbm), DRM_IOCTL_GEM_FLINK, &flink) != 0) {
-        weston_log("gem_flink: returned non-zero failed\n");
+        weston_log("Texture Sharing gem_flink: returned non-zero failed\n");
         gbm_bo_destroy(bo);
         return IVI_SHAREBUFFER_INVALID;
     }
