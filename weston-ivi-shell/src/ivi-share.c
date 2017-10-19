@@ -31,6 +31,8 @@
         (type *)( (char *)__mptr - offsetof(type,member) );})
 #endif
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 struct ivi_share_nativesurface_client_link
 {
     struct wl_resource *resource;
@@ -62,6 +64,9 @@ struct update_sharing_surface_content {
     struct wl_listener listener;
     struct ivi_shell_share_ext *shell_ext;
 };
+
+static void
+send_to_client(struct ivi_share_nativesurface *p_nativesurface, uint32_t send_flag);
 
 static void
 free_nativesurface(struct ivi_share_nativesurface *nativesurf)
@@ -272,6 +277,40 @@ share_surface_redirect_touch_cancel(struct wl_client *client,
     }
 }
 
+static void
+share_surface_release_shared_name(struct wl_client *client,
+                                  struct wl_resource *resource,
+                                  uint32_t name)
+{
+    struct ivi_share_nativesurface_client_link *client_link = wl_resource_get_user_data(resource);
+    struct ivi_share_nativesurface *p_nativesurface = client_link->parent;
+    int i;
+
+    if (p_nativesurface == NULL)
+        return;
+
+    for (i = 0; i < ARRAY_SIZE(p_nativesurface->buffer_refs); i++) {
+        struct ivi_share_buffer_reference *buffer_ref = &p_nativesurface->buffer_refs[i];
+        if ((buffer_ref->name == name) && (buffer_ref->client_count != 0)) {
+            buffer_ref->client_count--;
+            if (buffer_ref->client_count == 0) {
+                weston_buffer_reference(&buffer_ref->ref, NULL);
+                buffer_ref->name = 0;
+            }
+        }
+    }
+
+    if ((p_nativesurface->current->client_count == 0) &&
+        (p_nativesurface->back->client_count != 0)) {
+        struct ivi_share_buffer_reference *tmp = p_nativesurface->current;
+        p_nativesurface->current = p_nativesurface->back;
+        p_nativesurface->back = tmp;
+    }
+
+    p_nativesurface->send_flag = update_buffer_nativesurface(p_nativesurface);
+    send_to_client(p_nativesurface, p_nativesurface->send_flag);
+}
+
 static const
 struct ivi_share_surface_interface share_surface_implementation = {
     share_surface_destroy,
@@ -279,7 +318,8 @@ struct ivi_share_surface_interface share_surface_implementation = {
     share_surface_redirect_touch_up,
     share_surface_redirect_touch_motion,
     share_surface_redirect_touch_frame,
-    share_surface_redirect_touch_cancel
+    share_surface_redirect_touch_cancel,
+    share_surface_release_shared_name
 };
 
 static struct shell_surface *
@@ -322,6 +362,9 @@ remove_nativesurface(struct ivi_share_nativesurface *nativesurf)
         wl_list_init(&p_link->link);
     }
 
+    weston_buffer_reference(&nativesurf->current->ref, NULL);
+    weston_buffer_reference(&nativesurf->back->ref, NULL);
+
     wl_list_remove(&nativesurf->link);
     free_nativesurface(nativesurf);
 }
@@ -350,6 +393,8 @@ alloc_share_nativesurface(struct weston_surface *surface, uint32_t id, uint32_t 
         return NULL;
     }
 
+    int i;
+
     nativesurface->id = id;
     nativesurface->surface = surface;
     nativesurface->bufferType = bufferType;
@@ -362,6 +407,14 @@ alloc_share_nativesurface(struct weston_surface *surface, uint32_t id, uint32_t 
     nativesurface->shell_ext = shell_ext;
     wl_list_init(&nativesurface->client_list);
 
+    for (i = 0; i < ARRAY_SIZE(nativesurface->buffer_refs); i++) {
+        nativesurface->buffer_refs[i].name = 0;
+        nativesurface->buffer_refs[i].client_count = 0;
+        nativesurface->buffer_refs[i].ref.buffer = NULL;
+    }
+    nativesurface->current = &nativesurface->buffer_refs[0];
+    nativesurface->back = &nativesurface->buffer_refs[1];
+
     if (NULL != surface) {
         nativesurface->surface_destroy_listener.notify = nativesurface_destroy;
         wl_signal_add(&surface->destroy_signal, &nativesurface->surface_destroy_listener);
@@ -371,9 +424,30 @@ alloc_share_nativesurface(struct weston_surface *surface, uint32_t id, uint32_t 
 }
 
 static void
+destroy_buffer_ref(struct ivi_share_buffer_reference *buf_ref, int version)
+{
+    if ((buf_ref->client_count != 0) &&
+        (version >= IVI_SHARE_SURFACE_RELEASE_SHARED_NAME_SINCE_VERSION))
+        buf_ref->client_count--;
+
+    if (buf_ref->client_count == 0) {
+        weston_buffer_reference(&buf_ref->ref, NULL);
+        buf_ref->name = 0;
+    }
+}
+
+static void
 destroy_client_link(struct wl_resource *resource)
 {
     struct ivi_share_nativesurface_client_link *client_link = wl_resource_get_user_data(resource);
+    int version = wl_resource_get_version(resource);
+    struct ivi_share_nativesurface *p_nativesurface = client_link->parent;
+
+    if (p_nativesurface == NULL)
+        return;
+
+    destroy_buffer_ref(p_nativesurface->current, version);
+    destroy_buffer_ref(p_nativesurface->back, version);
 
     wl_list_remove(&client_link->link);
     free(client_link);
@@ -586,10 +660,46 @@ bind_share_interface(struct wl_client *p_client, void *p_data,
         return;
     }
 
-    shell_ext->resource = wl_resource_create(p_client, &ivi_share_interface, 1, id);
+    shell_ext->resource = wl_resource_create(p_client, &ivi_share_interface, version, id);
     wl_resource_set_implementation(shell_ext->resource,
                                    &g_share_implementation,
                                    shell_ext, NULL);
+}
+
+static void
+send_damage_to_clients(struct ivi_share_nativesurface *p_nativesurface, struct ivi_share_buffer_reference *buf_ref, uint32_t name)
+{
+    struct ivi_share_nativesurface_client_link *p_link = NULL;
+
+    buf_ref->name = name;
+    weston_buffer_reference(&buf_ref->ref, p_nativesurface->surface->buffer_ref.buffer);
+
+    wl_list_for_each(p_link, &p_nativesurface->client_list, link)
+    {
+        if (wl_resource_get_version(p_link->resource) >= IVI_SHARE_SURFACE_RELEASE_SHARED_NAME_SINCE_VERSION)
+            buf_ref->client_count++;
+        send_damage(p_link->resource, p_nativesurface->id, buf_ref->name);
+    }
+}
+
+static void
+update_buffer_refs(struct ivi_share_nativesurface *p_nativesurface)
+{
+    uint32_t name = get_buffer_name(p_nativesurface);
+
+    if((p_nativesurface->current->name == name) ||
+       (p_nativesurface->back->name == name)){
+        return;
+    }
+
+    if (p_nativesurface->current->client_count == 0) {
+        send_damage_to_clients(p_nativesurface, p_nativesurface->current, name);
+        return;
+    }
+    if (p_nativesurface->back->client_count == 0) {
+        send_damage_to_clients(p_nativesurface, p_nativesurface->back, name);
+        return;
+    }
 }
 
 static void
@@ -618,10 +728,10 @@ send_to_client(struct ivi_share_nativesurface *p_nativesurface, uint32_t send_fl
                            p_nativesurface);
             p_link->firstSendConfigureComp = true;
         }
-        if ((IVI_SHAREBUFFER_DAMAGE & send_flag) == IVI_SHAREBUFFER_DAMAGE) {
-            send_damage(p_link->resource, p_nativesurface->id,
-                        get_buffer_name(p_nativesurface));
-        }
+    }
+
+    if ((IVI_SHAREBUFFER_DAMAGE & send_flag) == IVI_SHAREBUFFER_DAMAGE) {
+        update_buffer_refs(p_nativesurface);
     }
 }
 
@@ -665,7 +775,7 @@ buffer_sharing_init(struct weston_compositor *wc,
         return -1;
     }
 
-    if (NULL == wl_global_create(wc->wl_display, &ivi_share_interface, 1,
+    if (NULL == wl_global_create(wc->wl_display, &ivi_share_interface, 2,
                                  shell_ext, bind_share_interface)) {
         weston_log("Buffer Sharing, Failed to global create\n");
         return -1;
