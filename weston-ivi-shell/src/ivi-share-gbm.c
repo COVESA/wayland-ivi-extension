@@ -33,8 +33,6 @@
 #include "ivi-share-server-protocol.h"
 #include "ivi-share.h"
 
-static uint32_t nativesurface_name;
-
 /* copied from libinput-seat.h of weston-1.9.0 */
 struct udev_input {
 	struct libinput *libinput;
@@ -92,16 +90,13 @@ struct drm_backend {
 };
 
 uint32_t
-get_buffer_name(struct weston_surface *surface,
-                struct ivi_shell_share_ext *shell_ext)
+get_buffer_name(struct ivi_share_nativesurface *nativesurface)
 {
-     (void)surface;
-     return nativesurface_name;
+     return nativesurface->name;
 }
 
 uint32_t
-update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface,
-                            struct ivi_shell_share_ext *shell_ext)
+update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface)
 {
     if (NULL == p_nativesurface || NULL == p_nativesurface->surface) {
         return IVI_SHAREBUFFER_NOT_AVAILABLE;
@@ -121,14 +116,14 @@ update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface,
     struct gbm_bo *bo = gbm_bo_import(backend->gbm, GBM_BO_IMPORT_WL_BUFFER,
                                       buffer->legacy_buffer, GBM_BO_USE_SCANOUT);
     if (!bo) {
-        weston_log("failed to import gbm_bo\n");
+        weston_log("Texture Sharing Failed to import gbm_bo\n");
         return IVI_SHAREBUFFER_INVALID;
     }
 
     struct drm_gem_flink flink = {0};
     flink.handle = gbm_bo_get_handle(bo).u32;
     if (drmIoctl(gbm_device_get_fd(backend->gbm), DRM_IOCTL_GEM_FLINK, &flink) != 0) {
-        weston_log("gem_flink: returned non-zero failed\n");
+        weston_log("Texture Sharing gem_flink: returned non-zero failed\n");
         gbm_bo_destroy(bo);
         return IVI_SHAREBUFFER_INVALID;
     }
@@ -139,8 +134,6 @@ update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface,
     uint32_t stride = gbm_bo_get_stride(bo);
     uint32_t format = IVI_SHARE_SURFACE_FORMAT_ARGB8888;
     uint32_t ret    = IVI_SHAREBUFFER_STABLE;
-
-    nativesurface_name = name;
 
     if (name != p_nativesurface->name) {
         ret |= IVI_SHAREBUFFER_DAMAGE;

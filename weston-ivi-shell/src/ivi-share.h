@@ -28,6 +28,13 @@
  */
 #define IVI_BIT(x) (1 << (x))
 
+struct ivi_share_buffer_reference
+{
+	struct weston_buffer_reference ref;
+	uint32_t name;
+	uint32_t client_count;
+};
+
 struct ivi_share_nativesurface
 {
     struct weston_surface *surface; /* resource                                   */
@@ -44,6 +51,7 @@ struct ivi_share_nativesurface
     uint32_t send_flag;
     struct wl_listener surface_destroy_listener;
     struct ivi_shell_share_ext *shell_ext;
+    struct ivi_share_buffer_reference buffer_refs[2], *current, *back;
 };
 
 struct ivi_shell_share_ext
@@ -69,7 +77,5 @@ enum ivi_sharebuffer_updatetype
 int32_t setup_buffer_sharing(struct weston_compositor *wc,
                              const struct ivi_layout_interface *interface);
 
-uint32_t get_buffer_name(struct weston_surface *surface,
-                         struct ivi_shell_share_ext *shell_ext);
-uint32_t update_buffer_nativesurface(struct ivi_share_nativesurface *nativesurface,
-                                     struct ivi_shell_share_ext *shell_ext);
+uint32_t get_buffer_name(struct ivi_share_nativesurface *native_surface);
+uint32_t update_buffer_nativesurface(struct ivi_share_nativesurface *nativesurface);
