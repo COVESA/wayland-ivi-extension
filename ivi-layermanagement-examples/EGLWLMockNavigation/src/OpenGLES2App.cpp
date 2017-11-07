@@ -369,25 +369,7 @@ unsigned int OpenGLES2App::GetTickCount()
     return (unsigned int) (ts.tv_sec * 1000 + (ts.tv_usec / 1000));
 }
 
-extern "C" void
-OpenGLES2App::frame_listener_func(void *data, struct wl_callback *callback, uint32_t time)
-{
-    data = data; // TODO:to avoid warning
-    time = time; // TODO:to avoid warning
-    if (callback)
-    {
-        wl_callback_destroy(callback);
-    }
-}
-
-static const struct wl_callback_listener frame_listener = {
-    OpenGLES2App::frame_listener_func
-};
-
 void OpenGLES2App::swapBuffers()
 {
-    struct wl_callback* callback = wl_surface_frame(m_wlContextStruct.wlSurface);
-    wl_callback_add_listener(callback, &frame_listener, NULL);
-
     eglSwapBuffers(m_eglContextStruct.eglDisplay, m_eglContextStruct.eglSurface);
 }
