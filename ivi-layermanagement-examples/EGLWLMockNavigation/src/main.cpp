@@ -32,6 +32,7 @@ using std::cout;
 #define DEFAULT_OPACITY  1.0
 #define DEFAULT_NOSKY    false
 #define DEFAULT_HELP     false
+#define DEFAULT_SYNC     1
 
 int main (int argc, const char * argv[])
 {
@@ -42,6 +43,7 @@ int main (int argc, const char * argv[])
     IntArgument height("height", DEFAULT_HEIGHT, argc, argv);
     BoolArgument nosky("nosky", DEFAULT_NOSKY, argc, argv);
     BoolArgument help("help", DEFAULT_HELP, argc, argv);
+    UnsignedIntArgument sync("sync", DEFAULT_SYNC, argc, argv);
 
     if (help.get())
     {
@@ -53,7 +55,8 @@ int main (int argc, const char * argv[])
              << "  -nosky        do not render sky, background transparent (default " << DEFAULT_NOSKY << ")\n"
              << "  -surface x    render to surface id x (default " << DEFAULT_SURFACE << ")\n"
              << "  -width x      set surface width to x (default " << DEFAULT_WIDTH << ")\n"
-             << "  -height x     set surface height to x (default " << DEFAULT_HEIGHT << ")\n\n";
+             << "  -height x     set surface height to x (default " << DEFAULT_HEIGHT << ")\n"
+             << "  -sync x       sync with frame callback or not (default " << DEFAULT_SYNC << ")\n\n";
     }
     else
     {
@@ -62,6 +65,7 @@ int main (int argc, const char * argv[])
         config.surfaceWidth = width.get();
         config.surfaceHeight = height.get();
         config.nosky = nosky.get();
+        config.sync = sync.get();
 
         MockNavi navi(fps.get(), animSpeed.get(), &config);
         navi.mainloop();

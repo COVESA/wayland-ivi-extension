@@ -32,6 +32,7 @@ struct SurfaceConfiguration
     unsigned int surfaceId;
     unsigned int surfaceWidth;
     unsigned int surfaceHeight;
+    unsigned int sync;
     bool nosky;
 };
 
@@ -55,7 +56,7 @@ private:
     bool createWLContext(SurfaceConfiguration* config);
     void destroyWLContext();
 
-    bool createEGLContext();
+    bool createEGLContext(SurfaceConfiguration* config);
     void destroyEglContext();
 
     unsigned int GetTickCount();

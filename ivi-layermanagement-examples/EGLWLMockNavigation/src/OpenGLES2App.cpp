@@ -129,7 +129,7 @@ OpenGLES2App::OpenGLES2App(float fps, float animationSpeed, SurfaceConfiguration
 , m_surfaceId(0)
 {
     createWLContext(config);
-    createEGLContext();
+    createEGLContext(config);
 
     if (config->nosky)
     {
@@ -240,7 +240,7 @@ bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
     return result;
 }
 
-bool OpenGLES2App::createEGLContext()
+bool OpenGLES2App::createEGLContext(SurfaceConfiguration* config)
 {
     bool result = true;
     EGLint eglstatus = EGL_SUCCESS;
@@ -311,7 +311,7 @@ bool OpenGLES2App::createEGLContext()
     eglMakeCurrent(m_eglContextStruct.eglDisplay,
             m_eglContextStruct.eglSurface, m_eglContextStruct.eglSurface,
             m_eglContextStruct.eglContext);
-    eglSwapInterval(m_eglContextStruct.eglDisplay, 1);
+    eglSwapInterval(m_eglContextStruct.eglDisplay, config->sync);
     eglstatus = eglGetError();
     if (eglstatus != EGL_SUCCESS)
     {
