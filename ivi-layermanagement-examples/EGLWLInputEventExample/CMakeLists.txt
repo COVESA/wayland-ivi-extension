@@ -29,16 +29,32 @@ pkg_check_modules(WAYLAND_EGL wayland-egl REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 pkg_check_modules(WAYLAND_CURSOR wayland-cursor REQUIRED)
 
-GET_TARGET_PROPERTY(ILM_CLIENT_INCLUDE_DIRS  ilmClient  INCLUDE_DIRECTORIES)
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+add_custom_command(
+    OUTPUT  ivi-application-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-application-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
 
 include_directories(
-    ${ILM_CLIENT_INCLUDE_DIRS}
     ${GLESv2_INCLUDE_DIR}
     ${EGL_INCLUDE_DIR}
     ${WAYLAND_CLIENT_INCLUDE_DIR}
     ${WAYLAND_CURSOR_INCLUDE_DIR}
     ${FFI_INCLUDE_DIR}
     "include"
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 link_directories(
@@ -68,14 +84,15 @@ set (SRC_FILES
 
 add_executable(EGLWLInputEventExample
     ${SRC_FILES}
+    ivi-application-protocol.c
     ${HEADER_FILES}
+    ivi-application-client-protocol.h
 )
 
 add_dependencies(EGLWLInputEventExample
     wayland-client
     wayland-cursor
     wayland-egl
-    ivi-application
     ${LIBS}
 )
 
@@ -87,7 +104,6 @@ set(LIBS
     ${WAYLAND_EGL_LIBRARIES}
     ${FFI_LIBRARIES}
     ${EGL_LIBRARIES}
-    ivi-application
 )
 
 add_definitions(${EGL_CFLAGS})
