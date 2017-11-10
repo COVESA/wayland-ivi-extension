@@ -26,13 +26,30 @@ pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
 pkg_check_modules(WESTON weston REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
-GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
 GET_TARGET_PROPERTY(ILM_COMMON_INCLUDE_DIRS ilmCommon INCLUDE_DIRECTORIES)
 GET_TARGET_PROPERTY(IVI_CONTROLLER_INCLUDE_DIRS ivi-controller INCLUDE_DIRECTORIES)
 
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+add_custom_command(
+    OUTPUT  ivi-input-server-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-input-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+)
+
 include_directories(
     include
-    ${IVI_EXTENSION_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${ILM_COMMON_INCLUDE_DIRS}
     ${IVI_CONTROLLER_INCLUDE_DIRS}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
@@ -49,12 +66,13 @@ link_directories(
 
 add_library(${PROJECT_NAME} MODULE
     src/ivi-input-controller.c
+    ivi-input-server-protocol.h
+    ivi-input-protocol.c
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 add_dependencies(${PROJECT_NAME}
-    ivi-extension-protocol
     ilmCommon
     ${WAYLAND_SERVER_LIBRARIES}
     ${WESTON_LIBRARIES}
@@ -63,7 +81,6 @@ add_dependencies(${PROJECT_NAME}
 
 set(LIBS
     ${LIBS}
-    ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
     ${WESTON_LIBRARIES}
 )
