@@ -19,7 +19,7 @@
 
 cmake_minimum_required (VERSION 2.6)
 
-project(ivi-extension-protocol)
+project (ivi-application)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client>=1.13.0 REQUIRED)
@@ -51,77 +51,6 @@ add_custom_command(
     DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
 )
 
-add_custom_command(
-    OUTPUT  ivi-wm-client-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-client-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-wm-server-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-server-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-wm-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-protocol.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-input-client-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-input-server-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-input-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-share-client-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-share-server-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-server-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-share-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-)
 
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
@@ -134,31 +63,13 @@ link_directories(
     ${WAYLAND_SERVER_LIBRARY_DIRS}
 )
 
-add_library(${PROJECT_NAME} STATIC
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-server-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-client-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-server-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-protocol.c
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-server-protocol.h
-    ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
-)
-
-set_target_properties(${PROJECT_NAME} PROPERTIES
-                      COMPILE_FLAGS "-fPIC")
-
-
-project (ivi-application)
-
 add_library(${PROJECT_NAME} SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
 )
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+                      COMPILE_FLAGS "-fPIC")
 
 install(
     TARGETS ${PROJECT_NAME}
