@@ -28,10 +28,45 @@ pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
 GET_TARGET_PROPERTY(ILM_COMMON_INCLUDE_DIRS ilmCommon INCLUDE_DIRECTORIES)
 
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+add_custom_command(
+    OUTPUT  ivi-wm-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-wm-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-input-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-input-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+)
+
 include_directories(
     include
     ${ILM_COMMON_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 link_directories(
@@ -41,6 +76,10 @@ link_directories(
 add_library(${PROJECT_NAME} SHARED
     src/ilm_control_wayland_platform.c
     src/bitmap.c
+    ivi-wm-client-protocol.h
+    ivi-wm-protocol.c
+    ivi-input-client-protocol.h
+    ivi-input-protocol.c
 )
 
 add_dependencies(${PROJECT_NAME}
@@ -51,7 +90,6 @@ add_dependencies(${PROJECT_NAME}
 set(LIBS
     ${LIBS}
     ilmCommon
-    ivi-extension-protocol
     rt
     dl
     ${CMAKE_THREAD_LIBS_INIT}
