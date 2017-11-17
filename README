@@ -15,7 +15,7 @@ Pre-requisite:
 
 Build up
 1. Pull the current codebase form the git repo
-   E.g. git clone http://git.projects.genivi.org/wayland-ivi-extension.git
+   E.g. git clone https://github.com/GENIVI/wayland-ivi-extension.git
 
 2. Create a build directory
    E.g mkdir build_ivi_extension
