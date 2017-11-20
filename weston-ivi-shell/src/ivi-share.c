@@ -345,7 +345,7 @@ alloc_share_nativesurface(struct weston_surface *surface, uint32_t id, uint32_t 
                           struct ivi_shell_share_ext *shell_ext)
 {
     struct ivi_share_nativesurface *nativesurface =
-        malloc(sizeof(struct ivi_share_nativesurface));
+        calloc(1, sizeof(struct ivi_share_nativesurface));
     if (NULL == nativesurface) {
         return NULL;
     }
@@ -353,10 +353,6 @@ alloc_share_nativesurface(struct weston_surface *surface, uint32_t id, uint32_t 
     nativesurface->id = id;
     nativesurface->surface = surface;
     nativesurface->bufferType = bufferType;
-    nativesurface->name = 0;
-    nativesurface->width = 0;
-    nativesurface->height = 0;
-    nativesurface->stride = 0;
     nativesurface->format = format;
     nativesurface->surface_id = surface_id;
     nativesurface->shell_ext = shell_ext;
