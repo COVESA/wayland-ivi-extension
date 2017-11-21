@@ -374,7 +374,7 @@ wm_listener_layer_error(void *data, struct ivi_wm *controller, uint32_t object_i
         error_code = ILM_ERROR_ON_CONNECTION;
     }
 
-    fprintf(stderr, message);
+    fprintf(stderr, "%s", message);
     fprintf(stderr, "\n");
 
     /*Do not override old error message*/
@@ -597,7 +597,7 @@ wm_listener_surface_error(void *data, struct ivi_wm *controller,
         break;
     }
 
-    fprintf(stderr, message);
+    fprintf(stderr, "%s", message);
     fprintf(stderr, "\n");
 
     if (ctx->error_flag == ILM_SUCCESS)
@@ -683,7 +683,7 @@ wm_screen_listener_error(void *data, struct ivi_wm_screen *controller,
         break;
     }
 
-    fprintf(stderr, message);
+    fprintf(stderr, "%s", message);
     fprintf(stderr, "\n");
 
     if (ctx_screen->ctx->error_flag == ILM_SUCCESS)
