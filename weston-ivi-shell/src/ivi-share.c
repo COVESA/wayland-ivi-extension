@@ -504,7 +504,7 @@ share_get_ivi_share_surface(struct wl_client *client, struct wl_resource *resour
 
     nativesurf = find_nativesurface(shsurf, shell_ext);
     if (nativesurf == NULL) {
-        nativesurf = alloc_share_nativesurface(shsurf->surface, id, 0,
+        nativesurf = alloc_share_nativesurface(shsurf->surface, id, shsurf->surface_id,
                                                (int32_t)IVI_SHARE_SURFACE_TYPE_GBM,
                                                (int32_t)IVI_SHARE_SURFACE_FORMAT_ARGB8888,
                                                shell_ext);
