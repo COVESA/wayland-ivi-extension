@@ -185,6 +185,7 @@ handle_share_surface_damage(void *data, struct ivi_share_surface *share_surface,
         if (window->share_buffer.eglimage != NULL) {
             pfEglDestroyImageKHR(display->egl.egldisplay,
                                  window->share_buffer.eglimage);
+            ivi_share_surface_release_shared_name(window->share_surface, window->share_buffer.name);
         }
 
         window->share_buffer.eglimage =
@@ -580,7 +581,7 @@ registry_handle_global(void *data, struct wl_registry *registry,
             wl_registry_bind(registry, name, &ivi_application_interface, 1);
     } else if (strcmp(interface, "ivi_share") == 0) {
         display->ivi_share =
-            wl_registry_bind(registry, name, &ivi_share_interface, 1);
+            wl_registry_bind(registry, name, &ivi_share_interface, 2);
     } else if (strcmp(interface, "wl_seat") == 0) {
         display->seat =
             wl_registry_bind(registry, name, &wl_seat_interface, 1);
