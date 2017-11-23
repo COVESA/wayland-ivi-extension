@@ -277,19 +277,11 @@ input_ctrl_kbd_snd_event_resource(struct seat_ctx *ctx_seat,
                              seat->compositor->kb_repeat_delay);
         }
 
-        if (seat->compositor->use_xkbcommon) {
-            wl_keyboard_send_keymap(resource,
-                        WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
-                        keyboard->xkb_info->keymap_fd,
-                        keyboard->xkb_info->keymap_size);
-        } else {
-            int null_fd = open("/dev/null", O_RDONLY);
-            wl_keyboard_send_keymap(resource,
-                        WL_KEYBOARD_KEYMAP_FORMAT_NO_KEYMAP,
-                        null_fd,
-                        0);
-            close(null_fd);
-        }
+        wl_keyboard_send_keymap(resource,
+                       WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
+                       keyboard->xkb_info->keymap_fd,
+                       keyboard->xkb_info->keymap_size);
+
         wl_keyboard_send_modifiers(resource,
                        kbd_data->serial,
                        keyboard->modifiers.mods_depressed,
