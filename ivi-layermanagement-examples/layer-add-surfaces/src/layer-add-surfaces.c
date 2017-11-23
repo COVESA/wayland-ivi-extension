@@ -79,11 +79,11 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
                 if ((sp.origSourceWidth != 0) && (sp.origSourceHeight !=0))
                 {   // surface is already configured
                     configure_ilm_surface(id, sp.origSourceWidth, sp.origSourceHeight);
-                } else {
-                    // wait for configured event
-                    ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
-                    ilm_commitChanges();
                 }
+
+                // always get configured event to follow the surface changings
+                ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
+                ilm_commitChanges();
             }
         }
         else if(!created)
