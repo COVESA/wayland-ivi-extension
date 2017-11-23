@@ -27,6 +27,40 @@ pkg_check_modules(WAYLAND_SERVER wayland-server>=1.13.0 REQUIRED)
 pkg_check_modules(WESTON weston>=2.0.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+add_custom_command(
+    OUTPUT  ivi-wm-server-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-server-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-wm-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-share-server-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-server-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-share-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+)
+
 find_package(Threads REQUIRED)
 if (IVI_SHARE)
     pkg_check_modules(GBM gbm REQUIRED)
@@ -35,6 +69,8 @@ if (IVI_SHARE)
     SET(BUFFER_SHARING_SRC_FILES
         src/ivi-share.c
         src/ivi-share-gbm.c
+        ivi-share-protocol.c
+        ivi-share-server-protocol.h
     )
 endif (IVI_SHARE)
 
@@ -44,12 +80,9 @@ CHECK_FUNCTION_EXISTS(posix_fallocate HAVE_POSIX_FALLOCATE)
 
 configure_file(src/config.h.cmake config.h)
 
-GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
-
 include_directories(
     src
     ${CMAKE_CURRENT_BINARY_DIR}
-    ${IVI_EXTENSION_INCLUDE_DIRS}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
     ${PIXMAN_INCLUDE_DIRS}
@@ -63,20 +96,20 @@ link_directories(
 
 add_library(${PROJECT_NAME} MODULE
     src/ivi-controller.c
+    ivi-wm-protocol.c
+    ivi-wm-server-protocol.h
     ${BUFFER_SHARING_SRC_FILES}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 add_dependencies(${PROJECT_NAME}
-    ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
     ${PIXMAN_LIBRARIES}
 )
 
 set(LIBS
     ${LIBS}
-    ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
 )
 

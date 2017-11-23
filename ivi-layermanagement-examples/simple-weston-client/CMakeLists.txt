@@ -23,12 +23,28 @@ find_package(PkgConfig)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 pkg_check_modules(WAYLAND_CURSOR wayland-cursor REQUIRED)
 
-GET_TARGET_PROPERTY(IVI_EXTENSION_PROTOCOL_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+add_custom_command(
+    OUTPUT  ivi-application-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-application-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
 
 include_directories(
-    ${IVI_EXTENSION_PROTOCOL_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIR}
     ${WAYLAND_CURSOR_INCLUDE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 link_directories(
@@ -37,13 +53,14 @@ link_directories(
 )
 
 SET(LIBS
-    ivi-application
     ${WAYLAND_CLIENT_LIBRARIES}
     ${WAYLAND_CURSOR_LIBRARIES}
 )
 
 SET(SRC_FILES
     src/simple-weston-client.c
+    ivi-application-protocol.c
+    ivi-application-client-protocol.h
 )
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})

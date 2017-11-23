@@ -28,11 +28,27 @@ pkg_check_modules(EGL egl REQUIRED)
 pkg_check_modules(WAYLAND_EGL wayland-egl REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
-GET_TARGET_PROPERTY(ILM_CLIENT_INCLUDE_DIRS  ilmClient  INCLUDE_DIRECTORIES)
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+add_custom_command(
+    OUTPUT  ivi-application-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-application-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
 
 include_directories(
     include
-    ${ILM_CLIENT_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${GLESv2_INCLUDE_DIRS}
     ${EGL_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
@@ -76,7 +92,9 @@ set (SRC_FILES
 
 add_executable(${PROJECT_NAME}
     ${SRC_FILES}
+    ivi-application-protocol.c
     ${HEADER_FILES}
+    ivi-application-client-protocol.h
 )
 
 
@@ -86,7 +104,6 @@ set(LIBS
     ${WAYLAND_CLIENT_LIBRARIES}
     ${WAYLAND_EGL_LIBRARIES}
     ${EGL_LIBRARIES}
-    ivi-application
 )
 
 add_dependencies(${PROJECT_NAME}

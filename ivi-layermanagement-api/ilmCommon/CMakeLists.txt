@@ -26,11 +26,8 @@ find_package(Threads)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
-GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
-
 include_directories(
     include
-    ${IVI_EXTENSION_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
 )
 
@@ -49,7 +46,6 @@ target_link_libraries(${PROJECT_NAME}
 
 add_dependencies(${PROJECT_NAME}
     ${WAYLAND_CLIENT_LIBRARIES}
-    ivi-extension-protocol
 )
 
 install (
