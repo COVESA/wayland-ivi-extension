@@ -33,8 +33,6 @@
 #include "ivi-share-server-protocol.h"
 #include "ivi-share.h"
 
-static uint32_t nativesurface_name;
-
 /* copied from libinput-seat.h of weston-1.9.0 */
 struct udev_input {
 	struct libinput *libinput;
@@ -92,16 +90,13 @@ struct drm_backend {
 };
 
 uint32_t
-get_buffer_name(struct weston_surface *surface,
-                struct ivi_shell_share_ext *shell_ext)
+get_buffer_name(struct ivi_share_nativesurface *p_nativesurface)
 {
-     (void)surface;
-     return nativesurface_name;
+     return p_nativesurface->name;
 }
 
 uint32_t
-update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface,
-                            struct ivi_shell_share_ext *shell_ext)
+update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface)
 {
     if (NULL == p_nativesurface || NULL == p_nativesurface->surface) {
         return IVI_SHAREBUFFER_NOT_AVAILABLE;
@@ -139,8 +134,6 @@ update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface,
     uint32_t stride = gbm_bo_get_stride(bo);
     uint32_t format = IVI_SHARE_SURFACE_FORMAT_ARGB8888;
     uint32_t ret    = IVI_SHAREBUFFER_STABLE;
-
-    nativesurface_name = name;
 
     if (name != p_nativesurface->name) {
         ret |= IVI_SHAREBUFFER_DAMAGE;

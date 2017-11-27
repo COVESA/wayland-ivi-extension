@@ -69,7 +69,5 @@ enum ivi_sharebuffer_updatetype
 int32_t setup_buffer_sharing(struct weston_compositor *wc,
                              const struct ivi_layout_interface *interface);
 
-uint32_t get_buffer_name(struct weston_surface *surface,
-                         struct ivi_shell_share_ext *shell_ext);
-uint32_t update_buffer_nativesurface(struct ivi_share_nativesurface *nativesurface,
-                                     struct ivi_shell_share_ext *shell_ext);
+uint32_t get_buffer_name(struct ivi_share_nativesurface *p_nativesurface);
+uint32_t update_buffer_nativesurface(struct ivi_share_nativesurface *p_nativesurface);
