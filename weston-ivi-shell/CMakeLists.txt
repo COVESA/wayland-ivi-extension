@@ -45,27 +45,28 @@ add_custom_command(
     DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
 )
 
-add_custom_command(
-    OUTPUT  ivi-share-server-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-server-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-)
-
-add_custom_command(
-    OUTPUT  ivi-share-protocol.c
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-)
-
 find_package(Threads REQUIRED)
 if (IVI_SHARE)
     pkg_check_modules(GBM gbm REQUIRED)
     pkg_check_modules(LIBDRM libdrm REQUIRED)
     ADD_DEFINITIONS("-DIVI_SHARE_ENABLE")
+
+    add_custom_command(
+        OUTPUT  ivi-share-server-protocol.h
+        COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
+                < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+                > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-server-protocol.h
+        DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+    )
+
+    add_custom_command(
+        OUTPUT  ivi-share-protocol.c
+        COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+                < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+                > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
+        DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
+    )
+
     SET(BUFFER_SHARING_SRC_FILES
         src/ivi-share.c
         src/ivi-share-gbm.c
