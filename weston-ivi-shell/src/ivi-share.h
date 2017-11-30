@@ -28,6 +28,16 @@
  */
 #define IVI_BIT(x) (1 << (x))
 
+#define MAX_BUFFER_REFERENCE 2
+
+struct ivi_share_buffer_reference
+{
+	struct weston_buffer_reference ref;
+	uint32_t name;
+	uint32_t client_count;
+	bool next_to_release;
+};
+
 struct ivi_share_nativesurface
 {
     struct weston_surface *surface; /* resource                                   */
@@ -44,6 +54,7 @@ struct ivi_share_nativesurface
     uint32_t send_flag;
     struct wl_listener surface_destroy_listener;
     struct ivi_shell_share_ext *shell_ext;
+    struct ivi_share_buffer_reference buffer_refs[MAX_BUFFER_REFERENCE];
 };
 
 struct ivi_shell_share_ext
