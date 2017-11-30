@@ -36,14 +36,6 @@ add_custom_command(
 )
 
 add_custom_command(
-    OUTPUT  ivi-application-server-protocol.h
-    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
-            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
-            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-server-protocol.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
-)
-
-add_custom_command(
     OUTPUT  ivi-application-protocol.c
     COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
             < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
@@ -124,90 +116,6 @@ if (IVI_SHARE)
 
     SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_API_VERSION} SOVERSION ${ILM_API_VERSION})
 endif (IVI_SHARE)
-
-#=============================================================================================
-# generate documentation for ivi-application API
-#=============================================================================================
-SET(IVI_APP_XML      ${CMAKE_CURRENT_SOURCE_DIR}/ivi-application.xml)
-SET(IVI_APP_CLIENT_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client.h)
-SET(IVI_APP_SERVER_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-server.h)
-
-add_custom_target(ivi-application-doc
-                  COMMAND wayland-scanner client-header < ${IVI_APP_XML} > ${IVI_APP_CLIENT_H}
-                  COMMAND wayland-scanner server-header < ${IVI_APP_XML} > ${IVI_APP_SERVER_H}
-
-                  COMMAND cat ${CMAKE_SOURCE_DIR}/doc/Doxyfile.template
-                          | sed 's!___DOC_NAME___!IVI Application API!'
-                          | sed 's!___DOC_VERSION___!${IVI_EXTENSION_VERSION}!'
-                          | sed 's!___INPUT_FILE___!${IVI_APP_CLIENT_H} ${IVI_APP_SERVER_H}!'
-                          | sed 's!___OUTPUT_DIR___!ivi-application-tmp!'
-                          | doxygen -
-
-                  COMMAND make --silent -C ivi-application-tmp/latex
-
-                  COMMAND cp ivi-application-tmp/latex/refman.pdf
-                             ${CMAKE_BINARY_DIR}/ivi-application-api-${IVI_EXTENSION_VERSION}.pdf
-
-                  DEPENDS ${IVI_APP_XML}
-
-                  COMMENT "Generating ivi-application-api-${IVI_EXTENSION_VERSION}.pdf"
-)
-
-#=============================================================================================
-# generate documentation ivi-wm API
-#=============================================================================================
-SET(IVI_CTL_XML      ${CMAKE_CURRENT_SOURCE_DIR}/ivi-wm.xml)
-SET(IVI_CTL_CLIENT_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-client.h)
-SET(IVI_CTL_SERVER_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-server.h)
-
-add_custom_target(ivi-wm-doc
-                  COMMAND wayland-scanner client-header < ${IVI_CTL_XML} > ${IVI_CTL_CLIENT_H}
-                  COMMAND wayland-scanner server-header < ${IVI_CTL_XML} > ${IVI_CTL_SERVER_H}
-
-                  COMMAND cat ${CMAKE_SOURCE_DIR}/doc/Doxyfile.template
-                          | sed 's!___DOC_NAME___!IVI Controller API!'
-                          | sed 's!___DOC_VERSION___!${IVI_EXTENSION_VERSION}!'
-                          | sed 's!___INPUT_FILE___!${IVI_CTL_CLIENT_H} ${IVI_CTL_SERVER_H}!'
-                          | sed 's!___OUTPUT_DIR___!ivi-wm-tmp!'
-                          | doxygen -
-
-                  COMMAND make --silent -C ivi-wm-tmp/latex
-
-                  COMMAND cp ivi-wm-tmp/latex/refman.pdf
-                             ${CMAKE_BINARY_DIR}/ivi-wm-api-${IVI_EXTENSION_VERSION}.pdf
-
-                  DEPENDS ${IVI_CTL_XML}
-
-                  COMMENT "Generating ivi-wm-api-${IVI_EXTENSION_VERSION}.pdf"
-)
-
-#=============================================================================================
-# generate documentation ivi-input API
-#=============================================================================================
-SET(IVI_CTL_INP_XML      ${CMAKE_CURRENT_SOURCE_DIR}/ivi-input.xml)
-SET(IVI_CTL_INP_CLIENT_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client.h)
-SET(IVI_CTL_INP_SERVER_H ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-server.h)
-
-add_custom_target(ivi-input-doc
-                  COMMAND wayland-scanner client-header < ${IVI_CTL_INP_XML} > ${IVI_CTL_INP_CLIENT_H}
-                  COMMAND wayland-scanner server-header < ${IVI_CTL_INP_XML} > ${IVI_CTL_INP_SERVER_H}
-
-                  COMMAND cat ${CMAKE_SOURCE_DIR}/doc/Doxyfile.template
-                          | sed 's!___DOC_NAME___!IVI Controller API!'
-                          | sed 's!___DOC_VERSION___!${IVI_EXTENSION_VERSION}!'
-                          | sed 's!___INPUT_FILE___!${IVI_CTL_INP_CLIENT_H} ${IVI_CTL_INP_SERVER_H}!'
-                          | sed 's!___OUTPUT_DIR___!ivi-input-tmp!'
-                          | doxygen -
-
-                  COMMAND make --silent -C ivi-input-tmp/latex
-
-                  COMMAND cp ivi-input-tmp/latex/refman.pdf
-                             ${CMAKE_BINARY_DIR}/ivi-input-api-${IVI_EXTENSION_VERSION}.pdf
-
-                  DEPENDS ${IVI_CTL_INP_XML}
-
-                  COMMENT "Generating ivi-input-api-${IVI_EXTENSION_VERSION}.pdf"
-)
 
 #=============================================================================================
 # generate pkg-config file for ivi-application API
