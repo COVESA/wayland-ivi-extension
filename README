@@ -22,7 +22,7 @@ Build up
 
 3. In <build-dir> Generate build system for your platform using CMake.
    E.g. cd <build-dir>
-        cmake -DCMAKE_TOOLCHAIN_FILE=<your setting *.cmake> ../
+        cmake -DCMAKE_TOOLCHAIN_FILE=<your setting *.cmake> ../<git-clone-dir>
 
 4. Start the build and install
    
