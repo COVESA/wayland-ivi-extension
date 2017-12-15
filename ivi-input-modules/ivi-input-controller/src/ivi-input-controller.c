@@ -561,10 +561,9 @@ input_ctrl_ptr_leave_west_focus(struct seat_ctx *ctx_seat,
 
 static void
 input_ctrl_ptr_set_west_focus(struct seat_ctx *ctx_seat,
-        struct weston_pointer *pointer, struct weston_view *w_view,
-        int rel_x, int rel_y)
+        struct weston_pointer *pointer, struct weston_view *w_view)
 {
-    struct weston_view *view;
+    struct weston_view *view = NULL;
     struct ivisurface *surf_ctx;
     struct input_context *ctx = ctx_seat->input_ctx;
     struct seat_focus *st_focus;
@@ -576,9 +575,8 @@ input_ctrl_ptr_set_west_focus(struct seat_ctx *ctx_seat,
                        pointer->x, pointer->y,
                        &sx, &sy);
     } else {
-        view = w_view;
-        sx = wl_fixed_from_int(rel_x);
-        sy = wl_fixed_from_int(rel_y);
+        weston_view_from_global_fixed(view, pointer->x,
+                        pointer->y, &sx, &sy);
     }
 
     if (pointer->focus != view) {
@@ -682,7 +680,7 @@ pointer_grab_focus(struct weston_pointer_grab *grab)
             if ((NULL != forced_west_surf) && !wl_list_empty(&forced_west_surf->views)) {
                 w_view = wl_container_of(forced_west_surf->views.next,
                         w_view, surface_link);
-                input_ctrl_ptr_set_west_focus(seat, pointer, w_view, 0, 0);
+                input_ctrl_ptr_set_west_focus(seat, pointer, w_view);
             }
         } else if (NULL != pointer->focus) {
             if(pointer->focus->surface == forced_west_surf) {
@@ -692,7 +690,7 @@ pointer_grab_focus(struct weston_pointer_grab *grab)
         }
 
     } else {
-        input_ctrl_ptr_set_west_focus(seat, pointer, NULL, 0, 0);
+        input_ctrl_ptr_set_west_focus(seat, pointer, NULL);
     }
 }
 
