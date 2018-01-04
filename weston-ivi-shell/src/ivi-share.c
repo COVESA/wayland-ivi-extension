@@ -853,4 +853,5 @@ setup_buffer_sharing(struct weston_compositor *wc,
 
     shell_ext->surface_created_listener.notify = add_weston_surf_data;
     wl_signal_add(&wc->create_surface_signal, &shell_ext->surface_created_listener);
+    return 0;
 }
