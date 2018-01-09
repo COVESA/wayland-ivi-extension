@@ -1992,7 +1992,7 @@ get_config(struct weston_compositor *compositor, struct ivishell *shell)
 
 	weston_config_section_get_int(section,
                        "bkgnd-surface-id",
-                       &shell->bkgnd_surface_id, -1);
+                       &shell->bkgnd_surface_id, 0);
 
 	weston_config_section_get_string(section,
 	                   "debug-scopes",
@@ -2176,8 +2176,11 @@ launch_client_process(void *data)
             (struct ivishell *)data;
     char option[128] = {0};
 
-    sprintf(option, "%d", shell->bkgnd_surface_id);
-    setenv(IVI_CLIENT_SURFACE_ID_ENV_NAME, option, 0x1);
+    if (0 != shell->bkgnd_surface_id) {
+        sprintf(option, "%d", shell->bkgnd_surface_id);
+        setenv(IVI_CLIENT_SURFACE_ID_ENV_NAME, option, 0x1);
+    }
+
     if (shell->debug_scopes) {
         setenv(IVI_CLIENT_DEBUG_SCOPES_ENV_NAME, shell->debug_scopes, 0x1);
         free(shell->debug_scopes);
@@ -2238,7 +2241,7 @@ controller_module_init(struct weston_compositor *compositor,
         return -1;
     }
 
-    if (shell->bkgnd_surface_id && shell->ivi_client_name) {
+    if (shell->ivi_client_name) {
         loop = wl_display_get_event_loop(compositor->wl_display);
         wl_event_loop_add_idle(loop, launch_client_process, shell);
     }
