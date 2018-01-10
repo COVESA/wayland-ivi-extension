@@ -45,6 +45,7 @@
 #endif
 
 #define IVI_CLIENT_SURFACE_ID_ENV_NAME "IVI_CLIENT_SURFACE_ID"
+#define IVI_CLIENT_CURSOR_ENABLE_ENV_NAME "IVI_CLIENT_CURSOR_ENABLE"
 #define IVI_CLIENT_DEBUG_SCOPES_ENV_NAME "IVI_CLIENT_DEBUG_STREAM_NAMES"
 
 struct ivilayer;
@@ -1994,6 +1995,23 @@ get_config(struct weston_compositor *compositor, struct ivishell *shell)
                        "bkgnd-surface-id",
                        &shell->bkgnd_surface_id, 0);
 
+	/* cursor is enabled by default,
+	 * if the user doesn't want the cursor
+	 * then cursor-enable option can be set
+	 * as false in weston.ini */
+	weston_config_section_get_bool(section,
+                       "cursor-enable",
+                       &shell->cursor_enable, 0);
+
+	/* if cursor is enabled,
+	 * background surface has to be created
+	 * even it is not configured by the user
+	 * otherwise the cursor can't be set */
+	if (shell->cursor_enable &&
+	    (0 == shell->bkgnd_surface_id)) {
+	    shell->bkgnd_surface_id = 1000000;
+	}
+
 	weston_config_section_get_string(section,
 	                   "debug-scopes",
 	                   &shell->debug_scopes, NULL);
@@ -2179,6 +2197,11 @@ launch_client_process(void *data)
     if (0 != shell->bkgnd_surface_id) {
         sprintf(option, "%d", shell->bkgnd_surface_id);
         setenv(IVI_CLIENT_SURFACE_ID_ENV_NAME, option, 0x1);
+    }
+
+    if (0 != shell->cursor_enable) {
+        sprintf(option, "%d", shell->cursor_enable);
+        setenv(IVI_CLIENT_CURSOR_ENABLE_ENV_NAME, option, 0x1);
     }
 
     if (shell->debug_scopes) {
