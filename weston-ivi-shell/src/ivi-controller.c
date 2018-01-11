@@ -45,6 +45,7 @@
 #endif
 
 #define IVI_CLIENT_SURFACE_ID_ENV_NAME "IVI_CLIENT_SURFACE_ID"
+#define IVI_CLIENT_DEBUG_SCOPES_ENV_NAME "IVI_CLIENT_DEBUG_STREAM_NAMES"
 
 struct ivilayer;
 struct iviscreen;
@@ -1993,6 +1994,10 @@ get_config(struct weston_compositor *compositor, struct ivishell *shell)
                        "bkgnd-surface-id",
                        &shell->bkgnd_surface_id, -1);
 
+	weston_config_section_get_string(section,
+	                   "debug-scopes",
+	                   &shell->debug_scopes, NULL);
+
 	weston_config_section_get_color(section,
                        "bkgnd-color",
                        &shell->bkgnd_color, 0xFF000000);
@@ -2173,11 +2178,13 @@ launch_client_process(void *data)
 
     sprintf(option, "%d", shell->bkgnd_surface_id);
     setenv(IVI_CLIENT_SURFACE_ID_ENV_NAME, option, 0x1);
+    setenv(IVI_CLIENT_DEBUG_SCOPES_ENV_NAME, shell->debug_scopes, 0x1);
 
     shell->client = weston_client_start(shell->compositor,
                                         shell->ivi_client_name);
 
     free(shell->ivi_client_name);
+    free(shell->debug_scopes);
 }
 
 WL_EXPORT int
