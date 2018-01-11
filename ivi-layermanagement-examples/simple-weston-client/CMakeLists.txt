@@ -115,6 +115,7 @@ add_dependencies(${PROJECT_NAME} ${LIBS})
 
 if(${LIBWESTON_PROTOCOLS_FOUND})
     add_definitions(${DLT_CFLAGS})
+    add_definitions(-DLIBWESTON_DEBUG_PROTOCOL)
 endif(${LIBWESTON_PROTOCOLS_FOUND})
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
