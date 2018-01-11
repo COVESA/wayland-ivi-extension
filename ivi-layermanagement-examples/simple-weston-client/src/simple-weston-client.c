@@ -216,6 +216,9 @@ get_debug_streams(WaylandContextStruct* wlcontext)
 
     stream_names = getenv("IVI_CLIENT_DEBUG_STREAM_NAMES");
 
+    if(NULL == stream_names)
+        return;
+
     /* get the first stream */
     stream = strtok(stream_names, separator);
 

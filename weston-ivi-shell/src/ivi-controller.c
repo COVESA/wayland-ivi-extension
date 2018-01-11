@@ -2178,13 +2178,15 @@ launch_client_process(void *data)
 
     sprintf(option, "%d", shell->bkgnd_surface_id);
     setenv(IVI_CLIENT_SURFACE_ID_ENV_NAME, option, 0x1);
-    setenv(IVI_CLIENT_DEBUG_SCOPES_ENV_NAME, shell->debug_scopes, 0x1);
+    if (shell->debug_scopes) {
+        setenv(IVI_CLIENT_DEBUG_SCOPES_ENV_NAME, shell->debug_scopes, 0x1);
+        free(shell->debug_scopes);
+    }
 
     shell->client = weston_client_start(shell->compositor,
                                         shell->ivi_client_name);
 
     free(shell->ivi_client_name);
-    free(shell->debug_scopes);
 }
 
 WL_EXPORT int
