@@ -28,6 +28,12 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <assert.h>
+#include <pthread.h>
+#include <signal.h>
+#include <poll.h>
+
+#include "dlt_common.h"
+#include "dlt_user.h"
 
 #include <wayland-cursor.h>
 #include <ivi-application-client-protocol.h>
@@ -37,6 +43,8 @@
 #ifndef MIN
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
 #endif
+
+static int running = 1;
 
 typedef struct _BkGndSettings
 {
@@ -65,6 +73,9 @@ typedef struct _WaylandContext {
     uint32_t                formats;
     struct wl_list          stream_list;
     int                     debug_fd;
+    char                    thread_running;
+    pthread_t               dlt_ctx_thread;
+    int                     pipefd[2];
 }WaylandContextStruct;
 
 struct debug_stream {
@@ -79,6 +90,14 @@ static const char *left_ptrs[] = {
     "top_left_arrow",
     "left-arrow"
 };
+
+#define WESTON_DLT_APP_DESC "messages from weston debug protocol"
+#define WESTON_DLT_CONTEXT_DESC "weston debug context"
+
+#define WESTON_DLT_APP "WESN"
+#define WESTON_DLT_CONTEXT "WESC"
+
+#define MAXSTRLEN 1024
 
 static BkGndSettingsStruct*
 get_bkgnd_settings(void)
@@ -582,12 +601,128 @@ void destroy_bkgnd_surface(WaylandContextStruct* wlcontext)
         wl_surface_destroy(wlcontext->wlBkgndSurface);
 }
 
+static void *
+weston_dlt_thread_function(void *data)
+{
+    WaylandContextStruct* wlcontext;
+    char apid[DLT_ID_SIZE];
+    char ctid[DLT_ID_SIZE];
+    char *temp;
+    DLT_DECLARE_CONTEXT(weston_dlt_context)
+
+    wlcontext = (WaylandContextStruct*)data;
+
+    /*init dlt*/
+    dlt_set_id(apid, WESTON_DLT_APP);
+    dlt_set_id(ctid, WESTON_DLT_CONTEXT);
+
+    DLT_REGISTER_APP(apid, WESTON_DLT_APP_DESC);
+    DLT_REGISTER_CONTEXT(weston_dlt_context, ctid, WESTON_DLT_CONTEXT_DESC);
+
+    /*make the stdin as read end of the pipe*/
+    dup2(wlcontext->pipefd[0], STDIN_FILENO);
+
+    while (running && wlcontext->thread_running)
+    {
+        char str[MAXSTRLEN] = {0};
+        int i = -1;
+
+        /* read from std-in(read end of pipe) till newline char*/
+        do {
+            i++;
+            read(wlcontext->pipefd[0], &str[i], 1);
+        } while (str[i] != '\n');
+
+        if (strcmp(str,"")!=0)
+        {
+            DLT_LOG(weston_dlt_context, DLT_LOG_INFO, DLT_STRING(str));
+        }
+    }
+
+    DLT_UNREGISTER_CONTEXT(weston_dlt_context);
+    DLT_UNREGISTER_APP();
+    pthread_exit(NULL);
+}
+
+static void
+signal_int(int signum)
+{
+    running = 0;
+}
+
+static int
+display_poll(struct wl_display *display, short int events)
+{
+    int ret;
+    struct pollfd pfd[1];
+
+    pfd[0].fd = wl_display_get_fd(display);
+    pfd[0].events = events;
+    do {
+        ret = poll(pfd, 1, -1);
+    } while (ret == -1 && errno == EINTR && running);
+
+    if(0 == running)
+        ret = -1;
+
+    return ret;
+}
+
+/* implemented local API for dispatch the default queue
+ * to handle the Ctrl+C signal properly, with the wl_display_dispatch
+ * the poll is continuing because the generated errno is EINTR,
+ * so added running flag also to decide whether to continue polling or not */
+static int
+display_dispatch(struct wl_display *display)
+{
+    int ret;
+
+    if (wl_display_prepare_read(display) == -1)
+        return wl_display_dispatch_pending(display);
+
+    while (1) {
+        ret = wl_display_flush(display);
+
+        if (ret != -1 || errno != EAGAIN)
+            break;
+
+        if (display_poll(display, POLLOUT) == -1) {
+            wl_display_cancel_read(display);
+            return -1;
+        }
+    }
+
+    /* Don't stop if flushing hits an EPIPE; continue so we can read any
+     * protocol error that may have triggered it. */
+    if (ret < 0 && errno != EPIPE) {
+        wl_display_cancel_read(display);
+        return -1;
+    }
+
+    if (display_poll(display, POLLIN) == -1) {
+        wl_display_cancel_read(display);
+        return -1;
+    }
+
+    if (wl_display_read_events(display) == -1)
+        return -1;
+
+    return wl_display_dispatch_pending(display);
+}
+
 int main (int argc, const char * argv[])
 {
     WaylandContextStruct* wlcontext;
     BkGndSettingsStruct* bkgnd_settings;
+    struct sigaction sigint;
     int offset = 0;
-    int ret;
+    int ret = 0;
+
+    sigint.sa_handler = signal_int;
+    sigemptyset(&sigint.sa_mask);
+    sigaction(SIGINT, &sigint, NULL);
+    sigaction(SIGTERM, &sigint, NULL);
+    sigaction(SIGSEGV, &sigint, NULL);
 
     /*get bkgnd settings and create shm-surface*/
     bkgnd_settings = get_bkgnd_settings();
@@ -615,19 +750,41 @@ int main (int argc, const char * argv[])
 
     if (!wl_list_empty(&wlcontext->stream_list) &&
             wlcontext->debug_iface) {
+        /* create the pipe b/w stdout and stdin
+         * stdout - write end
+         * stdin - read end
+         * weston will write to stdout and the
+         * dlt_ctx_thread will read from stdin */
+        pipe(wlcontext->pipefd);
+        dup2(wlcontext->pipefd[1], STDOUT_FILENO);
+
+        wlcontext->thread_running = 1;
+        pthread_create(&wlcontext->dlt_ctx_thread, NULL,
+                weston_dlt_thread_function, wlcontext);
         start_streams(wlcontext);
     }
 
     /*draw the bkgnd display*/
     draw_bkgnd_surface(wlcontext);
 
-    while (ret != -1)
-        ret = wl_display_dispatch(wlcontext->wl_display);
+    while (running && (ret != -1))
+        ret = display_dispatch(wlcontext->wl_display);
 
 Error:
     destroy_streams(wlcontext);
+    wl_display_roundtrip(wlcontext->wl_display);
+
     destroy_bkgnd_surface(wlcontext);
     destroy_wayland_context(wlcontext);
+
+    if(wlcontext->thread_running)
+    {
+        close(wlcontext->pipefd[1]);
+        close(STDOUT_FILENO);
+        wlcontext->thread_running = 0;
+        pthread_join(wlcontext->dlt_ctx_thread, NULL);
+        close(wlcontext->pipefd[0]);
+    }
 
     free(bkgnd_settings);
     free(wlcontext);
