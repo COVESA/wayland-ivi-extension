@@ -71,6 +71,7 @@ struct ivishell {
     uint32_t screen_id_offset;
 
     int32_t bkgnd_surface_id;
+    int32_t cursor_enable;
     uint32_t bkgnd_color;
     struct ivisurface *bkgnd_surface;
     struct weston_layer bkgnd_layer;
@@ -79,6 +80,7 @@ struct ivishell {
 
     struct wl_client *client;
     char *ivi_client_name;
+    char *debug_scopes;
 };
 
 #endif /* WESTON_IVI_SHELL_SRC_IVI_CONTROLLER_H_ */

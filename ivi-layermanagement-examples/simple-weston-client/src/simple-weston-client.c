@@ -27,9 +27,33 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <assert.h>
+#include <pthread.h>
+#include <signal.h>
+#include <poll.h>
 
 #include <wayland-cursor.h>
 #include <ivi-application-client-protocol.h>
+
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+#include "dlt_common.h"
+#include "dlt_user.h"
+#include "weston-debug-client-protocol.h"
+
+#define WESTON_DLT_APP_DESC "messages from weston debug protocol"
+#define WESTON_DLT_CONTEXT_DESC "weston debug context"
+
+#define WESTON_DLT_APP "WESN"
+#define WESTON_DLT_CONTEXT "WESC"
+
+#define MAXSTRLEN 1024
+#endif
+
+#ifndef MIN
+#define MIN(x,y) (((x) < (y)) ? (x) : (y))
+#endif
+
+static int running = 1;
 
 typedef struct _BkGndSettings
 {
@@ -55,7 +79,22 @@ typedef struct _WaylandContext {
     struct wl_cursor        *cursor;
     void                    *bkgnddata;
     uint32_t                formats;
+    int                     cursor_enable;
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    struct weston_debug_v1  *debug_iface;
+    struct wl_list          stream_list;
+    int                     debug_fd;
+    char                    thread_running;
+    pthread_t               dlt_ctx_thread;
+    int                     pipefd[2];
+#endif
 }WaylandContextStruct;
+
+struct debug_stream {
+    struct wl_list link;
+    char *name;
+    struct weston_debug_stream_v1 *obj;
+};
 
 static const char *left_ptrs[] = {
     "left_ptr",
@@ -72,21 +111,143 @@ get_bkgnd_settings(void)
     char *end;
     int len;
 
+    /*if no environment variable given return NULL*/
+    option = getenv("IVI_CLIENT_SURFACE_ID");
+    if(NULL == option)
+        return NULL;
+
     bkgnd_settings =
             (BkGndSettingsStruct*)calloc(1, sizeof(BkGndSettingsStruct));
 
-    option = getenv("IVI_CLIENT_SURFACE_ID");
-    if(option)
-        bkgnd_settings->surface_id = strtol(option, &end, 0);
-    else
-        bkgnd_settings->surface_id = 10;
-
+    bkgnd_settings->surface_id = strtol(option, &end, 0);
     bkgnd_settings->surface_width = 1;
     bkgnd_settings->surface_height = 1;
     bkgnd_settings->surface_stride = bkgnd_settings->surface_width * 4;
 
     return bkgnd_settings;
 }
+
+static int
+get_cursor_enable(void)
+{
+    char *option;
+    char *end;
+    int cursor_enable = 0;
+
+    option = getenv("IVI_CLIENT_CURSOR_ENABLE");
+    if(option)
+        cursor_enable = strtol(option, &end, 0);
+
+    return cursor_enable;
+}
+
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+static struct debug_stream *
+stream_alloc(WaylandContextStruct* wlcontext, const char *name)
+{
+    struct debug_stream *stream;
+
+    stream = calloc(1, (sizeof *stream));
+    if (!stream)
+        return NULL;
+
+    stream->name = strdup(name);
+    if (!stream->name) {
+        free(stream);
+        return NULL;
+    }
+
+    wl_list_insert(wlcontext->stream_list.prev, &stream->link);
+
+    return stream;
+}
+
+static void
+stream_destroy(struct debug_stream *stream)
+{
+    if (stream->obj)
+        weston_debug_stream_v1_destroy(stream->obj);
+
+    wl_list_remove(&stream->link);
+    free(stream->name);
+    free(stream);
+}
+
+static void
+destroy_streams(WaylandContextStruct* wlcontext)
+{
+    struct debug_stream *stream;
+    struct debug_stream *tmp;
+
+    wl_list_for_each_safe(stream, tmp, &wlcontext->stream_list, link) {
+        stream_destroy(stream);
+    }
+}
+
+static void
+handle_stream_complete(void *data, struct weston_debug_stream_v1 *obj)
+{
+    struct debug_stream *stream = data;
+
+    assert(stream->obj == obj);
+
+    stream_destroy(stream);
+}
+
+static void
+handle_stream_failure(void *data, struct weston_debug_stream_v1 *obj,
+		      const char *msg)
+{
+    struct debug_stream *stream = data;
+
+    assert(stream->obj == obj);
+
+    fprintf(stderr, "Debug stream '%s' aborted: %s\n", stream->name, msg);
+
+    stream_destroy(stream);
+}
+
+static const struct weston_debug_stream_v1_listener stream_listener = {
+    handle_stream_complete,
+    handle_stream_failure
+};
+
+static void
+start_streams(WaylandContextStruct* wlcontext)
+{
+    struct debug_stream *stream;
+
+    wl_list_for_each(stream, &wlcontext->stream_list, link) {
+        stream->obj = weston_debug_v1_subscribe(wlcontext->debug_iface,
+                            stream->name,
+                            wlcontext->debug_fd);
+        weston_debug_stream_v1_add_listener(stream->obj,
+                            &stream_listener, stream);
+    }
+}
+
+static void
+get_debug_streams(WaylandContextStruct* wlcontext)
+{
+    char *stream_names;
+    char *stream;
+    const char separator[2] = " ";
+
+    stream_names = getenv("IVI_CLIENT_DEBUG_STREAM_NAMES");
+
+    if(NULL == stream_names)
+        return;
+
+    /* get the first stream */
+    stream = strtok(stream_names, separator);
+
+    /* walk through other streams */
+    while( stream != NULL ) {
+        stream_alloc(wlcontext, stream);
+        stream = strtok(NULL, separator);
+    }
+}
+#endif
 
 static void
 shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
@@ -242,25 +403,46 @@ registry_handle_global(void *data, struct wl_registry *registry, uint32_t name,
     WaylandContextStruct* wlcontext = (WaylandContextStruct*)data;
 
     if (!strcmp(interface, "wl_compositor")) {
-        wlcontext->wl_compositor =
-                wl_registry_bind(registry, name,
-                                 &wl_compositor_interface, 1);
+        if (wlcontext->bkgnd_settings) {
+            wlcontext->wl_compositor =
+                    wl_registry_bind(registry, name,
+                                     &wl_compositor_interface, 1);
+        }
     }
     else if (!strcmp(interface, "wl_shm")) {
-        wlcontext->wl_shm =
-                wl_registry_bind(registry, name, &wl_shm_interface, 1);
-        wl_shm_add_listener(wlcontext->wl_shm, &shm_listenter, wlcontext);
+        if (wlcontext->bkgnd_settings) {
+            wlcontext->wl_shm =
+                    wl_registry_bind(registry, name, &wl_shm_interface, 1);
+            wl_shm_add_listener(wlcontext->wl_shm, &shm_listenter, wlcontext);
+        }
     }
     else if (!strcmp(interface, "ivi_application")) {
-        wlcontext->ivi_application =
-                wl_registry_bind(registry, name,
-                                 &ivi_application_interface, 1);
+        if (wlcontext->bkgnd_settings) {
+            wlcontext->ivi_application =
+                    wl_registry_bind(registry, name,
+                                     &ivi_application_interface, 1);
+        }
     }
     else if (!strcmp(interface, "wl_seat")) {
-        wlcontext->wl_seat =
-                wl_registry_bind(registry, name, &wl_seat_interface, 1);
-        wl_seat_add_listener(wlcontext->wl_seat, &seat_Listener, data);
+        if (wlcontext->bkgnd_settings && wlcontext->cursor_enable) {
+            wlcontext->wl_seat =
+                    wl_registry_bind(registry, name, &wl_seat_interface, 1);
+            wl_seat_add_listener(wlcontext->wl_seat, &seat_Listener, data);
+        }
     }
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    else if (!strcmp(interface, weston_debug_v1_interface.name)) {
+        uint32_t myver;
+
+        if (wlcontext->debug_iface || wl_list_empty(&wlcontext->stream_list))
+            return;
+
+        myver = MIN(1, version);
+        wlcontext->debug_iface =
+                wl_registry_bind(registry, name,
+                    &weston_debug_v1_interface, myver);
+    }
+#endif
 }
 
 static void
@@ -288,17 +470,27 @@ int init_wayland_context(WaylandContextStruct* wlcontext)
                              &registry_listener, wlcontext);
     wl_display_roundtrip(wlcontext->wl_display);
 
-    if (wlcontext->wl_shm == NULL) {
+    if (wlcontext->bkgnd_settings &&
+        (wlcontext->wl_shm == NULL)) {
         fprintf(stderr, "No wl_shm global\n");
         return -1;
     }
 
     wl_display_roundtrip(wlcontext->wl_display);
 
-    if (!(wlcontext->formats & (1 << WL_SHM_FORMAT_XRGB8888))) {
+    if (wlcontext->bkgnd_settings &&
+        !(wlcontext->formats & (1 << WL_SHM_FORMAT_XRGB8888))) {
         fprintf(stderr, "WL_SHM_FORMAT_XRGB32 not available\n");
         return -1;
     }
+
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    if (!wl_list_empty(&wlcontext->stream_list) &&
+        (wlcontext->debug_iface == NULL)) {
+        fprintf(stderr, "WARNING: weston_debug protocol is not available,"
+                " missed enabling --debug option to weston ?\n");
+    }
+#endif
 
     return 0;
 }
@@ -307,6 +499,23 @@ void destroy_wayland_context(WaylandContextStruct* wlcontext)
 {
     if(wlcontext->wl_compositor)
         wl_compositor_destroy(wlcontext->wl_compositor);
+
+    if(wlcontext->ivi_application)
+       ivi_application_destroy(wlcontext->ivi_application);
+
+    if(wlcontext->wl_shm)
+        wl_shm_destroy(wlcontext->wl_shm);
+
+    if(wlcontext->wl_seat)
+        wl_seat_destroy(wlcontext->wl_seat);
+
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    if(wlcontext->debug_iface)
+        weston_debug_v1_destroy(wlcontext->debug_iface);
+#endif
+
+    if(wlcontext->wl_registry)
+        wl_registry_destroy(wlcontext->wl_registry);
 
     if(wlcontext->wl_display)
         wl_display_disconnect(wlcontext->wl_display);
@@ -449,42 +658,209 @@ void destroy_bkgnd_surface(WaylandContextStruct* wlcontext)
         wl_surface_destroy(wlcontext->wlBkgndSurface);
 }
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+static void *
+weston_dlt_thread_function(void *data)
+{
+    WaylandContextStruct* wlcontext;
+    char apid[DLT_ID_SIZE];
+    char ctid[DLT_ID_SIZE];
+    char *temp;
+    DLT_DECLARE_CONTEXT(weston_dlt_context)
+
+    wlcontext = (WaylandContextStruct*)data;
+
+    /*init dlt*/
+    dlt_set_id(apid, WESTON_DLT_APP);
+    dlt_set_id(ctid, WESTON_DLT_CONTEXT);
+
+    DLT_REGISTER_APP(apid, WESTON_DLT_APP_DESC);
+    DLT_REGISTER_CONTEXT(weston_dlt_context, ctid, WESTON_DLT_CONTEXT_DESC);
+
+    /*make the stdin as read end of the pipe*/
+    dup2(wlcontext->pipefd[0], STDIN_FILENO);
+
+    while (running && wlcontext->thread_running)
+    {
+        char str[MAXSTRLEN] = {0};
+        int i = -1;
+
+        /* read from std-in(read end of pipe) till newline char*/
+        do {
+            i++;
+            read(wlcontext->pipefd[0], &str[i], 1);
+        } while (str[i] != '\n');
+
+        if (strcmp(str,"")!=0)
+        {
+            DLT_LOG(weston_dlt_context, DLT_LOG_INFO, DLT_STRING(str));
+        }
+    }
+
+    DLT_UNREGISTER_CONTEXT(weston_dlt_context);
+    DLT_UNREGISTER_APP();
+    pthread_exit(NULL);
+}
+#endif
+
+static void
+signal_int(int signum)
+{
+    running = 0;
+}
+
+static int
+display_poll(struct wl_display *display, short int events)
+{
+    int ret;
+    struct pollfd pfd[1];
+
+    pfd[0].fd = wl_display_get_fd(display);
+    pfd[0].events = events;
+    do {
+        ret = poll(pfd, 1, -1);
+    } while (ret == -1 && errno == EINTR && running);
+
+    if(0 == running)
+        ret = -1;
+
+    return ret;
+}
+
+/* implemented local API for dispatch the default queue
+ * to handle the Ctrl+C signal properly, with the wl_display_dispatch
+ * the poll is continuing because the generated errno is EINTR,
+ * so added running flag also to decide whether to continue polling or not */
+static int
+display_dispatch(struct wl_display *display)
+{
+    int ret;
+
+    if (wl_display_prepare_read(display) == -1)
+        return wl_display_dispatch_pending(display);
+
+    while (1) {
+        ret = wl_display_flush(display);
+
+        if (ret != -1 || errno != EAGAIN)
+            break;
+
+        if (display_poll(display, POLLOUT) == -1) {
+            wl_display_cancel_read(display);
+            return -1;
+        }
+    }
+
+    /* Don't stop if flushing hits an EPIPE; continue so we can read any
+     * protocol error that may have triggered it. */
+    if (ret < 0 && errno != EPIPE) {
+        wl_display_cancel_read(display);
+        return -1;
+    }
+
+    if (display_poll(display, POLLIN) == -1) {
+        wl_display_cancel_read(display);
+        return -1;
+    }
+
+    if (wl_display_read_events(display) == -1)
+        return -1;
+
+    return wl_display_dispatch_pending(display);
+}
+
 int main (int argc, const char * argv[])
 {
     WaylandContextStruct* wlcontext;
     BkGndSettingsStruct* bkgnd_settings;
+    struct sigaction sigint;
     int offset = 0;
-    int ret;
+    int ret = 0;
 
-    /*get bkgnd settings and create shm-surface*/
+    sigint.sa_handler = signal_int;
+    sigemptyset(&sigint.sa_mask);
+    sigaction(SIGINT, &sigint, NULL);
+    sigaction(SIGTERM, &sigint, NULL);
+    sigaction(SIGSEGV, &sigint, NULL);
+
+    /*get bkgnd settings if available*/
     bkgnd_settings = get_bkgnd_settings();
 
     /*init wayland context*/
     wlcontext = (WaylandContextStruct*)calloc(1, sizeof(WaylandContextStruct));
     wlcontext->bkgnd_settings = bkgnd_settings;
+
+    /*check cursor is enabled*/
+    wlcontext->cursor_enable = get_cursor_enable();
+
+    /*init debug stream list*/
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    wl_list_init(&wlcontext->stream_list);
+    get_debug_streams(wlcontext);
+    wlcontext->debug_fd = STDOUT_FILENO;
+#else
+    fprintf(stderr, "WARNING: weston_debug protocol is not available\n");
+#endif
+
     if (init_wayland_context(wlcontext)) {
         fprintf(stderr, "init_wayland_context failed\n");
         return -1;
     }
 
-    if (create_bkgnd_surface(wlcontext)) {
+    if (wlcontext->bkgnd_settings && create_bkgnd_surface(wlcontext)) {
         fprintf(stderr, "create_bkgnd_surface failed\n");
         goto Error;
     }
 
     wl_display_roundtrip(wlcontext->wl_display);
 
-    /*draw the bkgnd display*/
-    draw_bkgnd_surface(wlcontext);
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    if (!wl_list_empty(&wlcontext->stream_list) &&
+            wlcontext->debug_iface) {
+        /* create the pipe b/w stdout and stdin
+         * stdout - write end
+         * stdin - read end
+         * weston will write to stdout and the
+         * dlt_ctx_thread will read from stdin */
+        pipe(wlcontext->pipefd);
+        dup2(wlcontext->pipefd[1], STDOUT_FILENO);
 
-    while (ret != -1)
-        ret = wl_display_dispatch(wlcontext->wl_display);
+        wlcontext->thread_running = 1;
+        pthread_create(&wlcontext->dlt_ctx_thread, NULL,
+                weston_dlt_thread_function, wlcontext);
+        start_streams(wlcontext);
+    }
+#endif
+
+    /*draw the bkgnd display*/
+    if (wlcontext->bkgnd_settings)
+        draw_bkgnd_surface(wlcontext);
+
+    while (running && (ret != -1))
+        ret = display_dispatch(wlcontext->wl_display);
 
 Error:
-    destroy_bkgnd_surface(wlcontext);
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    destroy_streams(wlcontext);
+    wl_display_roundtrip(wlcontext->wl_display);
+
+    if(wlcontext->thread_running)
+    {
+        close(wlcontext->pipefd[1]);
+        close(STDOUT_FILENO);
+        wlcontext->thread_running = 0;
+        pthread_join(wlcontext->dlt_ctx_thread, NULL);
+        close(wlcontext->pipefd[0]);
+    }
+#endif
+
+    if (wlcontext->bkgnd_settings)
+        destroy_bkgnd_surface(wlcontext);
     destroy_wayland_context(wlcontext);
 
-    free(bkgnd_settings);
+    if (bkgnd_settings)
+        free(bkgnd_settings);
+
     free(wlcontext);
 
     return 0;
