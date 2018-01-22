@@ -79,6 +79,7 @@ struct ivishell {
 
     struct wl_client *client;
     char *ivi_client_name;
+    char *debug_scopes;
 };
 
 #endif /* WESTON_IVI_SHELL_SRC_IVI_CONTROLLER_H_ */
