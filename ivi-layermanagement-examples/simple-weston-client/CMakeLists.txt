@@ -118,6 +118,10 @@ add_dependencies(${PROJECT_NAME} ${LIBS})
 
 add_definitions(${DLT_CFLAGS})
 
+if(${LIBWESTON_PROTOCOLS_FOUND})
+    add_definitions(-DLIBWESTON_DEBUG_PROTOCOL)
+endif(${LIBWESTON_PROTOCOLS_FOUND})
+
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)

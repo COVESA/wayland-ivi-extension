@@ -32,13 +32,22 @@
 #include <signal.h>
 #include <poll.h>
 
-#include "dlt_common.h"
-#include "dlt_user.h"
-
 #include <wayland-cursor.h>
 #include <ivi-application-client-protocol.h>
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+#include "dlt_common.h"
+#include "dlt_user.h"
 #include "weston-debug-client-protocol.h"
+
+#define WESTON_DLT_APP_DESC "messages from weston debug protocol"
+#define WESTON_DLT_CONTEXT_DESC "weston debug context"
+
+#define WESTON_DLT_APP "WESN"
+#define WESTON_DLT_CONTEXT "WESC"
+
+#define MAXSTRLEN 1024
+#endif
 
 #ifndef MIN
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
@@ -60,7 +69,6 @@ typedef struct _WaylandContext {
     struct wl_compositor    *wl_compositor;
     struct wl_shm           *wl_shm;
     struct wl_seat          *wl_seat;
-    struct weston_debug_v1  *debug_iface;
     struct wl_pointer       *wl_pointer;
     struct wl_surface       *wl_pointer_surface;
     struct ivi_application  *ivi_application;
@@ -71,11 +79,14 @@ typedef struct _WaylandContext {
     struct wl_cursor        *cursor;
     void                    *bkgnddata;
     uint32_t                formats;
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    struct weston_debug_v1  *debug_iface;
     struct wl_list          stream_list;
     int                     debug_fd;
     char                    thread_running;
     pthread_t               dlt_ctx_thread;
     int                     pipefd[2];
+#endif
 }WaylandContextStruct;
 
 struct debug_stream {
@@ -90,14 +101,6 @@ static const char *left_ptrs[] = {
     "top_left_arrow",
     "left-arrow"
 };
-
-#define WESTON_DLT_APP_DESC "messages from weston debug protocol"
-#define WESTON_DLT_CONTEXT_DESC "weston debug context"
-
-#define WESTON_DLT_APP "WESN"
-#define WESTON_DLT_CONTEXT "WESC"
-
-#define MAXSTRLEN 1024
 
 static BkGndSettingsStruct*
 get_bkgnd_settings(void)
@@ -123,6 +126,7 @@ get_bkgnd_settings(void)
     return bkgnd_settings;
 }
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
 static struct debug_stream *
 stream_alloc(WaylandContextStruct* wlcontext, const char *name)
 {
@@ -228,6 +232,7 @@ get_debug_streams(WaylandContextStruct* wlcontext)
         stream = strtok(NULL, separator);
     }
 }
+#endif
 
 static void
 shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
@@ -402,7 +407,8 @@ registry_handle_global(void *data, struct wl_registry *registry, uint32_t name,
                 wl_registry_bind(registry, name, &wl_seat_interface, 1);
         wl_seat_add_listener(wlcontext->wl_seat, &seat_Listener, data);
     }
-    if (!strcmp(interface, weston_debug_v1_interface.name)) {
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    else if (!strcmp(interface, weston_debug_v1_interface.name)) {
         uint32_t myver;
 
         if (wlcontext->debug_iface || wl_list_empty(&wlcontext->stream_list))
@@ -413,6 +419,7 @@ registry_handle_global(void *data, struct wl_registry *registry, uint32_t name,
                 wl_registry_bind(registry, name,
                     &weston_debug_v1_interface, myver);
     }
+#endif
 }
 
 static void
@@ -452,6 +459,14 @@ int init_wayland_context(WaylandContextStruct* wlcontext)
         return -1;
     }
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+    if (!wl_list_empty(&wlcontext->stream_list) &&
+        (wlcontext->debug_iface == NULL)) {
+        fprintf(stderr, "WARNING: weston_debug protocol is not available,"
+                " missed enabling --debug option to weston ?\n");
+    }
+#endif
+
     return 0;
 }
 
@@ -463,8 +478,10 @@ void destroy_wayland_context(WaylandContextStruct* wlcontext)
     if(wlcontext->wl_display)
         wl_display_disconnect(wlcontext->wl_display);
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
     if(wlcontext->debug_iface)
         weston_debug_v1_destroy(wlcontext->debug_iface);
+#endif
 }
 
 int
@@ -604,6 +621,7 @@ void destroy_bkgnd_surface(WaylandContextStruct* wlcontext)
         wl_surface_destroy(wlcontext->wlBkgndSurface);
 }
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
 static void *
 weston_dlt_thread_function(void *data)
 {
@@ -646,6 +664,7 @@ weston_dlt_thread_function(void *data)
     DLT_UNREGISTER_APP();
     pthread_exit(NULL);
 }
+#endif
 
 static void
 signal_int(int signum)
@@ -734,10 +753,14 @@ int main (int argc, const char * argv[])
     wlcontext = (WaylandContextStruct*)calloc(1, sizeof(WaylandContextStruct));
     wlcontext->bkgnd_settings = bkgnd_settings;
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
     /*init debug stream list*/
     wl_list_init(&wlcontext->stream_list);
     get_debug_streams(wlcontext);
     wlcontext->debug_fd = STDOUT_FILENO;
+#else
+    fprintf(stderr, "WARNING: weston_debug protocol is not available\n");
+#endif
 
     if (init_wayland_context(wlcontext)) {
         fprintf(stderr, "init_wayland_context failed\n");
@@ -751,6 +774,7 @@ int main (int argc, const char * argv[])
 
     wl_display_roundtrip(wlcontext->wl_display);
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
     if (!wl_list_empty(&wlcontext->stream_list) &&
             wlcontext->debug_iface) {
         /* create the pipe b/w stdout and stdin
@@ -766,6 +790,7 @@ int main (int argc, const char * argv[])
                 weston_dlt_thread_function, wlcontext);
         start_streams(wlcontext);
     }
+#endif
 
     /*draw the bkgnd display*/
     draw_bkgnd_surface(wlcontext);
@@ -774,11 +799,9 @@ int main (int argc, const char * argv[])
         ret = display_dispatch(wlcontext->wl_display);
 
 Error:
+#ifdef LIBWESTON_DEBUG_PROTOCOL
     destroy_streams(wlcontext);
     wl_display_roundtrip(wlcontext->wl_display);
-
-    destroy_bkgnd_surface(wlcontext);
-    destroy_wayland_context(wlcontext);
 
     if(wlcontext->thread_running)
     {
@@ -788,6 +811,10 @@ Error:
         pthread_join(wlcontext->dlt_ctx_thread, NULL);
         close(wlcontext->pipefd[0]);
     }
+#endif
+
+    destroy_bkgnd_surface(wlcontext);
+    destroy_wayland_context(wlcontext);
 
     free(bkgnd_settings);
     free(wlcontext);
