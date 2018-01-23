@@ -25,6 +25,9 @@ pkg_check_modules(WAYLAND_CURSOR wayland-cursor REQUIRED)
 pkg_check_modules(LIBWESTON_PROTOCOLS libweston-2-protocols QUIET)
 
 if(${LIBWESTON_PROTOCOLS_FOUND})
+    #check for DLT
+    pkg_check_modules(DLT automotive-dlt REQUIRED)
+
     #import the pkgdatadir from libweston-protocols pkgconfig file
     execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=pkgdatadir libweston-2-protocols
                     OUTPUT_VARIABLE WestonProtocols_PKGDATADIR)
@@ -80,16 +83,19 @@ include_directories(
     ${WAYLAND_CLIENT_INCLUDE_DIR}
     ${WAYLAND_CURSOR_INCLUDE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${DLT_INCLUDE_DIR}
 )
 
 link_directories(
     ${WAYLAND_CLIENT_LIBRARY_DIRS}
     ${WAYLAND_CURSOR_LIBRARY_DIRS}
+    ${DLT_LIBRARY_DIRS}
 )
 
 SET(LIBS
     ${WAYLAND_CLIENT_LIBRARIES}
     ${WAYLAND_CURSOR_LIBRARIES}
+    ${DLT_LIBRARIES}
 )
 
 SET(SRC_FILES
@@ -109,6 +115,8 @@ endif(${LIBWESTON_PROTOCOLS_FOUND})
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${WESTON_DEBUG_SRC_FILES})
 
 add_dependencies(${PROJECT_NAME} ${LIBS})
+
+add_definitions(${DLT_CFLAGS})
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
