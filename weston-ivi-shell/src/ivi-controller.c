@@ -363,10 +363,6 @@ controller_set_surface_destination_rectangle(struct wl_client *client,
                                      IVI_LAYOUT_TRANSITION_NONE,
                                      300); // ms
 
-    if (x < 0)
-        x = prop->dest_x;
-    if (y < 0)
-        y = prop->dest_y;
     if (width < 0)
         width = prop->dest_width;
     if (height < 0)
@@ -748,10 +744,6 @@ controller_set_layer_destination_rectangle(struct wl_client *client,
 
     prop = lyt->get_properties_of_layer(layout_layer);
 
-    if (x < 0)
-        x = prop->dest_x;
-    if (y < 0)
-        y = prop->dest_y;
     if (width < 0)
         width = prop->dest_width;
     if (height < 0)
