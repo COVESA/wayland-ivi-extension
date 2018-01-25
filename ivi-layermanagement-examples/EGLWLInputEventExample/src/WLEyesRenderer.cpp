@@ -57,7 +57,7 @@ const struct wl_touch_listener TouchListener = {
     TouchHandleCancel,
 };
 
-void WaitForEvent(struct wl_display* wlDisplay, int fd)
+int WaitForEvent(struct wl_display* wlDisplay, int fd)
 {
     int err;
 
@@ -71,7 +71,7 @@ void WaitForEvent(struct wl_display* wlDisplay, int fd)
     {
         err = wl_display_get_error(wlDisplay);
         printf("Error communicating with wayland: %d",err);
-        return;
+        return -1;
     }
 
     /*Wait till an event occurs */
@@ -90,6 +90,8 @@ void WaitForEvent(struct wl_display* wlDisplay, int fd)
         /*Unblock other threads, if an error happens */
         wl_display_cancel_read(wlDisplay);
     }
+
+    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////

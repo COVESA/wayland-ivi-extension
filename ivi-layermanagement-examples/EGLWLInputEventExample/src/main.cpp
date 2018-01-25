@@ -99,7 +99,10 @@ int main(int argc, char **argv)
     gRunLoop = 1;
     gNeedRedraw = 0;
     while (gRunLoop){
-        WaitForEvent(wlContext->GetWLDisplay(), fd);
+        if ((WaitForEvent(wlContext->GetWLDisplay(), fd) < 0)){
+            gRunLoop = 0;
+        }
+
         if (gNeedRedraw && gRunLoop){
             DrawEyes(eglSurface, eyes);
             gNeedRedraw = 0;
