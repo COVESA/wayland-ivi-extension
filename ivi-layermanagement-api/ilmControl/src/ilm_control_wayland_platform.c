@@ -207,6 +207,9 @@ wm_listener_layer_visibility(void *data, struct ivi_wm *controller,
     if(!ctx_layer)
         return;
 
+    if (ctx_layer->prop.visibility == (t_ilm_bool)visibility)
+        return;
+
     ctx_layer->prop.visibility = (t_ilm_bool)visibility;
 
     if (ctx_layer->notification != NULL) {
@@ -225,6 +228,9 @@ wm_listener_layer_opacity(void *data, struct ivi_wm *controller,
 
     ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
     if(!ctx_layer)
+        return;
+
+    if (ctx_layer->prop.opacity == (t_ilm_float)wl_fixed_to_double(opacity))
         return;
 
     ctx_layer->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
@@ -246,6 +252,12 @@ wm_listener_layer_source_rectangle(void *data, struct ivi_wm *controller,
 
     ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
     if(!ctx_layer)
+        return;
+
+    if ((ctx_layer->prop.sourceX == (t_ilm_uint)x) &&
+        (ctx_layer->prop.sourceY == (t_ilm_uint)y) &&
+        (ctx_layer->prop.sourceWidth == (t_ilm_uint)width &&
+        (ctx_layer->prop.sourceHeight == (t_ilm_uint)height)))
         return;
 
     ctx_layer->prop.sourceX = (t_ilm_uint)x;
@@ -270,6 +282,12 @@ wm_listener_layer_destination_rectangle(void *data, struct ivi_wm *controller,
 
     ctx_layer = wayland_controller_get_layer_context(ctx, layer_id);
     if(!ctx_layer)
+        return;
+
+    if ((ctx_layer->prop.destX == (t_ilm_uint)x) &&
+        (ctx_layer->prop.destY == (t_ilm_uint)y) &&
+        (ctx_layer->prop.destWidth == (t_ilm_uint)width &&
+        (ctx_layer->prop.destHeight == (t_ilm_uint)height)))
         return;
 
     ctx_layer->prop.destX = (t_ilm_uint)x;
