@@ -563,14 +563,14 @@ static void
 input_ctrl_ptr_set_west_focus(struct seat_ctx *ctx_seat,
         struct weston_pointer *pointer, struct weston_view *w_view)
 {
-    struct weston_view *view = NULL;
+    struct weston_view *view = w_view;
     struct ivisurface *surf_ctx;
     struct input_context *ctx = ctx_seat->input_ctx;
     struct seat_focus *st_focus;
     uint32_t ivi_surf_id;
     wl_fixed_t sx, sy;
 
-    if (NULL == w_view) {
+    if (NULL == view) {
         view = weston_compositor_pick_view(pointer->seat->compositor,
                        pointer->x, pointer->y,
                        &sx, &sy);
