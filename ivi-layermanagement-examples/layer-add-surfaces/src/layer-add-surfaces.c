@@ -45,6 +45,7 @@ static void configure_ilm_surface(t_ilm_uint id, t_ilm_uint width, t_ilm_uint he
     ilm_surfaceSetSourceRectangle(id, 0, 0, width, height);
     ilm_surfaceSetVisibility(id, ILM_TRUE);
     ilm_layerAddSurface(layer,id);
+    ilm_surfaceRemoveNotification(id);
 
     ilm_commitChanges();
     pthread_cond_signal( &waiterVariable );
@@ -74,16 +75,15 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
             if (number_of_surfaces > 0) {
                 number_of_surfaces--;
                 printf("layer-add-surfaces: surface (%d) created\n",id);
+                // always get configured event to follow the surface changings
+                ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
+                ilm_commitChanges();
                 ilm_getPropertiesOfSurface(id, &sp);
 
                 if ((sp.origSourceWidth != 0) && (sp.origSourceHeight !=0))
                 {   // surface is already configured
                     configure_ilm_surface(id, sp.origSourceWidth, sp.origSourceHeight);
                 }
-
-                // always get configured event to follow the surface changings
-                ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
-                ilm_commitChanges();
             }
         }
         else if(!created)
