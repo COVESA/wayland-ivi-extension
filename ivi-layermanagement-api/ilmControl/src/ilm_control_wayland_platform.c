@@ -393,6 +393,9 @@ wm_listener_surface_visibility(void *data, struct ivi_wm *controller,
     if(!ctx_surf)
         return;
 
+    if (ctx_surf->prop.visibility == (t_ilm_bool)visibility)
+        return;
+
     ctx_surf->prop.visibility = (t_ilm_bool)visibility;
 
     if (ctx_surf->notification != NULL) {
@@ -413,6 +416,9 @@ wm_listener_surface_opacity(void *data, struct ivi_wm *controller,
     if(!ctx_surf)
         return;
 
+    if (ctx_surf->prop.opacity == (t_ilm_float)wl_fixed_to_double(opacity))
+        return;
+
     ctx_surf->prop.opacity = (t_ilm_float)wl_fixed_to_double(opacity);
 
     if (ctx_surf->notification != NULL) {
@@ -431,6 +437,10 @@ wm_listener_surface_size(void *data, struct ivi_wm *controller,
 
     ctx_surf = get_surface_context(ctx, surface_id);
     if(!ctx_surf)
+        return;
+
+    if ((ctx_surf->prop.origSourceWidth == (t_ilm_uint)width) &&
+        (ctx_surf->prop.origSourceHeight == (t_ilm_uint)height))
         return;
 
     ctx_surf->prop.origSourceWidth = (t_ilm_uint)width;
@@ -455,6 +465,12 @@ wm_listener_surface_source_rectangle(void *data, struct ivi_wm *controller,
     if(!ctx_surf)
         return;
 
+    if ((ctx_surf->prop.sourceX == (t_ilm_uint)x) &&
+        (ctx_surf->prop.sourceY == (t_ilm_uint)y) &&
+        (ctx_surf->prop.sourceWidth == (t_ilm_uint)width &&
+        (ctx_surf->prop.sourceHeight == (t_ilm_uint)height)))
+        return;
+
     ctx_surf->prop.sourceX = (t_ilm_uint)x;
     ctx_surf->prop.sourceY = (t_ilm_uint)y;
     ctx_surf->prop.sourceWidth = (t_ilm_uint)width;
@@ -477,6 +493,12 @@ wm_listener_surface_destination_rectangle(void *data, struct ivi_wm *controller,
 
     ctx_surf = get_surface_context(ctx, surface_id);
     if(!ctx_surf)
+        return;
+
+    if ((ctx_surf->prop.destX == (t_ilm_uint)x) &&
+        (ctx_surf->prop.destY == (t_ilm_uint)y) &&
+        (ctx_surf->prop.destWidth == (t_ilm_uint)width &&
+        (ctx_surf->prop.destHeight == (t_ilm_uint)height)))
         return;
 
     ctx_surf->prop.destX = (t_ilm_uint)x;
