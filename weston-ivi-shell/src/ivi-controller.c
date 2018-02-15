@@ -452,7 +452,6 @@ controller_surface_screenshot(struct wl_client *client,
     const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     struct ivi_layout_surface *layout_surface;
     char *buffer = NULL;
-    int32_t i = 0;
     struct weston_compositor *compositor = ctrl->shell->compositor;
     // assuming ABGR32 is always written by surface_dump
     uint32_t format = WL_SHM_FORMAT_ABGR8888;
@@ -570,7 +569,6 @@ controller_surface_sync(struct wl_client *client,
     const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     struct ivi_layout_surface *layout_surface;
     struct ivisurface *ivisurf;
-    const struct ivi_layout_surface_properties *prop;
     (void)client;
     struct notification *not;
 
@@ -665,7 +663,6 @@ controller_surface_get(struct wl_client *client, struct wl_resource *resource,
     const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     (void)client;
     struct ivi_layout_surface *layout_surface;
-    struct ivisurface *ivisurf;
     enum ivi_layout_notification_mask mask;
     const struct ivi_layout_surface_properties *prop;
 
@@ -858,7 +855,6 @@ set_bkgnd_surface_prop(struct ivishell *shell)
     struct weston_view *view;
     struct weston_compositor *compositor;
     struct weston_output *output;
-    const struct ivi_layout_interface *lyt = shell->interface;
     struct weston_surface *w_surface;
     struct weston_geometry source_rect = {0};
     struct weston_geometry dest_rect = {0};
@@ -869,8 +865,6 @@ set_bkgnd_surface_prop(struct ivishell *shell)
     uint32_t count = 0;
     uint32_t x = 0;
     uint32_t y = 0;
-    float scale_x;
-    float scale_y;
 
     view = shell->bkgnd_view;
     compositor = shell->compositor;
@@ -987,7 +981,6 @@ controller_layer_sync(struct wl_client *client,
     const struct ivi_layout_interface *lyt = ctrl->shell->interface;
     struct ivi_layout_layer *layout_layer;
     struct ivilayer *ivilayer;
-    const struct ivi_layout_layer_properties *prop;
     (void)client;
     struct notification *not;
 
@@ -1711,7 +1704,6 @@ layer_event_create(struct wl_listener *listener, void *data)
 static void
 layer_event_remove(struct wl_listener *listener, void *data)
 {
-    struct wl_resource *resource;
     struct ivishell *shell = wl_container_of(listener, shell, layer_removed);
     struct ivilayer *ivilayer = NULL;
     struct ivicontroller *controller = NULL;
@@ -1749,7 +1741,6 @@ layer_event_remove(struct wl_listener *listener, void *data)
 static void
 surface_event_create(struct wl_listener *listener, void *data)
 {
-    struct wl_resource *resource;
     struct ivishell *shell = wl_container_of(listener, shell, surface_created);
     const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
@@ -1772,7 +1763,6 @@ surface_event_create(struct wl_listener *listener, void *data)
 static void
 surface_event_remove(struct wl_listener *listener, void *data)
 {
-    struct wl_resource *resource;
     struct ivishell *shell = wl_container_of(listener, shell, surface_removed);
     struct ivicontroller *controller = NULL;
     struct ivisurface *ivisurf = NULL;
@@ -1817,7 +1807,6 @@ surface_event_remove(struct wl_listener *listener, void *data)
 static void
 surface_event_configure(struct wl_listener *listener, void *data)
 {
-    struct wl_resource *resource;
     struct ivishell *shell = wl_container_of(listener, shell, surface_configured);
     const struct ivi_layout_interface *lyt = shell->interface;
     struct ivisurface *ivisurf = NULL;
