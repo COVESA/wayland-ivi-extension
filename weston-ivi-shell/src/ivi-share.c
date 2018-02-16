@@ -54,7 +54,7 @@ struct redirect_target {
     struct wl_client *client;
     struct wl_resource *resource;
     struct wl_resource *target_resource;
-    uint32_t id;
+    int32_t id;
     struct wl_list link;
 };
 
