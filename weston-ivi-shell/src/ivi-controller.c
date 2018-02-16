@@ -1507,7 +1507,7 @@ bind_ivi_controller(struct wl_client *client, void *data,
     }
 }
 
-static struct iviscreen*
+static void
 create_screen(struct ivishell *shell, struct weston_output *output)
 {
     struct iviscreen *iviscrn;
@@ -1517,7 +1517,7 @@ create_screen(struct ivishell *shell, struct weston_output *output)
     iviscrn = calloc(1, sizeof *iviscrn);
     if (iviscrn == NULL) {
         weston_log("no memory to allocate client screen\n");
-        return NULL;
+        return;
     }
 
     id = output->id + shell->screen_id_offset;
@@ -1538,7 +1538,7 @@ create_screen(struct ivishell *shell, struct weston_output *output)
     wl_list_insert(&shell->list_screen, &iviscrn->link);
     wl_list_init(&iviscrn->resource_list);
 
-    return iviscrn;
+    return;
 }
 
 static void
@@ -1587,10 +1587,9 @@ static void
 output_created_event(struct wl_listener *listener, void *data)
 {
     struct ivishell *shell = wl_container_of(listener, shell, output_created);
-    struct iviscreen *iviscrn = NULL;
     struct weston_output *created_output = (struct weston_output*)data;
 
-    iviscrn = create_screen(shell, created_output);
+    create_screen(shell, created_output);
 
     if (shell->bkgnd_view)
         set_bkgnd_surface_prop(shell);
@@ -2057,7 +2056,6 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
 {
     const struct ivi_layout_interface *lyt = shell->interface;
     struct weston_output *output = NULL;
-    struct iviscreen *iviscrn = NULL;
     int32_t ret = 0;
 
     shell->compositor = ec;
@@ -2068,7 +2066,7 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
     wl_list_init(&shell->list_controller);
 
     wl_list_for_each(output, &ec->output_list, link)
-        iviscrn = create_screen(shell, output);
+        create_screen(shell, output);
 
     ret = check_layout_layers(shell);
     if (ret != 0) {
