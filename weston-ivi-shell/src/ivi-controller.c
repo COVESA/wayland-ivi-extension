@@ -858,13 +858,13 @@ set_bkgnd_surface_prop(struct ivishell *shell)
     struct weston_surface *w_surface;
     struct weston_geometry source_rect = {0};
     struct weston_geometry dest_rect = {0};
-    uint32_t src_width = 0;
-    uint32_t src_height = 0;
-    uint32_t dest_width = 0;
-    uint32_t dest_height = 0;
+    int32_t src_width = 0;
+    int32_t src_height = 0;
+    int32_t dest_width = 0;
+    int32_t dest_height = 0;
     uint32_t count = 0;
-    uint32_t x = 0;
-    uint32_t y = 0;
+    int32_t x = 0;
+    int32_t y = 0;
 
     view = shell->bkgnd_view;
     compositor = shell->compositor;
@@ -1664,7 +1664,7 @@ create_surface(struct ivishell *shell,
     surface = lyt->surface_get_weston_surface(layout_surface);
     wl_signal_add(&surface->commit_signal, &ivisurf->committed);
 
-    if (shell->bkgnd_surface_id != id_surface) {
+    if (shell->bkgnd_surface_id != (int32_t)id_surface) {
         wl_list_insert(&shell->list_surface, &ivisurf->link);
 
         wl_list_for_each(controller, &shell->list_controller, link) {
@@ -1756,7 +1756,7 @@ surface_event_create(struct wl_listener *listener, void *data)
         return;
     }
 
-    if (shell->bkgnd_surface_id != id_surface)
+    if (shell->bkgnd_surface_id != (int32_t)id_surface)
         wl_signal_emit(&shell->ivisurface_created_signal, ivisurf);
 }
 
@@ -1792,7 +1792,7 @@ surface_event_remove(struct wl_listener *listener, void *data)
 
     id_surface = shell->interface->get_id_of_surface(layout_surface);
 
-    if ((shell->bkgnd_surface_id == id_surface) &&
+    if ((shell->bkgnd_surface_id == (int32_t)id_surface) &&
          shell->bkgnd_view) {
         weston_layer_entry_remove(&shell->bkgnd_view->layer_link);
         weston_view_destroy(shell->bkgnd_view);
@@ -1818,7 +1818,7 @@ surface_event_configure(struct wl_listener *listener, void *data)
     struct weston_surface *w_surface;
 
     surface_id = lyt->get_id_of_surface(layout_surface);
-    if (shell->bkgnd_surface_id == surface_id) {
+    if (shell->bkgnd_surface_id == (int32_t)surface_id) {
         float red, green, blue, alpha;
 
         w_surface = lyt->surface_get_weston_surface(layout_surface);
@@ -1878,7 +1878,7 @@ check_layout_layers(struct ivishell *shell)
     const struct ivi_layout_interface *lyt = shell->interface;
     uint32_t id_layer = 0;
     int32_t length = 0;
-    uint32_t i = 0;
+    int32_t i = 0;
     int32_t ret = 0;
 
     ret = lyt->get_layers(&length, &pArray);
@@ -1914,7 +1914,7 @@ check_layout_surfaces(struct ivishell *shell)
     const struct ivi_layout_interface *lyt = shell->interface;
     uint32_t id_surface = 0;
     int32_t length = 0;
-    uint32_t i = 0;
+    int32_t i = 0;
     int32_t ret = 0;
 
     ret = lyt->get_surfaces(&length, &pArray);
