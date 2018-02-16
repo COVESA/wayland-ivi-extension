@@ -1364,7 +1364,7 @@ input_controller_init(struct ivishell *shell)
     int successful_init_stage = 0;
     int init_stage;
     int ret = -1;
-    struct input_context *ctx;
+    struct input_context *ctx = NULL;
     bool init_success = false;
 
     for (init_stage = 0; (init_stage == successful_init_stage);
