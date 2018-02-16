@@ -259,7 +259,6 @@ share_surface_redirect_touch_cancel(struct wl_client *client,
     struct ivi_share_nativesurface_client_link *client_link = wl_resource_get_user_data(resource);
     struct weston_seat *seat = NULL;
     struct wl_resource *target_resource = NULL;
-    uint32_t time = get_event_time();
     struct wl_resource *surface_resource = client_link->parent->surface->resource;
 
     seat = get_weston_seat(client_link->parent->shell_ext->wc, client_link);
