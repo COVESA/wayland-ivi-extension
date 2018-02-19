@@ -276,13 +276,14 @@ TEST_F(IlmCommandTest, ilm_getLayerIDsOfScreen) {
     t_ilm_layer layer2 = 46586;
     t_ilm_uint roLength = 2;
     t_ilm_layer idRenderOrder[2] = {layer1, layer2};
+    t_ilm_int length;
+    t_ilm_layer* IDs;
+
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer1, 800, 480));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer2, 800, 480));
     ASSERT_EQ(ILM_SUCCESS, ilm_displaySetRenderOrder(0, idRenderOrder, roLength));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
-    t_ilm_int length = 0;
-    t_ilm_layer* IDs = 0;
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDsOnScreen(0, &length, &IDs));
 
     EXPECT_EQ(2, length);
