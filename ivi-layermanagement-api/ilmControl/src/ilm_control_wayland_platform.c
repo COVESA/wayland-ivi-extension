@@ -1546,6 +1546,9 @@ ilm_getLayerIDsOnScreen(t_ilm_uint screenId,
         struct screen_context *ctx_screen = NULL;
         ctx_screen = get_screen_context_by_id(&ctx->wl, screenId);
         if (ctx_screen != NULL) {
+            *pLength = 0;
+            *ppArray = NULL;
+
             ivi_wm_screen_get(ctx_screen->controller, IVI_WM_PARAM_RENDER_ORDER);
 
             if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1 ) {
