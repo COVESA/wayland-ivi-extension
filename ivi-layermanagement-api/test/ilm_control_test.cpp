@@ -211,16 +211,16 @@ TEST_F(IlmCommandTest, SetSurfaceSourceRectangle_InvalidInput) {
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenIDs) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
+    t_ilm_uint numberOfScreens;
+    t_ilm_uint* screenIDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
     EXPECT_GT(numberOfScreens, 0u);
     free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenResolution_SingleScreen) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
+    t_ilm_uint numberOfScreens;
+    t_ilm_uint* screenIDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
     EXPECT_TRUE(numberOfScreens>0);
 
@@ -237,8 +237,8 @@ TEST_F(IlmCommandTest, ilm_getScreenResolution_SingleScreen) {
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenResolution_MultiScreen) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
+    t_ilm_uint numberOfScreens;
+    t_ilm_uint* screenIDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
     EXPECT_TRUE(numberOfScreens>0);
 
@@ -618,8 +618,8 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
+    t_ilm_uint numberOfScreens;
+    t_ilm_uint* screenIDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
     EXPECT_TRUE(numberOfScreens>0);
 
