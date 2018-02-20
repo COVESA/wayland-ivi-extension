@@ -211,16 +211,16 @@ TEST_F(IlmCommandTest, SetSurfaceSourceRectangle_InvalidInput) {
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenIDs) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
+    t_ilm_uint numberOfScreens;
+    t_ilm_uint* screenIDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
     EXPECT_GT(numberOfScreens, 0u);
     free(screenIDs);
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenResolution_SingleScreen) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
+    t_ilm_uint numberOfScreens;
+    t_ilm_uint* screenIDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
     EXPECT_TRUE(numberOfScreens>0);
 
@@ -237,8 +237,8 @@ TEST_F(IlmCommandTest, ilm_getScreenResolution_SingleScreen) {
 }
 
 TEST_F(IlmCommandTest, ilm_getScreenResolution_MultiScreen) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
+    t_ilm_uint numberOfScreens;
+    t_ilm_uint* screenIDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
     EXPECT_TRUE(numberOfScreens>0);
 
@@ -276,13 +276,14 @@ TEST_F(IlmCommandTest, ilm_getLayerIDsOfScreen) {
     t_ilm_layer layer2 = 46586;
     t_ilm_uint roLength = 2;
     t_ilm_layer idRenderOrder[2] = {layer1, layer2};
+    t_ilm_int length;
+    t_ilm_layer* IDs;
+
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer1, 800, 480));
     ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer2, 800, 480));
     ASSERT_EQ(ILM_SUCCESS, ilm_displaySetRenderOrder(0, idRenderOrder, roLength));
     ASSERT_EQ(ILM_SUCCESS, ilm_commitChanges());
 
-    t_ilm_int length = 0;
-    t_ilm_layer* IDs = 0;
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDsOnScreen(0, &length, &IDs));
 
     EXPECT_EQ(2, length);
@@ -617,8 +618,8 @@ TEST_F(IlmCommandTest, ilm_takeSurfaceScreenshot_InvalidInputs) {
 }
 
 TEST_F(IlmCommandTest, ilm_getPropertiesOfScreen) {
-    t_ilm_uint numberOfScreens = 0;
-    t_ilm_uint* screenIDs = NULL;
+    t_ilm_uint numberOfScreens;
+    t_ilm_uint* screenIDs;
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&numberOfScreens, &screenIDs));
     EXPECT_TRUE(numberOfScreens>0);
 
