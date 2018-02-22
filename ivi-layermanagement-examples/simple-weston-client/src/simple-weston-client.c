@@ -70,7 +70,6 @@ get_bkgnd_settings(void)
     BkGndSettingsStruct* bkgnd_settings;
     char *option;
     char *end;
-    int len;
 
     bkgnd_settings =
             (BkGndSettingsStruct*)calloc(1, sizeof(BkGndSettingsStruct));
@@ -442,7 +441,6 @@ create_shm_buffer(WaylandContextStruct* wlcontext)
 
 int draw_bkgnd_surface(WaylandContextStruct* wlcontext)
 {
-    struct ivi_surface *ivisurf = NULL;
     BkGndSettingsStruct *bkgnd_settings = wlcontext->bkgnd_settings;
     uint32_t* pixels;
 
@@ -491,7 +489,6 @@ int main (int argc, const char * argv[])
 {
     WaylandContextStruct* wlcontext;
     BkGndSettingsStruct* bkgnd_settings;
-    int offset = 0;
     int ret;
 
     /*get bkgnd settings and create shm-surface*/
