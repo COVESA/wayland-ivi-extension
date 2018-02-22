@@ -1591,7 +1591,7 @@ ilm_getLayerIDsOnScreen(t_ilm_uint screenId,
             ivi_wm_screen_get(ctx_screen->controller, IVI_WM_PARAM_RENDER_ORDER);
 
             if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1 ) {
-                create_layerids(ctx_screen, ppArray, pLength);
+                create_layerids(ctx_screen, ppArray, (t_ilm_uint*)pLength);
                 returnValue = ILM_SUCCESS;
             }
         }
