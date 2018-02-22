@@ -922,7 +922,6 @@ registry_handle_control(void *data,
 
     } else if (strcmp(interface, "wl_output") == 0) {
         struct screen_context *ctx_scrn = calloc(1, sizeof *ctx_scrn);
-        struct wl_proxy *pxy = NULL;
 
         if (ctx_scrn == NULL) {
             fprintf(stderr, "Failed to allocate memory for screen_context\n");
@@ -1637,7 +1636,6 @@ ilm_getSurfaceIDsOnLayer(t_ilm_layer layer,
 {
     struct ilm_control_context *const ctx = &ilm_context;
     struct layer_context *ctx_layer = NULL;
-    struct surface_context *ctx_surf = NULL;
     t_ilm_uint length = 0;
     t_ilm_surface* ids = NULL;
     uint32_t *id = NULL;
@@ -2074,8 +2072,6 @@ static void screenshot_done(void *data, struct ivi_screenshot *ivi_screenshot,
     int32_t offset = 0;
     int32_t i = 0;
     int32_t j = 0;
-    int32_t padding = 0;
-    int32_t sum_padding = 0;
     size_t size = stride * height;
     int bytes_per_pixel;
     bool flip_order;
