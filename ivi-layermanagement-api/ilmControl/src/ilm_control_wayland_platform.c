@@ -1894,7 +1894,7 @@ ilm_layerSetRenderOrder(t_ilm_layer layerId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *const ctx = &ilm_context;
-    t_ilm_uint i;
+    t_ilm_int i;
 
     lock_context(ctx);
     if (ctx->wl.controller) {
