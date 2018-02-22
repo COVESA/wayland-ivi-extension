@@ -194,12 +194,43 @@ PointerHandleButton(void *data, struct wl_pointer *wlPointer, uint32_t serial,
 
 }
 
+static void
+PointerHandleFrame(void *data, struct wl_pointer *wl_pointer)
+{
+
+}
+
+static void
+PointerHandleAxisSource(void *data, struct wl_pointer *wl_pointer,
+                        uint32_t axis_source)
+{
+
+}
+
+static void
+PointerHandleAxisStop(void *data, struct wl_pointer *wl_pointer,
+                      uint32_t time, uint32_t axis)
+{
+
+}
+
+static void
+PointerHandleAxisDiscrete(void *data, struct wl_pointer *wl_pointer,
+                          uint32_t axis, int32_t discrete)
+{
+
+}
+
 static struct wl_pointer_listener pointer_listener = {
     PointerHandleEnter,
     PointerHandleLeave,
     PointerHandleMotion,
     PointerHandleButton,
-    PointerHandleAxis
+    PointerHandleAxis,
+    PointerHandleFrame,
+    PointerHandleAxisSource,
+    PointerHandleAxisStop,
+    PointerHandleAxisDiscrete
 };
 
 static void
@@ -231,8 +262,15 @@ seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t caps)
     }
 }
 
+static void
+seat_name(void *data, struct wl_seat *wl_seat, const char *name)
+{
+
+}
+
 static struct wl_seat_listener seat_Listener = {
     seat_handle_capabilities,
+    seat_name
 };
 
 static void
