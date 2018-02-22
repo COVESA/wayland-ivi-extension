@@ -50,6 +50,7 @@ typedef struct _WaylandContext {
     struct ivi_application  *ivi_application;
     BkGndSettingsStruct     *bkgnd_settings;
     struct wl_surface       *wlBkgndSurface;
+    struct ivi_surface      *ivi_surf;
     struct wl_buffer        *wlBkgndBuffer;
     struct wl_cursor_theme  *cursor_theme;
     struct wl_cursor        *cursor;
@@ -457,7 +458,6 @@ int draw_bkgnd_surface(WaylandContextStruct* wlcontext)
 
 int create_bkgnd_surface(WaylandContextStruct* wlcontext)
 {
-    struct ivi_surface *ivisurf = NULL;
     BkGndSettingsStruct *bkgnd_settings = wlcontext->bkgnd_settings;
 
     wlcontext->wlBkgndSurface =
@@ -472,15 +472,18 @@ int create_bkgnd_surface(WaylandContextStruct* wlcontext)
         return -1;
     }
 
-    ivisurf = ivi_application_surface_create(wlcontext->ivi_application,
-                                             bkgnd_settings->surface_id,
-                                             wlcontext->wlBkgndSurface);
+    wlcontext->ivi_surf = ivi_application_surface_create(wlcontext->ivi_application,
+                                                         bkgnd_settings->surface_id,
+                                                         wlcontext->wlBkgndSurface);
 
     return 0;
 }
 
 void destroy_bkgnd_surface(WaylandContextStruct* wlcontext)
 {
+    if (wlcontext->ivi_surf)
+        ivi_surface_destroy(wlcontext->ivi_surf);
+
     if (wlcontext->wlBkgndSurface)
         wl_surface_destroy(wlcontext->wlBkgndSurface);
 }
