@@ -634,7 +634,7 @@ touch_event_test_main(struct touch_event_test_params *p_params)
     DisplayRun(p_display);
 
     /* Print event information */
-    LOG_INFO("Number of events: %d\n", p_params->log_array.n_log);
+    LOG_INFO("Number of events: %lu\n", p_params->log_array.n_log);
 
     log_array_release(&p_params->log_array);
 
