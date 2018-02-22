@@ -67,8 +67,8 @@ struct window {
     uint32_t surface_id;
 
     struct {
-        int width;
-        int height;
+        uint32_t width;
+        uint32_t height;
     } geometry;
 
     struct {
