@@ -1399,9 +1399,7 @@ ilm_getPropertiesOfLayer(t_ilm_uint layerID,
     struct layer_context *ctx_layer = NULL;
     int32_t mask;
 
-    mask |= IVI_WM_PARAM_OPACITY;
-    mask |= IVI_WM_PARAM_VISIBILITY;
-    mask |= IVI_WM_PARAM_SIZE;
+    mask = IVI_WM_PARAM_OPACITY | IVI_WM_PARAM_VISIBILITY | IVI_WM_PARAM_SIZE;
 
     if (pLayerProperties != NULL) {
         lock_context(ctx);
