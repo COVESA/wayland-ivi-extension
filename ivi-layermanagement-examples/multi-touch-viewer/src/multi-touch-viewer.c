@@ -201,12 +201,35 @@ touch_handle_cancel(void *p_data, struct wl_touch *p_touch)
     update_touch_point(NULL, TOUCH_CANCEL, 0, 0, 0, 0);
 }
 
+static void
+touch_handle_shape(void *p_data, struct wl_touch *p_touch,
+                   int32_t id, wl_fixed_t major, wl_fixed_t minor)
+{
+    _UNUSED_(p_data);
+    _UNUSED_(p_touch);
+    _UNUSED_(id);
+    _UNUSED_(major);
+    _UNUSED_(minor);
+}
+
+static void
+touch_handle_orientation(void *p_data, struct wl_touch *p_touch,
+                         int32_t id, wl_fixed_t orientation)
+{
+    _UNUSED_(p_data);
+    _UNUSED_(p_touch);
+    _UNUSED_(id);
+    _UNUSED_(orientation);
+}
+
 static const struct wl_touch_listener touch_listener = {
     touch_handle_down,
     touch_handle_up,
     touch_handle_motion,
     touch_handle_frame,
-    touch_handle_cancel
+    touch_handle_cancel,
+    touch_handle_shape,
+    touch_handle_orientation
 };
 
 static void
