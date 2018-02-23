@@ -33,30 +33,6 @@ extern int gNeedRedraw;
 extern int gPointerX;
 extern int gPointerY;
 
-const struct wl_pointer_listener PointerListener = {
-    PointerHandleEnter,
-    PointerHandleLeave,
-    PointerHandleMotion,
-    PointerHandleButton,
-    PointerHandleAxis
-};
-
-const struct wl_keyboard_listener KeyboardListener = {
-    KeyboardHandleKeymap,
-    KeyboardHandleEnter,
-    KeyboardHandleLeave,
-    KeyboardHandleKey,
-    KeyboardHandleModifiers,
-};
-
-const struct wl_touch_listener TouchListener = {
-    TouchHandleDown,
-    TouchHandleUp,
-    TouchHandleMotion,
-    TouchHandleFrame,
-    TouchHandleCancel,
-};
-
 int WaitForEvent(struct wl_display* wlDisplay, int fd)
 {
     int err;
@@ -134,7 +110,7 @@ set_pointer_image(struct seat_data* context, uint32_t serial)
     wl_surface_commit(context->ctx->GetPointerSurface());
 }
 
-void
+static void
 PointerHandleEnter(void* data, struct wl_pointer* wlPointer, uint32_t serial,
                    struct wl_surface* wlSurface, wl_fixed_t sx, wl_fixed_t sy)
 {
@@ -151,7 +127,7 @@ PointerHandleEnter(void* data, struct wl_pointer* wlPointer, uint32_t serial,
            wl_fixed_to_int(sx), wl_fixed_to_int(sy));
 }
 
-void
+static void
 PointerHandleLeave(void* data, struct wl_pointer* wlPointer, uint32_t serial,
                    struct wl_surface* wlSurface)
 {
@@ -162,7 +138,7 @@ PointerHandleLeave(void* data, struct wl_pointer* wlPointer, uint32_t serial,
     printf("ENTER EGLWLINPUT PointerHandleLeave: serial(%d)\n", serial);
 }
 
-void
+static void
 PointerHandleMotion(void* data, struct wl_pointer* wlPointer, uint32_t time,
                     wl_fixed_t sx, wl_fixed_t sy)
 {
@@ -175,7 +151,7 @@ PointerHandleMotion(void* data, struct wl_pointer* wlPointer, uint32_t time,
     gNeedRedraw = 1;
 }
 
-void
+static void
 PointerHandleButton(void* data, struct wl_pointer* wlPointer, uint32_t serial,
                     uint32_t time, uint32_t button, uint32_t state)
 {
@@ -188,7 +164,7 @@ PointerHandleButton(void* data, struct wl_pointer* wlPointer, uint32_t serial,
     printf("ENTER EGLWLINPUT PointerHandleButton: button(%d), state(%d)\n", button, state);
 }
 
-void
+static void
 PointerHandleAxis(void* data, struct wl_pointer* wlPointer, uint32_t time,
                   uint32_t axis, wl_fixed_t value)
 {
@@ -202,7 +178,7 @@ PointerHandleAxis(void* data, struct wl_pointer* wlPointer, uint32_t time,
 
 //////////////////////////////////////////////////////////////////////////////
 
-void
+static void
 KeyboardHandleKeymap(void* data, struct wl_keyboard* keyboard,
                      uint32_t format, int fd, uint32_t size)
 {
@@ -215,7 +191,7 @@ KeyboardHandleKeymap(void* data, struct wl_keyboard* keyboard,
         format, fd, size);
 }
 
-void
+static void
 KeyboardHandleEnter(void* data, struct wl_keyboard* keyboard, uint32_t serial,
                     struct wl_surface* surface, struct wl_array* keys)
 {
@@ -228,7 +204,7 @@ KeyboardHandleEnter(void* data, struct wl_keyboard* keyboard, uint32_t serial,
         serial, surface);
 }
 
-void
+static void
 KeyboardHandleLeave(void* data, struct wl_keyboard* keyboard, uint32_t serial,
                     struct wl_surface* surface)
 {
@@ -240,7 +216,7 @@ KeyboardHandleLeave(void* data, struct wl_keyboard* keyboard, uint32_t serial,
         serial, surface);
 }
 
-void
+static void
 KeyboardHandleKey(void* data, struct wl_keyboard* keyboard, uint32_t serial,
                   uint32_t time, uint32_t key, uint32_t state_w)
 {
@@ -254,7 +230,7 @@ KeyboardHandleKey(void* data, struct wl_keyboard* keyboard, uint32_t serial,
         serial, time, key, state_w);
 }
 
-void
+static void
 KeyboardHandleModifiers(void* data, struct wl_keyboard* keyboard, uint32_t serial,
                         uint32_t mods_depressed, uint32_t mods_latched,
                         uint32_t mods_locked, uint32_t group)
@@ -274,7 +250,7 @@ KeyboardHandleModifiers(void* data, struct wl_keyboard* keyboard, uint32_t seria
 
 //////////////////////////////////////////////////////////////////////////////
 
-void
+static void
 TouchHandleDown(void* data, struct wl_touch* touch, uint32_t serial, uint32_t time,
                 struct wl_surface* surface, int32_t id, wl_fixed_t xw, wl_fixed_t yw)
 {
@@ -292,7 +268,7 @@ TouchHandleDown(void* data, struct wl_touch* touch, uint32_t serial, uint32_t ti
     printf("ENTER EGLWLINPUT TouchHandleDown id: %d, x: %d,y: %d \n",id,gPointerX,gPointerY);
 }
 
-void
+static void
 TouchHandleUp(void* data, struct wl_touch* touch, uint32_t serial, uint32_t time, int32_t id)
 {
     WL_UNUSED(data);
@@ -303,7 +279,7 @@ TouchHandleUp(void* data, struct wl_touch* touch, uint32_t serial, uint32_t time
     printf("ENTER EGLWLINPUT TouchHandleUp\n");
 }
 
-void
+static void
 TouchHandleMotion(void* data, struct wl_touch* touch, uint32_t time, int32_t id,
                   wl_fixed_t xw, wl_fixed_t yw)
 {
@@ -319,19 +295,43 @@ TouchHandleMotion(void* data, struct wl_touch* touch, uint32_t time, int32_t id,
     gNeedRedraw = 1;
 }
 
-void
+static void
 TouchHandleFrame(void* data, struct wl_touch* touch)
 {
     WL_UNUSED(data);
     WL_UNUSED(touch);
 }
 
-void
+static void
 TouchHandleCancel(void* data, struct wl_touch* touch)
 {
     WL_UNUSED(data);
     WL_UNUSED(touch);
 }
+
+const struct wl_pointer_listener PointerListener = {
+    PointerHandleEnter,
+    PointerHandleLeave,
+    PointerHandleMotion,
+    PointerHandleButton,
+    PointerHandleAxis
+};
+
+const struct wl_keyboard_listener KeyboardListener = {
+    KeyboardHandleKeymap,
+    KeyboardHandleEnter,
+    KeyboardHandleLeave,
+    KeyboardHandleKey,
+    KeyboardHandleModifiers,
+};
+
+const struct wl_touch_listener TouchListener = {
+    TouchHandleDown,
+    TouchHandleUp,
+    TouchHandleMotion,
+    TouchHandleFrame,
+    TouchHandleCancel,
+};
 
 //////////////////////////////////////////////////////////////////////////////
 
