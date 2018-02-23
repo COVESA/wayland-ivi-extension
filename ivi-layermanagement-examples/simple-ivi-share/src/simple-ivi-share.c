@@ -539,12 +539,28 @@ touch_handle_cancel(void *data, struct wl_touch *touch)
     }
 }
 
+static void
+touch_handle_shape(void *data, struct wl_touch *wl_touch, int32_t id,
+                   wl_fixed_t major, wl_fixed_t minor)
+{
+    /* no op */
+}
+
+static void
+touch_handle_orientation(void *data, struct wl_touch *wl_touch, int32_t id,
+                         wl_fixed_t orientation)
+{
+    /* no op */
+}
+
 static const struct wl_touch_listener touch_listener = {
     touch_handle_down,
     touch_handle_up,
     touch_handle_motion,
     touch_handle_frame,
-    touch_handle_cancel
+    touch_handle_cancel,
+    touch_handle_shape,
+    touch_handle_orientation
 };
 
 static void
@@ -563,8 +579,15 @@ seat_handle_capabilities(void *data, struct wl_seat *seat,
     }
 }
 
+static void
+seat_handle_name(void *data, struct wl_seat *wl_seat, const char *name)
+{
+    /* no op */
+}
+
 static const struct wl_seat_listener seat_listener = {
-    seat_handle_capabilities
+    seat_handle_capabilities,
+    seat_handle_name
 };
 
 static void
