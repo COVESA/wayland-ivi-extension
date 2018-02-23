@@ -26,6 +26,9 @@ project(wayland-ivi-extension)
 SET(IVI_EXTENSION_VERSION 2.1.0)
 SET(ILM_API_VERSION 2.1.0)
 
+SET( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter" )
+SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter" )
+
 add_subdirectory(protocol)
 
 add_subdirectory(weston-ivi-shell)
