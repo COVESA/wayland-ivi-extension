@@ -176,6 +176,41 @@ PointerHandleAxis(void* data, struct wl_pointer* wlPointer, uint32_t time,
     printf("ENTER EGLWLINPUT PointerHandleAxis: axis(%d), value(%d)\n", axis, wl_fixed_to_int(value));
 }
 
+static void
+PointerHandleFrame(void* data, struct wl_pointer* wlPointer)
+{
+    WL_UNUSED(data);
+    WL_UNUSED(wlPointer);
+    printf("ENTER EGLWLINPUT PointerHandleFrame\n");
+}
+
+static void
+PointerHandleAxisSource(void* data, struct wl_pointer* wlPointer, uint32_t axisSource)
+{
+    WL_UNUSED(data);
+    WL_UNUSED(wlPointer);
+    printf("ENTER EGLWLINPUT PointerHandleAxisSource: axisSource(%d)\n", axisSource);
+}
+
+static void
+PointerHandleAxisStop(void* data, struct wl_pointer* wlPointer, uint32_t time,
+                           uint32_t axis)
+{
+    WL_UNUSED(data);
+    WL_UNUSED(wlPointer);
+    WL_UNUSED(time);
+    printf("ENTER EGLWLINPUT PointerHandleAxisStop: axis(%d)\n", axis);
+}
+
+static void
+PointerHandleAxisDiscrete(void* data, struct wl_pointer* wlPointer,
+                               uint32_t axis, int32_t discrete)
+{
+    WL_UNUSED(data);
+    WL_UNUSED(wlPointer);
+    printf("ENTER EGLWLINPUT PointerHandleAxisDiscrete: axis(%d), value(%d)\n", axis, discrete);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 static void
@@ -248,6 +283,16 @@ KeyboardHandleModifiers(void* data, struct wl_keyboard* keyboard, uint32_t seria
         serial, mods_depressed, mods_latched, mods_locked, group);
 }
 
+static void
+KeyboardHandleRepeatInfo(void* data, struct wl_keyboard* keyboard, int32_t rate,
+                          int32_t delay)
+{
+    WL_UNUSED(data);
+    WL_UNUSED(keyboard);
+    printf("ENTER EGLWLINPUT KeyboardHandleRepeatInfo: rate(%d), delay(%d)\n",
+            rate, delay);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 static void
@@ -309,12 +354,38 @@ TouchHandleCancel(void* data, struct wl_touch* touch)
     WL_UNUSED(touch);
 }
 
+static void TouchHandleShape(void* data, struct wl_touch* touch, int32_t id,
+                             wl_fixed_t major, wl_fixed_t minor)
+{
+    WL_UNUSED(data);
+    WL_UNUSED(touch);
+    WL_UNUSED(id);
+    WL_UNUSED(major);
+    WL_UNUSED(minor);
+    printf("ENTER EGLWLINPUT TouchHandleShape\n");
+}
+
+static void
+TouchHandleOrientation(void* data, struct wl_touch* touch,
+                       int32_t id, wl_fixed_t orientation)
+{
+    WL_UNUSED(data);
+    WL_UNUSED(touch);
+    WL_UNUSED(id);
+    WL_UNUSED(orientation);
+    printf("ENTER EGLWLINPUT TouchHandleOrientation\n");
+}
+
 const struct wl_pointer_listener PointerListener = {
     PointerHandleEnter,
     PointerHandleLeave,
     PointerHandleMotion,
     PointerHandleButton,
-    PointerHandleAxis
+    PointerHandleAxis,
+    PointerHandleFrame,
+    PointerHandleAxisSource,
+    PointerHandleAxisStop,
+    PointerHandleAxisDiscrete
 };
 
 const struct wl_keyboard_listener KeyboardListener = {
@@ -323,6 +394,7 @@ const struct wl_keyboard_listener KeyboardListener = {
     KeyboardHandleLeave,
     KeyboardHandleKey,
     KeyboardHandleModifiers,
+    KeyboardHandleRepeatInfo
 };
 
 const struct wl_touch_listener TouchListener = {
@@ -331,6 +403,8 @@ const struct wl_touch_listener TouchListener = {
     TouchHandleMotion,
     TouchHandleFrame,
     TouchHandleCancel,
+    TouchHandleShape,
+    TouchHandleOrientation
 };
 
 //////////////////////////////////////////////////////////////////////////////
