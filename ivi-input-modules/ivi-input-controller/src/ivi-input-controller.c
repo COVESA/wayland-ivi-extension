@@ -50,7 +50,7 @@ struct seat_ctx {
      * event will re-evaulate the focus. A rotary knob
      * is one of the examples, where it is used as pointer
      * axis.*/
-    uint32_t forced_ptr_focus_surf;
+    struct ivisurface *forced_ptr_focus_surf;
     int32_t  forced_surf_enabled;
 
     struct wl_listener updated_caps_listener;
@@ -622,26 +622,26 @@ input_ctrl_ptr_clear_focus(struct seat_ctx *ctx_seat)
     if (!input_ctrl_ptr_is_focus_emtpy(ctx_seat)) {
         input_ctrl_ptr_leave_west_focus(ctx_seat,
                 ctx_seat->pointer_grab.pointer);
-        ctx_seat->forced_ptr_focus_surf = 0;
+        ctx_seat->forced_ptr_focus_surf = NULL;
     }
 }
 
 static void
 input_ctrl_ptr_set_focus_surf(struct seat_ctx *ctx_seat,
-        uint32_t surface, int32_t enabled)
+        struct ivisurface *surf_ctx, int32_t enabled)
 {
     struct weston_pointer *pointer;
     pointer = weston_seat_get_pointer(ctx_seat->west_seat);
     if (NULL != pointer) {
         if (ILM_TRUE == enabled) {
-            if (ctx_seat->forced_ptr_focus_surf != surface) {
-                ctx_seat->forced_ptr_focus_surf = surface;
+            if (ctx_seat->forced_ptr_focus_surf != surf_ctx) {
+                ctx_seat->forced_ptr_focus_surf = surf_ctx;
                 ctx_seat->forced_surf_enabled = ILM_TRUE;
                 ctx_seat->pointer_grab.interface->focus(
                                     &ctx_seat->pointer_grab);
             }
         } else {
-            if (ctx_seat->forced_ptr_focus_surf == surface) {
+            if (ctx_seat->forced_ptr_focus_surf == surf_ctx) {
                 ctx_seat->forced_surf_enabled = ILM_FALSE;
                 ctx_seat->pointer_grab.interface->focus(
                                     &ctx_seat->pointer_grab);
@@ -664,11 +664,10 @@ pointer_grab_focus(struct weston_pointer_grab *grab)
         return;
     }
 
-    if (seat->forced_ptr_focus_surf > 0) {
+    if (seat->forced_ptr_focus_surf != NULL) {
         /*When we want to force pointer focus to
          * a certain surface*/
-        layout_surf = ctx->ivishell->interface->
-                            get_surface_from_id(seat->forced_ptr_focus_surf);
+        layout_surf = seat->forced_ptr_focus_surf->layout_surface;
         forced_west_surf = ctx->ivishell->interface->
                             surface_get_weston_surface(layout_surf);
 
@@ -682,7 +681,7 @@ pointer_grab_focus(struct weston_pointer_grab *grab)
             if(pointer->focus->surface == forced_west_surf) {
                 input_ctrl_ptr_leave_west_focus(seat, pointer);
             }
-            seat->forced_ptr_focus_surf = 0;
+            seat->forced_ptr_focus_surf = NULL;
         }
 
     } else {
@@ -696,7 +695,7 @@ pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
     /*Motion results in re-evaluation of pointer focus*/
-    seat->forced_ptr_focus_surf = 0;
+    seat->forced_ptr_focus_surf = NULL;
     weston_pointer_send_motion(grab->pointer, time, event);
 }
 
@@ -990,6 +989,7 @@ input_ctrl_free_surf_ctx(struct ivisurface *surf_ctx)
 
     wl_list_for_each_safe(st_focus, tmp_st_focus,
             &surf_ctx->accepted_seat_list, link) {
+
         wl_list_remove(&st_focus->link);
         free(st_focus->seat_name);
         free(st_focus);
@@ -1051,25 +1051,15 @@ setup_input_focus(struct input_context *ctx, uint32_t surface,
         uint32_t device, int32_t enabled)
 {
     struct ivisurface *surf = NULL;
-    const struct ivi_layout_interface *interface =
-                            ctx->ivishell->interface;
-    struct ivi_layout_surface *current_layout_surface;
     struct seat_focus *st_focus;
     struct seat_ctx *ctx_seat;
-
-    current_layout_surface = interface->get_surface_from_id(surface);
-
-    if (!current_layout_surface) {
-        weston_log("%s: surface %d was not found\n", __FUNCTION__, surface);
-        return;
-    }
 
     surf = input_ctrl_get_surf_ctx_from_id(ctx, surface);
     if (NULL != surf) {
         wl_list_for_each(st_focus, &surf->accepted_seat_list, link) {
             ctx_seat = input_ctrl_get_seat_ctx(ctx, st_focus->seat_name);
             if (device & ILM_INPUT_DEVICE_POINTER) {
-                input_ctrl_ptr_set_focus_surf(ctx_seat, surface, enabled);
+                input_ctrl_ptr_set_focus_surf(ctx_seat, surf, enabled);
             }
             if (device & ILM_INPUT_DEVICE_KEYBOARD) {
                 input_ctrl_kbd_set_focus_surf(ctx_seat, surface, enabled);
