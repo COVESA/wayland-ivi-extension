@@ -38,8 +38,7 @@ add_subdirectory(ivi-layermanagement-api/ilmClient)
 add_subdirectory(ivi-layermanagement-api/ilmControl)
 add_subdirectory(ivi-layermanagement-api/test)
 add_subdirectory(ivi-layermanagement-examples)
-add_subdirectory(ivi-input-api/ilmInput)
-add_subdirectory(ivi-input-api/test)
+add_subdirectory(ivi-layermanagement-api/ilmInput)
 add_subdirectory(ivi-input-modules/ivi-input-controller)
 
 

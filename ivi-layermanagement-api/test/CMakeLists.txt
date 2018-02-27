@@ -33,6 +33,7 @@ IF(BUILD_ILM_API_TESTS)
     INCLUDE_DIRECTORIES(
         ${CMAKE_CURRENT_SOURCE_DIR}/../ilmCommon/include
         ${CMAKE_CURRENT_SOURCE_DIR}/../ilmControl/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../ilmInput/include
         ${CMAKE_CURRENT_BINARY_DIR}/../../protocol
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
         ${gtest_INCLUDE_DIRS}
@@ -45,6 +46,7 @@ IF(BUILD_ILM_API_TESTS)
     SET(LIBS
         ilmCommon
         ilmControl
+        ilmInput
         ivi-application
         ${gtest_LIBRARIES}
         ${WAYLAND_CLIENT_LIBRARIES}
@@ -54,6 +56,8 @@ IF(BUILD_ILM_API_TESTS)
         TestBase.cpp
         ilm_control_test.cpp
         ilm_control_notification_test.cpp
+        ilm_input_test.cpp
+        ilm_input_null_pointer_test.cpp
     )
 
     SET(GCC_SANITIZER_COMPILE_FLAGS "-fsanitize=address -fsanitize=undefined -fno-sanitize-recover -fstack-protector-all")
@@ -72,5 +76,6 @@ IF(BUILD_ILM_API_TESTS)
     ENABLE_TESTING()
     ADD_TEST(ilmCommon  ${PROJECT_NAME})
     ADD_TEST(ilmControl ${PROJECT_NAME})
+    ADD_TEST(ilmInput ${PROJECT_NAME})
 
 ENDIF() 

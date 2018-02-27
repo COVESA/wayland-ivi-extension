@@ -23,7 +23,7 @@ include_directories(
     include
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include"
-    "${CMAKE_SOURCE_DIR}/ivi-input-api/ilmInput/include"
+    "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmInput/include"
     ${WAYLAND_CLIENT_INCLUDE_DIR}
 )
 
