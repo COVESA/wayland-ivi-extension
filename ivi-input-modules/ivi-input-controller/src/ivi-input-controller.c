@@ -404,10 +404,9 @@ input_ctrl_kbd_enter_surf(struct seat_ctx *ctx_seat,
 
 static void
 input_ctrl_kbd_set_focus_surf(struct seat_ctx *ctx_seat,
-        uint32_t ivi_surf_id, int32_t enabled)
+        struct ivisurface *surf_ctx, int32_t enabled)
 {
     struct input_context *ctx = ctx_seat->input_ctx;
-    struct ivisurface *surf_ctx;
     const struct ivi_layout_interface *interface = ctx->ivishell->interface;
     struct weston_surface *w_surf;
 
@@ -416,7 +415,6 @@ input_ctrl_kbd_set_focus_surf(struct seat_ctx *ctx_seat,
 
 
     if (NULL != keyboard) {
-        surf_ctx = input_ctrl_get_surf_ctx_from_id(ctx, ivi_surf_id);
         w_surf = interface->surface_get_weston_surface(
                 surf_ctx->layout_surface);
 
@@ -1067,7 +1065,7 @@ setup_input_focus(struct input_context *ctx, uint32_t surface,
                 input_ctrl_ptr_set_focus_surf(ctx_seat, surf, enabled);
             }
             if (device & ILM_INPUT_DEVICE_KEYBOARD) {
-                input_ctrl_kbd_set_focus_surf(ctx_seat, surface, enabled);
+                input_ctrl_kbd_set_focus_surf(ctx_seat, surf, enabled);
             }
             if (device & ILM_INPUT_DEVICE_TOUCH) {
                 /*Touch focus cannot be forced to a particular surface.
