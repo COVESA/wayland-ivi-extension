@@ -982,13 +982,18 @@ handle_seat_create(struct wl_listener *listener, void *data)
 }
 
 static void
-input_ctrl_free_surf_ctx(struct ivisurface *surf_ctx)
+input_ctrl_free_surf_ctx(struct input_context *ctx, struct ivisurface *surf_ctx)
 {
+    struct seat_ctx *seat_ctx;
     struct seat_focus *st_focus;
     struct seat_focus *tmp_st_focus;
 
     wl_list_for_each_safe(st_focus, tmp_st_focus,
             &surf_ctx->accepted_seat_list, link) {
+        seat_ctx = input_ctrl_get_seat_ctx(ctx, st_focus->seat_name);
+
+        if (seat_ctx->forced_ptr_focus_surf == surf_ctx)
+            seat_ctx->forced_ptr_focus_surf = NULL;
 
         wl_list_remove(&st_focus->link);
         free(st_focus->seat_name);
@@ -1009,7 +1014,7 @@ handle_surface_destroy(struct wl_listener *listener, void *data)
 
     if (NULL != surf) {
 
-        input_ctrl_free_surf_ctx(surf);
+        input_ctrl_free_surf_ctx(ctx, surf);
 
         surface_removed = 1;
     }
@@ -1256,7 +1261,7 @@ destroy_input_context(struct input_context *ctx)
     wl_list_for_each_safe(surf_ctx, tmp_surf_ctx,
             &ctx->ivishell->list_surface, link) {
 
-        input_ctrl_free_surf_ctx(surf_ctx);
+        input_ctrl_free_surf_ctx(ctx, surf_ctx);
     }
 
     wl_list_for_each_safe(seat, tmp, &ctx->seat_list, seat_node) {
