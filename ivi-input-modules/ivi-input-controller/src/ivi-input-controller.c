@@ -206,10 +206,13 @@ send_input_acceptance(struct input_context *ctx, uint32_t surface_id, const char
 }
 
 static void
-send_input_focus(struct input_context *ctx, t_ilm_surface surface_id,
+send_input_focus(struct input_context *ctx, struct ivisurface *surf_ctx,
                  ilmInputDevice device, t_ilm_bool enabled)
 {
     struct input_controller *controller;
+    const struct ivi_layout_interface *lyt_if = ctx->ivishell->interface;
+    t_ilm_surface surface_id = lyt_if->get_id_of_surface(surf_ctx->layout_surface);
+
     wl_list_for_each(controller, &ctx->controller_list, link) {
         ivi_input_send_input_focus(controller->resource, surface_id,
                                    device, enabled);
@@ -352,9 +355,7 @@ input_ctrl_kbd_leave_surf(struct seat_ctx *ctx_seat,
 {
     struct wl_keyboard_data kbd_data;
     struct input_context *ctx = ctx_seat->input_ctx;
-    const struct ivi_layout_interface *interface = ctx->ivishell->interface;
     struct seat_focus *st_focus;
-
 
     st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
 
@@ -368,8 +369,7 @@ input_ctrl_kbd_leave_surf(struct seat_ctx *ctx_seat,
                 ctx_seat->keyboard_grab.keyboard, &kbd_data);
 
         st_focus->focus &= ~ILM_INPUT_DEVICE_KEYBOARD;
-        send_input_focus(ctx,
-                interface->get_id_of_surface(surf_ctx->layout_surface),
+        send_input_focus(ctx, surf_ctx,
                 ILM_INPUT_DEVICE_KEYBOARD, ILM_FALSE);
     }
 }
@@ -381,7 +381,6 @@ input_ctrl_kbd_enter_surf(struct seat_ctx *ctx_seat,
     struct wl_keyboard_data kbd_data;
     struct input_context *ctx = ctx_seat->input_ctx;
     struct seat_focus *st_focus;
-    const struct ivi_layout_interface *interface = ctx->ivishell->interface;
     uint32_t serial;
 
     st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
@@ -395,8 +394,7 @@ input_ctrl_kbd_enter_surf(struct seat_ctx *ctx_seat,
                 ctx_seat->keyboard_grab.keyboard, &kbd_data);
 
         st_focus->focus |= ILM_INPUT_DEVICE_KEYBOARD;
-        send_input_focus(ctx,
-                interface->get_id_of_surface(surf_ctx->layout_surface),
+        send_input_focus(ctx, surf_ctx,
                 ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE);
 
     }
@@ -513,13 +511,9 @@ input_ctrl_snd_focus_to_controller(struct ivisurface *surf_ctx,
         int32_t enabled)
 {
     struct input_context *ctx = ctx_seat->input_ctx;
-    const struct ivi_layout_interface *lyt_if = ctx->ivishell->interface;
     struct seat_focus *st_focus = NULL;
-    uint32_t ivi_surf_id;
 
     if (NULL != surf_ctx) {
-        ivi_surf_id = lyt_if->get_id_of_surface(surf_ctx->layout_surface);
-
         st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
         /* Send focus lost event to the surface which has lost the focus*/
         if (NULL != st_focus) {
@@ -528,8 +522,7 @@ input_ctrl_snd_focus_to_controller(struct ivisurface *surf_ctx,
             } else {
                 st_focus->focus &= ~device;
             }
-            send_input_focus(ctx, ivi_surf_id, device,
-                    enabled);
+            send_input_focus(ctx, surf_ctx, device, enabled);
         }
     }
     return st_focus;
@@ -1071,7 +1064,7 @@ setup_input_focus(struct input_context *ctx, uint32_t surface,
                 /*Touch focus cannot be forced to a particular surface.
                  * Preserve the old behaviour by sending it to controller.
                  * TODO: Should we just remove focus setting for touch?*/
-                send_input_focus(ctx, surface, device, enabled);
+                send_input_focus(ctx, surf, device, enabled);
             }
         }
     }
