@@ -268,44 +268,6 @@ void exportSceneToXMLHelper(ostream& stream, StringMapTree* tree, string prefix 
 
     stream << prefix << "</" << tree->mNodeLabel << ">\n";
 }
-
-ilmSurfaceProperties getSurfaceProperties(IlmSurface* pIlmsurface)
-{
-    ilmSurfaceProperties props;
-
-    pIlmsurface->get("destHeight", &(props.destHeight));
-    pIlmsurface->get("destWidth", &(props.destWidth));
-    pIlmsurface->get("destX", &(props.destX));
-    pIlmsurface->get("destY", &(props.destY));
-    pIlmsurface->get("frameCounter", &(props.frameCounter));
-    pIlmsurface->get("opacity", &(props.opacity));
-    pIlmsurface->get("origSourceHeight", &(props.origSourceHeight));
-    pIlmsurface->get("origSourceWidth", &(props.origSourceWidth));
-    pIlmsurface->get("sourceHeight", &(props.sourceHeight));
-    pIlmsurface->get("sourceWidth", &(props.sourceWidth));
-    pIlmsurface->get("sourceX", &(props.sourceX));
-    pIlmsurface->get("sourceY", &(props.sourceY));
-    pIlmsurface->get("visibility", &(props.visibility));
-
-    return props;
-}
-
-ilmLayerProperties getLayerProperties(IlmLayer* pIlmlayer)
-{
-    ilmLayerProperties props;
-    pIlmlayer->get("destHeight", &(props.destHeight));
-    pIlmlayer->get("destWidth", &(props.destWidth));
-    pIlmlayer->get("destX", &(props.destX));
-    pIlmlayer->get("destY", &(props.destY));
-    pIlmlayer->get("opacity", &(props.opacity));
-    pIlmlayer->get("sourceHeight", &(props.sourceHeight));
-    pIlmlayer->get("sourceWidth", &(props.sourceWidth));
-    pIlmlayer->get("sourceX", &(props.sourceX));
-    pIlmlayer->get("sourceY", &(props.sourceY));
-    pIlmlayer->get("visibility", &(props.visibility));
-
-    return props;
-}
 } //end of anonymous namespace
 
 void exportSceneToFile(string filename)

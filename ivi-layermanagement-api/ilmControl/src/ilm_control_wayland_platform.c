@@ -922,7 +922,6 @@ registry_handle_control(void *data,
 
     } else if (strcmp(interface, "wl_output") == 0) {
         struct screen_context *ctx_scrn = calloc(1, sizeof *ctx_scrn);
-        struct wl_proxy *pxy = NULL;
 
         if (ctx_scrn == NULL) {
             fprintf(stderr, "Failed to allocate memory for screen_context\n");
@@ -1400,9 +1399,7 @@ ilm_getPropertiesOfLayer(t_ilm_uint layerID,
     struct layer_context *ctx_layer = NULL;
     int32_t mask;
 
-    mask |= IVI_WM_PARAM_OPACITY;
-    mask |= IVI_WM_PARAM_VISIBILITY;
-    mask |= IVI_WM_PARAM_SIZE;
+    mask = IVI_WM_PARAM_OPACITY | IVI_WM_PARAM_VISIBILITY | IVI_WM_PARAM_SIZE;
 
     if (pLayerProperties != NULL) {
         lock_context(ctx);
@@ -1592,7 +1589,7 @@ ilm_getLayerIDsOnScreen(t_ilm_uint screenId,
             ivi_wm_screen_get(ctx_screen->controller, IVI_WM_PARAM_RENDER_ORDER);
 
             if (wl_display_roundtrip_queue(ctx->wl.display, ctx->wl.queue) != -1 ) {
-                create_layerids(ctx_screen, ppArray, pLength);
+                create_layerids(ctx_screen, ppArray, (t_ilm_uint*)pLength);
                 returnValue = ILM_SUCCESS;
             }
         }
@@ -1637,7 +1634,6 @@ ilm_getSurfaceIDsOnLayer(t_ilm_layer layer,
 {
     struct ilm_control_context *const ctx = &ilm_context;
     struct layer_context *ctx_layer = NULL;
-    struct surface_context *ctx_surf = NULL;
     t_ilm_uint length = 0;
     t_ilm_surface* ids = NULL;
     uint32_t *id = NULL;
@@ -1896,7 +1892,7 @@ ilm_layerSetRenderOrder(t_ilm_layer layerId,
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *const ctx = &ilm_context;
-    t_ilm_uint i;
+    t_ilm_int i;
 
     lock_context(ctx);
     if (ctx->wl.controller) {
@@ -2074,8 +2070,6 @@ static void screenshot_done(void *data, struct ivi_screenshot *ivi_screenshot,
     int32_t offset = 0;
     int32_t i = 0;
     int32_t j = 0;
-    int32_t padding = 0;
-    int32_t sum_padding = 0;
     size_t size = stride * height;
     int bytes_per_pixel;
     bool flip_order;

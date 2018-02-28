@@ -32,7 +32,7 @@ ilm_setInputAcceptanceOn(t_ilm_surface surfaceID, t_ilm_uint num_seats,
                          t_ilm_string *seats)
 {
     struct ilm_control_context *ctx;
-    int i;
+    t_ilm_uint i;
     struct surface_context *surface_ctx = NULL;
     struct accepted_seat *accepted_seat;
     struct seat_context *seat;
@@ -249,9 +249,9 @@ ILM_EXPORT ilmErrorTypes
 ilm_setInputFocus(t_ilm_surface *surfaceIDs, t_ilm_uint num_surfaces,
                   ilmInputDevice bitmask, t_ilm_bool is_set)
 {
-	ilmErrorTypes returnValue = ILM_FAILED;
+    ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *ctx;
-    int i;
+    t_ilm_uint i;
 
     if (surfaceIDs == NULL) {
         fprintf(stderr, "Invalid Argument\n");

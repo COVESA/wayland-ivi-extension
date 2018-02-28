@@ -50,6 +50,7 @@ typedef struct _WaylandContext {
     struct ivi_application  *ivi_application;
     BkGndSettingsStruct     *bkgnd_settings;
     struct wl_surface       *wlBkgndSurface;
+    struct ivi_surface      *ivi_surf;
     struct wl_buffer        *wlBkgndBuffer;
     struct wl_cursor_theme  *cursor_theme;
     struct wl_cursor        *cursor;
@@ -70,7 +71,6 @@ get_bkgnd_settings(void)
     BkGndSettingsStruct* bkgnd_settings;
     char *option;
     char *end;
-    int len;
 
     bkgnd_settings =
             (BkGndSettingsStruct*)calloc(1, sizeof(BkGndSettingsStruct));
@@ -194,12 +194,43 @@ PointerHandleButton(void *data, struct wl_pointer *wlPointer, uint32_t serial,
 
 }
 
+static void
+PointerHandleFrame(void *data, struct wl_pointer *wl_pointer)
+{
+
+}
+
+static void
+PointerHandleAxisSource(void *data, struct wl_pointer *wl_pointer,
+                        uint32_t axis_source)
+{
+
+}
+
+static void
+PointerHandleAxisStop(void *data, struct wl_pointer *wl_pointer,
+                      uint32_t time, uint32_t axis)
+{
+
+}
+
+static void
+PointerHandleAxisDiscrete(void *data, struct wl_pointer *wl_pointer,
+                          uint32_t axis, int32_t discrete)
+{
+
+}
+
 static struct wl_pointer_listener pointer_listener = {
     PointerHandleEnter,
     PointerHandleLeave,
     PointerHandleMotion,
     PointerHandleButton,
-    PointerHandleAxis
+    PointerHandleAxis,
+    PointerHandleFrame,
+    PointerHandleAxisSource,
+    PointerHandleAxisStop,
+    PointerHandleAxisDiscrete
 };
 
 static void
@@ -231,8 +262,15 @@ seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t caps)
     }
 }
 
+static void
+seat_name(void *data, struct wl_seat *wl_seat, const char *name)
+{
+
+}
+
 static struct wl_seat_listener seat_Listener = {
     seat_handle_capabilities,
+    seat_name
 };
 
 static void
@@ -404,7 +442,6 @@ create_shm_buffer(WaylandContextStruct* wlcontext)
 
 int draw_bkgnd_surface(WaylandContextStruct* wlcontext)
 {
-    struct ivi_surface *ivisurf = NULL;
     BkGndSettingsStruct *bkgnd_settings = wlcontext->bkgnd_settings;
     uint32_t* pixels;
 
@@ -421,7 +458,6 @@ int draw_bkgnd_surface(WaylandContextStruct* wlcontext)
 
 int create_bkgnd_surface(WaylandContextStruct* wlcontext)
 {
-    struct ivi_surface *ivisurf = NULL;
     BkGndSettingsStruct *bkgnd_settings = wlcontext->bkgnd_settings;
 
     wlcontext->wlBkgndSurface =
@@ -436,15 +472,18 @@ int create_bkgnd_surface(WaylandContextStruct* wlcontext)
         return -1;
     }
 
-    ivisurf = ivi_application_surface_create(wlcontext->ivi_application,
-                                             bkgnd_settings->surface_id,
-                                             wlcontext->wlBkgndSurface);
+    wlcontext->ivi_surf = ivi_application_surface_create(wlcontext->ivi_application,
+                                                         bkgnd_settings->surface_id,
+                                                         wlcontext->wlBkgndSurface);
 
     return 0;
 }
 
 void destroy_bkgnd_surface(WaylandContextStruct* wlcontext)
 {
+    if (wlcontext->ivi_surf)
+        ivi_surface_destroy(wlcontext->ivi_surf);
+
     if (wlcontext->wlBkgndSurface)
         wl_surface_destroy(wlcontext->wlBkgndSurface);
 }
@@ -453,7 +492,6 @@ int main (int argc, const char * argv[])
 {
     WaylandContextStruct* wlcontext;
     BkGndSettingsStruct* bkgnd_settings;
-    int offset = 0;
     int ret;
 
     /*get bkgnd settings and create shm-surface*/

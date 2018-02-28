@@ -105,7 +105,7 @@ static t_ilm_uint choose_screen(void)
     t_ilm_uint screen_count = 0;
     t_ilm_uint choosen_width = 0;
     t_ilm_uint choosen_height = 0;
-    int i;
+    t_ilm_uint i;
 
     ilm_getScreenIDs(&screen_count, &screen_IDs);
 

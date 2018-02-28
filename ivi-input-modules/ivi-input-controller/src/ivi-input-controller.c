@@ -321,7 +321,6 @@ input_ctrl_kbd_wl_snd_event(struct seat_ctx *ctx_seat,
         struct wl_keyboard_data *kbd_data)
 {
     struct wl_resource *resource;
-    struct input_context *ctx = ctx_seat->input_ctx;
     struct wl_client *surface_client;
     struct wl_client *client;
     struct wl_list *resource_list;
@@ -544,8 +543,6 @@ input_ctrl_ptr_leave_west_focus(struct seat_ctx *ctx_seat,
 {
     struct ivisurface *surf_ctx;
     struct input_context *ctx = ctx_seat->input_ctx;
-    const struct ivi_layout_interface *lyt_if = ctx->ivishell->interface;
-    struct seat_focus *st_focus;
 
     if (NULL != pointer->focus) {
         surf_ctx = input_ctrl_get_surf_ctx_from_surf(ctx,
@@ -567,7 +564,6 @@ input_ctrl_ptr_set_west_focus(struct seat_ctx *ctx_seat,
     struct ivisurface *surf_ctx;
     struct input_context *ctx = ctx_seat->input_ctx;
     struct seat_focus *st_focus;
-    uint32_t ivi_surf_id;
     wl_fixed_t sx, sy;
 
     if (NULL == view) {
@@ -808,7 +804,6 @@ input_ctrl_touch_clear_focus(struct seat_ctx *ctx_seat)
     struct input_context *ctx = ctx_seat->input_ctx;
     struct weston_touch *touch = ctx_seat->touch_grab.touch;
     struct ivisurface *surf_ctx;
-    struct seat_focus *st_focus = NULL;
 
     if (touch->focus != NULL) {
 
@@ -843,11 +838,8 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
     struct input_context *ctx = seat->input_ctx;
-    struct seat_focus *st_focus;
     struct weston_touch *touch = grab->touch;
     struct ivisurface *surf_ctx;
-    const struct ivi_layout_interface *interface =
-        seat->input_ctx->ivishell->interface;
 
     if (NULL != touch->focus) {
         if (touch->num_tp == 0) {
@@ -1058,12 +1050,9 @@ static void
 setup_input_focus(struct input_context *ctx, uint32_t surface,
         uint32_t device, int32_t enabled)
 {
-    struct ivisurface *surf, *current_surf = NULL;
-    struct weston_seat *seat;
-    struct weston_surface *w_surf;
+    struct ivisurface *surf = NULL;
     const struct ivi_layout_interface *interface =
                             ctx->ivishell->interface;
-    uint32_t caps;
     struct ivi_layout_surface *current_layout_surface;
     struct seat_focus *st_focus;
     struct seat_ctx *ctx_seat;
@@ -1297,7 +1286,7 @@ static void
 input_controller_deinit(struct input_context *ctx)
 {
     int deinit_stage;
-    int ret = 0;
+
     if (NULL == ctx) {
         return;
     }
@@ -1375,7 +1364,7 @@ input_controller_init(struct ivishell *shell)
     int successful_init_stage = 0;
     int init_stage;
     int ret = -1;
-    struct input_context *ctx;
+    struct input_context *ctx = NULL;
     bool init_success = false;
 
     for (init_stage = 0; (init_stage == successful_init_stage);

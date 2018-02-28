@@ -298,11 +298,12 @@ TEST_F(IlmCommandTest, ilm_getLayerIDsOfScreen) {
 TEST_F(IlmCommandTest, ilm_getSurfaceIDs) {
     t_ilm_uint* IDs;
     t_ilm_int length;
+    t_ilm_uint i;
 
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&length, &IDs));
 
     EXPECT_EQ(iviSurfaces.size(), length);
-    for (int i=0; i < iviSurfaces.size(); i++)
+    for (i=0; i < iviSurfaces.size(); i++)
     {
         EXPECT_EQ(IDs[i], iviSurfaces[i].surface_id);
     }
