@@ -43,11 +43,22 @@ bool contains(T const *actual, size_t as, T expected)
    return false;
 }
 
-class IlmCommandTest : public TestBase, public ::testing::Test {
+class IlmInputTest : public TestBase, public ::testing::Test {
 public:
     void SetUp()
     {
         ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay));
+
+        iviSurfaces.reserve(10);
+        struct iviSurface surf;
+        for (int i = 0; i < (int)iviSurfaces.capacity(); ++i)
+        {
+            surf.surface = ivi_application_surface_create(iviApp, i+500, wlSurfaces[i]);
+            surf.surface_id = i+500;
+            iviSurfaces.push_back(surf);
+        }
+
+        wl_display_flush(wlDisplay);
     }
 
     void TearDown()
@@ -62,37 +73,50 @@ public:
         };
         free(layers);
 
+        for (std::vector<iviSurface>::reverse_iterator it = iviSurfaces.rbegin();
+             it != iviSurfaces.rend();
+             ++it)
+        {
+            ivi_surface_destroy((*it).surface);
+        }
+        iviSurfaces.clear();
+
         EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
         EXPECT_EQ(ILM_SUCCESS, ilm_destroy());
     }
 };
 
-TEST_F(IlmCommandTest, ilm_input_focus) {
+TEST_F(IlmInputTest, ilm_input_focus) {
     const uint32_t surfaceCount = 4;
-    t_ilm_surface surfaces[] = {1010, 2020, 3030, 4040};
-    struct ivi_surface* ivi_surfaces[surfaceCount];
+    t_ilm_surface surfaces[] = {iviSurfaces[0].surface_id,
+                                iviSurfaces[1].surface_id,
+                                iviSurfaces[2].surface_id,
+                                iviSurfaces[3].surface_id};
     t_ilm_surface *surfaceIDs;
     ilmInputDevice *bitmasks;
     t_ilm_uint num_ids;
+    t_ilm_uint layer = 0xbeef;
 
-    for (unsigned int i = 0; i < surfaceCount; i++) {
-        ivi_surfaces[i] = (struct ivi_surface*) ivi_application_surface_create(iviApp, surfaces[i], wlSurfaces[i]);
-    }
+    /* We have to add surfaces to a layer. Otherwise, they would not have a view.
+       We need a view to be able to set pointer focus. */
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerCreateWithDimension(&layer, 800, 480));
+    EXPECT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(layer, surfaces, surfaceCount));
 
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputFocus(&surfaceIDs, &bitmasks, &num_ids));
     /* All the surfaces are returned */
-    ASSERT_EQ(num_ids, surfaceCount);
+    ASSERT_EQ(num_ids, iviSurfaces.size());
     int surfaces_found = 0;
+
     for (unsigned int i = 0; i < num_ids; i++) {
         /* The bitmasks all start unset */
         EXPECT_EQ(bitmasks[i], 0);
-        if (contains(&surfaces[0], surfaceCount, surfaceIDs[i]))
+        if (contains(surfaceIDs, iviSurfaces.size(), iviSurfaces[i].surface_id))
             surfaces_found++;
     }
     free(surfaceIDs);
     free(bitmasks);
     /* The surfaces returned are the correct ones */
-    ASSERT_EQ(surfaces_found, surfaceCount);
+    ASSERT_EQ(surfaces_found, iviSurfaces.size());
 
     /* Can set all focus to keyboard */
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputFocus(&surfaces[0], surfaceCount, ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE));
@@ -100,7 +124,10 @@ TEST_F(IlmCommandTest, ilm_input_focus) {
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputFocus(&surfaceIDs, &bitmasks, &num_ids));
     for (unsigned int i = 0; i < num_ids; i++) {
         /* All surfaces now have keyboard focus */
-        EXPECT_EQ(bitmasks[i], ILM_INPUT_DEVICE_KEYBOARD);
+        for (unsigned int j = 0; j < surfaceCount; j++) {
+            if (surfaceIDs[i] == surfaces[j])
+                EXPECT_EQ(bitmasks[i], ILM_INPUT_DEVICE_KEYBOARD);
+        }
     }
     free(surfaceIDs);
     free(bitmasks);
@@ -134,20 +161,14 @@ TEST_F(IlmCommandTest, ilm_input_focus) {
             EXPECT_EQ(bitmasks[i], ILM_INPUT_DEVICE_KEYBOARD | ILM_INPUT_DEVICE_TOUCH);
     free(surfaceIDs);
     free(bitmasks);
-
-    for (unsigned int i = 0; i < surfaceCount; i++) {
-        ivi_surface_destroy(ivi_surfaces[i]);
-    }
 }
 
-TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
-    t_ilm_surface surface1 = 1010;
+TEST_F(IlmInputTest, ilm_input_event_acceptance) {
+    t_ilm_surface surface1 = iviSurfaces[0].surface_id;
     t_ilm_uint num_seats = 0;
     t_ilm_string *seats = NULL;
     char const *set_seats = "default";
     t_ilm_uint set_seats_count = 1;
-    struct ivi_surface* ivi_surface = (struct ivi_surface*)
-        ivi_application_surface_create(iviApp, surface1, wlSurfaces[0]);
 
     /* All seats accept the "default" seat when created */
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputAcceptanceOn(surface1, &num_seats,
@@ -184,6 +205,4 @@ TEST_F(IlmCommandTest, ilm_input_event_acceptance) {
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, (t_ilm_string*)&set_seats));
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 0, NULL));
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, (t_ilm_string*)&set_seats));
-
-    ivi_surface_destroy(ivi_surface);
 }

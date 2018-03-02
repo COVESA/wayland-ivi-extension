@@ -28,7 +28,7 @@ public:
     struct iviSurface
     {
         ivi_surface* surface;
-        int surface_id;
+        uint32_t surface_id;
     };
     TestBase();
     virtual ~TestBase();

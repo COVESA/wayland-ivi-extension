@@ -61,7 +61,6 @@ How to test
    Example: cmake -DBUILD_ILM_API_TESTS
 2. After starting up Weston run the testsuite.
    Example: <your installation path>/bin/ivi-layermanagement-api-test
-            <your installation path>/bin/ivi-input-api-test
 
 Features
 ====================================

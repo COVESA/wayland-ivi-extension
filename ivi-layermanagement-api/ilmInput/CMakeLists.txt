@@ -85,7 +85,7 @@ install (
 )
 
 install (
-    FILES       ${CMAKE_SOURCE_DIR}/ivi-input-api/ilmInput/include/ilm_input.h
+    FILES       ${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmInput/include/ilm_input.h
     DESTINATION include/ilm
 )
 
