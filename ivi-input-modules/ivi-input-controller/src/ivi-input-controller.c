@@ -944,6 +944,9 @@ handle_seat_create(struct wl_listener *listener, void *data)
     struct input_context *input_ctx = wl_container_of(listener, input_ctx,
                                                       seat_create_listener);
     struct input_controller *controller;
+    struct ivisurface *surf;
+    const struct ivi_layout_interface *interface =
+        input_ctx->ivishell->interface;
     struct seat_ctx *ctx = calloc(1, sizeof *ctx);
     if (ctx == NULL) {
         weston_log("%s: Failed to allocate memory\n", __FUNCTION__);
@@ -969,6 +972,17 @@ handle_seat_create(struct wl_listener *listener, void *data)
         ivi_input_send_seat_created(controller->resource,
                                     seat->seat_name,
                                     get_seat_capabilities(seat));
+    }
+
+    /* If default seat is created, we have to add it to the accepted_seat_list
+     * of all surfaces. Also we have to send an acceptance event to all clients */
+    if (!strcmp(ctx->name_seat, "default")) {
+        wl_list_for_each(surf, &input_ctx->ivishell->list_surface, link) {
+            add_accepted_seat(surf, "default");
+            send_input_acceptance(input_ctx,
+                                 interface->get_id_of_surface(surf->layout_surface),
+                                 "default", ILM_TRUE);
+        }
     }
 }
 
@@ -1024,12 +1038,17 @@ handle_surface_create(struct wl_listener *listener, void *data)
     struct ivisurface *ivisurface = (struct ivisurface *) data;
     const struct ivi_layout_interface *interface =
         input_ctx->ivishell->interface;
+    struct seat_ctx *seat_ctx;
 
     wl_list_init(&ivisurface->accepted_seat_list);
-    add_accepted_seat(ivisurface, "default");
-    send_input_acceptance(input_ctx,
-                          interface->get_id_of_surface(ivisurface->layout_surface),
-                          "default", ILM_TRUE);
+
+    seat_ctx = input_ctrl_get_seat_ctx(input_ctx, "default");
+    if (seat_ctx) {
+        add_accepted_seat(ivisurface, "default");
+        send_input_acceptance(input_ctx,
+                              interface->get_id_of_surface(ivisurface->layout_surface),
+                              "default", ILM_TRUE);
+    }
 }
 
 static void
