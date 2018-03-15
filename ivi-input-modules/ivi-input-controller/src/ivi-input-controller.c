@@ -157,11 +157,9 @@ add_accepted_seat(struct ivisurface *surface, const char *seat)
 }
 
 static int
-remove_accepted_seat(struct ivisurface *surface, const char *seat)
+remove_if_seat_accepted(struct ivisurface *surface, const char *seat)
 {
     int ret = 0;
-    const struct ivi_layout_interface *interface =
-            surface->shell->interface;
 
     struct seat_focus *st_focus = get_accepted_seat(surface, seat);
 
@@ -171,10 +169,6 @@ remove_accepted_seat(struct ivisurface *surface, const char *seat)
         free(st_focus->seat_name);
         free(st_focus);
 
-    } else {
-        weston_log("%s: Warning: seat '%s' not found for surface %u\n",
-                  __FUNCTION__, seat,
-                  interface->get_id_of_surface(surface->layout_surface));
     }
     return ret;
 }
@@ -920,6 +914,8 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
     struct seat_ctx *ctx = wl_container_of(listener, ctx, destroy_listener);
     struct weston_seat *seat = data;
     struct input_controller *controller;
+    struct input_context* input_ctx = ctx->input_ctx;
+    struct ivisurface *surf;
 
     if (ctx->keyboard_grab.keyboard)
         keyboard_grab_cancel(&ctx->keyboard_grab);
@@ -927,6 +923,12 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
         pointer_grab_cancel(&ctx->pointer_grab);
     if (ctx->touch_grab.touch)
         touch_grab_cancel(&ctx->touch_grab);
+
+    /* Remove seat acceptance from surfaces which have input acceptance from
+     * this seat */
+    wl_list_for_each(surf, &input_ctx->ivishell->list_surface, link) {
+         remove_if_seat_accepted(surf, ctx->name_seat);
+    }
 
     wl_list_for_each(controller, &ctx->input_ctx->controller_list, link) {
         ivi_input_send_seat_destroyed(controller->resource,
@@ -1169,7 +1171,7 @@ setup_input_acceptance(struct input_context *ctx,
                     }
                 }
 
-                found_seat = remove_accepted_seat(ivisurface, seat);
+                found_seat = remove_if_seat_accepted(ivisurface, seat);
             }
         }
     }
