@@ -1013,23 +1013,10 @@ handle_surface_destroy(struct wl_listener *listener, void *data)
 {
     struct input_context *ctx =
             wl_container_of(listener, ctx, surface_destroyed);
-    int surface_removed = 0;
-    const struct ivi_layout_interface *interface =
-        ctx->ivishell->interface;
-
     struct ivisurface *surf = (struct ivisurface *) data;
 
-    if (NULL != surf) {
-
+    if (NULL != surf)
         input_ctrl_free_surf_ctx(ctx, surf);
-
-        surface_removed = 1;
-    }
-
-    if (!surface_removed) {
-        weston_log("%s: Warning! surface %d already destroyed\n", __FUNCTION__,
-                   interface->get_id_of_surface((surf->layout_surface)));
-    }
 }
 
 static void
