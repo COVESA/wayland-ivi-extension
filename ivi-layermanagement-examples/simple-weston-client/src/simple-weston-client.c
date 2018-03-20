@@ -492,7 +492,7 @@ int main (int argc, const char * argv[])
 {
     WaylandContextStruct* wlcontext;
     BkGndSettingsStruct* bkgnd_settings;
-    int ret;
+    int ret = 0;
 
     /*get bkgnd settings and create shm-surface*/
     bkgnd_settings = get_bkgnd_settings();
