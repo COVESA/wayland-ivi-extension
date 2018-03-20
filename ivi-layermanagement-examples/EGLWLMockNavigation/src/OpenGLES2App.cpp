@@ -249,7 +249,6 @@ bool OpenGLES2App::createEGLContext(SurfaceConfiguration* config)
     m_eglContextStruct.eglContext = NULL;
 
     m_eglContextStruct.eglDisplay = eglGetDisplay(m_wlContextStruct.wlDisplay);
-    eglstatus = eglGetError();
     if (!m_eglContextStruct.eglDisplay)
     {
 	cout << "Error: eglGetDisplay() failed.\n";
