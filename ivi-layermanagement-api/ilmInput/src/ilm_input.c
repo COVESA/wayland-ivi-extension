@@ -141,7 +141,7 @@ ilm_getInputAcceptanceOn(t_ilm_surface surfaceID, t_ilm_uint *num_seats,
     }
 
     *num_seats = wl_list_length(&surface_ctx->list_accepted_seats);
-    *seats = calloc(*num_seats, sizeof *seats);
+    *seats = calloc(*num_seats, sizeof **seats);
     if (*seats == NULL) {
         fprintf(stderr, "Failed to allocate memory for seat array\n");
         release_instance();
