@@ -478,7 +478,7 @@ controller_surface_screenshot(struct wl_client *client,
 
     result = lyt->surface_get_size(layout_surface, &width,
                                    &height, &stride);
-    if (!width || !height || !stride) {
+    if ((result != IVI_SUCCEEDED) || !width || !height || !stride) {
         ivi_screenshot_send_error(
             screenshot, IVI_SCREENSHOT_ERROR_NO_CONTENT,
             "surface_screenshot: surface does not have content");
