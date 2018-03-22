@@ -84,8 +84,7 @@ create_cursors(WLContext* wlContext)
 		fprintf(stderr, "could not load default theme\n");
 		return;
 	}
-	wlContext->SetWLCursor(
-			(wl_cursor*) malloc(sizeof wlContext->GetWLCursor()));
+	wlContext->SetWLCursor((wl_cursor*) malloc(sizeof(wl_cursor)));
 
 	for (j = 0; !cursor && j < 4; ++j)
 		cursor = wl_cursor_theme_get_cursor(wlContext->GetWLCursorTheme(),
