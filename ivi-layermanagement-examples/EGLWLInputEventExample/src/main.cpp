@@ -46,6 +46,7 @@ int main(int argc, char **argv)
     WLEGLSurface* eglSurface;
     WLEyes* eyes;
     int surfaceId = 5100;
+    int ret = -1;
 
     argc = argc; // avoid warning
     argv = argv;
@@ -89,7 +90,7 @@ int main(int argc, char **argv)
     // initialize eyes renderer
     if (!InitRenderer()){
         fprintf(stderr, "Failed to init renderer\n");
-        return -1;
+        goto Error;
     }
 
     // draw eyes once
@@ -110,10 +111,12 @@ int main(int argc, char **argv)
     }
 
     TerminateRenderer();
+    ret = 0;
 
+Error:
     delete eyes;
     delete eglSurface;
     delete wlContext;
 
-    return 0;
+    return ret;
 }

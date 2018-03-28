@@ -492,7 +492,7 @@ int main (int argc, const char * argv[])
 {
     WaylandContextStruct* wlcontext;
     BkGndSettingsStruct* bkgnd_settings;
-    int ret;
+    int ret = 0;
 
     /*get bkgnd settings and create shm-surface*/
     bkgnd_settings = get_bkgnd_settings();
@@ -502,7 +502,7 @@ int main (int argc, const char * argv[])
     wlcontext->bkgnd_settings = bkgnd_settings;
     if (init_wayland_context(wlcontext)) {
         fprintf(stderr, "init_wayland_context failed\n");
-        return -1;
+        goto ErrorContext;
     }
 
     if (create_bkgnd_surface(wlcontext)) {
@@ -520,6 +520,7 @@ int main (int argc, const char * argv[])
 
 Error:
     destroy_bkgnd_surface(wlcontext);
+ErrorContext:
     destroy_wayland_context(wlcontext);
 
     free(bkgnd_settings);

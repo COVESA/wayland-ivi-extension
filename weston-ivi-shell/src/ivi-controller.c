@@ -478,7 +478,7 @@ controller_surface_screenshot(struct wl_client *client,
 
     result = lyt->surface_get_size(layout_surface, &width,
                                    &height, &stride);
-    if (!width || !height || !stride) {
+    if ((result != IVI_SUCCEEDED) || !width || !height || !stride) {
         ivi_screenshot_send_error(
             screenshot, IVI_SCREENSHOT_ERROR_NO_CONTENT,
             "surface_screenshot: surface does not have content");
@@ -1820,7 +1820,6 @@ surface_event_configure(struct wl_listener *listener, void *data)
     if (shell->bkgnd_surface_id == (int32_t)surface_id) {
         float red, green, blue, alpha;
 
-        w_surface = lyt->surface_get_weston_surface(layout_surface);
         if (!shell->bkgnd_view) {
             w_surface = lyt->surface_get_weston_surface(layout_surface);
 

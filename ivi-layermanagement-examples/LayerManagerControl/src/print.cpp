@@ -29,7 +29,7 @@ using std::endl;
 using std::dec;
 using std::hex;
 
-
+#include <stdlib.h>
 #include <map>
 using std::map;
 
