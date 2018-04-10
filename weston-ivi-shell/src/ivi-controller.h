@@ -26,6 +26,19 @@
 #include "ivi-wm-server-protocol.h"
 #include <weston/ivi-layout-export.h>
 
+/* Convert timespec to milliseconds
+ *
+ * \param a timespec
+ * \return milliseconds
+ *
+ * Rounding to integer milliseconds happens always down (floor()).
+ */
+static inline int64_t
+timespec_to_msec(const struct timespec *a)
+{
+	return (int64_t)a->tv_sec * 1000 + a->tv_nsec / 1000000;
+}
+
 struct ivisurface {
     struct wl_list link;
     struct ivishell *shell;
