@@ -1340,8 +1340,7 @@ controller_screen_screenshot(struct wl_client *client,
     l->frame_listener.notify = controller_screenshot_notify;
     wl_signal_add(&iviscrn->output->frame_signal, &l->frame_listener);
     iviscrn->output->disable_planes++;
-    weston_output_schedule_repaint(iviscrn->output);
-    return;
+    weston_output_damage(iviscrn->output);
 }
 
 static void
