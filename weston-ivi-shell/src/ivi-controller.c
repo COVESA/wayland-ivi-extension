@@ -2166,10 +2166,8 @@ launch_client_process(void *data)
 }
 
 WL_EXPORT int
-controller_module_init(struct weston_compositor *compositor,
-		       int *argc, char *argv[],
-		       const struct ivi_layout_interface *interface,
-		       size_t interface_version)
+wet_module_init(struct weston_compositor *compositor,
+		       int *argc, char *argv[])
 {
     struct ivishell *shell;
     struct wl_event_loop *loop = NULL;
@@ -2182,7 +2180,12 @@ controller_module_init(struct weston_compositor *compositor,
 
     memset(shell, 0, sizeof *shell);
 
-    shell->interface = interface;
+    shell->interface = ivi_layout_get_api(compositor);
+    if (!shell->interface) {
+        free(shell);
+        weston_log("Cannot use ivi_layout_interface.\n");
+        return -1;
+    }
 
     get_config(compositor, shell);
 
@@ -2196,7 +2199,7 @@ controller_module_init(struct weston_compositor *compositor,
     init_ivi_shell(compositor, shell);
 
 #ifdef IVI_SHARE_ENABLE
-    if (setup_buffer_sharing(compositor, interface) < 0) {
+    if (setup_buffer_sharing(compositor, shell->interface) < 0) {
         free(shell);
         return -1;
     }
