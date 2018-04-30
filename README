@@ -36,9 +36,9 @@ Pre-requisite:
   Example:
     [core]
     shell=ivi-shell.so
+    modules=ivi-controller.so
 
     [ivi-shell]
-    ivi-module=ivi-controller.so
     ivi-input-module=ivi-input-controller.so
 
 - Set Environmental values

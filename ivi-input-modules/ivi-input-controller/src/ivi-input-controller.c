@@ -419,7 +419,7 @@ input_ctrl_kbd_set_focus_surf(struct seat_ctx *ctx_seat,
 }
 
 static void
-keyboard_grab_key(struct weston_keyboard_grab *grab, uint32_t time,
+keyboard_grab_key(struct weston_keyboard_grab *grab, const struct timespec *time,
                   uint32_t key, uint32_t state)
 {
     struct seat_ctx *seat_ctx = wl_container_of(grab, seat_ctx, keyboard_grab);
@@ -431,7 +431,7 @@ keyboard_grab_key(struct weston_keyboard_grab *grab, uint32_t time,
         seat_ctx->input_ctx->ivishell->interface;
 
     kbd_data.kbd_evt = KEYBOARD_KEY;
-    kbd_data.time = time;
+    kbd_data.time = timespec_to_msec(time);
     kbd_data.key = key;
     kbd_data.state = state;
     kbd_data.serial = wl_display_next_serial(grab->keyboard->seat->
@@ -675,7 +675,7 @@ pointer_grab_focus(struct weston_pointer_grab *grab)
 }
 
 static void
-pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
+pointer_grab_motion(struct weston_pointer_grab *grab, const struct timespec *time,
                     struct weston_pointer_motion_event *event)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, pointer_grab);
@@ -685,7 +685,7 @@ pointer_grab_motion(struct weston_pointer_grab *grab, uint32_t time,
 }
 
 static void
-pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
+pointer_grab_button(struct weston_pointer_grab *grab, const struct timespec *time,
                     uint32_t button, uint32_t state)
 {
     struct weston_pointer *pointer = grab->pointer;
@@ -700,7 +700,7 @@ pointer_grab_button(struct weston_pointer_grab *grab, uint32_t time,
 
 static void
 pointer_grab_axis(struct weston_pointer_grab *grab,
-                  uint32_t time,
+                  const struct timespec *time,
                   struct weston_pointer_axis_event *event)
 {
     weston_pointer_send_axis(grab->pointer, time, event);
@@ -736,8 +736,8 @@ static struct weston_pointer_grab_interface pointer_grab_interface = {
 
 static void
 input_ctrl_touch_set_west_focus(struct seat_ctx *ctx_seat,
-        struct weston_touch *touch, uint32_t time, int touch_id,
-        wl_fixed_t x, wl_fixed_t y)
+        struct weston_touch *touch, const struct timespec *time,
+        int touch_id, wl_fixed_t x, wl_fixed_t y)
 {
     /*Weston would have set the focus here*/
     struct ivisurface *surf_ctx;
@@ -804,8 +804,8 @@ input_ctrl_touch_clear_focus(struct seat_ctx *ctx_seat)
 }
 
 static void
-touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
-                wl_fixed_t x, wl_fixed_t y)
+touch_grab_down(struct weston_touch_grab *grab, const struct timespec *time,
+                int touch_id, wl_fixed_t x, wl_fixed_t y)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
 
@@ -818,7 +818,8 @@ touch_grab_down(struct weston_touch_grab *grab, uint32_t time, int touch_id,
 }
 
 static void
-touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
+touch_grab_up(struct weston_touch_grab *grab, const struct timespec *time,
+              int touch_id)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
     struct input_context *ctx = seat->input_ctx;
@@ -838,7 +839,7 @@ touch_grab_up(struct weston_touch_grab *grab, uint32_t time, int touch_id)
 }
 
 static void
-touch_grab_motion(struct weston_touch_grab *grab, uint32_t time, int touch_id,
+touch_grab_motion(struct weston_touch_grab *grab, const struct timespec *time, int touch_id,
                   wl_fixed_t x, wl_fixed_t y)
 {
     weston_touch_send_motion(grab->touch, time, touch_id, x, y);
