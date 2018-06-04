@@ -64,16 +64,8 @@ struct seat_focus {
     struct wl_list link;
 };
 
-struct input_controller {
-    struct wl_list link;
-    struct wl_resource *resource;
-    struct wl_client *client;
-    uint32_t id;
-    struct input_context *input_context;
-};
-
 struct input_context {
-    struct wl_list controller_list;
+    struct wl_list resource_list;
     struct wl_list seat_list;
     int successful_init_stage;
     struct ivishell *ivishell;
@@ -191,10 +183,9 @@ input_ctrl_get_seat_ctx(struct input_context *ctx, const char *nm_seat)
 static void
 send_input_acceptance(struct input_context *ctx, uint32_t surface_id, const char *seat, int32_t accepted)
 {
-    struct input_controller *controller;
-    wl_list_for_each(controller, &ctx->controller_list, link) {
-        ivi_input_send_input_acceptance(controller->resource,
-                                        surface_id, seat,
+    struct wl_resource *resource;
+    wl_resource_for_each(resource, &ctx->resource_list) {
+        ivi_input_send_input_acceptance(resource, surface_id, seat,
                                         accepted);
     }
 }
@@ -203,13 +194,12 @@ static void
 send_input_focus(struct input_context *ctx, struct ivisurface *surf_ctx,
                  ilmInputDevice device, t_ilm_bool enabled)
 {
-    struct input_controller *controller;
+    struct wl_resource *resource;
     const struct ivi_layout_interface *lyt_if = ctx->ivishell->interface;
     t_ilm_surface surface_id = lyt_if->get_id_of_surface(surf_ctx->layout_surface);
 
-    wl_list_for_each(controller, &ctx->controller_list, link) {
-        ivi_input_send_input_focus(controller->resource, surface_id,
-                                   device, enabled);
+    wl_resource_for_each(resource, &ctx->resource_list) {
+        ivi_input_send_input_focus(resource, surface_id, device, enabled);
     }
 }
 
@@ -890,7 +880,8 @@ handle_seat_updated_caps(struct wl_listener *listener, void *data)
     struct weston_touch *touch = weston_seat_get_touch(seat);
     struct seat_ctx *ctx = wl_container_of(listener, ctx,
                                            updated_caps_listener);
-    struct input_controller *controller;
+    struct input_context* input_ctx = ctx->input_ctx;
+    struct wl_resource *resource;
 
     if (keyboard && keyboard != ctx->keyboard_grab.keyboard) {
         weston_keyboard_start_grab(keyboard, &ctx->keyboard_grab);
@@ -902,8 +893,8 @@ handle_seat_updated_caps(struct wl_listener *listener, void *data)
         weston_touch_start_grab(touch, &ctx->touch_grab);
     }
 
-    wl_list_for_each(controller, &ctx->input_ctx->controller_list, link) {
-        ivi_input_send_seat_capabilities(controller->resource,
+    wl_resource_for_each(resource, &input_ctx->resource_list) {
+        ivi_input_send_seat_capabilities(resource,
                                          seat->seat_name,
                                          get_seat_capabilities(seat));
     }
@@ -914,7 +905,7 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
 {
     struct seat_ctx *ctx = wl_container_of(listener, ctx, destroy_listener);
     struct weston_seat *seat = data;
-    struct input_controller *controller;
+    struct wl_resource *resource;
     struct input_context* input_ctx = ctx->input_ctx;
     struct ivisurface *surf;
 
@@ -931,8 +922,8 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
          remove_if_seat_accepted(surf, ctx->name_seat);
     }
 
-    wl_list_for_each(controller, &ctx->input_ctx->controller_list, link) {
-        ivi_input_send_seat_destroyed(controller->resource,
+    wl_resource_for_each(resource, &input_ctx->resource_list) {
+        ivi_input_send_seat_destroyed(resource,
                                       seat->seat_name);
     }
     wl_list_remove(&ctx->seat_node);
@@ -946,7 +937,7 @@ handle_seat_create(struct wl_listener *listener, void *data)
     struct weston_seat *seat = data;
     struct input_context *input_ctx = wl_container_of(listener, input_ctx,
                                                       seat_create_listener);
-    struct input_controller *controller;
+    struct wl_resource *resource;
     struct ivisurface *surf;
     const struct ivi_layout_interface *interface =
         input_ctx->ivishell->interface;
@@ -971,8 +962,8 @@ handle_seat_create(struct wl_listener *listener, void *data)
     ctx->updated_caps_listener.notify = &handle_seat_updated_caps;
     wl_signal_add(&seat->updated_caps_signal, &ctx->updated_caps_listener);
 
-    wl_list_for_each(controller, &input_ctx->controller_list, link) {
-        ivi_input_send_seat_created(controller->resource,
+    wl_resource_for_each(resource, &input_ctx->resource_list) {
+        ivi_input_send_seat_created(resource,
                                     seat->seat_name,
                                     get_seat_capabilities(seat));
     }
@@ -1044,11 +1035,7 @@ handle_surface_create(struct wl_listener *listener, void *data)
 static void
 unbind_resource_controller(struct wl_resource *resource)
 {
-    struct input_controller *controller = wl_resource_get_user_data(resource);
-
-    wl_list_remove(&controller->link);
-
-    free(controller);
+    wl_list_remove(wl_resource_get_link(resource));
 }
 
 static void
@@ -1085,8 +1072,7 @@ input_set_input_focus(struct wl_client *client,
                                  uint32_t surface, uint32_t device,
                                  int32_t enabled)
 {
-    struct input_controller *controller = wl_resource_get_user_data(resource);
-    struct input_context *ctx = controller->input_context;
+    struct input_context *ctx = wl_resource_get_user_data(resource);
     setup_input_focus(ctx, surface, device, enabled);
 }
 
@@ -1174,8 +1160,7 @@ input_set_input_acceptance(struct wl_client *client,
                                       uint32_t surface, const char *seat,
                                       int32_t accepted)
 {
-    struct input_controller *controller = wl_resource_get_user_data(resource);
-    struct input_context *ctx = controller->input_context;
+    struct input_context *ctx = wl_resource_get_user_data(resource);
     setup_input_acceptance(ctx, surface, seat, accepted);
 }
 
@@ -1189,52 +1174,39 @@ bind_ivi_input(struct wl_client *client, void *data,
                uint32_t version, uint32_t id)
 {
     struct input_context *ctx = data;
-    struct input_controller *controller;
     struct weston_seat *seat;
+    struct wl_resource *resource;
     struct ivisurface *ivisurface;
     const struct ivi_layout_interface *interface =
         ctx->ivishell->interface;
     struct seat_focus *st_focus;
     uint32_t ivi_surf_id;
 
-    controller = calloc(1, sizeof *controller);
-    if (controller == NULL) {
-        weston_log("%s: Failed to allocate memory for controller\n",
-                   __FUNCTION__);
-        return;
-    }
+    resource = wl_resource_create(client, &ivi_input_interface, 1, id);
+    wl_resource_set_implementation(resource, &input_implementation,
+                                   ctx, unbind_resource_controller);
 
-    controller->input_context = ctx;
-    controller->resource =
-        wl_resource_create(client, &ivi_input_interface, 1, id);
-    wl_resource_set_implementation(controller->resource, &input_implementation,
-                                   controller, unbind_resource_controller);
-
-    controller->client = client;
-    controller->id = id;
-
-    wl_list_insert(&ctx->controller_list, &controller->link);
+    wl_list_insert(&ctx->resource_list, wl_resource_get_link(resource));
 
     /* Send seat events for all known seats to the client */
     wl_list_for_each(seat, &ctx->ivishell->compositor->seat_list, link) {
-        ivi_input_send_seat_created(controller->resource,
-                                               seat->seat_name,
-                                               get_seat_capabilities(seat));
+        ivi_input_send_seat_created(resource, seat->seat_name,
+                                    get_seat_capabilities(seat));
     }
     /* Send focus events for all known surfaces to the client */
     wl_list_for_each(ivisurface, &ctx->ivishell->list_surface, link) {
         ivi_surf_id = interface->get_id_of_surface(ivisurface->layout_surface);
         wl_list_for_each(st_focus, &ivisurface->accepted_seat_list, link) {
-            ivi_input_send_input_focus(controller->resource,
-                                ivi_surf_id, st_focus->focus, ILM_TRUE);
+            ivi_input_send_input_focus(resource, ivi_surf_id,
+                                       st_focus->focus, ILM_TRUE);
         }
     }
     /* Send acceptance events for all known surfaces to the client */
     wl_list_for_each(ivisurface, &ctx->ivishell->list_surface, link) {
         ivi_surf_id = interface->get_id_of_surface(ivisurface->layout_surface);
         wl_list_for_each(st_focus, &ivisurface->accepted_seat_list, link) {
-            ivi_input_send_input_acceptance(controller->resource,
-                                ivi_surf_id, st_focus->seat_name, ILM_TRUE);
+            ivi_input_send_input_acceptance(resource, ivi_surf_id,
+                                            st_focus->seat_name, ILM_TRUE);
 
         }
     }
@@ -1247,15 +1219,13 @@ destroy_input_context(struct input_context *ctx)
     struct seat_ctx *tmp;
     struct ivisurface *surf_ctx;
     struct ivisurface *tmp_surf_ctx;
-    struct input_controller *controller;
-    struct input_controller *tmp_controller;
+    struct wl_resource *resource, *tmp_resource;
 
-    wl_list_for_each_safe(controller, tmp_controller,
-            &ctx->controller_list, link) {
+    wl_resource_for_each_safe(resource, tmp_resource, &ctx->resource_list) {
         /*We have set destroy function for this resource.
          * The below api will call unbind_resource_controller and
          * free up the controller structure*/
-        wl_resource_destroy(controller->resource);
+        wl_resource_destroy(resource);
     }
 
     wl_list_for_each_safe(surf_ctx, tmp_surf_ctx,
@@ -1329,7 +1299,7 @@ create_input_context(struct ivishell *shell)
     }
 
     ctx->ivishell = shell;
-    wl_list_init(&ctx->controller_list);
+    wl_list_init(&ctx->resource_list);
     wl_list_init(&ctx->seat_list);
 
     /* Add signal handlers for ivi surfaces. */
