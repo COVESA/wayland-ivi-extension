@@ -38,7 +38,6 @@
 #include "ivi-controller.h"
 
 struct seat_ctx {
-    char *name_seat;
     struct input_context *input_ctx;
     struct weston_keyboard_grab keyboard_grab;
     struct weston_pointer_grab pointer_grab;
@@ -172,7 +171,7 @@ input_ctrl_get_seat_ctx(struct input_context *ctx, const char *nm_seat)
     struct seat_ctx *ctx_seat;
     struct seat_ctx *ret_ctx = NULL;
     wl_list_for_each(ctx_seat, &ctx->seat_list, seat_node) {
-        if (0 == strcmp(ctx_seat->name_seat, nm_seat)) {
+        if (0 == strcmp(ctx_seat->west_seat->seat_name, nm_seat)) {
             ret_ctx = ctx_seat;
             break;
         }
@@ -341,7 +340,7 @@ input_ctrl_kbd_leave_surf(struct seat_ctx *ctx_seat,
     struct input_context *ctx = ctx_seat->input_ctx;
     struct seat_focus *st_focus;
 
-    st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
+    st_focus = get_accepted_seat(surf_ctx, ctx_seat->west_seat->seat_name);
 
     if ((NULL != st_focus)
         && ((st_focus->focus & ILM_INPUT_DEVICE_KEYBOARD))) {
@@ -367,7 +366,7 @@ input_ctrl_kbd_enter_surf(struct seat_ctx *ctx_seat,
     struct seat_focus *st_focus;
     uint32_t serial;
 
-    st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
+    st_focus = get_accepted_seat(surf_ctx, ctx_seat->west_seat->seat_name);
     if ((NULL != st_focus) &&
         (!(st_focus->focus & ILM_INPUT_DEVICE_KEYBOARD))) {
         serial = wl_display_next_serial(ctx->ivishell->compositor->wl_display);
@@ -498,7 +497,7 @@ input_ctrl_snd_focus_to_controller(struct ivisurface *surf_ctx,
     struct seat_focus *st_focus = NULL;
 
     if (NULL != surf_ctx) {
-        st_focus = get_accepted_seat(surf_ctx, ctx_seat->name_seat);
+        st_focus = get_accepted_seat(surf_ctx, ctx_seat->west_seat->seat_name);
         /* Send focus lost event to the surface which has lost the focus*/
         if (NULL != st_focus) {
             if (ILM_TRUE == enabled) {
@@ -919,7 +918,7 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
     /* Remove seat acceptance from surfaces which have input acceptance from
      * this seat */
     wl_list_for_each(surf, &input_ctx->ivishell->list_surface, link) {
-         remove_if_seat_accepted(surf, ctx->name_seat);
+         remove_if_seat_accepted(surf, ctx->west_seat->seat_name);
     }
 
     wl_resource_for_each(resource, &input_ctx->resource_list) {
@@ -927,7 +926,6 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
                                       seat->seat_name);
     }
     wl_list_remove(&ctx->seat_node);
-    free(ctx->name_seat);
     free(ctx);
 }
 
@@ -948,7 +946,6 @@ handle_seat_create(struct wl_listener *listener, void *data)
     }
 
     ctx->input_ctx = input_ctx;
-    ctx->name_seat = strdup(seat->seat_name);
     ctx->west_seat = seat;
 
     ctx->keyboard_grab.interface = &keyboard_grab_interface;
@@ -970,7 +967,7 @@ handle_seat_create(struct wl_listener *listener, void *data)
 
     /* If default seat is created, we have to add it to the accepted_seat_list
      * of all surfaces. Also we have to send an acceptance event to all clients */
-    if (!strcmp(ctx->name_seat, "default")) {
+    if (!strcmp(ctx->west_seat->seat_name, "default")) {
         wl_list_for_each(surf, &input_ctx->ivishell->list_surface, link) {
             add_accepted_seat(surf, "default");
             send_input_acceptance(input_ctx,
@@ -1231,7 +1228,6 @@ destroy_input_context(struct input_context *ctx)
         wl_list_remove(&seat->seat_node);
         wl_list_remove(&seat->destroy_listener.link);
         wl_list_remove(&seat->updated_caps_listener.link);
-        free(seat->name_seat);
         free(seat);
     }
     wl_list_remove(&ctx->seat_create_listener.link);
