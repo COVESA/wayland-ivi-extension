@@ -1193,21 +1193,14 @@ bind_ivi_input(struct wl_client *client, void *data,
         ivi_input_send_seat_created(resource, seat->seat_name,
                                     get_seat_capabilities(seat));
     }
-    /* Send focus events for all known surfaces to the client */
+    /* Send focus and acceptance events for all known surfaces to the client */
     wl_list_for_each(ivisurface, &ctx->ivishell->list_surface, link) {
         ivi_surf_id = interface->get_id_of_surface(ivisurface->layout_surface);
         wl_list_for_each(st_focus, &ivisurface->accepted_seat_list, link) {
             ivi_input_send_input_focus(resource, ivi_surf_id,
                                        st_focus->focus, ILM_TRUE);
-        }
-    }
-    /* Send acceptance events for all known surfaces to the client */
-    wl_list_for_each(ivisurface, &ctx->ivishell->list_surface, link) {
-        ivi_surf_id = interface->get_id_of_surface(ivisurface->layout_surface);
-        wl_list_for_each(st_focus, &ivisurface->accepted_seat_list, link) {
             ivi_input_send_input_acceptance(resource, ivi_surf_id,
                                             st_focus->seat_name, ILM_TRUE);
-
         }
     }
 }
