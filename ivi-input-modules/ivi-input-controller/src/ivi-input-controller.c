@@ -58,7 +58,7 @@ struct seat_ctx {
 };
 
 struct seat_focus {
-    char *seat_name;
+    struct seat_ctx *seat_ctx;
     ilmInputDevice focus;
     struct wl_list link;
 };
@@ -95,14 +95,13 @@ struct wl_keyboard_data {
 };
 
 static struct seat_focus *
-get_accepted_seat(struct ivisurface *surface, const char *seat)
+get_accepted_seat(struct ivisurface *surface, struct seat_ctx *seat_ctx)
 {
     struct seat_focus *st_focus;
     struct seat_focus *ret_focus = NULL;
 
     wl_list_for_each(st_focus, &surface->accepted_seat_list, link) {
-
-        if (strcmp(st_focus->seat_name, seat) == 0) {
+        if (st_focus->seat_ctx == seat_ctx) {
             ret_focus = st_focus;
             break;
         }
@@ -111,35 +110,28 @@ get_accepted_seat(struct ivisurface *surface, const char *seat)
 }
 
 static int
-add_accepted_seat(struct ivisurface *surface, const char *seat)
+add_accepted_seat(struct ivisurface *surface, struct seat_ctx *seat_ctx)
 {
     const struct ivi_layout_interface *interface =
         surface->shell->interface;
     struct seat_focus *st_focus;
     int ret = 0;
 
-    st_focus = get_accepted_seat(surface, seat);
+    st_focus = get_accepted_seat(surface, seat_ctx);
     if (st_focus == NULL) {
         st_focus = calloc(1, sizeof(*st_focus));
 
         if (NULL != st_focus) {
-            st_focus->seat_name = strdup(seat);
-            if (NULL != st_focus->seat_name) {
-                wl_list_insert(&surface->accepted_seat_list,
-                        &st_focus->link);
-                ret = 1;
-            } else {
-                free(st_focus);
-                weston_log("%s Failed to allocate memory for seat addition of surface %d",
-                        __FUNCTION__, interface->get_id_of_surface(surface->layout_surface));
-            }
+            st_focus->seat_ctx = seat_ctx;
+            wl_list_insert(&surface->accepted_seat_list, &st_focus->link);
+            ret = 1;
        } else {
             weston_log("%s Failed to allocate memory for seat addition of surface %d",
                     __FUNCTION__, interface->get_id_of_surface(surface->layout_surface));
         }
     } else {
         weston_log("%s: Warning: seat '%s' is already accepted by surface %d\n",
-                   __FUNCTION__, seat,
+                   __FUNCTION__, seat_ctx->west_seat->seat_name,
                    interface->get_id_of_surface(surface->layout_surface));
         ret = 1;
     }
@@ -148,22 +140,20 @@ add_accepted_seat(struct ivisurface *surface, const char *seat)
 }
 
 static int
-remove_if_seat_accepted(struct ivisurface *surface, const char *seat)
+remove_if_seat_accepted(struct ivisurface *surface, struct seat_ctx *seat_ctx)
 {
     int ret = 0;
 
-    struct seat_focus *st_focus = get_accepted_seat(surface, seat);
+    struct seat_focus *st_focus = get_accepted_seat(surface, seat_ctx);
 
     if (NULL != st_focus) {
         ret = 1;
         wl_list_remove(&st_focus->link);
-        free(st_focus->seat_name);
         free(st_focus);
 
     }
     return ret;
 }
-
 
 struct seat_ctx*
 input_ctrl_get_seat_ctx(struct input_context *ctx, const char *nm_seat)
@@ -340,7 +330,7 @@ input_ctrl_kbd_leave_surf(struct seat_ctx *ctx_seat,
     struct input_context *ctx = ctx_seat->input_ctx;
     struct seat_focus *st_focus;
 
-    st_focus = get_accepted_seat(surf_ctx, ctx_seat->west_seat->seat_name);
+    st_focus = get_accepted_seat(surf_ctx, ctx_seat);
 
     if ((NULL != st_focus)
         && ((st_focus->focus & ILM_INPUT_DEVICE_KEYBOARD))) {
@@ -366,7 +356,7 @@ input_ctrl_kbd_enter_surf(struct seat_ctx *ctx_seat,
     struct seat_focus *st_focus;
     uint32_t serial;
 
-    st_focus = get_accepted_seat(surf_ctx, ctx_seat->west_seat->seat_name);
+    st_focus = get_accepted_seat(surf_ctx, ctx_seat);
     if ((NULL != st_focus) &&
         (!(st_focus->focus & ILM_INPUT_DEVICE_KEYBOARD))) {
         serial = wl_display_next_serial(ctx->ivishell->compositor->wl_display);
@@ -428,7 +418,7 @@ keyboard_grab_key(struct weston_keyboard_grab *grab, const struct timespec *time
 
     wl_list_for_each(surf_ctx, &seat_ctx->input_ctx->ivishell->list_surface, link) {
 
-        st_focus = get_accepted_seat(surf_ctx, grab->keyboard->seat->seat_name);
+        st_focus = get_accepted_seat(surf_ctx, seat_ctx);
         if (NULL == st_focus)
             continue;
 
@@ -462,7 +452,7 @@ keyboard_grab_modifiers(struct weston_keyboard_grab *grab, uint32_t serial,
 
     wl_list_for_each(surf_ctx, &seat_ctx->input_ctx->ivishell->list_surface, link) {
 
-        st_focus = get_accepted_seat(surf_ctx, grab->keyboard->seat->seat_name);
+        st_focus = get_accepted_seat(surf_ctx, seat_ctx);
         if (NULL == st_focus)
             continue;
 
@@ -497,7 +487,7 @@ input_ctrl_snd_focus_to_controller(struct ivisurface *surf_ctx,
     struct seat_focus *st_focus = NULL;
 
     if (NULL != surf_ctx) {
-        st_focus = get_accepted_seat(surf_ctx, ctx_seat->west_seat->seat_name);
+        st_focus = get_accepted_seat(surf_ctx, ctx_seat);
         /* Send focus lost event to the surface which has lost the focus*/
         if (NULL != st_focus) {
             if (ILM_TRUE == enabled) {
@@ -743,7 +733,7 @@ input_ctrl_touch_set_west_focus(struct seat_ctx *ctx_seat,
             st_focus = input_ctrl_snd_focus_to_controller(surf_ctx, ctx_seat,
                     ILM_INPUT_DEVICE_TOUCH, ILM_TRUE);
         } else {
-            st_focus = get_accepted_seat(surf_ctx, touch->seat->seat_name);
+            st_focus = get_accepted_seat(surf_ctx, ctx_seat);
         }
 
         if (st_focus != NULL) {
@@ -918,7 +908,7 @@ handle_seat_destroy(struct wl_listener *listener, void *data)
     /* Remove seat acceptance from surfaces which have input acceptance from
      * this seat */
     wl_list_for_each(surf, &input_ctx->ivishell->list_surface, link) {
-         remove_if_seat_accepted(surf, ctx->west_seat->seat_name);
+         remove_if_seat_accepted(surf, ctx);
     }
 
     wl_resource_for_each(resource, &input_ctx->resource_list) {
@@ -969,7 +959,7 @@ handle_seat_create(struct wl_listener *listener, void *data)
      * of all surfaces. Also we have to send an acceptance event to all clients */
     if (!strcmp(ctx->west_seat->seat_name, "default")) {
         wl_list_for_each(surf, &input_ctx->ivishell->list_surface, link) {
-            add_accepted_seat(surf, "default");
+            add_accepted_seat(surf, ctx);
             send_input_acceptance(input_ctx,
                                  interface->get_id_of_surface(surf->layout_surface),
                                  "default", ILM_TRUE);
@@ -986,13 +976,12 @@ input_ctrl_free_surf_ctx(struct input_context *ctx, struct ivisurface *surf_ctx)
 
     wl_list_for_each_safe(st_focus, tmp_st_focus,
             &surf_ctx->accepted_seat_list, link) {
-        seat_ctx = input_ctrl_get_seat_ctx(ctx, st_focus->seat_name);
+        seat_ctx = st_focus->seat_ctx;
 
         if (seat_ctx->forced_ptr_focus_surf == surf_ctx)
             seat_ctx->forced_ptr_focus_surf = NULL;
 
         wl_list_remove(&st_focus->link);
-        free(st_focus->seat_name);
         free(st_focus);
     }
 }
@@ -1022,7 +1011,7 @@ handle_surface_create(struct wl_listener *listener, void *data)
 
     seat_ctx = input_ctrl_get_seat_ctx(input_ctx, "default");
     if (seat_ctx) {
-        add_accepted_seat(ivisurface, "default");
+        add_accepted_seat(ivisurface, seat_ctx);
         send_input_acceptance(input_ctx,
                               interface->get_id_of_surface(ivisurface->layout_surface),
                               "default", ILM_TRUE);
@@ -1046,7 +1035,7 @@ setup_input_focus(struct input_context *ctx, uint32_t surface,
     surf = input_ctrl_get_surf_ctx_from_id(ctx, surface);
     if (NULL != surf) {
         wl_list_for_each(st_focus, &surf->accepted_seat_list, link) {
-            ctx_seat = input_ctrl_get_seat_ctx(ctx, st_focus->seat_name);
+            ctx_seat = st_focus->seat_ctx;
             if (device & ILM_INPUT_DEVICE_POINTER) {
                 input_ctrl_ptr_set_focus_surf(ctx_seat, surf, enabled);
             }
@@ -1100,7 +1089,7 @@ setup_input_acceptance(struct input_context *ctx,
 
     if (NULL != ivisurface) {
         if (accepted == ILM_TRUE) {
-            found_seat = add_accepted_seat(ivisurface, seat);
+            found_seat = add_accepted_seat(ivisurface, ctx_seat);
 
             pointer = weston_seat_get_pointer(ctx_seat->west_seat);
             if (NULL != pointer) {
@@ -1112,7 +1101,7 @@ setup_input_acceptance(struct input_context *ctx,
                 }
             }
         } else {
-            st_focus = get_accepted_seat(ivisurface, seat);
+            st_focus = get_accepted_seat(ivisurface, ctx_seat);
 
             if (NULL != st_focus) {
                 w_surf = interface->surface_get_weston_surface(ivisurface->
@@ -1142,7 +1131,7 @@ setup_input_acceptance(struct input_context *ctx,
                     }
                 }
 
-                found_seat = remove_if_seat_accepted(ivisurface, seat);
+                found_seat = remove_if_seat_accepted(ivisurface, ctx_seat);
             }
         }
     }
@@ -1197,7 +1186,8 @@ bind_ivi_input(struct wl_client *client, void *data,
             ivi_input_send_input_focus(resource, ivi_surf_id,
                                        st_focus->focus, ILM_TRUE);
             ivi_input_send_input_acceptance(resource, ivi_surf_id,
-                                            st_focus->seat_name, ILM_TRUE);
+                                            st_focus->seat_ctx->west_seat->seat_name,
+                                            ILM_TRUE);
         }
     }
 }
