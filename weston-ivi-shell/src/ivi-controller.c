@@ -40,9 +40,6 @@
 #include "ivi-controller.h"
 
 #include "wayland-util.h"
-#ifdef IVI_SHARE_ENABLE
-#  include "ivi-share.h"
-#endif
 
 #define IVI_CLIENT_SURFACE_ID_ENV_NAME "IVI_CLIENT_SURFACE_ID"
 
@@ -2197,13 +2194,6 @@ wet_module_init(struct weston_compositor *compositor,
     }
 
     init_ivi_shell(compositor, shell);
-
-#ifdef IVI_SHARE_ENABLE
-    if (setup_buffer_sharing(compositor, shell->interface) < 0) {
-        free(shell);
-        return -1;
-    }
-#endif
 
     if (setup_ivi_controller_server(compositor, shell)) {
         destroy_screen_ids(shell);

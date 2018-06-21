@@ -2,7 +2,6 @@ Sections in this file describe:
 - How to build
 - Example applications
 - How to test
-- Features
 
 How to build on different platforms
 ====================================
@@ -61,15 +60,3 @@ How to test
    Example: cmake -DBUILD_ILM_API_TESTS
 2. After starting up Weston run the testsuite.
    Example: <your installation path>/bin/ivi-layermanagement-api-test
-
-Features
-====================================
-ivi_share protocol:
- ivi-controller provides ivi_share protocol to share native buffer of other clients.
- A application which shared native buffer can create texture from it using EGL extension
- API (eglCreateImageKHR) and GL extension API (glEGLImageTargetTexture2DOES).
- And the texture can manipulate in your rendering scene.
- Example: <your installtion path>/bin/simple-ivi-share
-
- To build this feature, add the following line into toolchain file.
- option (IVI_SHARE "Enable ivi_share protocol" ON)

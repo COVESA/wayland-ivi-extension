@@ -80,43 +80,6 @@ install(
 
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_API_VERSION} SOVERSION ${ILM_API_VERSION})
 
-if (IVI_SHARE)
-    project (ivi-share)
-
-    add_custom_command(
-        OUTPUT  ivi-share-client-protocol.h
-        COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
-                < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-                > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
-        DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-    )
-
-    add_custom_command(
-        OUTPUT  ivi-share-protocol.c
-        COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
-                < ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-                > ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
-        DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-share.xml
-    )
-
-    add_library(${PROJECT_NAME} SHARED
-        ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
-        ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-protocol.c
-    )
-
-    install(
-        TARGETS ${PROJECT_NAME}
-        LIBRARY DESTINATION lib${LIB_SUFFIX}
-    )
-
-    install(
-        FILES ${CMAKE_CURRENT_BINARY_DIR}/ivi-share-client-protocol.h
-        DESTINATION include
-    )
-
-    SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_API_VERSION} SOVERSION ${ILM_API_VERSION})
-endif (IVI_SHARE)
-
 #=============================================================================================
 # generate pkg-config file for ivi-application API
 #=============================================================================================
