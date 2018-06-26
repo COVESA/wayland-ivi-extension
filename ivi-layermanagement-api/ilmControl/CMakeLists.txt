@@ -83,13 +83,11 @@ add_library(${PROJECT_NAME} SHARED
 )
 
 add_dependencies(${PROJECT_NAME}
-    ilmCommon
     ${WAYLAND_CLIENT_LIBRARIES}
 )
 
 set(LIBS
     ${LIBS}
-    ilmCommon
     rt
     dl
     ${CMAKE_THREAD_LIBS_INIT}

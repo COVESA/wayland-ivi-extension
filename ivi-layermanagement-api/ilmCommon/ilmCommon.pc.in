@@ -6,6 +6,7 @@ includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/ilm
 Name: ilmCommon
 Description: Library for common part of ilm api
 Version: @ILM_API_VERSION@
+Requires: ilmControl
 Requires.private: wayland-client
 Libs: -L${libdir} -lilmCommon
 Cflags: -I${includedir}
