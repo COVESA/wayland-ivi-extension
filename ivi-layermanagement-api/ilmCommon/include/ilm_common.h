@@ -28,6 +28,8 @@ extern "C" {
 
 /**
  * \brief Initializes the IVI LayerManagement Client.
+ *        in case of wayland this API will create a connection to wayland server
+ *        and maintain own instance of the wl_display
  * \ingroup ilmCommon
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if a connection can not be established to the services.
@@ -36,6 +38,8 @@ ilmErrorTypes ilm_init(void);
 
 /**
  * \brief Initializes the IVI LayerManagement Client.
+ *        in case of wayland nativedisplay is the wl_display and connection
+ *        will be created to the corresponding wayland server
  * \ingroup ilmCommon
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if a connection can not be established to the services.
@@ -52,6 +56,8 @@ t_ilm_bool ilm_isInitialized(void);
 
 /**
  * \brief Commit all changes and execute all enqueued commands since last commit.
+ *        All enqueued command on the server site will be executed,
+ *        regardless which client enqueued them
  * \ingroup ilmCommon
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
