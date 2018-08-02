@@ -470,6 +470,17 @@ keyboard_grab_modifiers(struct weston_keyboard_grab *grab, uint32_t serial,
 static void
 keyboard_grab_cancel(struct weston_keyboard_grab *grab)
 {
+    struct seat_ctx *ctx_seat = wl_container_of(grab, ctx_seat, keyboard_grab);
+    struct ivisurface *surf;
+    struct weston_surface *w_surf;
+    const struct ivi_layout_interface *interface =
+                                ctx_seat->input_ctx->ivishell->interface;
+
+    wl_list_for_each(surf, &ctx_seat->input_ctx->ivishell->list_surface,
+                     link) {
+        w_surf = interface->surface_get_weston_surface(surf->layout_surface);
+        input_ctrl_kbd_leave_surf(ctx_seat, surf, w_surf);
+    }
 }
 
 static struct weston_keyboard_grab_interface keyboard_grab_interface = {
@@ -701,6 +712,8 @@ pointer_grab_frame(struct weston_pointer_grab *grab)
 static void
 pointer_grab_cancel(struct weston_pointer_grab *grab)
 {
+    struct seat_ctx *ctx_seat = wl_container_of(grab, ctx_seat, pointer_grab);
+    input_ctrl_ptr_clear_focus(ctx_seat);
 }
 
 static struct weston_pointer_grab_interface pointer_grab_interface = {
@@ -833,6 +846,8 @@ touch_grab_frame(struct weston_touch_grab *grab)
 static void
 touch_grab_cancel(struct weston_touch_grab *grab)
 {
+    struct seat_ctx *ctx_seat = wl_container_of(grab, ctx_seat, touch_grab);
+    input_ctrl_touch_clear_focus(ctx_seat);
 }
 
 static struct weston_touch_grab_interface touch_grab_interface = {
@@ -875,11 +890,22 @@ handle_seat_updated_caps(struct wl_listener *listener, void *data)
     if (keyboard && keyboard != ctx->keyboard_grab.keyboard) {
         weston_keyboard_start_grab(keyboard, &ctx->keyboard_grab);
     }
+    else if (!keyboard && ctx->keyboard_grab.keyboard) {
+        ctx->keyboard_grab.keyboard = NULL;
+    }
+
     if (pointer && pointer != ctx->pointer_grab.pointer) {
         weston_pointer_start_grab(pointer, &ctx->pointer_grab);
     }
+    else if (!pointer && ctx->pointer_grab.pointer) {
+        ctx->pointer_grab.pointer = NULL;
+    }
+
     if (touch && touch != ctx->touch_grab.touch) {
         weston_touch_start_grab(touch, &ctx->touch_grab);
+    }
+    else if (!touch && ctx->touch_grab.touch) {
+        ctx->touch_grab.touch = NULL;
     }
 
     wl_resource_for_each(resource, &input_ctx->resource_list) {
@@ -890,33 +916,45 @@ handle_seat_updated_caps(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_seat_destroy(struct wl_listener *listener, void *data)
+destroy_seat(struct seat_ctx *ctx_seat)
 {
-    struct seat_ctx *ctx = wl_container_of(listener, ctx, destroy_listener);
-    struct weston_seat *seat = data;
-    struct wl_resource *resource;
-    struct input_context* input_ctx = ctx->input_ctx;
     struct ivisurface *surf;
-
-    if (ctx->keyboard_grab.keyboard)
-        keyboard_grab_cancel(&ctx->keyboard_grab);
-    if (ctx->pointer_grab.pointer)
-        pointer_grab_cancel(&ctx->pointer_grab);
-    if (ctx->touch_grab.touch)
-        touch_grab_cancel(&ctx->touch_grab);
+    struct wl_resource *resource;
+    if (ctx_seat->keyboard_grab.keyboard) {
+    	keyboard_grab_cancel(&ctx_seat->keyboard_grab);
+        weston_keyboard_end_grab(ctx_seat->keyboard_grab.keyboard);
+    }
+    if (ctx_seat->pointer_grab.pointer) {
+    	pointer_grab_cancel(&ctx_seat->pointer_grab);
+        weston_pointer_end_grab(ctx_seat->pointer_grab.pointer);
+    }
+    if (ctx_seat->touch_grab.touch) {
+    	touch_grab_cancel(&ctx_seat->touch_grab);
+        weston_touch_end_grab(ctx_seat->touch_grab.touch);
+    }
 
     /* Remove seat acceptance from surfaces which have input acceptance from
      * this seat */
-    wl_list_for_each(surf, &input_ctx->ivishell->list_surface, link) {
-         remove_if_seat_accepted(surf, ctx);
+    wl_list_for_each(surf, &ctx_seat->input_ctx->ivishell->list_surface,
+                     link) {
+         remove_if_seat_accepted(surf, ctx_seat);
     }
 
-    wl_resource_for_each(resource, &input_ctx->resource_list) {
+    wl_resource_for_each(resource, &ctx_seat->input_ctx->resource_list) {
         ivi_input_send_seat_destroyed(resource,
-                                      seat->seat_name);
+                                      ctx_seat->west_seat->seat_name);
     }
-    wl_list_remove(&ctx->seat_node);
-    free(ctx);
+    wl_list_remove(&ctx_seat->destroy_listener.link);
+    wl_list_remove(&ctx_seat->updated_caps_listener.link);
+    wl_list_remove(&ctx_seat->seat_node);
+    free(ctx_seat);
+}
+
+static void
+handle_seat_destroy(struct wl_listener *listener, void *data)
+{
+    struct seat_ctx *ctx = wl_container_of(listener, ctx, destroy_listener);
+    destroy_seat(ctx);
 }
 
 static void
@@ -1201,28 +1239,26 @@ destroy_input_context(struct input_context *ctx)
     struct ivisurface *tmp_surf_ctx;
     struct wl_resource *resource, *tmp_resource;
 
+    wl_list_for_each_safe(seat, tmp, &ctx->seat_list, seat_node) {
+        destroy_seat(seat);
+    }
+
+    wl_list_for_each_safe(surf_ctx, tmp_surf_ctx,
+            &ctx->ivishell->list_surface, link) {
+        input_ctrl_free_surf_ctx(ctx, surf_ctx);
+    }
+
+    wl_list_remove(&ctx->seat_create_listener.link);
+    wl_list_remove(&ctx->surface_created.link);
+    wl_list_remove(&ctx->surface_destroyed.link);
+    wl_list_remove(&ctx->compositor_destroy_listener.link);
+
     wl_resource_for_each_safe(resource, tmp_resource, &ctx->resource_list) {
         /*We have set destroy function for this resource.
          * The below api will call unbind_resource_controller and
          * free up the controller structure*/
         wl_resource_destroy(resource);
     }
-
-    wl_list_for_each_safe(surf_ctx, tmp_surf_ctx,
-            &ctx->ivishell->list_surface, link) {
-
-        input_ctrl_free_surf_ctx(ctx, surf_ctx);
-    }
-
-    wl_list_for_each_safe(seat, tmp, &ctx->seat_list, seat_node) {
-        wl_list_remove(&seat->seat_node);
-        wl_list_remove(&seat->destroy_listener.link);
-        wl_list_remove(&seat->updated_caps_listener.link);
-        free(seat);
-    }
-    wl_list_remove(&ctx->seat_create_listener.link);
-    wl_list_remove(&ctx->surface_created.link);
-    wl_list_remove(&ctx->surface_destroyed.link);
     free(ctx);
 }
 
