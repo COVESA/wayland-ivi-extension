@@ -2095,9 +2095,6 @@ init_ivi_shell(struct weston_compositor *ec, struct ivishell *shell)
     wl_signal_add(&ec->output_destroyed_signal, &shell->output_destroyed);
     wl_signal_add(&ec->output_resized_signal, &shell->output_resized);
 
-    shell->destroy_listener.notify = ivi_shell_destroy;
-    wl_signal_add(&ec->destroy_signal, &shell->destroy_listener);
-
     wl_signal_init(&shell->ivisurface_created_signal);
     wl_signal_init(&shell->ivisurface_removed_signal);
 }
@@ -2206,6 +2203,12 @@ wet_module_init(struct weston_compositor *compositor,
         free(shell);
         return -1;
     }
+    /* add compositor destroy signal after loading input
+     * modules, to ensure input module is the first one to
+     * de-initialize
+     */
+    shell->destroy_listener.notify = ivi_shell_destroy;
+    wl_signal_add(&compositor->destroy_signal, &shell->destroy_listener);
 
     if (shell->bkgnd_surface_id && shell->ivi_client_name) {
         loop = wl_display_get_event_loop(compositor->wl_display);
