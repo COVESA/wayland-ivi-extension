@@ -2023,7 +2023,18 @@ ivi_shell_destroy(struct wl_listener *listener, void *data)
 	struct ivishell *shell =
 		wl_container_of(listener, shell, destroy_listener);
 
+	wl_list_remove(&shell->destroy_listener.link);
+
+	wl_list_remove(&shell->output_created.link);
 	wl_list_remove(&shell->output_destroyed.link);
+	wl_list_remove(&shell->output_resized.link);
+
+	wl_list_remove(&shell->surface_configured.link);
+	wl_list_remove(&shell->surface_removed.link);
+	wl_list_remove(&shell->surface_created.link);
+
+	wl_list_remove(&shell->layer_removed.link);
+	wl_list_remove(&shell->layer_created.link);
 
 	wl_list_for_each_safe(ivisurf, ivisurf_next,
 			      &shell->list_surface, link) {
