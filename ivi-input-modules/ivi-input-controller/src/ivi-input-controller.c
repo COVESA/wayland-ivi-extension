@@ -255,7 +255,7 @@ input_ctrl_kbd_snd_event_resource(struct seat_ctx *ctx_seat,
 
         wl_keyboard_send_keymap(resource,
                        WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
-                       keyboard->xkb_info->keymap_fd,
+                       keyboard->xkb_info->ref_count,
                        keyboard->xkb_info->keymap_size);
 
         wl_keyboard_send_modifiers(resource,
