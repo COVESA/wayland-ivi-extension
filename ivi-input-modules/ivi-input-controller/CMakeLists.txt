@@ -23,7 +23,7 @@ project(ivi-input-controller)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
-pkg_check_modules(WESTON weston REQUIRED)
+pkg_check_modules(WESTON weston>=5.0.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
 GET_TARGET_PROPERTY(ILM_COMMON_INCLUDE_DIRS ilmCommon INCLUDE_DIRECTORIES)
