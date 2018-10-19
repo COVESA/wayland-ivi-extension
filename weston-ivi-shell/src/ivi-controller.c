@@ -1402,7 +1402,7 @@ controller_create_screen(struct wl_client *client,
                         struct wl_resource *output_resource,
                         uint32_t id)
 {
-    struct weston_output *weston_output =
+    struct weston_head *weston_head =
         wl_resource_get_user_data(output_resource);
     struct wl_resource *screen_resource;
     struct ivicontroller *ctrl = wl_resource_get_user_data(resource);
@@ -1410,7 +1410,7 @@ controller_create_screen(struct wl_client *client,
 
 
     wl_list_for_each(iviscrn, &ctrl->shell->list_screen, link) {
-        if (weston_output != iviscrn->output) {
+        if (weston_head->output != iviscrn->output) {
             continue;
         }
 

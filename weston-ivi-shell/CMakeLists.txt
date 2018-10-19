@@ -24,7 +24,7 @@ project(ivi-controller)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_SERVER wayland-server>=1.13.0 REQUIRED)
-pkg_check_modules(WESTON weston>=4.0.0 REQUIRED)
+pkg_check_modules(WESTON weston>=5.0.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
 find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
