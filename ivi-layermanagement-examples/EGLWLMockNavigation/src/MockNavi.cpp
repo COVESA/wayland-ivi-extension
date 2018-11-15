@@ -73,6 +73,8 @@ void MockNavi::generateCity()
     ShaderTexture* pShaderTexture = new ShaderTexture(projection);
     TextureLoader* carTexture = new TextureLoader;
     bool carTextureLoaded = carTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/car.bmp");
+    TextureLoader* streetTexture = new TextureLoader;
+    bool streetTextureLoaded = streetTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/street.bmp");
 
     // generate base plate
 	vec4f groundColor(0.8, 0.8, 0.6, 1.0);
@@ -83,9 +85,14 @@ void MockNavi::generateCity()
 
     // generate street z direction
     vec4f streetColor(0.0, 0.0, 0.0, 1.0);
-    vec3f streetPosition = vec3f(0.6 * CITY_GRID_SIZE, 0.0, 0.0);
-    vec3f streetSize = vec3f(CITY_GRID_SIZE * 0.6, 0.0, -CITY_GRID_SIZE * 2.0 * m_houseCount);
-    Street* obj = new Street(streetPosition, streetSize, streetColor, pShader);
+    vec3f streetPosition = vec3f(0.6 * CITY_GRID_SIZE, 0.001, 0.0);
+    vec3f streetSize = vec3f(CITY_GRID_SIZE * 0.6, 0.0, -CITY_GRID_SIZE * 2.0 * m_houseCount * 200.0);
+    Street* obj = nullptr;
+        if(streetTextureLoaded){
+            obj = new Street(streetPosition, streetSize, streetColor, pShaderTexture, streetTexture);
+        }else{
+            obj = new Street(streetPosition, streetSize, streetColor, pShader);
+    }
     m_renderList.push_back(obj);
 
     // generate streets x direction
@@ -94,7 +101,12 @@ void MockNavi::generateCity()
         vec4f streetColor(0.0, 0.0, 0.0, 1.0);
         vec3f streetPosition = vec3f(0.0, 0.0, 0.6 - z * CITY_GRID_SIZE);
         vec3f streetSize = vec3f(CITY_GRID_SIZE * 3, 0.0, CITY_GRID_SIZE * 0.6);
-        Street* obj = new Street(streetPosition, streetSize, streetColor, pShader);
+        Street* obj = nullptr;
+        if(streetTextureLoaded){
+            obj = new Street(streetPosition, streetSize, streetColor, pShaderTexture, streetTexture);
+        }else{
+            obj = new Street(streetPosition, streetSize, streetColor, pShader);
+        }
         m_renderList.push_back(obj);
         m_updateList.push_back(obj);
     }

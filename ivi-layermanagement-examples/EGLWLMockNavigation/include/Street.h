@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2010,2011 BMW Car IT GmbH
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +23,8 @@
 #include "IRenderable.h"
 #include "IUpdateable.h"
 #include "vec.h"
+#include "TextureLoader.h"
+#include "ShaderTexture.h"
 
 class ShaderBase;
 
@@ -29,6 +32,7 @@ class Street : public IRenderable, public IUpdateable
 {
 public:
     Street(vec3f position, vec3f size, vec4f color, ShaderBase* shader);
+    Street(vec3f position, vec3f size, vec4f color, ShaderTexture* shader, TextureLoader* texture, float numRepeats = 2.0);
     virtual ~Street() {}
 
     virtual void render();
@@ -41,6 +45,9 @@ private:
 
     vec3u m_index[2];
     vec3f m_vertex[4];
+    vec2f m_texCoords[4];
+    bool withTexture = false;
+    TextureLoader* texture = nullptr;
 
     ShaderBase* m_shader;
 };
