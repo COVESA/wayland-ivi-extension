@@ -22,6 +22,8 @@
 
 #include "IRenderable.h"
 #include "vec.h"
+#include "ShaderTexture.h"
+#include "TextureLoader.h"
 
 class ShaderBase;
 
@@ -29,6 +31,7 @@ class Car : public IRenderable
 {
 public:
     Car(vec3f position, vec3f size, vec4f color, ShaderBase* shader);
+    Car(vec3f position, vec3f size, vec4f color, ShaderTexture* shader, TextureLoader* texture);
     virtual ~Car() {}
 
     virtual void render();
@@ -40,8 +43,12 @@ private:
 
     vec4u m_index;
     vec3f m_vertex[4];
+    vec2f m_texCoords[4];
 
     ShaderBase* m_pShader;
+
+    TextureLoader* texture;
+    bool withTexture = false;
 };
 
 #endif /* _CAR_H */
