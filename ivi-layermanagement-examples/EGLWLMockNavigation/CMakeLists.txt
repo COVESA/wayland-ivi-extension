@@ -76,6 +76,7 @@ set (HEADER_FILES
     include/ShaderBase.h
     include/ShaderLighting.h
     include/TextureLoader.h
+    include/ShaderTexture.h
 )
 
 set (SRC_FILES
@@ -91,6 +92,7 @@ set (SRC_FILES
     src/ShaderLighting.cpp
     src/main.cpp
     src/TextureLoader.cpp
+    src/ShaderTexture.cpp
 )
 
 add_executable(${PROJECT_NAME}
