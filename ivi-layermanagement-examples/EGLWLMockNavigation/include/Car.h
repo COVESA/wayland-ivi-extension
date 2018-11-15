@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2010,2011 BMW Car IT GmbH
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,8 +38,8 @@ private:
     vec3f m_size;
     vec4f m_color;
 
-    vec3u m_index;
-    vec3f m_vertex[3];
+    vec4u m_index;
+    vec3f m_vertex[4];
 
     ShaderBase* m_pShader;
 };

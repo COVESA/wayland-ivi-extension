@@ -2,6 +2,7 @@
  *
  * Copyright 2010,2011 BMW Car IT GmbH
  * Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,25 +28,28 @@ using std::endl;
 
 #include <GLES2/gl2.h>
 
-
 Car::Car(vec3f position, vec3f size, vec4f color, ShaderBase* shader)
 : m_position(position)
 , m_size(size)
 , m_color(color)
-, m_index(0, 1, 2)
+, m_index(0, 1, 2, 3)
 , m_pShader(shader)
 {
 	m_vertex[0].x = 0.0;
 	m_vertex[0].y = 0.0;
 	m_vertex[0].z = 0.0;
 
-	m_vertex[1].x = 0.5 * m_size.x;
+	m_vertex[1].x = 0.1 * m_size.x;
 	m_vertex[1].y = 0.0;
 	m_vertex[1].z = -m_size.z;
 
-	m_vertex[2].x = m_size.x;
+	m_vertex[2].x = 0.9 * m_size.x;
 	m_vertex[2].y = 0.0;
-	m_vertex[2].z = 0.0;
+	m_vertex[2].z = -m_size.z;
+
+	m_vertex[3].x = m_size.x;
+	m_vertex[3].y = 0.0;
+	m_vertex[3].z = 0.0;
 }
 
 void Car::render()
@@ -55,5 +59,5 @@ void Car::render()
     // draw
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, m_vertex);
-    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, &m_index);
+    glDrawElements(GL_TRIANGLE_FAN, 4, GL_UNSIGNED_SHORT, &m_index);
 }
