@@ -94,9 +94,14 @@ Car::Car(vec3f position, vec3f size, vec4f color, ShaderTexture* shader, Texture
 
 void Car::render()
 {
-    m_pShader->use(&m_position, &m_color);
-
     // draw
+    if (withTexture) {
+        GLuint textureID = texture->getId();
+        ((ShaderTexture *)m_pShader)->use(&m_position, textureID);
+        ((ShaderTexture *)m_pShader)->setTexCoords(m_texCoords);
+    } else {
+        m_pShader->use(&m_position, &m_color);
+    }
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, m_vertex);
     glDrawElements(GL_TRIANGLE_FAN, 4, GL_UNSIGNED_SHORT, &m_index);
