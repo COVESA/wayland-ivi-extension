@@ -127,3 +127,8 @@ install(
     TARGETS     ${PROJECT_NAME}
     DESTINATION bin
 )
+
+install (
+    DIRECTORY   ${CMAKE_SOURCE_DIR}/ivi-layermanagement-examples/EGLWLMockNavigation/textures
+    DESTINATION share/wayland-ivi-extension
+)
