@@ -109,6 +109,7 @@ void MockNavi::generateCity()
             obj = new Street(streetPosition, streetSize, streetColor, pShader);
     }
     m_renderList.push_back(obj);
+    m_updateList.push_back(obj);
 
     // generate streets x direction
     for (int z = 1; z < m_houseCount; ++z)
