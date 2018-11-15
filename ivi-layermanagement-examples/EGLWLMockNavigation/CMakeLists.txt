@@ -2,6 +2,7 @@
 #
 # Copyright 2010-2014 BMW Car IT GmbH
 # Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+# Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
 #
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,6 +75,7 @@ set (HEADER_FILES
     include/Street.h
     include/ShaderBase.h
     include/ShaderLighting.h
+    include/TextureLoader.h
 )
 
 set (SRC_FILES
@@ -88,6 +90,7 @@ set (SRC_FILES
     src/ShaderBase.cpp
     src/ShaderLighting.cpp
     src/main.cpp
+    src/TextureLoader.cpp
 )
 
 add_executable(${PROJECT_NAME}
