@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2010,2011 BMW Car IT GmbH
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +24,7 @@
 #include "Ground.h"
 #include "Car.h"
 #include "ShaderLighting.h"
+#include "ShaderTexture.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -68,6 +70,9 @@ void MockNavi::generateCity()
 {
     float* projection = m_camera.getViewProjectionMatrix();
     ShaderLighting* pShader = new ShaderLighting(projection);
+    ShaderTexture* pShaderTexture = new ShaderTexture(projection);
+    TextureLoader* carTexture = new TextureLoader;
+    bool carTextureLoaded = carTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/car.bmp");
 
     // generate base plate
 	vec4f groundColor(0.8, 0.8, 0.6, 1.0);
@@ -95,10 +100,16 @@ void MockNavi::generateCity()
     }
 
     // generate car
-    vec3f carPosition(1.4 * CITY_GRID_SIZE, 0.001, -0.3);
     vec3f carSize(0.2f, 0.2f, 0.3f);
     vec4f carColor(0.7, 0.3, 0.3, 1.0);
-    Car* car = new Car(carPosition, carSize, carColor, pShader);
+    Car* car = nullptr;
+    if(carTextureLoaded){
+        vec3f carPosition(1.39 * CITY_GRID_SIZE, 0.002, -0.3);
+        car = new Car(carPosition, carSize, carColor, pShaderTexture, carTexture);
+    } else {
+        vec3f carPosition(1.4 * CITY_GRID_SIZE, 0.002, -0.3);
+        car = new Car(carPosition, carSize, carColor, pShader);
+    }
     m_renderList.push_back(car);
 
     // generate houses
