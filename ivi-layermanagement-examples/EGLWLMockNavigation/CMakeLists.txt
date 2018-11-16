@@ -106,6 +106,8 @@ set(LIBS
     ${EGL_LIBRARIES}
 )
 
+SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
+
 add_dependencies(${PROJECT_NAME}
     ${LIBS}
 )
