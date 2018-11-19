@@ -23,6 +23,8 @@
 #include "IRenderable.h"
 #include "IUpdateable.h"
 #include "Camera.h"
+#include "ShaderLighting.h"
+#include "ShaderTexture.h"
 
 #include <list>
 using std::list;
@@ -33,6 +35,7 @@ class MockNavi : public OpenGLES2App
 {
 public:
     MockNavi(float fps, float animationSpeed, SurfaceConfiguration* config);
+    ~MockNavi();
 
     virtual void update(int currentTimeInMs, int lastFrameTime);
     virtual void render();
@@ -45,6 +48,8 @@ private:
     int m_houseCount;
     list<IRenderable*> m_renderList;
     list<IUpdateable*> m_updateList;
+    ShaderLighting* pShader = nullptr;
+    ShaderTexture* pShaderTexture = nullptr;
 };
 
 #endif /* _MOCKNAVI_H */

@@ -23,8 +23,6 @@
 #include "Street.h"
 #include "Ground.h"
 #include "Car.h"
-#include "ShaderLighting.h"
-#include "ShaderTexture.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -38,6 +36,12 @@ MockNavi::MockNavi(float fps, float animationSpeed, SurfaceConfiguration* config
 , m_houseCount(15)
 {
     generateCity();
+}
+
+MockNavi::~MockNavi()
+{
+    delete pShader;
+    delete pShaderTexture;
 }
 
 void MockNavi::update(int currentTimeInMs, int lastFrameTime)
@@ -69,8 +73,8 @@ void MockNavi::render()
 void MockNavi::generateCity()
 {
     float* projection = m_camera.getViewProjectionMatrix();
-    ShaderLighting* pShader = new ShaderLighting(projection);
-    ShaderTexture* pShaderTexture = new ShaderTexture(projection);
+    pShader = new ShaderLighting(projection);
+    pShaderTexture = new ShaderTexture(projection);
     TextureLoader* carTexture = new TextureLoader;
     bool carTextureLoaded = carTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/car.bmp");
     TextureLoader* streetTexture = new TextureLoader;
