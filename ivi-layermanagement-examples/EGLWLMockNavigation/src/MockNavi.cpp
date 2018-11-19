@@ -75,6 +75,21 @@ void MockNavi::generateCity()
     bool carTextureLoaded = carTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/car.bmp");
     TextureLoader* streetTexture = new TextureLoader;
     bool streetTextureLoaded = streetTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/street.bmp");
+    list<TextureLoader*> houseTextures;
+    for(int i = 0; i < m_houseCount; i++){
+        TextureLoader* houseTexture = new TextureLoader;
+        std::string houseTexturePathString = "/usr/share/wayland-ivi-extension/textures/skyscrapers/facade0";
+        houseTexturePathString.append(std::to_string(i));
+        houseTexturePathString.append(".bmp");
+        char houseTexturePath[houseTexturePathString.size() + 1];
+        houseTexturePathString.copy(houseTexturePath, houseTexturePathString.size() + 1);
+        houseTexturePath[houseTexturePathString.size()] = '\0';
+        bool houseTextureLoaded = houseTexture->loadBMP(houseTexturePath);
+        if(not houseTextureLoaded){
+            break;
+        }
+        houseTextures.push_back(houseTexture);
+    }
 
     // generate base plate
 	vec4f groundColor(0.8, 0.8, 0.6, 1.0);
@@ -137,7 +152,17 @@ void MockNavi::generateCity()
             vec3f housePosition(posx, posy, posz);
             vec3f houseSize(1.0, 1.0, 1.0);
 
-            House* obj = new House(housePosition, houseSize, houseColor, pShader);
+            TextureLoader* houseTexture = houseTextures.front();
+
+            House* obj = nullptr;
+
+            if(houseTexture == nullptr){
+                obj = new House(housePosition, houseSize, houseColor, pShader);
+            } else {
+                houseTextures.pop_front();
+                obj = new House(housePosition, houseSize, houseColor, pShaderTexture, houseTexture);
+                houseTextures.push_back(houseTexture);
+            }
 
             m_renderList.push_back(obj);
             m_updateList.push_back(obj);
