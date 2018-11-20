@@ -77,6 +77,7 @@ set (HEADER_FILES
     include/ShaderLighting.h
     include/TextureLoader.h
     include/ShaderTexture.h
+    include/Sky.h
     include/ShaderGradient.h
 )
 
@@ -94,6 +95,7 @@ set (SRC_FILES
     src/main.cpp
     src/TextureLoader.cpp
     src/ShaderTexture.cpp
+    src/Sky.cpp
     src/ShaderGradient.cpp
 )
 
