@@ -23,6 +23,7 @@
 #include "Street.h"
 #include "Ground.h"
 #include "Car.h"
+#include "Sky.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -34,6 +35,7 @@ MockNavi::MockNavi(float fps, float animationSpeed, SurfaceConfiguration* config
 : OpenGLES2App(fps, animationSpeed, config)
 , m_camera(vec3f(-1.5 * CITY_GRID_SIZE, -0.1, 0.0), vec3f(0.0, 0.0, 0.0), config->surfaceWidth, config->surfaceHeight)
 , m_houseCount(15)
+, nosky(config->nosky)
 {
     generateCity();
 }
@@ -42,6 +44,7 @@ MockNavi::~MockNavi()
 {
     delete pShader;
     delete pShaderTexture;
+    delete pShaderGradient;
 }
 
 void MockNavi::update(int currentTimeInMs, int lastFrameTime)
@@ -75,6 +78,7 @@ void MockNavi::generateCity()
     float* projection = m_camera.getViewProjectionMatrix();
     pShader = new ShaderLighting(projection);
     pShaderTexture = new ShaderTexture(projection);
+    pShaderGradient = new ShaderGradient();
     TextureLoader* carTexture = new TextureLoader;
     bool carTextureLoaded = carTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/car.bmp");
     TextureLoader* streetTexture = new TextureLoader;
@@ -93,6 +97,16 @@ void MockNavi::generateCity()
             break;
         }
         houseTextures.push_back(houseTexture);
+    }
+
+    // generate sky
+    if (not nosky) {
+        vec4f skyColor(0.0, 0.0, 1.0, 1.0);
+        vec3f skyPosition = vec3f(-1.0, -1.0, 1.0);
+        vec3f skySize = vec3f(2.0, 2.0, 0.0);
+        Sky* sky = new Sky(skyPosition, skySize, skyColor, pShaderGradient);
+        m_renderList.push_back(sky);
+        m_updateList.push_back(sky);
     }
 
     // generate base plate

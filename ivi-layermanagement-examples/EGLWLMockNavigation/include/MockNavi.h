@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2010,2011 BMW Car IT GmbH
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +26,7 @@
 #include "Camera.h"
 #include "ShaderLighting.h"
 #include "ShaderTexture.h"
+#include "ShaderGradient.h"
 
 #include <list>
 using std::list;
@@ -50,6 +52,8 @@ private:
     list<IUpdateable*> m_updateList;
     ShaderLighting* pShader = nullptr;
     ShaderTexture* pShaderTexture = nullptr;
+    ShaderGradient* pShaderGradient = nullptr;
+    bool nosky;
 };
 
 #endif /* _MOCKNAVI_H */
