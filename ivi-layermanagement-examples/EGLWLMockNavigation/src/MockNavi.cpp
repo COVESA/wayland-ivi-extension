@@ -24,6 +24,7 @@
 #include "Ground.h"
 #include "Car.h"
 #include "Sky.h"
+#include "configuration.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -80,19 +81,17 @@ void MockNavi::generateCity()
     pShaderTexture = new ShaderTexture(projection);
     pShaderGradient = new ShaderGradient();
     TextureLoader* carTexture = new TextureLoader;
-    bool carTextureLoaded = carTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/car.bmp");
+    bool carTextureLoaded = carTexture->loadBMP((texturePath + std::string("/car.bmp")).c_str());
     TextureLoader* streetTexture = new TextureLoader;
-    bool streetTextureLoaded = streetTexture->loadBMP("/usr/share/wayland-ivi-extension/textures/street.bmp");
+    bool streetTextureLoaded = streetTexture->loadBMP((texturePath + std::string("/street.bmp")).c_str());
     list<TextureLoader*> houseTextures;
     for(int i = 0; i < m_houseCount; i++){
         TextureLoader* houseTexture = new TextureLoader;
-        std::string houseTexturePathString = "/usr/share/wayland-ivi-extension/textures/skyscrapers/facade0";
-        houseTexturePathString.append(std::to_string(i));
-        houseTexturePathString.append(".bmp");
-        char houseTexturePath[houseTexturePathString.size() + 1];
-        houseTexturePathString.copy(houseTexturePath, houseTexturePathString.size() + 1);
-        houseTexturePath[houseTexturePathString.size()] = '\0';
-        bool houseTextureLoaded = houseTexture->loadBMP(houseTexturePath);
+        std::string houseTexturePath = texturePath;
+        houseTexturePath.append("/skyscrapers/facade0");
+        houseTexturePath.append(std::to_string(i));
+        houseTexturePath.append(".bmp");
+        bool houseTextureLoaded = houseTexture->loadBMP(houseTexturePath.c_str());
         if(not houseTextureLoaded){
             break;
         }

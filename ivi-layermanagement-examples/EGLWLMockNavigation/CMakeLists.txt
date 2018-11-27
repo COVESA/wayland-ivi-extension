@@ -132,7 +132,11 @@ install(
     DESTINATION bin
 )
 
+SET(TEXTURES_DIR share/wayland-ivi-extension)
+
 install (
     DIRECTORY   ${CMAKE_SOURCE_DIR}/ivi-layermanagement-examples/EGLWLMockNavigation/textures
-    DESTINATION share/wayland-ivi-extension
+    DESTINATION ${TEXTURES_DIR}
 )
+
+configure_file(configuration.h.in configuration.h)
