@@ -2,6 +2,7 @@
  *
  * Copyright 2010,2011 BMW Car IT GmbH
  * Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,9 +62,45 @@ Street::Street(vec3f position, vec3f size, vec4f color, ShaderBase* shader)
     m_vertex[3].z = m_position.z + m_size.z;
 }
 
+Street::Street(vec3f position, vec3f size, vec4f color, ShaderTexture* shader, TextureLoader* streetTexture, float numRepeats)
+: Street(position, size, color, shader)
+{
+    withTexture = true;
+    texture = streetTexture;
+    float xCoords, yCoords;
+
+    float z_to_x = m_size.z / m_size.x;
+    float x_to_z = m_size.x / m_size.z;
+    if(z_to_x > x_to_z){
+        yCoords = numRepeats;
+        xCoords = numRepeats * z_to_x;
+    } else {
+        yCoords = numRepeats * z_to_x;
+        xCoords = numRepeats;
+    }
+
+    m_texCoords[0].x = 0.0;
+    m_texCoords[0].y = 0.0;
+
+    m_texCoords[1].x = xCoords;
+    m_texCoords[1].y = 0.0;
+
+    m_texCoords[2].x = xCoords;
+    m_texCoords[2].y = yCoords;
+
+    m_texCoords[3].x = 0.0;
+    m_texCoords[3].y = yCoords;
+}
+
 void Street::render()
 {
-    m_shader->use(&m_position, &m_color);
+    if(withTexture) {
+        GLuint textureID = texture->getId();
+        ((ShaderTexture *)m_shader)->use(&m_position, textureID);
+        ((ShaderTexture *)m_shader)->setTexCoords(m_texCoords);
+    }else{
+        m_shader->use(&m_position, &m_color);
+    }
 
     // draw
     glEnableVertexAttribArray(0);
@@ -78,6 +115,6 @@ void Street::update(int currentTimeInMs, int lastFrameTime)
 
     if (m_position.z > 3.0)
     {
-        m_position.z -= 2 * 2.0;
+        m_position.z -= 2.0;
     }
 }

@@ -2,6 +2,7 @@
  *
  * Copyright 2010,2011 BMW Car IT GmbH
  * Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,10 +32,11 @@ using std::endl;
 
 #include <GLES2/gl2.h>
 
-House::House(vec3f position, vec3f size, vec4f houseColor, ShaderBase* pShader)
+House::House(vec3f position, vec3f size, vec4f houseColor, ShaderBase* pShader, TextureLoader* houseTexture, float numElements)
 : m_position(position)
 , m_size(size)
 , m_color(houseColor)
+, numElements(numElements)
 , m_pShader(pShader)
 {
 	/*
@@ -52,6 +54,13 @@ House::House(vec3f position, vec3f size, vec4f houseColor, ShaderBase* pShader)
     */
 
     float height = 0.1 + 1.5 * random() / INT_MAX;
+
+    if(houseTexture != nullptr){
+        texture = houseTexture;
+        withTexture = true;
+        // use square houses (1.0 x 1.0) when using textures
+        height = 1.0f;
+    }
 
     m_index[0] = vec3u(7, 4, 0); // bottom
     m_index[1] = vec3u(0, 3, 7); // bottom
@@ -83,12 +92,67 @@ House::~House()
 
 void House::render()
 {
-    m_pShader->use(&m_position, &m_color);
+    if (withTexture) {
+        GLuint textureID = texture->getId();
+        ((ShaderTexture *)m_pShader)->use(&m_position, textureID);
+    } else {
+        m_pShader->use(&m_position, &m_color);
+    }
 
     // draw
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, m_vertex);
-    glDrawElements(GL_TRIANGLES, 3 * sizeof(m_index)/sizeof(m_index[0]), GL_UNSIGNED_SHORT, m_index);
+    if(not withTexture) {
+        glDrawElements(GL_TRIANGLES, 3 * sizeof(m_index)/sizeof(m_index[0]), GL_UNSIGNED_SHORT, m_index);
+    } else {
+        for(int i = 0; i < 6; i++) {
+            // change texture mapping for each size of the house
+            // numElements == number of textures used per side of a house
+            if(i*2 == 0.0) { // left
+                m_texCoords[0].x = numElements;
+                m_texCoords[0].y = 0.0;
+
+                m_texCoords[7].x = 0.0;
+                m_texCoords[7].y = numElements;
+
+                m_texCoords[4].x = 0.0;
+                m_texCoords[4].y = 0.0;
+
+                m_texCoords[3].x = numElements;
+                m_texCoords[3].y = numElements;
+            } else if(i*2 == 10.0) { // front
+                m_texCoords[0].x = 0.0;
+                m_texCoords[0].y = 0.0;
+
+                m_texCoords[1].x = numElements;
+                m_texCoords[1].y = 0.0;
+
+                m_texCoords[2].x = numElements;
+                m_texCoords[2].y = numElements;
+
+                m_texCoords[3].x = 0.0;
+                m_texCoords[3].y = numElements;
+            } else if(i*2 == 8.0) { // right
+                m_texCoords[5].x = numElements;
+                m_texCoords[5].y = 0.0;
+
+                m_texCoords[1].x = 0.0;
+                m_texCoords[1].y = 0.0;
+
+                m_texCoords[2].x = 0.0;
+                m_texCoords[2].y = numElements;
+
+                m_texCoords[6].x = numElements;
+                m_texCoords[6].y = numElements;
+            } else {
+                memset(m_texCoords, 0, sizeof(m_texCoords));
+            }
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, m_vertex);
+            ((ShaderTexture *)m_pShader)->setTexCoords(m_texCoords);
+            glDrawElements(GL_TRIANGLE_FAN, 6, GL_UNSIGNED_SHORT, &m_index[i*2]);
+        }
+    }
 }
 
 void House::update(int currentTimeInMs, int lastFrameTime)

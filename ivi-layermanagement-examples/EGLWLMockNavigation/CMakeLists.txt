@@ -2,6 +2,7 @@
 #
 # Copyright 2010-2014 BMW Car IT GmbH
 # Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+# Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
 #
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,6 +75,10 @@ set (HEADER_FILES
     include/Street.h
     include/ShaderBase.h
     include/ShaderLighting.h
+    include/TextureLoader.h
+    include/ShaderTexture.h
+    include/Sky.h
+    include/ShaderGradient.h
 )
 
 set (SRC_FILES
@@ -88,6 +93,10 @@ set (SRC_FILES
     src/ShaderBase.cpp
     src/ShaderLighting.cpp
     src/main.cpp
+    src/TextureLoader.cpp
+    src/ShaderTexture.cpp
+    src/Sky.cpp
+    src/ShaderGradient.cpp
 )
 
 add_executable(${PROJECT_NAME}
@@ -106,6 +115,8 @@ set(LIBS
     ${EGL_LIBRARIES}
 )
 
+SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
+
 add_dependencies(${PROJECT_NAME}
     ${LIBS}
 )
@@ -120,3 +131,12 @@ install(
     TARGETS     ${PROJECT_NAME}
     DESTINATION bin
 )
+
+SET(TEXTURES_DIR share/wayland-ivi-extension)
+
+install (
+    DIRECTORY   ${CMAKE_SOURCE_DIR}/ivi-layermanagement-examples/EGLWLMockNavigation/textures
+    DESTINATION ${TEXTURES_DIR}
+)
+
+configure_file(configuration.h.in configuration.h)

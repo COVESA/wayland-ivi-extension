@@ -1,6 +1,5 @@
 /***************************************************************************
  *
- * Copyright 2010,2011 BMW Car IT GmbH
  * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
@@ -17,43 +16,42 @@
  * limitations under the License.
  *
  ****************************************************************************/
-#ifndef _MOCKNAVI_H
-#define _MOCKNAVI_H
+#ifndef _SKY_H
+#define _SKY_H
 
-#include "OpenGLES2App.h"
 #include "IRenderable.h"
 #include "IUpdateable.h"
-#include "Camera.h"
-#include "ShaderLighting.h"
-#include "ShaderTexture.h"
+#include "vec.h"
 #include "ShaderGradient.h"
 
-#include <list>
-using std::list;
+class ShaderBase;
 
-class MockNaviHouse;
-
-class MockNavi : public OpenGLES2App
+class Sky : public IRenderable, public IUpdateable
 {
 public:
-    MockNavi(float fps, float animationSpeed, SurfaceConfiguration* config);
-    ~MockNavi();
+    Sky(vec3f position, vec3f size, vec4f color, ShaderGradient* shader, float sunriseSpeed = 0.02, float sunsetSpeed = 0.01, float daySpeed = 0.02, float nightSpeed = 0.02);
+    virtual ~Sky() {}
 
-    virtual void update(int currentTimeInMs, int lastFrameTime);
     virtual void render();
+    virtual void update(int currentTimeInMs, int lastFrameTime);
 
 private:
-    void generateCity();
+    vec3f m_position;
+    vec3f m_size;
+    vec4f m_color;
+    vec4f colors[4]={{0.0, 0.0, 0.0, 1.0}, {0.0, 0.0, 0.0, 1.0}, {0.0, 0.0, 0.0, 1.0}, {0.0, 0.0, 0.0, 1.0}};
 
-private:
-    Camera m_camera;
-    int m_houseCount;
-    list<IRenderable*> m_renderList;
-    list<IUpdateable*> m_updateList;
-    ShaderLighting* pShader = nullptr;
-    ShaderTexture* pShaderTexture = nullptr;
-    ShaderGradient* pShaderGradient = nullptr;
-    bool nosky;
+    vec4u m_index;
+    vec3f m_vertex[4];
+
+    enum skyStates {sunrise, daytime, sunset, nighttime};
+    enum skyStates skyState;
+    const float sunriseSpeed;
+    const float sunsetSpeed;
+    const float daySpeed;
+    const float nightSpeed;
+
+    ShaderGradient* m_pShader;
 };
 
-#endif /* _MOCKNAVI_H */
+#endif /* _SKY_H */

@@ -1,6 +1,5 @@
 /***************************************************************************
  *
- * Copyright 2010,2011 BMW Car IT GmbH
  * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
@@ -17,38 +16,29 @@
  * limitations under the License.
  *
  ****************************************************************************/
-#ifndef _CAR_H
-#define _CAR_H
+#ifndef _TEXTURE_LOADER_H
+#define _TEXTURE_LOADER_H
 
-#include "IRenderable.h"
-#include "vec.h"
-#include "ShaderTexture.h"
-#include "TextureLoader.h"
+#include <string.h>
 
-class ShaderBase;
+#include <iostream>
+using std::cout;
+using std::endl;
 
-class Car : public IRenderable
+#include <GLES2/gl2.h>
+
+class TextureLoader
 {
 public:
-    Car(vec3f position, vec3f size, vec4f color, ShaderBase* shader);
-    Car(vec3f position, vec3f size, vec4f color, ShaderTexture* shader, TextureLoader* texture);
-    virtual ~Car() {}
+    TextureLoader();
 
-    virtual void render();
+    bool loadBMP(const char * imagePath);
+    bool loadArray(void * data, unsigned int width, unsigned int height, unsigned int pixelSizeBits);
+    GLuint getId();
 
 private:
-    vec3f m_position;
-    vec3f m_size;
-    vec4f m_color;
-
-    vec4u m_index;
-    vec3f m_vertex[4];
-    vec2f m_texCoords[4];
-
-    ShaderBase* m_pShader;
-
-    TextureLoader* texture;
-    bool withTexture = false;
+    GLuint textureID;
+    bool loaded = false;
 };
 
-#endif /* _CAR_H */
+#endif
