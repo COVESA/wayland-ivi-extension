@@ -2170,6 +2170,38 @@ launch_client_process(void *data)
     free(shell->ivi_client_name);
 }
 
+static int load_id_agent_module(struct ivishell *shell)
+{
+    struct weston_config *config = wet_get_config(shell->compositor);
+    struct weston_config_section *section;
+    char *id_agent_module = NULL;
+
+    int (*id_agent_module_init)(struct weston_compositor *compositor,
+            const struct ivi_layout_interface *interface);
+
+    section = weston_config_get_section(config, "ivi-shell", NULL, NULL);
+
+    if (weston_config_section_get_string(section, "ivi-id-agent-module",
+                                         &id_agent_module, NULL) < 0) {
+        /* input events are handled by weston's default grabs */
+        weston_log("ivi-controller: No ivi-id-agent-module set\n");
+        return 0;
+    }
+
+    id_agent_module_init = wet_load_module_entrypoint(id_agent_module, "id_agent_module_init");
+    if (!id_agent_module_init)
+        return -1;
+
+    if (id_agent_module_init(shell->compositor, shell->interface) != 0) {
+        weston_log("ivi-controller: Initialization of id-agent module failed\n");
+        return -1;
+    }
+
+    free(id_agent_module);
+
+    return 0;
+}
+
 WL_EXPORT int
 wet_module_init(struct weston_compositor *compositor,
 		       int *argc, char *argv[])
@@ -2224,6 +2256,10 @@ wet_module_init(struct weston_compositor *compositor,
     if (shell->bkgnd_surface_id && shell->ivi_client_name) {
         loop = wl_display_get_event_loop(compositor->wl_display);
         wl_event_loop_add_idle(loop, launch_client_process, shell);
+    }
+
+    if (load_id_agent_module(shell) < 0) {
+        weston_log("ivi-controller: id-agent module not loaded\n");
     }
 
     return 0;
