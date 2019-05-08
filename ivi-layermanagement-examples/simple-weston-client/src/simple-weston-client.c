@@ -92,6 +92,7 @@ typedef struct _WaylandContext {
 
 struct debug_stream {
     struct wl_list link;
+    int should_bind;
     char *name;
     struct weston_debug_stream_v1 *obj;
 };
@@ -141,6 +142,8 @@ stream_alloc(WaylandContextStruct* wlcontext, const char *name)
         free(stream);
         return NULL;
     }
+
+    stream->should_bind = 0;
 
     wl_list_insert(wlcontext->stream_list.prev, &stream->link);
 
@@ -203,11 +206,13 @@ start_streams(WaylandContextStruct* wlcontext)
     struct debug_stream *stream;
 
     wl_list_for_each(stream, &wlcontext->stream_list, link) {
+        if (stream->should_bind) {
         stream->obj = weston_debug_v1_subscribe(wlcontext->debug_iface,
                             stream->name,
                             wlcontext->debug_fd);
         weston_debug_stream_v1_add_listener(stream->obj,
                             &stream_listener, stream);
+        }
     }
 }
 
@@ -419,6 +424,30 @@ static struct wl_seat_listener seat_Listener = {
     seat_name
 };
 
+#ifdef LIBWESTON_DEBUG_PROTOCOL
+static void
+stream_find(WaylandContextStruct* wlcontext, const char *name, const char *desc)
+{
+    struct debug_stream *stream;
+    wl_list_for_each(stream, &wlcontext->stream_list, link)
+        if (strcmp(stream->name, name) == 0) {
+            stream->should_bind = 1;
+        }
+}
+
+static void
+debug_advertise(void *data, struct weston_debug_v1 *debug, const char *name,
+                const char *desc)
+{
+        WaylandContextStruct* wlcontext = data;
+        stream_find(wlcontext, name, desc);
+}
+
+static const struct weston_debug_v1_listener debug_listener = {
+        debug_advertise
+};
+#endif
+
 static void
 registry_handle_global(void *data, struct wl_registry *registry, uint32_t name,
                        const char *interface, uint32_t version)
@@ -456,6 +485,8 @@ registry_handle_global(void *data, struct wl_registry *registry, uint32_t name,
         wlcontext->debug_iface =
                 wl_registry_bind(registry, name,
                     &weston_debug_v1_interface, myver);
+        weston_debug_v1_add_listener(wlcontext->debug_iface, &debug_listener,
+                                             wlcontext);
     }
 #endif
 }
@@ -515,11 +546,6 @@ void destroy_wayland_context(WaylandContextStruct* wlcontext)
 
     if(wlcontext->wl_display)
         wl_display_disconnect(wlcontext->wl_display);
-
-#ifdef LIBWESTON_DEBUG_PROTOCOL
-    if(wlcontext->debug_iface)
-        weston_debug_v1_destroy(wlcontext->debug_iface);
-#endif
 }
 
 int
@@ -775,6 +801,7 @@ int main (int argc, const char * argv[])
 {
     WaylandContextStruct* wlcontext;
     BkGndSettingsStruct* bkgnd_settings;
+
     struct sigaction sigint;
     int offset = 0;
     int ret = 0;
@@ -839,6 +866,25 @@ int main (int argc, const char * argv[])
 
 Error:
 #ifdef LIBWESTON_DEBUG_PROTOCOL
+    weston_debug_v1_destroy(wlcontext->debug_iface);
+
+    while (1) {
+        struct debug_stream *stream;
+        int empty = 1;
+
+        wl_list_for_each(stream, &wlcontext->stream_list, link)
+            if (stream->obj) {
+                empty = 0;
+                break;
+            }
+
+        if (empty)
+            break;
+
+        if (wl_display_dispatch(wlcontext->wl_display) < 0)
+            break;
+    }
+
     destroy_streams(wlcontext);
     wl_display_roundtrip(wlcontext->wl_display);
 
