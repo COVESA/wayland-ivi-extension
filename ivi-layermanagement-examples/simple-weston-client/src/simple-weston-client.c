@@ -41,8 +41,7 @@
 #endif
 
 #ifdef DLT
-#include "dlt_common.h"
-#include "dlt_user.h"
+#include "dlt.h"
 
 #define WESTON_DLT_APP_DESC "messages from weston debug protocol"
 #define WESTON_DLT_CONTEXT_DESC "weston debug context"
