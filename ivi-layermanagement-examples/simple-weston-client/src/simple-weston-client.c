@@ -36,17 +36,19 @@
 #include <ivi-application-client-protocol.h>
 
 #ifdef LIBWESTON_DEBUG_PROTOCOL
+#include "weston-debug-client-protocol.h"
+#define MAXSTRLEN 1024
+#endif
+
+#ifdef DLT
 #include "dlt_common.h"
 #include "dlt_user.h"
-#include "weston-debug-client-protocol.h"
 
 #define WESTON_DLT_APP_DESC "messages from weston debug protocol"
 #define WESTON_DLT_CONTEXT_DESC "weston debug context"
 
 #define WESTON_DLT_APP "WESN"
 #define WESTON_DLT_CONTEXT "WESC"
-
-#define MAXSTRLEN 1024
 #endif
 
 #ifndef MIN
@@ -691,20 +693,19 @@ static void *
 weston_dlt_thread_function(void *data)
 {
     WaylandContextStruct* wlcontext;
+
+#ifdef DLT
+    /*init dlt*/
     char apid[DLT_ID_SIZE];
     char ctid[DLT_ID_SIZE];
-    char *temp;
     DLT_DECLARE_CONTEXT(weston_dlt_context)
-
-    wlcontext = (WaylandContextStruct*)data;
-
-    /*init dlt*/
     dlt_set_id(apid, WESTON_DLT_APP);
     dlt_set_id(ctid, WESTON_DLT_CONTEXT);
 
     DLT_REGISTER_APP(apid, WESTON_DLT_APP_DESC);
     DLT_REGISTER_CONTEXT(weston_dlt_context, ctid, WESTON_DLT_CONTEXT_DESC);
-
+#endif
+    wlcontext = (WaylandContextStruct*)data;
     /*make the stdin as read end of the pipe*/
     dup2(wlcontext->pipefd[0], STDIN_FILENO);
 
@@ -721,12 +722,19 @@ weston_dlt_thread_function(void *data)
 
         if (strcmp(str,"")!=0)
         {
+#ifdef DLT
             DLT_LOG(weston_dlt_context, DLT_LOG_INFO, DLT_STRING(str));
+#else
+            fprintf(stderr,"%s",str);
+#endif
         }
     }
 
+#ifdef DLT
     DLT_UNREGISTER_CONTEXT(weston_dlt_context);
     DLT_UNREGISTER_APP();
+#endif
+
     pthread_exit(NULL);
 }
 #endif

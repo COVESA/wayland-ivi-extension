@@ -26,7 +26,7 @@ pkg_check_modules(LIBWESTON_PROTOCOLS libweston-6-protocols QUIET)
 
 if(${LIBWESTON_PROTOCOLS_FOUND})
     #check for DLT
-    pkg_check_modules(DLT automotive-dlt REQUIRED)
+    pkg_check_modules(DLT automotive-dlt QUIET)
 
     #import the pkgdatadir from libweston-protocols pkgconfig file
     execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=pkgdatadir libweston-6-protocols
@@ -118,8 +118,13 @@ add_dependencies(${PROJECT_NAME} ${LIBS})
 
 add_definitions(${DLT_CFLAGS})
 
+if(${DLT_FOUND})
+    add_definitions(-DDLT)
+endif(${DLT_FOUND})
+
 if(${LIBWESTON_PROTOCOLS_FOUND})
     add_definitions(-DLIBWESTON_DEBUG_PROTOCOL)
+    target_link_libraries(${PROJECT_NAME} pthread)
 endif(${LIBWESTON_PROTOCOLS_FOUND})
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
