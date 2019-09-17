@@ -1565,7 +1565,7 @@ output_destroyed_event(struct wl_listener *listener, void *data)
             destroy_screen(iviscrn);
     }
 
-    if (shell->bkgnd_view)
+    if (shell->bkgnd_view && shell->client)
         set_bkgnd_surface_prop(shell);
     else
         weston_compositor_schedule_repaint(shell->compositor);
@@ -1576,7 +1576,7 @@ output_resized_event(struct wl_listener *listener, void *data)
 {
     struct ivishell *shell = wl_container_of(listener, shell, output_destroyed);
 
-    if (shell->bkgnd_view)
+    if (shell->bkgnd_view && shell->client)
         set_bkgnd_surface_prop(shell);
 }
 
@@ -1588,7 +1588,7 @@ output_created_event(struct wl_listener *listener, void *data)
 
     create_screen(shell, created_output);
 
-    if (shell->bkgnd_view)
+    if (shell->bkgnd_view && shell->client)
         set_bkgnd_surface_prop(shell);
     else
         weston_compositor_schedule_repaint(shell->compositor);
@@ -2028,6 +2028,11 @@ ivi_shell_destroy(struct wl_listener *listener, void *data)
 	struct ivishell *shell =
 		wl_container_of(listener, shell, destroy_listener);
 
+        if (shell->client) {
+            wl_list_remove(&shell->client_destroy_listener.link);
+            wl_client_destroy(shell->client);
+        }
+
 	wl_list_remove(&shell->destroy_listener.link);
 
 	wl_list_remove(&shell->output_created.link);
@@ -2160,6 +2165,18 @@ load_input_module(struct ivishell *shell)
 }
 
 static void
+ivi_shell_client_destroy(struct wl_listener *listener, void *data)
+{
+    struct ivishell *shell = wl_container_of(listener, shell,
+                                             client_destroy_listener);
+
+    weston_log("ivi shell client %p destroyed \n", shell->client);
+
+    wl_list_remove(&shell->client_destroy_listener.link);
+    shell->client = NULL;
+}
+
+static void
 launch_client_process(void *data)
 {
     struct ivishell *shell =
@@ -2175,6 +2192,10 @@ launch_client_process(void *data)
 
     shell->client = weston_client_start(shell->compositor,
                                         shell->ivi_client_name);
+
+    shell->client_destroy_listener.notify = ivi_shell_client_destroy;
+    wl_client_add_destroy_listener(shell->client,
+                                   &shell->client_destroy_listener);
 
     free(shell->ivi_client_name);
 }
