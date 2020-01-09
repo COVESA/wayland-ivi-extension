@@ -88,6 +88,7 @@ typedef struct _WaylandContext {
     pthread_t               dlt_ctx_thread;
     int                     pipefd[2];
 #endif
+    uint8_t                 enable_cursor;
 }WaylandContextStruct;
 
 struct debug_stream {
@@ -105,11 +106,17 @@ static const char *left_ptrs[] = {
 };
 
 static BkGndSettingsStruct*
-get_bkgnd_settings(void)
+get_bkgnd_settings_cursor_info(WaylandContextStruct* wlcontext)
 {
     BkGndSettingsStruct* bkgnd_settings;
     char *option;
     char *end;
+
+    option = getenv("IVI_CLIENT_ENABLE_CURSOR");
+    if(option)
+        wlcontext->enable_cursor = (uint8_t)strtol(option, &end, 0);
+    else
+        wlcontext->enable_cursor = 0;
 
     bkgnd_settings =
             (BkGndSettingsStruct*)calloc(1, sizeof(BkGndSettingsStruct));
@@ -470,9 +477,11 @@ registry_handle_global(void *data, struct wl_registry *registry, uint32_t name,
                                  &ivi_application_interface, 1);
     }
     else if (!strcmp(interface, "wl_seat")) {
-        wlcontext->wl_seat =
+        if (wlcontext->enable_cursor) {
+            wlcontext->wl_seat =
                 wl_registry_bind(registry, name, &wl_seat_interface, 1);
-        wl_seat_add_listener(wlcontext->wl_seat, &seat_Listener, data);
+            wl_seat_add_listener(wlcontext->wl_seat, &seat_Listener, data);
+        }
     }
 #ifdef LIBWESTON_DEBUG_PROTOCOL
     else if (!strcmp(interface, weston_debug_v1_interface.name)) {
@@ -812,11 +821,12 @@ int main (int argc, const char * argv[])
     sigaction(SIGTERM, &sigint, NULL);
     sigaction(SIGSEGV, &sigint, NULL);
 
+    wlcontext = (WaylandContextStruct*)calloc(1, sizeof(WaylandContextStruct));
+
     /*get bkgnd settings and create shm-surface*/
-    bkgnd_settings = get_bkgnd_settings();
+    bkgnd_settings = get_bkgnd_settings_cursor_info(wlcontext);
 
     /*init wayland context*/
-    wlcontext = (WaylandContextStruct*)calloc(1, sizeof(WaylandContextStruct));
     wlcontext->bkgnd_settings = bkgnd_settings;
 
 #ifdef LIBWESTON_DEBUG_PROTOCOL
