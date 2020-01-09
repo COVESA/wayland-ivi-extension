@@ -43,6 +43,7 @@
 
 #define IVI_CLIENT_SURFACE_ID_ENV_NAME "IVI_CLIENT_SURFACE_ID"
 #define IVI_CLIENT_DEBUG_SCOPES_ENV_NAME "IVI_CLIENT_DEBUG_STREAM_NAMES"
+#define IVI_CLIENT_ENABLE_CURSOR_ENV_NAME "IVI_CLIENT_ENABLE_CURSOR"
 
 struct ivilayer;
 struct iviscreen;
@@ -1985,6 +1986,10 @@ get_config(struct weston_compositor *compositor, struct ivishell *shell)
                        "bkgnd-color",
                        &shell->bkgnd_color, 0xFF000000);
 
+	weston_config_section_get_bool(section,
+	                   "enable-cursor",
+	                   &shell->enable_cursor, 0);
+
 	wl_array_init(&shell->screen_ids);
 
 	while (weston_config_next_section(config, &section, &name)) {
@@ -2171,6 +2176,10 @@ launch_client_process(void *data)
     if (shell->debug_scopes) {
         setenv(IVI_CLIENT_DEBUG_SCOPES_ENV_NAME, shell->debug_scopes, 0x1);
         free(shell->debug_scopes);
+    }
+    if(shell->enable_cursor) {
+      sprintf(option, "%d", shell->enable_cursor);
+      setenv(IVI_CLIENT_ENABLE_CURSOR_ENV_NAME, option, 0x1);
     }
 
     shell->client = weston_client_start(shell->compositor,
