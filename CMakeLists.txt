@@ -23,6 +23,8 @@ SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
 project(wayland-ivi-extension)
 
+include(GNUInstallDirs)
+
 SET(IVI_EXTENSION_VERSION 2.2.0)
 SET(ILM_API_VERSION 2.2.0)
 
