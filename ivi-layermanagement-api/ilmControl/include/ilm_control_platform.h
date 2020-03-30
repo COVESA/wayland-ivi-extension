@@ -58,6 +58,9 @@ struct ilm_control_context {
     pthread_mutex_t mutex;
     int shutdown_fd;
     uint32_t internal_id_surface;
+
+    shutdownNotificationFunc notification;
+    void *notification_user_data;
 };
 
 struct seat_context {
