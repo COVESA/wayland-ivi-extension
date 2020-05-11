@@ -30,6 +30,7 @@
 #include <sys/mman.h>
 #include <sys/eventfd.h>
 
+#include "writepng.h"
 #include "bitmap.h"
 #include "ilm_common.h"
 #include "ilm_control_platform.h"
@@ -2061,43 +2062,16 @@ static void screenshot_done(void *data, struct ivi_screenshot *ivi_screenshot,
 {
     struct screenshot_context *ctx_scrshot = data;
     char *buffer;
-    int32_t image_stride = 0;
-    int32_t image_size = 0;
-    char *image_buffer = NULL;
-    int32_t row = 0;
-    int32_t col = 0;
-    int32_t image_offset = 0;
-    int32_t offset = 0;
-    int32_t i = 0;
-    int32_t j = 0;
     size_t size = stride * height;
-    int bytes_per_pixel;
-    bool flip_order;
-    bool has_alpha;
     const char *filename = ctx_scrshot->filename;
+    char *filename_ext = NULL;
 
     ctx_scrshot->filename = NULL;
     ivi_screenshot_destroy(ivi_screenshot);
 
-    switch (format) {
-    case WL_SHM_FORMAT_ARGB8888:
-        flip_order = false;
-        has_alpha = true;
-        break;
-    case WL_SHM_FORMAT_XRGB8888:
-        flip_order = false;
-        has_alpha = false;
-        break;
-    case WL_SHM_FORMAT_ABGR8888:
-        flip_order = true;
-        has_alpha = true;
-        break;
-    case WL_SHM_FORMAT_XBGR8888:
-        flip_order = true;
-        has_alpha = false;
-        break;
-    default:
-        fprintf(stderr, "unsupported pixelformat 0x%x\n", format);
+    if (filename == NULL) {
+        ctx_scrshot->result = ILM_FAILED;
+        fprintf(stderr, "screenshot file name not provided: %m\n");
         return;
     }
 
@@ -2105,45 +2079,34 @@ static void screenshot_done(void *data, struct ivi_screenshot *ivi_screenshot,
     close(fd);
 
     if (buffer == MAP_FAILED) {
+        ctx_scrshot->result = ILM_FAILED;
         fprintf(stderr, "failed to mmap screenshot file: %m\n");
         return;
     }
 
-    bytes_per_pixel = has_alpha ? 4 : 3;
-    image_stride = (((width * bytes_per_pixel) + 3) & ~3);
-    image_size = image_stride * height;
+    if ((filename_ext = strstr(filename, ".png")) && (strlen(filename_ext) == 4)) {
+        if (save_as_png(filename, (const char *)buffer,
+                        width, height, format) == 0) {
+            ctx_scrshot->result = ILM_SUCCESS;
+        } else {
+            ctx_scrshot->result = ILM_FAILED;
+            fprintf(stderr, "failed to write screenshot as png file: %m\n");
+        }
+    } else {
+        if (!((filename_ext = strstr(filename, ".bmp")) && (strlen(filename_ext) == 4))) {
+            fprintf(stderr, "trying to write screenshot as bmp file, although file extension does not match: %m\n");
+        }
 
-    image_buffer = malloc(image_size);
-    if (image_buffer == NULL) {
-        fprintf(stderr, "failed to allocate %d bytes for image buffer: %m\n",
-                image_size);
-        munmap(buffer, size);
-        return;
-    }
-
-    for (row = 0; row < height; ++row) {
-        for (col = 0; col < width; ++col) {
-            offset = (height - row - 1) * width + col;
-            image_offset = row * image_stride + col * bytes_per_pixel;
-            for (i = 0; i < 3; ++i) {
-                j = flip_order ? 2 - i : i;
-                image_buffer[image_offset + i] = buffer[offset * 4 + j];
-            }
-            if (has_alpha)
-                image_buffer[image_offset + 3] = buffer[offset * 4 + 3];
+        if (save_as_bitmap(filename, (const char *)buffer,
+                           width, height, format) == 0) {
+            ctx_scrshot->result = ILM_SUCCESS;
+        } else {
+            ctx_scrshot->result = ILM_FAILED;
+            fprintf(stderr, "failed to write screenshot as bmp file: %m\n");
         }
     }
 
     munmap(buffer, size);
-
-    if (save_as_bitmap(filename, (const char *)image_buffer,
-                       image_size, width, height, bytes_per_pixel * 8) == 0) {
-        ctx_scrshot->result = ILM_SUCCESS;
-    } else {
-        fprintf(stderr, "failed to write screenshot file: %m\n");
-    }
-
-    free(image_buffer);
 }
 
 static void screenshot_error(void *data, struct ivi_screenshot *ivi_screenshot,

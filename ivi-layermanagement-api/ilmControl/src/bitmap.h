@@ -26,10 +26,9 @@
 
 int save_as_bitmap(const char *filename,
                    const char *buffer,
-                   int32_t image_size,
                    int32_t width,
                    int32_t height,
-                   int16_t bpp
+                   uint32_t format
                    );
 
 #endif /* IVICONTROLLER_BITMAP_H_*/
