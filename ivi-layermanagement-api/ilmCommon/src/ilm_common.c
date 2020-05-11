@@ -91,7 +91,10 @@ ilm_initWithNativedisplay(t_ilm_nativedisplay nativedisplay)
 ILM_EXPORT t_ilm_bool
 ilm_isInitialized(void)
 {
-    return gIlmCommonPlatformFunc.isInitialized();
+    if(gIlmCommonPlatformFunc.isInitialized)
+        return gIlmCommonPlatformFunc.isInitialized();
+
+    return ILM_FALSE;
 }
 
 ILM_EXPORT ilmErrorTypes
