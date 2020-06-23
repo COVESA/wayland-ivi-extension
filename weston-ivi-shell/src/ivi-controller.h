@@ -80,6 +80,8 @@ struct ivishell {
 
     struct wl_listener destroy_listener;
 
+    struct wl_listener client_destroy_listener;
+
     struct wl_array screen_ids;
     uint32_t screen_id_offset;
 
