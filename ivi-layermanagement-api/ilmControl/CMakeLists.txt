@@ -76,6 +76,7 @@ link_directories(
 add_library(${PROJECT_NAME} SHARED
     src/ilm_control_wayland_platform.c
     src/bitmap.c
+    src/writepng.c
     ivi-wm-client-protocol.h
     ivi-wm-protocol.c
     ivi-input-client-protocol.h
@@ -90,6 +91,7 @@ set(LIBS
     ${LIBS}
     rt
     dl
+    png
     ${CMAKE_THREAD_LIBS_INIT}
     ${WAYLAND_CLIENT_LIBRARIES}
 )
