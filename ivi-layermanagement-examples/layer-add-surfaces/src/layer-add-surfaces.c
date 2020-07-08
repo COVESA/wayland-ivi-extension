@@ -96,6 +96,35 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
     }
 }
 
+static void shutdownCallbackFunction(t_ilm_shutdown_error_type error_type,
+                                     int errornum,
+                                     void *user_data)
+{
+    (void) user_data;
+
+    switch (error_type) {
+        case ILM_ERROR_WAYLAND:
+        {
+            printf("layer-add-surfaces: exit, ilm shutdown due to wayland error: %s\n",
+                   strerror(errornum));
+            break;
+        }
+        case ILM_ERROR_POLL:
+        {
+            printf("layer-add-surfaces: exit, ilm shutdown due to poll error: %s\n",
+                   strerror(errornum));
+            break;
+        }
+        default:
+        {
+            printf("layer-add-surfaces: exit, ilm shutdown due to unknown reason: %s\n",
+                   strerror(errornum));
+        }
+    }
+
+    exit(1);
+}
+
 /* Choose the display with the largest resolution.*/
 static t_ilm_uint choose_screen(void)
 {
@@ -234,6 +263,8 @@ int main (int argc, char *argv[])
         fprintf(stderr, "layer-add-surfaces: ilm_init failed\n");
         return -1;
     }
+
+    ilm_registerShutdownNotification(shutdownCallbackFunction, NULL);
 
     screen_ID = choose_screen();
     ilm_layerCreateWithDimension(&layer, screenWidth, screenHeight);
