@@ -838,10 +838,14 @@ calc_trans_matrix(struct weston_geometry *source_rect,
     source_center_y = source_rect->y + source_rect->height * 0.5f;
     weston_matrix_translate(m, -source_center_x, -source_center_y, 0.0f);
 
-    scale_x = ((float)dest_rect->width) / source_rect->width;
-    scale_y = ((float)dest_rect->height) / source_rect->height;
+    if ((dest_rect->width != source_rect->width) ||
+        (dest_rect->height != source_rect->height))
+    {
+        scale_x = ((float)dest_rect->width) / source_rect->width;
+        scale_y = ((float)dest_rect->height) / source_rect->height;
 
-    weston_matrix_scale(m, scale_x, scale_y, 1.0f);
+        weston_matrix_scale(m, scale_x, scale_y, 1.0f);
+    }
 
     translate_x = dest_rect->width * 0.5f + dest_rect->x;
     translate_y = dest_rect->height * 0.5f + dest_rect->y;
