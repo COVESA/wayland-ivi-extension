@@ -211,7 +211,7 @@ COMMAND3(54,"set surface <surfaceid> input acceptance to [<namearray>]")
 
          callResult = ilm_setInputAcceptanceOn(surfaceid, count, array);
 
-         for (uint i = 0; i < count; i++)
+         for (t_ilm_uint i = 0; i < count; i++)
              free(array[i]);
          free(array);
      } else {
@@ -244,7 +244,7 @@ COMMAND3(55,"get surface <surfaceid> input acceptance")
         return;
     }
 
-    for (uint i = 0; i < num_seats; i++) {
+    for (t_ilm_uint i = 0; i < num_seats; i++) {
         cout << array[i] << endl;
         free(array[i]);
     }
