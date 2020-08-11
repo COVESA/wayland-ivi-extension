@@ -812,7 +812,6 @@ int main (int argc, const char * argv[])
     BkGndSettingsStruct* bkgnd_settings;
 
     struct sigaction sigint;
-    int offset = 0;
     int ret = 0;
 
     sigint.sa_handler = signal_int;
