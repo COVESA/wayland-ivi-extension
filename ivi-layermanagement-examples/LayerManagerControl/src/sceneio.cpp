@@ -175,19 +175,6 @@ void exportSceneToTXTHelper(ostream& stream, StringMapTree* tree, string prefix 
     stream << prefix + "}";
 }
 
-string decodeEscapesequences(string s)
-{
-    map<string, string> code;
-    code["\\[\\]"] = "\\";
-    code["\\[n]"] = "\n";
-    code["\\[t]"] = "\t";
-    code["\\[v]"] = "\v";
-    code["\\[b]"] = "\b";
-    code["\\[f]"] = "\f";
-    code["\\[r]"] = "\r";
-    return replaceAll(s, code);
-}
-
 string makeValidXMLCharacters(string s)
 {
     map<string, string> code;
