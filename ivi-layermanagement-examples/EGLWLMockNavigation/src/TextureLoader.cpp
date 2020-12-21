@@ -67,7 +67,8 @@ bool TextureLoader::loadBMP(const char * imagePath) {
     }
 
     data = new unsigned char [imageSize];
-    fread(data,1,imageSize,file);
+    if(fread(data,1,imageSize,file) != imageSize)
+	cout << "Reading error : mismatch in imageSize and amount of data read" << endl;
     fclose(file);
 
     if (pixelSizeBits == 32) {
