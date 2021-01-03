@@ -26,6 +26,9 @@
 #include "ilm_types.h"
 
 ILM_EXPORT ilmErrorTypes ilmControl_init(t_ilm_nativedisplay);
+ILM_EXPORT ilmErrorTypes ilmControl_registerShutdownNotification(
+				shutdownNotificationFunc callback,
+				void *user_data);
 ILM_EXPORT void ilmControl_destroy(void);
 
 static pthread_mutex_t g_initialize_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -95,6 +98,12 @@ ilm_isInitialized(void)
         return gIlmCommonPlatformFunc.isInitialized();
 
     return ILM_FALSE;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_registerShutdownNotification(shutdownNotificationFunc callback, void *user_data)
+{
+    return ilmControl_registerShutdownNotification(callback, user_data);
 }
 
 ILM_EXPORT ilmErrorTypes

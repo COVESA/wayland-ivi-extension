@@ -249,6 +249,16 @@ typedef enum
 } t_ilm_notification_mask;
 
 /**
+ * enum representing types of possible unrecoverable errors that could lead to ilm shutdown.
+ */
+typedef enum
+{
+    ILM_ERROR_WAYLAND = 1,          /*!< ErrorCode if Wayland API returns an error */
+    ILM_ERROR_POLL = 2              /*!< ErrorCode if Poll returns an error */
+}t_ilm_shutdown_error_type;
+
+
+/**
  * Typedef for notification callback on property changes of a layer
  */
 typedef void(*layerNotificationFunc)(t_ilm_layer layer,
@@ -270,4 +280,11 @@ typedef void(*notificationFunc)(ilmObjectType object,
                                         t_ilm_bool created,
                                         void* user_data);
 
+/**
+ * Typedef for notification callback on ilm shutdown due to unrecoverable
+ * errors
+ */
+typedef void(*shutdownNotificationFunc)(t_ilm_shutdown_error_type error_type,
+                                        int errornum,
+                                        void* user_data);
 #endif /* _ILM_TYPES_H_*/

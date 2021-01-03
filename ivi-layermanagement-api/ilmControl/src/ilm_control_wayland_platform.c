@@ -1084,6 +1084,28 @@ static void send_shutdown_event(struct ilm_control_context *ctx)
        ;
 }
 
+ILM_EXPORT ilmErrorTypes
+ilmControl_registerShutdownNotification(shutdownNotificationFunc callback, void *user_data)
+{
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+
+    if (!callback)
+    {
+        fprintf(stderr, "[Error] shutdownNotificationFunc is invalid\n");
+        goto error;
+    }
+
+    ctx->notification = callback;
+    ctx->notification_user_data = user_data;
+
+    returnValue = ILM_SUCCESS;
+
+error:
+    release_instance();
+    return returnValue;
+}
+
 ILM_EXPORT void
 ilmControl_destroy(void)
 {
@@ -1128,6 +1150,8 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
     }
 
     ctx->shutdown_fd = -1;
+    ctx->notification = NULL;
+    ctx->notification_user_data = NULL;
 
     ctx->wl.display = (struct wl_display*)nativedisplay;
 
@@ -1168,6 +1192,34 @@ ilmControl_init(t_ilm_nativedisplay nativedisplay)
     return ILM_SUCCESS;
 }
 
+static void
+handle_shutdown(struct ilm_control_context *ctx,
+                t_ilm_shutdown_error_type error_type)
+{
+    struct wayland_context *wl_ctx = &ctx->wl;
+    struct wl_display *display = wl_ctx->display;
+    int errornum;
+
+    switch (error_type)
+    {
+        case ILM_ERROR_WAYLAND:
+            errornum = wl_display_get_error(display);
+            break;
+        case ILM_ERROR_POLL:
+        default:
+            errornum = errno;
+    }
+
+    fprintf(stderr, "[Error] ilm services shutdown due to error %s\n",
+            strerror(errornum));
+
+    if (!ctx->notification)
+        return;
+
+    ctx->notification(error_type, errornum, ctx->notification_user_data);
+}
+
+
 static void*
 control_thread(void *p_ret)
 {
@@ -1190,6 +1242,7 @@ control_thread(void *p_ret)
 
         if (wl_display_flush(display) == -1)
         {
+            handle_shutdown(ctx, ILM_ERROR_WAYLAND);
             break;
         }
 
@@ -1209,11 +1262,15 @@ control_thread(void *p_ret)
 
             if (ret == -1)
             {
+                handle_shutdown(ctx, ILM_ERROR_WAYLAND);
                 break;
             }
         }
         else
         {
+            if (pollret == -1)
+                handle_shutdown(ctx, ILM_ERROR_POLL);
+
             wl_display_cancel_read(display);
 
             if (pollret == -1 || (pfd[1].revents & POLLIN))

@@ -65,6 +65,19 @@ t_ilm_bool ilm_isInitialized(void);
 ilmErrorTypes ilm_commitChanges(void);
 
 /**
+ * \brief register for notification on an event of ilm shutdown
+ * \ingroup ilmCommon
+ * \param[in] callback pointer to function to be called for notification
+              callback function is defined as:
+              void cb(t_ilm_shutdown_error_type error_type, int errornum, void *user_data)
+ * \param[in] user_data pointer to data which will be passed to a notification callback
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_registerShutdownNotification(shutdownNotificationFunc callback,
+					       void *user_data);
+
+/**
  * \brief Destroys the IVI LayerManagement Client.
  * \ingroup ilmCommon
  * \return ILM_SUCCESS if the method call was successful
