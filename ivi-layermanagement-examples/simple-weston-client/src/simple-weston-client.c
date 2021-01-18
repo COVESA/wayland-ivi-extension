@@ -702,7 +702,6 @@ weston_dlt_thread_function(void *data)
     WaylandContextStruct* wlcontext;
     char apid[DLT_ID_SIZE];
     char ctid[DLT_ID_SIZE];
-    char *temp;
     DLT_DECLARE_CONTEXT(weston_dlt_context)
 
     wlcontext = (WaylandContextStruct*)data;
@@ -725,7 +724,8 @@ weston_dlt_thread_function(void *data)
         /* read from std-in(read end of pipe) till newline char*/
         do {
             i++;
-            read(wlcontext->pipefd[0], &str[i], 1);
+            if(read(wlcontext->pipefd[0], &str[i], 1) < 0)
+                printf("read failed : %s", strerror(errno));
         } while (str[i] != '\n');
 
         if (strcmp(str,"")!=0)
@@ -812,7 +812,6 @@ int main (int argc, const char * argv[])
     BkGndSettingsStruct* bkgnd_settings;
 
     struct sigaction sigint;
-    int offset = 0;
     int ret = 0;
 
     sigint.sa_handler = signal_int;
@@ -858,7 +857,9 @@ int main (int argc, const char * argv[])
          * stdin - read end
          * weston will write to stdout and the
          * dlt_ctx_thread will read from stdin */
-        pipe(wlcontext->pipefd);
+        if((pipe(wlcontext->pipefd)) < 0)
+            printf("Error in pipe() processing : %s", strerror(errno));
+
         dup2(wlcontext->pipefd[1], STDOUT_FILENO);
 
         wlcontext->thread_running = 1;

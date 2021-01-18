@@ -125,8 +125,9 @@ TEST_F(IlmInputTest, ilm_input_focus) {
     for (unsigned int i = 0; i < num_ids; i++) {
         /* All surfaces now have keyboard focus */
         for (unsigned int j = 0; j < surfaceCount; j++) {
-            if (surfaceIDs[i] == surfaces[j])
+            if (surfaceIDs[i] == surfaces[j]) {
                 EXPECT_EQ(bitmasks[i], ILM_INPUT_DEVICE_KEYBOARD);
+            }
         }
     }
     free(surfaceIDs);
@@ -136,9 +137,11 @@ TEST_F(IlmInputTest, ilm_input_focus) {
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputFocus(&surfaces[0], 1, ILM_INPUT_DEVICE_KEYBOARD, ILM_FALSE));
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputFocus(&surfaceIDs, &bitmasks, &num_ids));
     /* keyboard focus now removed for surfaces[0] */
-    for (unsigned int i = 0; i < num_ids; i++)
-        if (surfaceIDs[i] == surfaces[0])
+    for (unsigned int i = 0; i < num_ids; i++) {
+        if (surfaceIDs[i] == surfaces[0]) {
             EXPECT_EQ(bitmasks[i], 0);
+        }
+    }
     free(surfaceIDs);
     free(bitmasks);
 
@@ -146,9 +149,11 @@ TEST_F(IlmInputTest, ilm_input_focus) {
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputFocus(&surfaces[1], 1, ILM_INPUT_DEVICE_POINTER, ILM_TRUE));
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputFocus(&surfaceIDs, &bitmasks, &num_ids));
     /* surfaces[1] now has pointer and keyboard focus */
-    for (unsigned int i = 0; i < num_ids; i++)
-        if (surfaceIDs[i] == surfaces[1])
+    for (unsigned int i = 0; i < num_ids; i++) {
+        if (surfaceIDs[i] == surfaces[1]) {
             EXPECT_EQ(bitmasks[i], ILM_INPUT_DEVICE_POINTER | ILM_INPUT_DEVICE_KEYBOARD);
+        }
+    }
     free(surfaceIDs);
     free(bitmasks);
 
@@ -156,9 +161,11 @@ TEST_F(IlmInputTest, ilm_input_focus) {
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputFocus(&surfaces[2], 1, ILM_INPUT_DEVICE_TOUCH, ILM_TRUE));
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputFocus(&surfaceIDs, &bitmasks, &num_ids));
     /* surfaces[2] now has keyboard and touch focus */
-    for (unsigned int i = 0; i < num_ids; i++)
-        if (surfaceIDs[i] == surfaces[2])
+    for (unsigned int i = 0; i < num_ids; i++) {
+        if (surfaceIDs[i] == surfaces[2]) {
             EXPECT_EQ(bitmasks[i], ILM_INPUT_DEVICE_KEYBOARD | ILM_INPUT_DEVICE_TOUCH);
+        }
+    }
     free(surfaceIDs);
     free(bitmasks);
 }
