@@ -1071,17 +1071,19 @@ setup_input_focus(struct input_context *ctx, uint32_t surface,
     if (NULL != surf) {
         wl_list_for_each(st_focus, &surf->accepted_seat_list, link) {
             ctx_seat = st_focus->seat_ctx;
-            if (device & ILM_INPUT_DEVICE_POINTER) {
-                input_ctrl_ptr_set_focus_surf(ctx_seat, surf, enabled);
-            }
-            if (device & ILM_INPUT_DEVICE_KEYBOARD) {
-                input_ctrl_kbd_set_focus_surf(ctx_seat, surf, enabled);
-            }
-            if (device & ILM_INPUT_DEVICE_TOUCH) {
-                /*Touch focus cannot be forced to a particular surface.
-                 * Preserve the old behaviour by sending it to controller.
-                 * TODO: Should we just remove focus setting for touch?*/
-                send_input_focus(ctx, surf, device, enabled);
+            if (ctx_seat != NULL) {
+                if (device & ILM_INPUT_DEVICE_POINTER) {
+                    input_ctrl_ptr_set_focus_surf(ctx_seat, surf, enabled);
+                }
+                if (device & ILM_INPUT_DEVICE_KEYBOARD) {
+                    input_ctrl_kbd_set_focus_surf(ctx_seat, surf, enabled);
+                }
+                if (device & ILM_INPUT_DEVICE_TOUCH) {
+                    /*Touch focus cannot be forced to a particular surface.
+                     * Preserve the old behaviour by sending it to controller.
+                     * TODO: Should we just remove focus setting for touch?*/
+                    send_input_focus(ctx, surf, device, enabled);
+                }
             }
         }
     }
