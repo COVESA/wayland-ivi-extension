@@ -917,18 +917,6 @@ destroy_seat(struct seat_ctx *ctx_seat)
 {
     struct ivisurface *surf;
     struct wl_resource *resource;
-    if (ctx_seat->keyboard_grab.keyboard) {
-    	keyboard_grab_cancel(&ctx_seat->keyboard_grab);
-        weston_keyboard_end_grab(ctx_seat->keyboard_grab.keyboard);
-    }
-    if (ctx_seat->pointer_grab.pointer) {
-    	pointer_grab_cancel(&ctx_seat->pointer_grab);
-        weston_pointer_end_grab(ctx_seat->pointer_grab.pointer);
-    }
-    if (ctx_seat->touch_grab.touch) {
-    	touch_grab_cancel(&ctx_seat->touch_grab);
-        weston_touch_end_grab(ctx_seat->touch_grab.touch);
-    }
 
     /* Remove seat acceptance from surfaces which have input acceptance from
      * this seat */
