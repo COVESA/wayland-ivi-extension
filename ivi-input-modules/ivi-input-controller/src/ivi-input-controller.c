@@ -758,12 +758,29 @@ input_ctrl_touch_set_west_focus(struct seat_ctx *ctx_seat,
     }
 }
 
+/** Check if the touch has focused resources.
+ *
+ * \param touch The touch to check for focused resources.
+ * \return Whether or not this touch has focused resources
+ */
+static bool
+ivi_weston_touch_has_focus_resource(struct weston_touch *touch)
+{
+	if (!touch->focus)
+		return false;
+
+	if (wl_list_empty(&touch->focus_resource_list))
+		return false;
+
+	return true;
+}
+
 static void
 input_ctrl_touch_west_send_cancel(struct weston_touch *touch)
 {
     struct wl_resource *resource;
 
-    if (!weston_touch_has_focus_resource(touch))
+    if (!ivi_weston_touch_has_focus_resource(touch))
         return;
 
     wl_resource_for_each(resource, &touch->focus_resource_list)
