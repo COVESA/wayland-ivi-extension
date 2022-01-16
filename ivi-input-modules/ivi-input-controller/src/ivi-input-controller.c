@@ -394,6 +394,40 @@ input_ctrl_kbd_set_focus_surf(struct seat_ctx *ctx_seat,
     }
 }
 
+struct weston_binding {
+	uint32_t key;
+	uint32_t button;
+	uint32_t axis;
+	uint32_t modifier;
+	void *handler;
+	void *data;
+	struct wl_list link;
+};
+
+static void
+ivi_weston_compositor_run_key_binding(struct weston_compositor *compositor,
+				  struct weston_keyboard *keyboard,
+				  const struct timespec *time, uint32_t key,
+				  enum wl_keyboard_key_state state)
+{
+	struct weston_binding *b, *tmp;
+	struct weston_seat *seat = keyboard->seat;
+
+	if (state == WL_KEYBOARD_KEY_STATE_RELEASED)
+		return;
+
+	/* Invalidate all active modifier bindings. */
+	wl_list_for_each(b, &compositor->modifier_binding_list, link)
+		b->key = key;
+
+	wl_list_for_each_safe(b, tmp, &compositor->key_binding_list, link) {
+		if (b->key == key && b->modifier == seat->modifier_state) {
+			weston_key_binding_handler_t handler = b->handler;
+			handler(keyboard, time, key, b->data);
+		}
+	}
+}
+
 static void
 keyboard_grab_key(struct weston_keyboard_grab *grab, const struct timespec *time,
                   uint32_t key, uint32_t state)
@@ -425,6 +459,9 @@ keyboard_grab_key(struct weston_keyboard_grab *grab, const struct timespec *time
         surface = interface->surface_get_weston_surface(surf_ctx->layout_surface);
         input_ctrl_kbd_wl_snd_event(seat_ctx, surface, grab->keyboard, &kbd_data);
     }
+
+    ivi_weston_compositor_run_key_binding(grab->keyboard->seat->compositor,
+					  grab->keyboard, time, key, state);
 }
 
 static void
