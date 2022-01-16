@@ -98,6 +98,8 @@ struct debug_stream {
     struct weston_debug_stream_v1 *obj;
 };
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 static const char *left_ptrs[] = {
     "left_ptr",
     "default",
@@ -270,12 +272,12 @@ static int create_cursors(WaylandContextStruct* wlcontext) {
 
     wlcontext->cursor = NULL;
 
-    for (j = 0; !wlcontext->cursor && j < 4; ++j)
+    for (j = 0; !wlcontext->cursor && j < ARRAY_SIZE(left_ptrs); ++j)
         wlcontext->cursor = wl_cursor_theme_get_cursor(wlcontext->cursor_theme, left_ptrs[j]);
 
     if (!wlcontext->cursor)
     {
-        fprintf(stderr, "could not load cursor '%s'\n", left_ptrs[j]);
+        fprintf(stderr, "could not load any cursor\n");
         return -1;
     }
 
