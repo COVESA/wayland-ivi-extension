@@ -27,6 +27,8 @@
 #include "wayland-util.h"
 #include "ivi-application-client-protocol.h"
 
+ILM_CLIENT_PLATFORM_FUNC gIlmClientPlatformFunc;
+
 static ilmErrorTypes wayland_surfaceCreate(t_ilm_nativehandle nativehandle,
                          t_ilm_int width, t_ilm_int height,
                          ilmPixelFormat pixelFormat,
