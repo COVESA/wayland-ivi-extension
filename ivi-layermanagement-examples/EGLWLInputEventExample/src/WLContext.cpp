@@ -64,6 +64,7 @@ WLContext::~WLContext()
  * The following correspondences between file names and cursors was copied
  * from: https://bugs.kde.org/attachment.cgi?id=67313
  */
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 static const char *left_ptrs[] = {
 	"left_ptr",
@@ -86,12 +87,12 @@ create_cursors(WLContext* wlContext)
 	}
 	wlContext->SetWLCursor((wl_cursor*) malloc(sizeof(wl_cursor)));
 
-	for (j = 0; !cursor && j < 4; ++j)
+	for (j = 0; !cursor && j < ARRAY_SIZE(left_ptrs); ++j)
 		cursor = wl_cursor_theme_get_cursor(wlContext->GetWLCursorTheme(),
 				left_ptrs[j]);
 
 	if (!cursor)
-		fprintf(stderr, "could not load cursor '%s'\n", left_ptrs[j]);
+		fprintf(stderr, "could not load any cursor\n");
 
 	wlContext->SetWLCursor(cursor);
 }
