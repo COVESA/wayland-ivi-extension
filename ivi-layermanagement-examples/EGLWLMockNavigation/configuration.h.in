@@ -1,0 +1,1 @@
+std::string texturePath = "@CMAKE_INSTALL_PREFIX@/@TEXTURES_DIR@/textures";

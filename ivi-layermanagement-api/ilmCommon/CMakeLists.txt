@@ -25,12 +25,10 @@ project(ilmCommon)
 find_package(Threads)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
-
-GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
+GET_TARGET_PROPERTY(ILM_CONTROL_INCLUDE_DIRS ilmControl INCLUDE_DIRECTORIES)
 
 include_directories(
     include
-    ${IVI_EXTENSION_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
 )
 
@@ -45,11 +43,12 @@ add_library(${PROJECT_NAME} SHARED
 
 target_link_libraries(${PROJECT_NAME}
     ${WAYLAND_CLIENT_LIBRARIES}
+    ilmControl
 )
 
 add_dependencies(${PROJECT_NAME}
     ${WAYLAND_CLIENT_LIBRARIES}
-    ivi-extension-protocol
+    ilmControl
 )
 
 install (
@@ -65,3 +64,18 @@ install (
 )
 
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES VERSION ${ILM_API_VERSION} SOVERSION ${ILM_API_VERSION})
+
+#=============================================================================================
+# generate pkg-config file for ilmCommon API
+#=============================================================================================
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/ilmCommon.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ilmCommon.pc"
+    @ONLY
+)
+
+install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/ilmCommon.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)

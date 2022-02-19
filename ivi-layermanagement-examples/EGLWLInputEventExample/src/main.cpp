@@ -45,7 +45,8 @@ int main(int argc, char **argv)
     WLContext* wlContext;
     WLEGLSurface* eglSurface;
     WLEyes* eyes;
-    t_ilm_surface surfaceId = 5100;
+    int surfaceId = 5100;
+    int ret = -1;
 
     argc = argc; // avoid warning
     argv = argv;
@@ -81,18 +82,15 @@ int main(int argc, char **argv)
 
     int const fd = wl_display_get_fd(wlContext->GetWLDisplay());
 
-    ilmClient_init((t_ilm_nativedisplay)wlContext->GetWLDisplay());
-
     eglSurface = new WLEGLSurface(wlContext);
-    eglSurface->CreateSurface(400, 240);
-    eglSurface->CreateIlmSurface(&surfaceId, 400, 240);
+    eglSurface->CreateSurface(400, 240, surfaceId);
 
     eyes = new WLEyes(400, 240);
 
     // initialize eyes renderer
     if (!InitRenderer()){
         fprintf(stderr, "Failed to init renderer\n");
-        return -1;
+        goto Error;
     }
 
     // draw eyes once
@@ -102,7 +100,10 @@ int main(int argc, char **argv)
     gRunLoop = 1;
     gNeedRedraw = 0;
     while (gRunLoop){
-        WaitForEvent(wlContext->GetWLDisplay(), fd);
+        if ((WaitForEvent(wlContext->GetWLDisplay(), fd) < 0)){
+            gRunLoop = 0;
+        }
+
         if (gNeedRedraw && gRunLoop){
             DrawEyes(eglSurface, eyes);
             gNeedRedraw = 0;
@@ -110,14 +111,12 @@ int main(int argc, char **argv)
     }
 
     TerminateRenderer();
-    ilm_surfaceRemove(surfaceId);
+    ret = 0;
 
-    eglSurface->DestroyIlmSurface();
-
-    ilmClient_destroy();
+Error:
     delete eyes;
     delete eglSurface;
     delete wlContext;
 
-    return 0;
+    return ret;
 }

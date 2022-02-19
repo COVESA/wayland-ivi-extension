@@ -16,8 +16,6 @@
  * limitations under the License.
  *
  ****************************************************************************/
-#include "ilm_client.h"
-#include "ilm_control.h"
 #include "LMControl.h"
 #include "Expression.h"
 #include "ExpressionInterpreter.h"
@@ -50,19 +48,14 @@ void captureSceneDataHelper(t_ilm_surface surfaceId, t_scene_data* pSceneData, I
     pSurface->set("destWidth", props.destWidth);
     pSurface->set("destX", props.destX);
     pSurface->set("destY", props.destY);
-    pSurface->set("drawCounter", props.drawCounter);
     pSurface->set("frameCounter", props.frameCounter);
-    pSurface->set("nativeSurface", props.nativeSurface);
     pSurface->set("opacity", props.opacity);
-    pSurface->set("orientation", props.orientation);
     pSurface->set("origSourceHeight", props.origSourceHeight);
     pSurface->set("origSourceWidth", props.origSourceWidth);
-    pSurface->set("pixelformat", props.pixelformat);
     pSurface->set("sourceHeight", props.sourceHeight);
     pSurface->set("sourceWidth", props.sourceWidth);
     pSurface->set("sourceX", props.sourceX);
     pSurface->set("sourceY", props.sourceY);
-    pSurface->set("updateCounter", props.updateCounter);
     pSurface->set("visibility", props.visibility);
 }
 
@@ -75,14 +68,10 @@ void captureSceneDataHelper(t_ilm_layer layerId, t_scene_data* pSceneData, IlmLa
     pLayer->set("destX", props.destX);
     pLayer->set("destY", props.destY);
     pLayer->set("opacity", props.opacity);
-    pLayer->set("orientation", props.orientation);
-    pLayer->set("origSourceHeight", props.origSourceHeight);
-    pLayer->set("origSourceWidth", props.origSourceWidth);
     pLayer->set("sourceHeight", props.sourceHeight);
     pLayer->set("sourceWidth", props.sourceWidth);
     pLayer->set("sourceX", props.sourceX);
     pLayer->set("sourceY", props.sourceY);
-    pLayer->set("type", props.type);
     pLayer->set("visibility", props.visibility);
 
     if (pSceneData->layerSurfaces.find(layerId) != pSceneData->layerSurfaces.end())
@@ -279,336 +268,7 @@ void exportSceneToXMLHelper(ostream& stream, StringMapTree* tree, string prefix 
 
     stream << prefix << "</" << tree->mNodeLabel << ">\n";
 }
-
-ilmPixelFormat toPixelFormat(t_ilm_int format)
-{
-    switch (format)
-    {
-    case 0:
-        return ILM_PIXELFORMAT_R_8;
-    case 1:
-        return ILM_PIXELFORMAT_RGB_888;
-    case 2:
-        return ILM_PIXELFORMAT_RGBA_8888;
-    case 3:
-        return ILM_PIXELFORMAT_RGB_565;
-    case 4:
-        return ILM_PIXELFORMAT_RGBA_5551;
-    case 5:
-        return ILM_PIXELFORMAT_RGBA_6661;
-    case 6:
-        return ILM_PIXELFORMAT_RGBA_4444;
-    }
-
-    return ILM_PIXEL_FORMAT_UNKNOWN;
-}
-
-ilmSurfaceProperties getSurfaceProperties(IlmSurface* pIlmsurface)
-{
-    ilmSurfaceProperties props;
-
-    pIlmsurface->get("destHeight", &(props.destHeight));
-    pIlmsurface->get("destWidth", &(props.destWidth));
-    pIlmsurface->get("destX", &(props.destX));
-    pIlmsurface->get("destY", &(props.destY));
-    pIlmsurface->get("drawCounter", &(props.drawCounter));
-    pIlmsurface->get("frameCounter", &(props.frameCounter));
-    pIlmsurface->get("nativeSurface", &(props.nativeSurface));
-    pIlmsurface->get("opacity", &(props.opacity));
-    pIlmsurface->get("orientation", &(props.orientation));
-    pIlmsurface->get("origSourceHeight", &(props.origSourceHeight));
-    pIlmsurface->get("origSourceWidth", &(props.origSourceWidth));
-    pIlmsurface->get("pixelformat", &(props.pixelformat));
-    pIlmsurface->get("sourceHeight", &(props.sourceHeight));
-    pIlmsurface->get("sourceWidth", &(props.sourceWidth));
-    pIlmsurface->get("sourceX", &(props.sourceX));
-    pIlmsurface->get("sourceY", &(props.sourceY));
-    pIlmsurface->get("updateCounter", &(props.updateCounter));
-    pIlmsurface->get("visibility", &(props.visibility));
-
-    return props;
-}
-
-ilmLayerProperties getLayerProperties(IlmLayer* pIlmlayer)
-{
-    ilmLayerProperties props;
-    pIlmlayer->get("destHeight", &(props.destHeight));
-    pIlmlayer->get("destWidth", &(props.destWidth));
-    pIlmlayer->get("destX", &(props.destX));
-    pIlmlayer->get("destY", &(props.destY));
-    pIlmlayer->get("opacity", &(props.opacity));
-    pIlmlayer->get("orientation", &(props.orientation));
-    pIlmlayer->get("origSourceHeight", &(props.origSourceHeight));
-    pIlmlayer->get("origSourceHeight", &(props.origSourceHeight));
-    pIlmlayer->get("origSourceWidth", &(props.origSourceWidth));
-    pIlmlayer->get("sourceHeight", &(props.sourceHeight));
-    pIlmlayer->get("sourceWidth", &(props.sourceWidth));
-    pIlmlayer->get("sourceX", &(props.sourceX));
-    pIlmlayer->get("sourceY", &(props.sourceY));
-    pIlmlayer->get("type", &(props.type));
-    pIlmlayer->get("visibility", &(props.visibility));
-
-    return props;
-}
-
-void createSceneContentsHelper(IlmSurface* pIlmsurface)
-{
-    t_ilm_surface surfaceId;
-    pIlmsurface->get("id", &surfaceId);
-    ilmSurfaceProperties props = getSurfaceProperties(pIlmsurface);
-
-    //if surface does not exist: create it
-    t_ilm_int surfaceCount;
-    t_ilm_surface* surfaceArray;
-
-    ilmErrorTypes callResult = ilm_getSurfaceIDs(&surfaceCount, &surfaceArray);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to get available surface IDs\n";
-    }
-
-    if (find(surfaceArray, surfaceArray + surfaceCount, surfaceId)
-            == surfaceArray + surfaceCount)
-    {
-        ilmPixelFormat pixelFormat;
-        pixelFormat = toPixelFormat(props.pixelformat);
-
-        ilmErrorTypes callResult = ilm_surfaceCreate(props.nativeSurface, props.origSourceWidth,
-                                                        props.origSourceHeight, pixelFormat, &surfaceId);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to create surface\n";
-        }
-    }
-}
-
-void createSceneContentsHelper(IlmLayer* pIlmlayer)
-{
-    t_ilm_layer layerId;
-    pIlmlayer->get("id", &layerId);
-
-    ilmLayerProperties props = getLayerProperties(pIlmlayer);
-
-    //create layer if does not exist
-    t_ilm_int layerCount;
-    t_ilm_layer* layerArray;
-
-    ilmErrorTypes callResult = ilm_getLayerIDs(&layerCount, &layerArray);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to get available layer IDs\n";
-    }
-
-    if (find(layerArray, layerArray + layerCount, layerId) == layerArray + layerCount)
-    {
-        ilmErrorTypes callResult = ilm_layerCreateWithDimension(&layerId, props.origSourceWidth, props.origSourceHeight);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to create layer width dimensions (" << props.origSourceWidth << " ," << props.origSourceHeight << ")\n";
-        }
-
-        ilm_commitChanges();
-    }
-
-    list<IlmSurface*> surfaceList;
-    pIlmlayer->get(&surfaceList);
-    vector<t_ilm_surface> renderOrder;
-    for (list<IlmSurface*>::iterator it = surfaceList.begin();
-            it != surfaceList.end(); ++it)
-    {
-        t_ilm_surface surfaceId;
-        (*it)->get("id", &surfaceId);
-        renderOrder.push_back(surfaceId);
-
-        createSceneContentsHelper(*it);
-    }
-
-    callResult = ilm_layerSetRenderOrder(layerId, renderOrder.data(), renderOrder.size());
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to set render order for layer with ID " << layerId << ")\n";
-    }
-
-    ilm_commitChanges();
-}
-
-void createSceneContentsHelper(IlmDisplay* pIlmdisplay)
-{
-    t_ilm_display displayId = 0xFFFFFFFF;
-    pIlmdisplay->get("id", &displayId);
-
-    list<IlmLayer*> layerList;
-    pIlmdisplay->get(&layerList);
-    vector<t_ilm_layer> renderOrder;
-    for (list<IlmLayer*>::iterator it = layerList.begin(); it != layerList.end(); ++it)
-    {
-        t_ilm_layer layerId;
-        (*it)->get("id", &layerId);
-        renderOrder.push_back(layerId);
-
-        createSceneContentsHelper(*it);
-        ilm_commitChanges();
-    }
-
-    ilmErrorTypes callResult = ilm_displaySetRenderOrder(displayId, renderOrder.data(), renderOrder.size());
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to set render order for display with ID " << displayId << ")\n";
-    }
-
-    ilm_commitChanges();
-}
-
-void createSceneContents(IlmScene* pIlmscene)
-{
-    list<IlmSurface*> surfaceList;
-    pIlmscene->get(&surfaceList);
-    for (list<IlmSurface*>::iterator it = surfaceList.begin(); it != surfaceList.end(); ++it)
-    {
-        createSceneContentsHelper(*it);
-    }
-
-    list<IlmLayer*> layerList;
-    pIlmscene->get(&layerList);
-    for (list<IlmLayer*>::iterator it = layerList.begin();
-            it != layerList.end(); ++it)
-    {
-        createSceneContentsHelper(*it);
-    }
-
-    list<IlmDisplay*> displayList;
-    pIlmscene->get(&displayList);
-    for (list<IlmDisplay*>::iterator it = displayList.begin(); it != displayList.end(); ++it)
-    {
-        createSceneContentsHelper(*it);
-    }
-}
-
-void restoreSceneHelper(IlmSurface* pIlmsurface)
-{
-    t_ilm_surface surfaceId = 0xFFFFFFFF;
-    pIlmsurface->get("id", &surfaceId);
-    ilmSurfaceProperties props = getSurfaceProperties(pIlmsurface);
-
-    ilm_surfaceSetOpacity(surfaceId, props.opacity);
-    ilm_commitChanges();
-    ilm_surfaceSetOrientation(surfaceId, props.orientation);
-    ilm_commitChanges();
-    ilm_surfaceSetSourceRectangle(surfaceId, props.sourceX, props.sourceY, props.sourceWidth, props.sourceHeight);
-    ilm_commitChanges();
-    ilm_surfaceSetDestinationRectangle(surfaceId, props.destX, props.destY, props.destWidth, props.destHeight);
-    ilm_commitChanges();
-    ilm_surfaceSetVisibility(surfaceId, props.visibility);
-    ilm_commitChanges();
-}
-
-void restoreSceneHelper(IlmLayer* pIlmlayer)
-{
-    t_ilm_layer layerId = 0xFFFFFFFF;
-    pIlmlayer->get("id", &layerId);
-
-    ilmLayerProperties props = getLayerProperties(pIlmlayer);
-
-    //set layer properties
-    ilmErrorTypes callResult = ilm_layerSetDestinationRectangle(layerId, props.destX, props.destY, props.destWidth, props.destHeight);
-    if (ILM_SUCCESS != callResult)
-    {
-        cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-        cout << "Failed to set destination rectangle for layer with ID " << layerId << ")\n";
-    }
-
-    ilm_commitChanges();
-    ilm_layerSetOpacity(layerId, props.opacity);
-    ilm_commitChanges();
-    ilm_layerSetOrientation(layerId, props.orientation);
-    ilm_commitChanges();
-    ilm_layerSetSourceRectangle(layerId, props.sourceX, props.sourceY, props.sourceWidth, props.sourceHeight);
-    ilm_commitChanges();
-    ilm_layerSetVisibility(layerId, props.visibility);
-    ilm_commitChanges();
-
-    list<IlmSurface*> surfaceList;
-    pIlmlayer->get(&surfaceList);
-
-    //restore surfaces
-    for (list<IlmSurface*>::iterator it = surfaceList.begin(); it != surfaceList.end(); ++it)
-    {
-        t_ilm_surface surfaceId;
-        (*it)->get("id", &surfaceId);
-
-        restoreSceneHelper(*it);
-    }
-}
-
-void restoreSceneHelper(IlmDisplay* pIlmdisplay)
-{
-    t_ilm_display displayId;
-    pIlmdisplay->get("id", &displayId);
-
-    list<IlmLayer*> layerList;
-    pIlmdisplay->get(&layerList);
-    for (list<IlmLayer*>::iterator it = layerList.begin(); it != layerList.end(); ++it)
-    {
-        t_ilm_layer layerId;
-        (*it)->get("id", &layerId);
-
-        restoreSceneHelper(*it);
-        ilm_commitChanges();
-    }
-}
-
-void restoreScene(IlmScene* pIlmscene)
-{
-    t_scene_data currentScene;
-    captureSceneData(&currentScene);
-
-    //remove all surfaces from all layers
-    for (map<t_ilm_surface, t_ilm_layer>::iterator it = currentScene.surfaceLayer.begin();
-            it != currentScene.surfaceLayer.end(); ++it)
-    {
-        ilmErrorTypes callResult = ilm_layerRemoveSurface(it->second, it->first);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to remove surface " << it->first << " from layer " << it->second << ")\n";
-        }
-    }
-
-    ilm_commitChanges();
-
-    //create scene contents
-    createSceneContents(pIlmscene);
-
-    //restore scene
-    list<IlmSurface*> surfaceList;
-    pIlmscene->get(&surfaceList);
-    for (list<IlmSurface*>::iterator it = surfaceList.begin(); it != surfaceList.end(); ++it)
-    {
-        restoreSceneHelper(*it);
-    }
-
-    list<IlmLayer*> layerList;
-    pIlmscene->get(&layerList);
-    for (list<IlmLayer*>::iterator it = layerList.begin(); it != layerList.end(); ++it)
-    {
-        restoreSceneHelper(*it);
-    }
-
-    list<IlmDisplay*> displayList;
-    pIlmscene->get(&displayList);
-    for (list<IlmDisplay*>::iterator it = displayList.begin(); it != displayList.end(); ++it)
-    {
-        restoreSceneHelper(*it);
-    }
-}
 } //end of anonymous namespace
-
 
 void exportSceneToFile(string filename)
 {
@@ -650,49 +310,6 @@ void exportSceneToFile(string filename)
     stream << buffer.str();
     stream.flush();
     stream.close();
-}
-
-void importSceneFromFile(string filename)
-{
-    IlmScene ilmscene;
-    IlmScene* pScene = &ilmscene;
-
-    fstream stream(filename.c_str(), ios::in);
-
-    StringMapTree sceneTree;
-
-    //check extension
-    if (filename.find_last_of(".") != string::npos)
-    {
-        string extension = filename.substr(filename.find_last_of("."));
-        cout << extension << endl;
-
-        if (extension == ".xml")
-        {
-//             importSceneFromXMLHelper(stream, &sceneTree);
-            cout << "READING XML IS NOT SUPPORTED YET" << endl;
-        }
-        else if (extension == ".txt")
-        {
-            importSceneFromTXTHelper(stream, &sceneTree);
-            cout << "DONE READING TXT" << endl;
-        }
-    }
-    else
-    {
-        //defult behavior: assume txt
-        importSceneFromTXTHelper(stream, &sceneTree);
-        cout << "DONE READING TXT" << endl;
-    }
-
-    stream.close();
-
-    cout << "Scene Tree :[" << sceneTree.toString() << "]" << endl;
-    pScene->fromStringMapTree(&sceneTree);
-    cout << "Scene successfully created from tree" << endl;
-
-    restoreScene(pScene);
-    cout << "Scene restored successfully" << endl;
 }
 
 void exportXtext(string fileName, string grammar, string url)

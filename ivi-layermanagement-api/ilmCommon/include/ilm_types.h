@@ -44,6 +44,20 @@
  **/
 #define ILM_FALSE     0u
 
+/* GCC visibility */
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define ILM_EXPORT __attribute__ ((visibility("default")))
+#else
+#define ILM_EXPORT
+#endif
+
+/* Deprecated attribute */
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define ILM_DEPRECATED __attribute__ ((deprecated))
+#else
+#define ILM_DEPRECATED
+#endif
+
 /**
  * \brief Enumeration on possible error codes
  * \ingroup ilmClient
@@ -93,19 +107,6 @@ typedef enum e_ilmPixelFormat
 } ilmPixelFormat;
 
 /**
- * \brief Enumeration for supported layertypes
- * \ingroup ilmControl
- **/
-typedef enum e_ilmLayerType
-{
-    ILM_LAYERTYPE_UNKNOWN = 0,         /*!< LayerType not known */
-    ILM_LAYERTYPE_HARDWARE = 1,        /*!< LayerType value, to describe a hardware layer */
-    ILM_LAYERTYPE_SOFTWARE2D = 2,      /*!< LayerType value, to describe a redirected offscreen buffer layer */
-    ILM_LAYERTYPE_SOFTWARE2_5D = 3     /*!< LayerType value, to describe a redirected offscreen buffer layer,
-                                            which can be rotated in the 3d space */
-} ilmLayerType;
-
-/**
  * \brief Enumeration for supported graphical objects
  * \ingroup ilmControl
  **/
@@ -116,16 +117,14 @@ typedef enum e_ilmObjectType
 } ilmObjectType;
 
 /**
- * \brief Enumeration for supported orientations of booth, surface and layer
+ * \brief Enumeration for supported surface types
  * \ingroup ilmControl
  **/
-typedef enum e_ilmOrientation
+typedef enum e_ilmSurfaceType
 {
-    ILM_ZERO = 0,                       /*!< Orientation value, to describe 0 degree of rotation regarding the z-axis*/
-    ILM_NINETY = 1,                     /*!< Orientation value, to describe 90 degree of rotation regarding the z-axis*/
-    ILM_ONEHUNDREDEIGHTY = 2,           /*!< Orientation value, to describe 180 degree of rotation regarding the z-axis*/
-    ILM_TWOHUNDREDSEVENTY = 3           /*!< Orientation value, to describe 270 degree of rotation regarding the z-axis*/
-} ilmOrientation;
+    ILM_SURFACETYPE_RESTRICTED = 0,                       /*!< SurfaceType value, to describe an IVI type surface*/
+    ILM_SURFACETYPE_DESKTOP = 1,                     /*!< SurfaceType value, to describe a desktop compatible surface*/
+} ilmSurfaceType;
 
 /**
  * \brief Identifier of different input device types. Can be used as a bitmask.
@@ -136,7 +135,6 @@ typedef unsigned int ilmInputDevice;
 #define ILM_INPUT_DEVICE_POINTER    ((ilmInputDevice) 1 << 1)
 #define ILM_INPUT_DEVICE_TOUCH      ((ilmInputDevice) 1 << 2)
 #define ILM_INPUT_DEVICE_ALL        ((ilmInputDevice) ~0)
-
 
 /**
  * \brief Typedef for representing a layer
@@ -155,12 +153,6 @@ typedef t_ilm_uint     t_ilm_surface;
  * \ingroup ilmClient
  **/
 typedef t_ilm_uint     t_ilm_display;
-
-/**
- * \brief Typedef for representing layer capabilities
- * \ingroup ilmControl
- **/
-typedef t_ilm_uint     t_ilm_layercapabilities;
 
 /**
  * \brief Typedef for representing a native display
@@ -203,13 +195,8 @@ struct ilmSurfaceProperties
     t_ilm_uint destY;                       /*!< y desitination position value of the surface */
     t_ilm_uint destWidth;                   /*!< destination width value of the surface */
     t_ilm_uint destHeight;                  /*!< destination height value of the surface */
-    ilmOrientation orientation;             /*!< orientation value of the surface */
     t_ilm_bool visibility;                  /*!< visibility value of the surface */
     t_ilm_uint frameCounter;                /*!< already rendered frames of surface */
-    t_ilm_uint drawCounter;                 /*!< content updates of surface */
-    t_ilm_uint updateCounter;               /*!< content updates of surface */
-    t_ilm_uint pixelformat;                 /*!< pixel format of surface */
-    t_ilm_uint nativeSurface;               /*!< native surface handle of surface */
     t_ilm_int  creatorPid;                  /*!< process id of application that created this surface */
     ilmInputDevice focus;                   /*!< bitmask of every type of device that this surface has focus in */
 };
@@ -225,16 +212,11 @@ struct ilmLayerProperties
     t_ilm_uint sourceY;          /*!< y source position value of the layer */
     t_ilm_uint sourceWidth;      /*!< source width value of the layer */
     t_ilm_uint sourceHeight;     /*!< source height value of the layer */
-    t_ilm_uint origSourceWidth;  /*!< original source width value of the layer */
-    t_ilm_uint origSourceHeight; /*!< original source height value of the layer */
     t_ilm_uint destX;            /*!< x destination position value of the layer */
     t_ilm_uint destY;            /*!< y desitination position value of the layer */
     t_ilm_uint destWidth;        /*!< destination width value of the layer */
     t_ilm_uint destHeight;       /*!< destination height value of the layer */
-    ilmOrientation orientation;  /*!< orientation value of the layer */
     t_ilm_bool visibility;       /*!< visibility value of the layer */
-    t_ilm_uint type;             /*!< type of layer */
-    t_ilm_int  creatorPid;       /*!< process id of application that created this layer */
 };
 
 /**
@@ -245,35 +227,10 @@ struct ilmScreenProperties
 {
     t_ilm_uint layerCount;          /*!< number of layers displayed on the screen */
     t_ilm_layer* layerIds;          /*!< array of layer ids */
-    t_ilm_uint harwareLayerCount;   /*!< number of hardware layers */
     t_ilm_uint screenWidth;         /*!< width value of screen in pixels */
     t_ilm_uint screenHeight;        /*!< height value of screen in pixels */
+    t_ilm_char connectorName[256];  /*!< name of the connector of the screen */
 };
-
-/**
- * enum representing all possible incoming events for ilmClient and
- * Communicator Plugin
- */
-typedef enum e_t_ilm_message_type
-{
-    IpcMessageTypeNone = 0,
-    IpcMessageTypeCommand,
-    IpcMessageTypeConnect,
-    IpcMessageTypeDisconnect,
-    IpcMessageTypeNotification,
-    IpcMessageTypeError,
-    IpcMessageTypeShutdown
-} t_ilm_message_type;
-
-/**
- * Typedef for opaque handling of client handles within an IpcModule
- */
-typedef void* t_ilm_client_handle;
-
-/**
- * Typedef for opaque handling of messages from IpcModule
- */
-typedef void* t_ilm_message;
 
 /**
  * enum representing the possible flags for changed properties in notification callbacks.
@@ -290,6 +247,16 @@ typedef enum
     ILM_NOTIFICATION_CONFIGURED = ILM_BIT(8),
     ILM_NOTIFICATION_ALL = 0xffff
 } t_ilm_notification_mask;
+
+/**
+ * enum representing types of possible unrecoverable errors that could lead to ilm shutdown.
+ */
+typedef enum
+{
+    ILM_ERROR_WAYLAND = 1,          /*!< ErrorCode if Wayland API returns an error */
+    ILM_ERROR_POLL = 2              /*!< ErrorCode if Poll returns an error */
+}t_ilm_shutdown_error_type;
+
 
 /**
  * Typedef for notification callback on property changes of a layer
@@ -314,41 +281,10 @@ typedef void(*notificationFunc)(ilmObjectType object,
                                         void* user_data);
 
 /**
- * enum for identifying different health states
+ * Typedef for notification callback on ilm shutdown due to unrecoverable
+ * errors
  */
-enum HealthCondition
-{
-    HealthStopped,
-    HealthRunning,
-    HealthDead
-};
-
-/**
- * enum for identifying plugin types and versions
- *
- * All plugins are started in the order defined by their value
- * in this enum (lowest first, highest last).
- * The plugins are stopped in opposite order (highest first,
- * lowest last).
- */
-typedef enum PluginApi
-{
-    Renderer_Api = 0x00010000,
-    Renderer_Api_v1,
-
-    SceneProvider_Api = 0x00020000,
-    SceneProvider_Api_v1,
-
-    Communicator_Api = 0x00040000,
-    Communicator_Api_v1,
-
-    HealthMonitor_Api = 0x00080000,
-    HealthMonitor_Api_v1
-} ilmPluginApi;
-
-#define PLUGIN_IS_COMMUNICATOR(x)  ((x) & Communicator_Api)
-#define PLUGIN_IS_RENDERER(x)      ((x) & Renderer_Api)
-#define PLUGIN_IS_SCENEPROVIDER(x) ((x) & SceneProvider_Api)
-#define PLUGIN_IS_HEALTHMONITOR(x) ((x) & HealthMonitor_Api)
-
+typedef void(*shutdownNotificationFunc)(t_ilm_shutdown_error_type error_type,
+                                        int errornum,
+                                        void* user_data);
 #endif /* _ILM_TYPES_H_*/

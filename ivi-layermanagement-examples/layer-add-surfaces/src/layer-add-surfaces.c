@@ -27,28 +27,34 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <getopt.h>
 
 #include "ilm_control.h"
 
 t_ilm_uint screenWidth;
 t_ilm_uint screenHeight;
-t_ilm_uint layer;
+static t_ilm_uint layer = 0;
 pthread_mutex_t mutex;
 static pthread_cond_t  waiterVariable = PTHREAD_COND_INITIALIZER;
-static int number_of_surfaces;
+static int number_of_surfaces = 0;
+char display_name[256] = {0};
 
 static void configure_ilm_surface(t_ilm_uint id, t_ilm_uint width, t_ilm_uint height)
 {
     ilm_surfaceSetDestinationRectangle(id, 0, 0, width, height);
-    printf("SetDestinationRectangle: surface ID (%d), Width (%u), Height (%u)\n", id, width, height);
     ilm_surfaceSetSourceRectangle(id, 0, 0, width, height);
-    printf("SetSourceRectangle     : surface ID (%d), Width (%u), Height (%u)\n", id, width, height);
     ilm_surfaceSetVisibility(id, ILM_TRUE);
-    printf("SetVisibility          : surface ID (%d), ILM_TRUE\n", id);
     ilm_layerAddSurface(layer,id);
-    printf("layerAddSurface        : surface ID (%d) is added to layer ID (%d)\n", id, layer);
+    ilm_surfaceRemoveNotification(id);
+
     ilm_commitChanges();
     pthread_cond_signal( &waiterVariable );
+
+    printf("layer-add-surfaces: surface (%u) configured with:\n"
+           "    dst region: x:0 y:0 w:%u h:%u\n"
+           "    src region: x:0 y:0 w:%u h:%u\n"
+           "    visibility: TRUE\n"
+           "    added to layer (%u)\n", id, width, height, width, height,layer);
 }
 
 static void surfaceCallbackFunction(t_ilm_uint id, struct ilmSurfaceProperties* sp, t_ilm_notification_mask m)
@@ -68,27 +74,55 @@ static void callbackFunction(ilmObjectType object, t_ilm_uint id, t_ilm_bool cre
         if (created) {
             if (number_of_surfaces > 0) {
                 number_of_surfaces--;
-                printf("surface                : %d created\n",id);
+                printf("layer-add-surfaces: surface (%d) created\n",id);
+                // always get configured event to follow the surface changings
+                ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
+                ilm_commitChanges();
                 ilm_getPropertiesOfSurface(id, &sp);
 
                 if ((sp.origSourceWidth != 0) && (sp.origSourceHeight !=0))
                 {   // surface is already configured
                     configure_ilm_surface(id, sp.origSourceWidth, sp.origSourceHeight);
-                } else {
-                    // wait for configured event
-                    ilm_surfaceAddNotification(id,&surfaceCallbackFunction);
-                    ilm_commitChanges();
                 }
             }
         }
         else if(!created)
-            printf("surface: %d destroyed\n",id);
+            printf("layer-add-surfaces: surface (%u) destroyed\n",id);
     } else if (object == ILM_LAYER) {
         if (created)
-            printf("layer: %d created\n",id);
+            printf("layer-add-surfaces: layer (%u) created\n",id);
         else if(!created)
-            printf("layer: %d destroyed\n",id);
+            printf("layer-add-surfaces: layer (%u) destroyed\n",id);
     }
+}
+
+static void shutdownCallbackFunction(t_ilm_shutdown_error_type error_type,
+                                     int errornum,
+                                     void *user_data)
+{
+    (void) user_data;
+
+    switch (error_type) {
+        case ILM_ERROR_WAYLAND:
+        {
+            printf("layer-add-surfaces: exit, ilm shutdown due to wayland error: %s\n",
+                   strerror(errornum));
+            break;
+        }
+        case ILM_ERROR_POLL:
+        {
+            printf("layer-add-surfaces: exit, ilm shutdown due to poll error: %s\n",
+                   strerror(errornum));
+            break;
+        }
+        default:
+        {
+            printf("layer-add-surfaces: exit, ilm shutdown due to unknown reason: %s\n",
+                   strerror(errornum));
+        }
+    }
+
+    exit(1);
 }
 
 /* Choose the display with the largest resolution.*/
@@ -97,17 +131,23 @@ static t_ilm_uint choose_screen(void)
     struct ilmScreenProperties screenProperties;
     t_ilm_uint* screen_IDs = NULL;
     t_ilm_uint screen_ID = 0;
-    t_ilm_uint screen_count = NULL;
+    t_ilm_uint screen_count = 0;
     t_ilm_uint choosen_width = 0;
     t_ilm_uint choosen_height = 0;
-    int i;
+    t_ilm_uint i;
 
     ilm_getScreenIDs(&screen_count, &screen_IDs);
 
     for (i = 0; i<screen_count; i++)
     {
         ilm_getPropertiesOfScreen(screen_IDs[i], &screenProperties);
-        if (screenProperties.screenWidth > choosen_width) {
+        if (!strcmp(screenProperties.connectorName, display_name)) {
+            choosen_width = screenProperties.screenWidth;
+            choosen_height = screenProperties.screenHeight;
+            screen_ID = screen_IDs[i];
+            break;
+        }
+        else if (screenProperties.screenWidth > choosen_width) {
             choosen_width = screenProperties.screenWidth;
             choosen_height = screenProperties.screenHeight;
             screen_ID = screen_IDs[i];
@@ -122,17 +162,78 @@ static t_ilm_uint choose_screen(void)
     return screen_ID;
 }
 
-int main (int argc, const char * argv[])
+static int
+usage(int ret)
 {
-    // Get command-line options
-    if ( argc != 3) {
-        printf("Call layer-add-surface <layerID> <number_of_surfaces>\n");
-        return -1;
+    fprintf(stderr, "    -h,  --help                  display this help and exit.\n"
+                    "    -d,  --display-name          name of the display which will be used,\n"
+                    "                                 e.g.: HDMI-A-1, LVDS1\n"
+                    "                                 If it is not set, display with highest resolution is used.\n"
+                    "    -l,  --layer-id              id of the used ILM layer. It has to be set\n"
+                    "    -s,  --surface-count         number of surfaces which will be added to\n"
+                    "                                 the layer. It has to be set\n");
+    exit(ret);
+}
+
+void parse_options(int argc, char *argv[])
+{
+    int opt;
+    static const struct option options[] = {
+        { "help",              no_argument, NULL, 'h' },
+        { "layer-id",              required_argument, 0, 'l' },
+        { "surface-count",           required_argument, 0, 's' },
+        { "display-name", required_argument, NULL, 'd' },
+        { 0,                   0,           NULL, 0 }
+    };
+
+    while (1) {
+        opt = getopt_long(argc, argv, "hl:s:d:", options, NULL);
+
+        if (opt == -1)
+            break;
+
+        switch (opt) {
+            case 'h':
+                usage(0);
+                break;
+            case 'l':
+                layer = atoi(optarg);
+                break;
+            case 's':
+                number_of_surfaces = atoi(optarg);
+                break;
+            case 'd':
+                strcpy(display_name, optarg);
+                break;
+            default:
+                usage(-1);
+                break;
+        }
     }
 
-    layer = strtol(argv[1], NULL, 0);
+    printf("layer-add-surfaces: layer (%u) on display (%s) created, waiting for %d surfaces ...\n",
+               layer,
+               display_name,
+               number_of_surfaces);
+}
 
-    number_of_surfaces = strtol(argv[2], NULL, 0);
+int main (int argc, char *argv[])
+{
+    // Get command-line options
+    if ( argc < 3) {
+        usage(-1);
+    }
+
+    // Check the first character of the first parameter
+    if (!strncmp(argv[1], "-", 1)) {
+        parse_options(argc, argv);
+    } else {
+        layer = strtol(argv[1], NULL, 0);
+        number_of_surfaces = strtol(argv[2], NULL, 0);
+    }
+
+    if (!number_of_surfaces || !layer)
+        usage(-1);
 
     pthread_mutexattr_t a;
     if (pthread_mutexattr_init(&a) != 0)
@@ -149,7 +250,7 @@ int main (int argc, const char * argv[])
     if (pthread_mutex_init(&mutex, &a) != 0)
     {
         pthread_mutexattr_destroy(&a);
-        fprintf(stderr, "failed to initialize pthread_mutex\n");
+        fprintf(stderr, "layer-add-surfaces: failed to initialize pthread_mutex\n");
         return -1;
     }
 
@@ -158,13 +259,18 @@ int main (int argc, const char * argv[])
     t_ilm_layer renderOrder[1];
     t_ilm_uint screen_ID;
     renderOrder[0] = layer;
-    ilm_init();
+    if (ilm_init() == ILM_FAILED) {
+        fprintf(stderr, "layer-add-surfaces: ilm_init failed\n");
+        return -1;
+    }
+
+    ilm_registerShutdownNotification(shutdownCallbackFunction, NULL);
 
     screen_ID = choose_screen();
     ilm_layerCreateWithDimension(&layer, screenWidth, screenHeight);
-    printf("CreateWithDimension: layer ID (%d), Width (%u), Height (%u)\n", layer, screenWidth, screenHeight);
+    printf("layer-add-surfaces: layer (%d) destination region: x:0 y:0 w:%u h:%u\n", layer, screenWidth, screenHeight);
     ilm_layerSetVisibility(layer,ILM_TRUE);
-    printf("SetVisibility      : layer ID (%d), ILM_TRUE\n", layer);
+    printf("layer-add-surfaces: layer (%d) visibility TRUE\n", layer);
     ilm_displaySetRenderOrder(screen_ID, renderOrder, 1);
     ilm_commitChanges();
     ilm_registerNotification(callbackFunction, NULL);

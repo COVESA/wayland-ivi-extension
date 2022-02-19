@@ -22,29 +22,35 @@
 
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
+#include <ivi-application-client-protocol.h>
+#include <wayland-cursor.h>
 
-struct serverinfo;
+
+struct seat_data {
+    struct wl_seat *wlSeat;
+    struct wl_keyboard *wlKeyboard;
+    struct wl_pointer *wlPointer;
+    struct wl_touch *wlTouch;
+    class WLContext *ctx;
+};
 
 class WLContext
 {
-	struct seat_data {
-		struct wl_seat *wlSeat;
-		struct wl_keyboard *wlKeyboard;
-		struct wl_pointer *wlPointer;
-		struct wl_touch *wlTouch;
-		class WLContext *ctx;
-	};
 // properties
 private:
     struct wl_display*    m_wlDisplay;
     struct wl_registry*   m_wlRegistry;
     struct wl_compositor* m_wlCompositor;
-    struct serverinfo*    m_wlServerInfo;
-    uint32_t m_connectionId;
+    struct ivi_application*    m_iviApp;
 
     struct wl_pointer_listener*  m_wlPointerListener;
     struct wl_keyboard_listener* m_wlKeyboardListener;
     struct wl_touch_listener*    m_wlTouchListener;
+
+    struct wl_cursor_theme* m_wlCursorTheme;
+    struct wl_cursor* m_wlCursor;
+    struct wl_shm* m_wlShm;
+    struct wl_surface *m_pointerSurface;
 
 // methods
 public:
@@ -61,25 +67,29 @@ public:
     struct wl_pointer_listener* GetWLPointerListener() const;
     struct wl_keyboard_listener* GetWLKeyboardListener() const;
     struct wl_touch_listener* GetWLTouchListener() const;
-    uint32_t GetConnectionId() const;
+    struct ivi_application* GetIviApp() const;
+    struct wl_cursor_theme* GetWLCursorTheme() const;
+    struct wl_cursor* GetWLCursor() const;
+    struct wl_shm* GetWLShm() const;
+    struct wl_surface* GetPointerSurface() const;
 
     void SetEventMask(uint32_t mask);
     void SetWLCompositor(struct wl_compositor* wlCompositor);
-    void SetWLServerInfo(struct serverinfo* wlServerInfo);
+    void SetIviApp(struct ivi_application* iviApp);
     void SetWLSeat(struct wl_seat* wlSeat);
-    void SetConnectionId(uint32_t connectionId);
     void SetWLPointer(struct wl_pointer* wlPointer);
     void SetWLKeyboard(struct wl_keyboard* wlKeyboard);
     void SetWLTouch(struct wl_touch* wlTouch);
+    void SetWLCursorTheme(struct wl_cursor_theme* wlCursorTheme);
+    void SetWLCursor(struct wl_cursor* wlCursor);
+    void SetWLShm(struct wl_shm* wlShm);
+    void SetPointerSurface(struct wl_surface* pointerSurface);
 
     static void RegistryHandleGlobal(void* data,
                                      struct wl_registry* registry,
                                      uint32_t name,
                                      const char* interface,
                                      uint32_t version);
-    static void ServerInfoListener(void* data,
-                                   struct serverinfo* serverInfo,
-                                   uint32_t clientHandle);
     static void SeatHandleCapabilities(void* data,
                                        struct wl_seat* seat,
                                        uint32_t caps);
@@ -98,12 +108,22 @@ inline struct wl_keyboard_listener* WLContext::GetWLKeyboardListener() const
     { return m_wlKeyboardListener; }
 inline struct wl_touch_listener* WLContext::GetWLTouchListener() const
     { return m_wlTouchListener; }
-inline uint32_t WLContext::GetConnectionId() const { return m_connectionId; }
+inline struct ivi_application* WLContext::GetIviApp() const { return m_iviApp; }
+inline struct wl_cursor_theme* WLContext::GetWLCursorTheme() const { return m_wlCursorTheme; }
+inline struct wl_cursor* WLContext::GetWLCursor() const { return m_wlCursor; }
+inline struct wl_shm* WLContext::GetWLShm() const { return m_wlShm; }
+inline struct wl_surface* WLContext::GetPointerSurface() const
+    { return m_pointerSurface; }
 inline void WLContext::SetWLCompositor(struct wl_compositor* wlCompositor)
     { m_wlCompositor = wlCompositor; }
-inline void WLContext::SetWLServerInfo(struct serverinfo* wlServerInfo)
-    { m_wlServerInfo = wlServerInfo; }
-inline void WLContext::SetConnectionId(uint32_t connectionId)
-    { m_connectionId = connectionId; }
+inline void WLContext::SetIviApp(struct ivi_application* iviApp)
+    { m_iviApp = iviApp; }
+inline void WLContext::SetWLCursorTheme(struct wl_cursor_theme* wlCursorTheme)
+    { m_wlCursorTheme = wlCursorTheme; }
+inline void WLContext::SetWLCursor(struct wl_cursor* wlCursor)
+    { m_wlCursor = wlCursor; }
+inline void WLContext::SetWLShm(struct wl_shm* wlShm) { m_wlShm = wlShm; }
+inline void WLContext::SetPointerSurface(struct wl_surface* pointerSurface)
+    { m_pointerSurface = pointerSurface; }
 
 #endif /* _WLCONTEXT_H_ */

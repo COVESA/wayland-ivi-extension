@@ -2,6 +2,7 @@
 #
 # Copyright 2010-2014 BMW Car IT GmbH
 # Copyright (C) 2011 DENSO CORPORATION and Robert Bosch Car Multimedia Gmbh
+# Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
 #
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,11 +29,27 @@ pkg_check_modules(EGL egl REQUIRED)
 pkg_check_modules(WAYLAND_EGL wayland-egl REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
-GET_TARGET_PROPERTY(ILM_CLIENT_INCLUDE_DIRS  ilmClient  INCLUDE_DIRECTORIES)
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+add_custom_command(
+    OUTPUT  ivi-application-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-application-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
 
 include_directories(
     include
-    ${ILM_CLIENT_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${GLESv2_INCLUDE_DIRS}
     ${EGL_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
@@ -58,6 +75,10 @@ set (HEADER_FILES
     include/Street.h
     include/ShaderBase.h
     include/ShaderLighting.h
+    include/TextureLoader.h
+    include/ShaderTexture.h
+    include/Sky.h
+    include/ShaderGradient.h
 )
 
 set (SRC_FILES
@@ -72,11 +93,17 @@ set (SRC_FILES
     src/ShaderBase.cpp
     src/ShaderLighting.cpp
     src/main.cpp
+    src/TextureLoader.cpp
+    src/ShaderTexture.cpp
+    src/Sky.cpp
+    src/ShaderGradient.cpp
 )
 
 add_executable(${PROJECT_NAME}
     ${SRC_FILES}
+    ivi-application-protocol.c
     ${HEADER_FILES}
+    ivi-application-client-protocol.h
 )
 
 
@@ -86,8 +113,9 @@ set(LIBS
     ${WAYLAND_CLIENT_LIBRARIES}
     ${WAYLAND_EGL_LIBRARIES}
     ${EGL_LIBRARIES}
-    ilmClient
 )
+
+SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
 
 add_dependencies(${PROJECT_NAME}
     ${LIBS}
@@ -103,3 +131,12 @@ install(
     TARGETS     ${PROJECT_NAME}
     DESTINATION bin
 )
+
+SET(TEXTURES_DIR share/wayland-ivi-extension)
+
+install (
+    DIRECTORY   ${CMAKE_SOURCE_DIR}/ivi-layermanagement-examples/EGLWLMockNavigation/textures
+    DESTINATION ${TEXTURES_DIR}
+)
+
+configure_file(configuration.h.in configuration.h)

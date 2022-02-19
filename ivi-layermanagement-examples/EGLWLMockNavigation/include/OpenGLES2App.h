@@ -24,7 +24,7 @@
 #include "wayland-egl.h"
 #include <GLES2/gl2.h>
 
-#include "ilm_client.h"
+#include <ivi-application-client-protocol.h>
 #include <EGL/egl.h>
 
 struct SurfaceConfiguration
@@ -32,6 +32,7 @@ struct SurfaceConfiguration
     unsigned int surfaceId;
     unsigned int surfaceWidth;
     unsigned int surfaceHeight;
+    unsigned int sync;
     bool nosky;
 };
 
@@ -55,10 +56,8 @@ private:
     bool createWLContext(SurfaceConfiguration* config);
     void destroyWLContext();
 
-    bool createEGLContext();
+    bool createEGLContext(SurfaceConfiguration* config);
     void destroyEglContext();
-
-    ilmErrorTypes setupLayerMangement(SurfaceConfiguration* config);
 
     unsigned int GetTickCount();
 
@@ -89,6 +88,8 @@ public:
         struct wl_surface* wlSurface;
         struct wl_shell* wlShell;
         struct wl_shell_surface* wlShellSurface;
+        struct ivi_application* iviApp;
+        struct ivi_surface* iviSurface;
         int width;
         int height;
 
@@ -99,7 +100,7 @@ public:
 protected:
     WLContextStruct m_wlContextStruct;
 
-    t_ilm_surface m_surfaceId;
+    unsigned int m_surfaceId;
 };
 
 #endif /* _OPENGLES2APP_H */

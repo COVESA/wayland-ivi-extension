@@ -213,6 +213,12 @@ ExpressionList Expression::getNextExpressionClosure(string text)
         {
             Expression* expr = *iter;
 
+            if((expr->mName).compare("<file>") &&
+               (expr->mName).compare("<filename>"))
+            {
+                transform(text.begin(), text.end(), text.begin(), ::tolower);
+            }
+
             if (expr->isVar())
             {
                 nextClosure.push_back(expr);

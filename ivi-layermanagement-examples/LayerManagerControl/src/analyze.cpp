@@ -17,7 +17,6 @@
  *
  ****************************************************************************/
 
-#include "ilm_client.h"
 #include "LMControl.h"
 
 #include <algorithm>
@@ -266,20 +265,6 @@ void analyzeLayerDimensions(t_ilm_surface targetSurfaceId, t_scene_data& scene)
 
     analyzePrintHelper(tag, flag, description);
 
-    tag = "Layer original width";
-    if (targetLayerProperties.origSourceWidth <= minDimension)
-    {
-        flag = "PROBLEM";
-        sprintf(description, "Layer %i has [origSourceWidth=%i]", targetSurfaceLayer, targetLayerProperties.origSourceWidth);
-    }
-    else
-    {
-        flag = "OK";
-        sprintf(description, "%s", "");
-    }
-
-    analyzePrintHelper(tag, flag, description);
-
     tag = "Layer dest height";
     if (targetLayerProperties.destHeight <= minDimension)
     {
@@ -299,20 +284,6 @@ void analyzeLayerDimensions(t_ilm_surface targetSurfaceId, t_scene_data& scene)
     {
         flag = "PROBLEM";
         sprintf(description, "Layer %i has [sourceHeight=%i]", targetSurfaceLayer, targetLayerProperties.sourceHeight);
-    }
-    else
-    {
-        flag = "OK";
-        sprintf(description, "%s", "");
-    }
-
-    analyzePrintHelper(tag, flag, description);
-
-    tag = "Layer original source";
-    if (targetLayerProperties.origSourceHeight <= minDimension)
-    {
-        flag = "PROBLEM";
-        sprintf(description, "Layer %i has [origSourceHeight=%i]", targetSurfaceLayer, targetLayerProperties.origSourceHeight);
     }
     else
     {
@@ -357,76 +328,6 @@ void analyzeSurfaceCheckInsideLayer(t_ilm_surface targetSurfaceId, t_scene_data&
     }
 
     analyzePrintHelper(tag, flag, description);
-}
-
-void analyzeOcclusion(t_ilm_surface targetSurfaceId,
-        map<t_ilm_surface, t_ilm_layer>& surfaceLayers,
-        map<t_ilm_surface, ilmSurfaceProperties>& surfaceProperties,
-        map<t_ilm_layer, ilmLayerProperties>& layerProperties,
-        vector<t_ilm_surface>& allSurfaces, tuple4 targetSurfaceCoordinates)
-{
-    string tag;
-    string flag;
-    char description[300] = "";
-
-    vector<t_ilm_surface> occludingSurfaces;
-
-    vector<t_ilm_surface>::iterator it = find(allSurfaces.begin(), allSurfaces.end(), targetSurfaceId);
-
-    t_ilm_bool occluded = ILM_FALSE;
-    tag = "Occlusion";
-    ++it;
-    for (; it != allSurfaces.end(); ++it)
-    {
-        t_ilm_surface surfaceId = *it;
-        t_ilm_layer surfaceLayer = surfaceLayers[surfaceId];
-
-        //if surface or layer invisible: neglect
-        if (layerProperties[surfaceLayer].visibility == ILM_FALSE || surfaceProperties[surfaceId].visibility == ILM_FALSE)
-            continue;
-
-        //if multiplication of their opacity is zero: neglect
-        if (layerProperties[surfaceLayer].opacity * surfaceProperties[surfaceId].opacity == 0)
-            continue;
-
-        //coordinates of the surface on screen
-        t_ilm_int horizontalScale = layerProperties[surfaceLayer].destWidth / layerProperties[surfaceLayer].sourceWidth;
-        t_ilm_int surfaceX1 = layerProperties[surfaceLayer].destX + horizontalScale
-                * (surfaceProperties[surfaceId].destX - layerProperties[surfaceLayer].sourceX);
-        t_ilm_int surfaceX2 = surfaceX1 + horizontalScale * surfaceProperties[surfaceId].destWidth;
-
-        t_ilm_int verticalScale = layerProperties[surfaceLayer].destHeight / layerProperties[surfaceLayer].sourceHeight;
-        t_ilm_int surfaceY1 = layerProperties[surfaceLayer].destY + verticalScale
-                * (surfaceProperties[surfaceId].destY - layerProperties[surfaceLayer].sourceY);
-        t_ilm_int surfaceY2 = surfaceY1 + verticalScale * surfaceProperties[surfaceId].destHeight;
-
-        tuple4 surfaceCoordinates(surfaceX1, surfaceY1, surfaceX2, surfaceY2);
-
-        //if the surface is completely occluded
-        if (inside(targetSurfaceCoordinates, surfaceCoordinates))
-        {
-            flag = "PROBLEM";
-            sprintf(description, "Surface %i is completely occluded by surface %i", targetSurfaceId, surfaceId);
-            analyzePrintHelper(tag, flag, description);
-
-            occluded = ILM_TRUE;
-        }
-        //if the surface is partially occluded
-        else if (intersect(targetSurfaceCoordinates, surfaceCoordinates))
-        {
-            flag = "PROBLEM";
-            sprintf(description, "Surface %i is partially occluded by surface %i", targetSurfaceId, surfaceId);
-            analyzePrintHelper(tag, flag, description);
-            occluded = ILM_TRUE;
-        }
-    }
-
-    if (!occluded)
-    {
-        flag = "OK";
-        sprintf(description, "%s", "");
-        analyzePrintHelper(tag, flag, description);
-    }
 }
 
 void analyzeOcclusion(t_ilm_surface targetSurfaceId, t_scene_data& scene)
@@ -571,63 +472,22 @@ t_ilm_bool analyzeCheckRendered(t_ilm_surface targetSurfaceId, t_scene_data& sce
     return onLayer && layerOnScreen;
 }
 
-t_ilm_bool analyzeSharedNative(t_ilm_surface targetSurfaceId, t_scene_data& scene)
-{
-    string tag;
-    string flag;
-    char description[300] = "";
-
-    tag = "Shared native";
-
-    t_ilm_bool shared = ILM_FALSE;
-
-    //native of the target surface
-    t_ilm_uint targetNative = scene.surfaceProperties[targetSurfaceId].nativeSurface;
-
-    //iterate all surface properties
-    for (map<t_ilm_surface, ilmSurfaceProperties>::iterator it = scene.surfaceProperties.begin();
-            it != scene.surfaceProperties.end(); ++it)
-    {
-        t_ilm_surface surface = (*it).first;
-        ilmSurfaceProperties& properties = (*it).second;
-        //if there is a surface that has the same surface as the target surface
-        if (surface != targetSurfaceId && properties.nativeSurface == targetNative)
-        {
-            shared = ILM_TRUE;
-
-            flag = "WARNING";
-            sprintf(description, "Surface %i shares native that has ID %i with surface %i",
-                    targetSurfaceId, targetNative, surface);
-            analyzePrintHelper(tag, flag, description);
-        }
-    }
-
-    if (!shared)
-    {
-        flag = "OK";
-        sprintf(description, "%s", "");
-        analyzePrintHelper(tag, flag, description);
-    }
-
-    return !shared;
-}
-
-t_ilm_bool analyzeUpdateCounter(t_ilm_surface targetSurfaceId, t_scene_data& scene)
+t_ilm_bool analyzeFrameCounter(t_ilm_surface targetSurfaceId, t_scene_data& scene)
 {
     ilmSurfaceProperties& targetSurfaceProperties = scene.surfaceProperties[targetSurfaceId];
 
-    t_ilm_bool problem = targetSurfaceProperties.updateCounter == 0;
+    t_ilm_bool problem = targetSurfaceProperties.frameCounter == 0;
     string tag;
     string flag;
     char description[300] = "";
 
-    tag = "Update Counter";
+    tag = "Frame Counter";
     //check if surface counter was updated since its creation
     if (problem)
     {
         flag = "PROBLEM";
-        sprintf(description, "Surface %i update counter is %i, no content was added to the surface since its creation",
-                targetSurfaceId, targetSurfaceProperties.updateCounter);
+        sprintf(description, "Surface %i frame counter is %i, no content was added to the surface since its creation",
+                targetSurfaceId, targetSurfaceProperties.frameCounter);
     }
     else
     {
@@ -666,10 +526,7 @@ t_ilm_bool analyzeSurface(t_ilm_surface targetSurfaceId)
     analyzeOcclusion(targetSurfaceId, scene);
 
     //check if the surface has been updated (if it has any content)
-    analyzeUpdateCounter(targetSurfaceId, scene);
-
-    //check if the surface shares the native with another surface
-    analyzeSharedNative(targetSurfaceId, scene);
+    analyzeFrameCounter(targetSurfaceId, scene);
 
     return ILM_TRUE;
 }

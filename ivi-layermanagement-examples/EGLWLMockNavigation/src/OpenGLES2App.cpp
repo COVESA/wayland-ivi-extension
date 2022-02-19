@@ -19,8 +19,6 @@
  ****************************************************************************/
 #include "OpenGLES2App.h"
 #include "LayerScene.h"
-#include <ilm_common.h>
-#include <ilm_client.h>
 
 #include <iostream>
 using std::cout;
@@ -105,6 +103,13 @@ extern "C"
                 break;
             }
 
+            ans_strcmp = strcmp(interface, "ivi_application");
+            if (0 == ans_strcmp)
+            {
+                p_wlCtx->iviApp = (struct ivi_application*)wl_registry_bind(registry, id, &ivi_application_interface, 1);
+                break;
+            }
+
         } while(0);
     }
 
@@ -124,10 +129,7 @@ OpenGLES2App::OpenGLES2App(float fps, float animationSpeed, SurfaceConfiguration
 , m_surfaceId(0)
 {
     createWLContext(config);
-    createEGLContext();
-
-    ilmClient_init((t_ilm_nativedisplay)m_wlContextStruct.wlDisplay);
-    setupLayerMangement(config);
+    createEGLContext(config);
 
     if (config->nosky)
     {
@@ -149,9 +151,6 @@ OpenGLES2App::~OpenGLES2App()
 {
     destroyEglContext();
     destroyWLContext();
-
-    ilm_surfaceRemove(m_surfaceId);
-    ilmClient_destroy();
 }
 
 void OpenGLES2App::mainloop()
@@ -184,7 +183,7 @@ void OpenGLES2App::mainloop()
 
 bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
 {
-    t_ilm_bool result = ILM_TRUE;
+    bool result = true;
     int width = config->surfaceWidth;
     int height = config->surfaceHeight;
 
@@ -210,7 +209,12 @@ bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
         destroyWLContext();
     }
 
-    if (m_wlContextStruct.wlShell) {
+    if (m_wlContextStruct.iviApp) {
+        m_surfaceId = config->surfaceId;
+        m_wlContextStruct.iviSurface = ivi_application_surface_create(m_wlContextStruct.iviApp,
+                                                                  m_surfaceId,
+                                                                  m_wlContextStruct.wlSurface);
+    } else if (m_wlContextStruct.wlShell) {
         m_wlContextStruct.wlShellSurface = wl_shell_get_shell_surface(m_wlContextStruct.wlShell,
                                                                       m_wlContextStruct.wlSurface);
     }
@@ -236,16 +240,15 @@ bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
     return result;
 }
 
-bool OpenGLES2App::createEGLContext()
+bool OpenGLES2App::createEGLContext(SurfaceConfiguration* config)
 {
-    t_ilm_bool result = ILM_TRUE;
+    bool result = true;
     EGLint eglstatus = EGL_SUCCESS;
     m_eglContextStruct.eglDisplay = NULL;
     m_eglContextStruct.eglSurface = NULL;
     m_eglContextStruct.eglContext = NULL;
 
     m_eglContextStruct.eglDisplay = eglGetDisplay(m_wlContextStruct.wlDisplay);
-    eglstatus = eglGetError();
     if (!m_eglContextStruct.eglDisplay)
     {
 	cout << "Error: eglGetDisplay() failed.\n";
@@ -307,7 +310,7 @@ bool OpenGLES2App::createEGLContext()
     eglMakeCurrent(m_eglContextStruct.eglDisplay,
             m_eglContextStruct.eglSurface, m_eglContextStruct.eglSurface,
             m_eglContextStruct.eglContext);
-    eglSwapInterval(m_eglContextStruct.eglDisplay, 1);
+    eglSwapInterval(m_eglContextStruct.eglDisplay, config->sync);
     eglstatus = eglGetError();
     if (eglstatus != EGL_SUCCESS)
     {
@@ -315,32 +318,6 @@ bool OpenGLES2App::createEGLContext()
     }
 
     return result;
-}
-
-ilmErrorTypes OpenGLES2App::setupLayerMangement(SurfaceConfiguration* config)
-{
-    ilmErrorTypes error = ILM_FAILED;
-
-    // register surfaces to layermanager
-    t_ilm_surface surfaceid = (t_ilm_surface)config->surfaceId;//SURFACE_EXAMPLE_EGLX11_APPLICATION;
-    int width = config->surfaceWidth;
-    int height = config->surfaceHeight;
-
-    if (config->nosky)
-    {
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    }
-    else
-    {
-        glClearColor(0.2f, 0.2f, 0.5f, 1.0f);
-    }
-
-    ilm_surfaceCreate((t_ilm_nativehandle)m_wlContextStruct.wlSurface, width, height,
-            ILM_PIXELFORMAT_RGBA_8888, &surfaceid);
-
-    m_surfaceId = surfaceid;
-
-    return error;
 }
 
 void OpenGLES2App::destroyEglContext()
@@ -358,6 +335,10 @@ void OpenGLES2App::destroyWLContext()
     {
         wl_egl_window_destroy(m_wlContextStruct.wlNativeWindow);
     }
+    if (m_wlContextStruct.iviSurface)
+    {
+        ivi_surface_destroy(m_wlContextStruct.iviSurface);
+    }
     if (m_wlContextStruct.wlShellSurface)
     {
         wl_shell_surface_destroy(reinterpret_cast<struct wl_shell_surface*>(m_wlContextStruct.wlShellSurface));
@@ -370,6 +351,10 @@ void OpenGLES2App::destroyWLContext()
     {
         wl_shell_destroy(m_wlContextStruct.wlShell);
     }
+    if (m_wlContextStruct.iviApp)
+    {
+        ivi_application_destroy(m_wlContextStruct.iviApp);
+    }
     if (m_wlContextStruct.wlCompositor)
     {
         wl_compositor_destroy(m_wlContextStruct.wlCompositor);
@@ -380,28 +365,10 @@ unsigned int OpenGLES2App::GetTickCount()
 {
     struct timeval ts;
     gettimeofday(&ts, 0);
-    return (t_ilm_uint) (ts.tv_sec * 1000 + (ts.tv_usec / 1000));
+    return (unsigned int) (ts.tv_sec * 1000 + (ts.tv_usec / 1000));
 }
-
-extern "C" void
-OpenGLES2App::frame_listener_func(void *data, struct wl_callback *callback, uint32_t time)
-{
-    data = data; // TODO:to avoid warning
-    time = time; // TODO:to avoid warning
-    if (callback)
-    {
-        wl_callback_destroy(callback);
-    }
-}
-
-static const struct wl_callback_listener frame_listener = {
-    OpenGLES2App::frame_listener_func
-};
 
 void OpenGLES2App::swapBuffers()
 {
-    struct wl_callback* callback = wl_surface_frame(m_wlContextStruct.wlSurface);
-    wl_callback_add_listener(callback, &frame_listener, NULL);
-
     eglSwapBuffers(m_eglContextStruct.eglDisplay, m_eglContextStruct.eglSurface);
 }

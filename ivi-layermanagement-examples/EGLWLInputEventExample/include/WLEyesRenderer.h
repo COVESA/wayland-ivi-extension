@@ -27,36 +27,8 @@
 bool InitRenderer();
 bool InitShader();
 bool InitVertexBuffer();
-void WaitForEvent(struct wl_display* wlDisplay, int fd);
+int WaitForEvent(struct wl_display* wlDisplay, int fd);
 void TerminateRenderer();
-
-// Pointer event handler
-void PointerHandleEnter(void*, struct wl_pointer*, uint32_t, struct wl_surface*,
-                        wl_fixed_t, wl_fixed_t);
-void PointerHandleLeave(void*, struct wl_pointer*, uint32_t, struct wl_surface*);
-void PointerHandleMotion(void*, struct wl_pointer*, uint32_t,
-                         wl_fixed_t, wl_fixed_t);
-void PointerHandleButton(void*, struct wl_pointer*, uint32_t, uint32_t, uint32_t,
-                         uint32_t);
-void PointerHandleAxis(void*, struct wl_pointer*, uint32_t, uint32_t, wl_fixed_t);
-
-// Keyboard event handler
-void KeyboardHandleKeymap(void*, struct wl_keyboard*, uint32_t, int, uint32_t);
-void KeyboardHandleEnter(void*, struct wl_keyboard*, uint32_t, struct wl_surface*,
-                         struct wl_array*);
-void KeyboardHandleLeave(void*, struct wl_keyboard*, uint32_t, struct wl_surface*);
-void KeyboardHandleKey(void*, struct wl_keyboard*, uint32_t, uint32_t, uint32_t,
-                       uint32_t);
-void KeyboardHandleModifiers(void*, struct wl_keyboard*, uint32_t, uint32_t,
-                             uint32_t, uint32_t, uint32_t);
-
-// Touch event handler
-void TouchHandleDown(void*, struct wl_touch*, uint32_t, uint32_t, struct wl_surface*,
-                     int32_t, wl_fixed_t, wl_fixed_t);
-void TouchHandleUp(void*, struct wl_touch*, uint32_t, uint32_t, int32_t);
-void TouchHandleMotion(void*, struct wl_touch*, uint32_t, int32_t, wl_fixed_t, wl_fixed_t);
-void TouchHandleFrame(void*, struct wl_touch*);
-void TouchHandleCancel(void*, struct wl_touch*);
 
 bool DrawEyes(WLEGLSurface* surface, WLEyes* eyes);
 void DrawFillPoly(const int nPoint, const float* points, const float color[4]);

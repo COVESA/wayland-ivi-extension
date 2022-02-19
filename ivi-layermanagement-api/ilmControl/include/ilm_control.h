@@ -28,7 +28,7 @@ extern "C" {
 
 /**
  * \brief Get the surface properties from the Layermanagement
- * \ingroup ilmClient
+ * \ingroup ilmControl
  * \param[in] surfaceID surface Indentifier as a Number from 0 .. MaxNumber of Surfaces
  * \param[out] pSurfaceProperties pointer where the surface properties should be stored
  * \return ILM_SUCCESS if the method call was successful
@@ -60,7 +60,8 @@ ilmErrorTypes ilm_getPropertiesOfScreen(t_ilm_display screenID, struct ilmScreen
  * \brief Get the screen Ids
  * \ingroup ilmControl
  * \param[out] pNumberOfIDs pointer where the number of Screen Ids should be returned
- * \param[out] ppIDs pointer to array where the IDs should be stored
+ * \param[out] ppIDs pointer to array where the IDs should be stored,
+ *             memory for ppIDs is internally allocated with malloc
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not get the resolution.
  */
@@ -78,11 +79,11 @@ ilmErrorTypes ilm_getScreenIDs(t_ilm_uint* pNumberOfIDs, t_ilm_uint** ppIDs);
 ilmErrorTypes ilm_getScreenResolution(t_ilm_uint screenID, t_ilm_uint* pWidth, t_ilm_uint* pHeight);
 
 /**
- * \brief Get all LayerIds which are currently registered and managed by the services
+ * \brief Get all LayerIds which are currently registered and managed by the service
  * \ingroup ilmControl
  * \param[out] pLength Pointer where length of ids array should be stored
  * \param[out] ppArray Array where the ids should be stored,
- *                     the array will be allocated inside
+ *             memory for ppIDs is internally allocated with malloc
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
@@ -101,23 +102,23 @@ ilmErrorTypes ilm_getLayerIDs(t_ilm_int* pLength, t_ilm_layer** ppArray);
 ilmErrorTypes ilm_getLayerIDsOnScreen(t_ilm_uint screenID, t_ilm_int* pLength, t_ilm_layer** ppArray);
 
 /**
- * \brief Get all SurfaceIDs which are currently registered and managed by the services
+ * \brief Get all SurfaceIDs which are currently registered and managed by the service
  * \ingroup ilmControl
  * \param[out] pLength Pointer where length of ids array should be stored
  * \param[out] ppArray Array where the ids should be stored,
- *                     the array will be allocated inside
+ *             memory for ppIDs is internally allocated with malloc
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_getSurfaceIDs(t_ilm_int* pLength, t_ilm_surface** ppArray);
 
 /**
- * \brief Get all SurfaceIds which are currently registered to a given layer and are managed by the services
+ * \brief Get all SurfaceIds which are currently registered to a given layer and are managed by the service
  * \ingroup ilmControl
  * \param[in] layer Id of the Layer whose surfaces are to be returned
  * \param[out] pLength Pointer where the array length of ids should be stored
  * \param[out] ppArray Array where the surface id should be stored,
- *                     the array will be allocated inside
+ *             memory for ppIDs is internally allocated with malloc
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
@@ -126,13 +127,9 @@ ilmErrorTypes ilm_getSurfaceIDsOnLayer(t_ilm_layer layer, t_ilm_int* pLength, t_
 /**
  * \brief Create a layer which should be managed by the service
  * \ingroup ilmControl
- * \param[out] pLayerId pointer where the id should be/is stored. It is possible
- *                      to set a id from outside, 0 will create a new id.
+ * \param[out] pLayerId pointer where the id should be passed
  * \param[in] width     horizontal dimension of the layer
- *
  * \param[in] height    vertical dimension of the layer
- *
- *
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
@@ -172,7 +169,7 @@ ilmErrorTypes ilm_layerRemoveSurface(t_ilm_layer layerId, t_ilm_surface surfaceI
  * surfaces will not be rendered.
  * \ingroup ilmControl
  * \param[in] layerId Id of the layer.
- * \param[in] newVisibility ILM_SUCCESS sets layer visible, ILM_FALSE disables the visibility.
+ * \param[in] newVisibility ILM_TRUE sets layer visible, ILM_FALSE disables the visibility.
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
@@ -184,7 +181,7 @@ ilmErrorTypes ilm_layerSetVisibility(t_ilm_layer layerId, t_ilm_bool newVisibili
  * \ingroup ilmControl
  * \param[in] layerId Id of layer.
  * \param[out] pVisibility pointer where the visibility of the layer should be stored
- *                         ILM_SUCCESS if the Layer is visible,
+ *                         ILM_TRUE if the Layer is visible,
  *                         ILM_FALSE if the visibility is disabled.
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
@@ -241,28 +238,6 @@ ilmErrorTypes ilm_layerSetSourceRectangle(t_ilm_layer layerId, t_ilm_uint x, t_i
 ilmErrorTypes ilm_layerSetDestinationRectangle(t_ilm_layer layerId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
 /**
- * \brief Sets the orientation of a layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[in] orientation Orientation of the layer.
- * \note ilmOrientation for more information on orientation values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerSetOrientation(t_ilm_layer layerId, ilmOrientation orientation);
-
-/**
- * \brief Gets the orientation of a layer.
- * \ingroup ilmControl
- * \param[in] layerId Id of layer.
- * \param[out] pOrientation Address where orientation of the layer should be stored.
- * \note ilmOrientation for more information on orientation values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_layerGetOrientation(t_ilm_layer layerId, ilmOrientation *pOrientation);
-
-/**
  * \brief Sets render order of surfaces within one layer
  * \ingroup ilmControl
  * \param[in] layerId Id of layer.
@@ -277,7 +252,7 @@ ilmErrorTypes ilm_layerSetRenderOrder(t_ilm_layer layerId, t_ilm_layer *pSurface
  * \brief Set the visibility of a surface. If a surface is not visible it will not be rendered.
  * \ingroup ilmControl
  * \param[in] surfaceId Id of the surface to set the visibility of
- * \param[in] newVisibility ILM_SUCCESS sets surface visible, ILM_FALSE disables the visibility.
+ * \param[in] newVisibility ILM_TRUE sets surface visible, ILM_FALSE disables the visibility.
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
@@ -289,7 +264,7 @@ ilmErrorTypes ilm_surfaceSetVisibility(t_ilm_surface surfaceId, t_ilm_bool newVi
  * \ingroup ilmClient
  * \param[in] surfaceId Id of the surface to get the visibility of.
  * \param[out] pVisibility pointer where the visibility of a surface should be stored
- *                         ILM_SUCCESS if the surface is visible,
+ *                         ILM_TRUE if the surface is visible,
  *                         ILM_FALSE if the visibility is disabled.
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
@@ -321,7 +296,7 @@ ilmErrorTypes ilm_surfaceGetOpacity(const t_ilm_surface surfaceId, t_ilm_float *
 
 /**
  * \brief Set the area of a surface which should be used for the rendering.
- * \ingroup ilmClient
+ * \ingroup ilmControl
  * \param[in] surfaceId Id of surface.
  * \param[in] x horizontal start position of the used area
  * \param[in] y vertical start position of the used area
@@ -346,37 +321,27 @@ ilmErrorTypes ilm_surfaceSetSourceRectangle(t_ilm_surface surfaceId, t_ilm_int x
 ilmErrorTypes ilm_surfaceSetDestinationRectangle(t_ilm_surface surfaceId, t_ilm_int x, t_ilm_int y, t_ilm_int width, t_ilm_int height);
 
 /**
- * \brief Sets the orientation of a surface.
+ * \brief Set the type of a surface. If a surface is not visible it will not be rendered.
+ * If a surface is restricted type, visible contents of the surface is strictly
+ * controlled by the compositor. Its content is not allowed to be go out of
+ * its destination region. If the application resizes its buffers or uses
+ * wp_viewporter protocol to scale its contents, the old destination region
+ * would causes visible glitches.
+ * To avoid these issues, the controller process mark a surface as desktop
+ * compatible. Source and destination regions of a desktop compatible
+ * surface will be modified accordingly,when application sends a request
+ * for resizing or scaling its contents. Therefore, applications contents
+ * will be drawn according to application's wishes.
+ * On the other hand, source and destination regions will be strictly
+ * enforced, when the surface's type is restricted. The default type for
+ * a surface is restricted.
  * \ingroup ilmControl
- * \param[in] surfaceId Id of surface.
- * \param[in] orientation Orientation of the surface.
- * \note ilmOrientation for information about orientation values
+ * \param[in] surfaceId Id of the surface to set the type of
+ * \param[in] type Type of the surface
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
  */
-ilmErrorTypes ilm_surfaceSetOrientation(t_ilm_surface surfaceId, ilmOrientation orientation);
-
-/**
- * \brief Gets the orientation of a surface.
- * \ingroup ilmControl
- * \param[in]  surfaceId Id of surface.
- * \param[out] pOrientation Address where orientation of the surface should be stored.
- * \note ilmOrientation for information about orientation values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceGetOrientation(t_ilm_surface surfaceId, ilmOrientation *pOrientation);
-
-/**
- * \brief Gets the pixelformat of a surface.
- * \ingroup ilmControl
- * \param[in] surfaceId Id of surface.
- * \param[out] pPixelformat Pointer where the pixelformat of the surface should be stored
- * \note ilmPixelFormat for information about pixel format values
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_surfaceGetPixelformat(t_ilm_layer surfaceId, ilmPixelFormat *pPixelformat);
+ilmErrorTypes ilm_surfaceSetType(t_ilm_surface surfaceId, ilmSurfaceType type);
 
 /**
  * \brief Sets render order of layers on a display
@@ -399,17 +364,6 @@ ilmErrorTypes ilm_displaySetRenderOrder(t_ilm_display display, t_ilm_layer *pLay
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename);
-
-/**
- * \brief Take a screenshot of a certain layer
- * The screenshot is saved as bmp file with the corresponding filename.
- * \ingroup ilmControl
- * \param[in] filename Location where the screenshot should be stored
- * \param[in] layerid Identifier of the layer to take the screenshot of
- * \return ILM_SUCCESS if the method call was successful
- * \return ILM_FAILED if the client can not call the method on the service.
- */
-ilmErrorTypes ilm_takeLayerScreenshot(t_ilm_const_string filename, t_ilm_layer layerid);
 
 /**
  * \brief Take a screenshot of a certain surface
@@ -445,7 +399,7 @@ ilmErrorTypes ilm_layerRemoveNotification(t_ilm_layer layer);
 
 /**
  * \brief register for notification on property changes of surface
- * \ingroup ilmClient
+ * \ingroup ilmControl
  * \param[in] surface id of surface to register for notification
  * \param[in] callback pointer to function to be called for notification
  * \return ILM_SUCCESS if the method call was successful
@@ -456,7 +410,7 @@ ilmErrorTypes ilm_surfaceAddNotification(t_ilm_surface surface, surfaceNotificat
 
 /**
  * \brief remove notification on property changes of surface
- * \ingroup ilmClient
+ * \ingroup ilmControl
  * \param[in] surface id of surface to remove notification
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
@@ -465,25 +419,41 @@ ilmErrorTypes ilm_surfaceAddNotification(t_ilm_surface surface, surfaceNotificat
 ilmErrorTypes ilm_surfaceRemoveNotification(t_ilm_surface surface);
 
 /**
- * \brief register for notification on property creation/deletion events for surfaces/layers
+ * \brief register notification callback for creation/deletion of ilm surfaces/layers
  * \ingroup ilmControl
- * \param[in] surface id of surface to register for notification
  * \param[in] callback pointer to function to be called for notification
+              callback function is defined as:
+              void cb(ilmObjectType o, t_ilm_uint id, t_ilm_bool created, void *user_data)
+ * \param[in] user_data pointer to data which will be passed to a notification callback
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
- * \return ILM_ERROR_INVALID_ARGUMENT if the given surface already has notification callback registered
  */
 ilmErrorTypes ilm_registerNotification(notificationFunc callback, void *user_data);
 
 /**
- * \brief remove notification on property changes of surface
- * \ingroup ilmClient
- * \param[in] surface id of surface to remove notification
+ * \brief unregister notification for creation/deletion events of ilm surfaces/layers
+ * \ingroup ilmControl
  * \return ILM_SUCCESS if the method call was successful
  * \return ILM_FAILED if the client can not call the method on the service.
- * \return ILM_ERROR_INVALID_ARGUMENT if the given surface has no notification callback registered
  */
 ilmErrorTypes ilm_unregisterNotification();
+
+/**
+ * \brief returns the global error flag.
+ * When compositor sends an error, the error flag is set to appropriate error code
+ * value. No other errors are recorded until ilm_getError is called. Calling this
+ * API sets the error flag to ILM_SUCCESS.
+ * \ingroup ilmControl
+ * \return ILM_SUCCESS if there is no error
+ * \return ILM_FAILED if the method call has failed
+ * \return ILM_ERROR_INVALID_ARGUMENTS, if an invalid arguments error has occurred
+ * \return ILM_ERROR_ON_CONNECTION, if a connection error has occurred
+ * \return ILM_ERROR_RESOURCE_ALREADY_INUSE, if resource is already in use
+ * \return ILM_ERROR_RESOURCE_NOT_FOUND, if resource was not found
+ * \return ILM_ERROR_NOT_IMPLEMENTED, if feature is not implemented
+ * \return ILM_ERROR_UNEXPECTED_MESSAGE, if received message has unexpected type
+ */
+ilmErrorTypes ilm_getError();
 #ifdef __cplusplus
 } /**/
 #endif /* __cplusplus */

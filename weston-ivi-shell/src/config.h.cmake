@@ -1,0 +1,1 @@
+#cmakedefine HAVE_POSIX_FALLOCATE 1

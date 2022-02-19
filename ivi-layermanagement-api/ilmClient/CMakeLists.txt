@@ -25,12 +25,31 @@ find_package(Threads)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+add_custom_command(
+    OUTPUT  ivi-application-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-client-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-application-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-application.xml
+)
+
 GET_TARGET_PROPERTY(ILM_COMMON_INCLUDE_DIRS ilmCommon INCLUDE_DIRECTORIES)
 
 include_directories(
     include
     ${ILM_COMMON_INCLUDE_DIRS}
     ${WAYLAND_CLIENT_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 link_directories(
@@ -40,11 +59,12 @@ link_directories(
 add_library(${PROJECT_NAME} SHARED
     src/ilm_client.c
     src/ilm_client_wayland_platform.c
+    ivi-application-protocol.c
+    ivi-application-client-protocol.h
 )
 
 set(LIBS
     ${LIBS}
-    ivi-extension-protocol
     ${WAYLAND_CLIENT_LIBRARIES}
 )
 

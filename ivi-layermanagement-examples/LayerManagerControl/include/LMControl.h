@@ -32,6 +32,8 @@ using std::set;
 #include <string>
 using std::string;
 
+#include "ilm_common.h"
+
 /*
  * Datastructure that contains all information about a scene
  */
@@ -126,43 +128,6 @@ tuple4 getSurfaceScreenCoordinates(t_scene_data* pScene, t_ilm_surface surface);
  */
 vector<t_ilm_surface> getSceneRenderOrder(t_scene_data* pScene);
 
-/*
- * Sets a scene to be restored if an interrupt signal (Ctrl+C) is received
- */
-void setSceneToRestore(t_scene_data* pScene);
-
-/*
- * Clones the given scene into another t_scene_data object that would look exactly the same
- * but all rendered surfaces are rendered on one (newly created) layer.
- * Order, sizes and positions of rendered surfaces are preserved relative to screen
- *
- */
-t_scene_data cloneToUniLayerScene(t_scene_data* pScene);
-
-/*
- * Hide the currently rendered scene, and render the given scene instead
- * If clean is set to true all layers and surfaces that do not exist in the given
- * scene are destroyed
- */
-void setScene(t_scene_data* pScene, bool clean = false);
-
-/*
- * Makes a smooth transformation effect from the intial to the final scene
- */
-void transformScene(t_scene_data* pInitialScene, t_scene_data* pFinalScene, t_ilm_long durationMillis, t_ilm_int frameCount);
-
-/*
- * Creates a new empty scene
- */
-void emptyScene(t_scene_data* pScene);
-
-/*
- * Returns true if the surface is rendered to the screen
- * (If the surface belongs to a layer that belongs to a screen)
- */
-t_ilm_bool surfaceRenderedOnScreen(t_scene_data& scene, t_ilm_surface surface);
-
-
 //=============================================================================
 //util.cpp
 //=============================================================================
@@ -250,7 +215,6 @@ void printScene();
 //=============================================================================
 //control.cpp
 //=============================================================================
-void getCommunicatorPerformance();
 void testNotificationLayer(t_ilm_layer layerid);
 void watchLayer(unsigned int* layerids, unsigned int layeridCount);
 void watchSurface(unsigned int* surfaceids, unsigned int surfaceidCount);
@@ -266,47 +230,10 @@ void watchSurface(unsigned int* surfaceids, unsigned int surfaceidCount);
  */
 t_ilm_bool analyzeSurface(t_ilm_surface targetSurfaceId);
 
-
-//=============================================================================
-//scatter.cpp
-//=============================================================================
-
-/*
- * Divides the screen into a grid of equal sized portions, and displays every rendered
- * surface in a separate tile with its relative size and position preserved
- *
- * Only rendred surfaces are considered. Surfaces are displayed according to their render order
- * topleft-to-rightbottom
- */
-void scatter();
-
-
-/*
- * Divides the screen into a grid of equal sized portions, and displays every existing surface
- * in a separate tile with its relative size and position preserved
- *
- * All existing surfaces are considered. surfaces that have 0 visibility are set to visibility 1.
- * Surfaces that have 0 opacity are set to opacity 1. Surfaces that are not on any layer and surfaces
- * that are on layers that are not on any screen are displayed as well
- */
-void scatterAll();
-
 /*
  * Returns a scattered version of the scene
  */
 t_scene_data getScatteredScene(t_scene_data* pInitialScene);
-
-
-//=============================================================================
-//demo.cpp
-//=============================================================================
-
-/*
- * Run a set of effects on the rendered scene depending on the parameter.
- * The function accepts values in range 0-4
- */
-void demo(t_ilm_uint mode);
-
 
 //=============================================================================
 //sceneio.cpp
@@ -321,12 +248,5 @@ void exportSceneToFile(string filename);
  * Saves an xtext representation of the grammar of the scene
  */
 void exportXtext(string fileName, string grammar, string url);
-
-/*
- * Imports a scene from a saved text file
- */
-void importSceneFromFile(string filename);
-
-
 
 #endif

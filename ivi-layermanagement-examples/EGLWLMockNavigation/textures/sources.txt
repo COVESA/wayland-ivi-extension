@@ -1,0 +1,16 @@
+street:
+https://opengameart.org/content/faux-asphalt-texture-pack
+license:
+public domain
+
+car:
+https://opengameart.org/content/free-top-down-car-sprites-by-unlucky-studio
+license:
+Created By UnLuckY Studio
+You are free to use it in your commercial projects. If you have any suggestions or questions, you can log on to www.unluckystudio.com
+
+skyscraper:
+https://opengameart.org/content/skyscraper-textures
+https://opengameart.org/sites/default/files/skyscrapers_20110801.zip
+license:
+CC-BY - Donation by hackcraft.de, generator by Benjamin Pickhardt

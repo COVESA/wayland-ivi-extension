@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/ilm
+
+Name: ilmControl
+Description: Library for control part of ilm api
+Version: @ILM_API_VERSION@
+Requires.private: wayland-client
+Libs: -L${libdir} -lilmControl
+Cflags: -I${includedir}

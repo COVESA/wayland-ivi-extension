@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2010,2011 BMW Car IT GmbH
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +22,8 @@
 
 #include "IRenderable.h"
 #include "vec.h"
+#include "ShaderTexture.h"
+#include "TextureLoader.h"
 
 class ShaderBase;
 
@@ -28,6 +31,7 @@ class Car : public IRenderable
 {
 public:
     Car(vec3f position, vec3f size, vec4f color, ShaderBase* shader);
+    Car(vec3f position, vec3f size, vec4f color, ShaderTexture* shader, TextureLoader* texture);
     virtual ~Car() {}
 
     virtual void render();
@@ -37,10 +41,14 @@ private:
     vec3f m_size;
     vec4f m_color;
 
-    vec3u m_index;
-    vec3f m_vertex[3];
+    vec4u m_index;
+    vec3f m_vertex[4];
+    vec2f m_texCoords[4];
 
     ShaderBase* m_pShader;
+
+    TextureLoader* texture;
+    bool withTexture = false;
 };
 
 #endif /* _CAR_H */

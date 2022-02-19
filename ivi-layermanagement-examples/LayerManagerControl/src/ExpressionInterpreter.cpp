@@ -18,7 +18,7 @@
  ****************************************************************************/
 #include "ExpressionInterpreter.h"
 #include "Expression.h"
-#include "ilm_client.h"
+#include "ilm_control.h"
 #include <string>
 #include <sstream>
 #include <algorithm> // transform
@@ -83,7 +83,6 @@ CommandResult ExpressionInterpreter::interpretCommand(string userInput)
     while (result == CommandSuccess && !ss.eof())
     {
         ss >> text;
-        transform(text.begin(), text.end(), text.begin(), ::tolower);
 
         ExpressionList::const_iterator iter = currentState.begin();
         ExpressionList::const_iterator end = currentState.end();

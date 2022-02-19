@@ -2,7 +2,6 @@ Sections in this file describe:
 - How to build
 - Example applications
 - How to test
-- Features
 
 How to build on different platforms
 ====================================
@@ -15,7 +14,7 @@ Pre-requisite:
 
 Build up
 1. Pull the current codebase form the git repo
-   E.g. git clone http://git.projects.genivi.org/wayland-ivi-extension.git
+   E.g. git clone https://github.com/GENIVI/wayland-ivi-extension.git
 
 2. Create a build directory
    E.g mkdir build_ivi_extension
@@ -36,9 +35,9 @@ Pre-requisite:
   Example:
     [core]
     shell=ivi-shell.so
+    modules=ivi-controller.so
 
     [ivi-shell]
-    ivi-module=ivi-controller.so
     ivi-input-module=ivi-input-controller.so
 
 - Set Environmental values
@@ -57,20 +56,7 @@ EGLWLMockNavigation:
 
 How to test
 ====================================
-1. Build the testsuite by setting BUILD_ILM_API_TESTS and INSTALL_ILM_API_TESTS options.
-   Example: cmake -DBUILD_ILM_API_TESTS -DINSTALL_ILM_API_TESTS
+1. Build the testsuite by setting BUILD_ILM_API_TESTS option.
+   Example: cmake -DBUILD_ILM_API_TESTS
 2. After starting up Weston run the testsuite.
    Example: <your installation path>/bin/ivi-layermanagement-api-test
-            <your installation path>/bin/ivi-input-api-test
-
-Features
-====================================
-ivi_share protocol:
- ivi-controller provides ivi_share protocol to share native buffer of other clients.
- A application which shared native buffer can create texture from it using EGL extension
- API (eglCreateImageKHR) and GL extension API (glEGLImageTargetTexture2DOES).
- And the texture can manipulate in your rendering scene.
- Example: <your installtion path>/bin/simple-ivi-share
-
- To build this feature, add the following line into toolchain file.
- option (IVI_SHARE "Enable ivi_share protocol" ON)

@@ -17,7 +17,6 @@
  *
  ****************************************************************************/
 
-#include "ilm_client.h"
 #include "ilm_control.h"
 #include "LMControl.h"
 
@@ -40,49 +39,6 @@ using std::hex;
 #include <sys/types.h>
 #include <unistd.h>
 
-
-bool gBenchmark_running;
-
-void benchmarkSigHandler(int sig)
-{
-    (void) sig;
-    gBenchmark_running = false;
-}
-
-void getCommunicatorPerformance()
-{
-    int runs = 0;
-    int runtimeInSec = 5;
-    ilmScreenProperties screenProperties;
-    cout << "running performance test for " << runtimeInSec << " seconds... ";
-    flush(cout);
-
-    signal(SIGALRM, benchmarkSigHandler);
-
-    gBenchmark_running = true;
-
-    alarm(runtimeInSec);
-
-    while (gBenchmark_running)
-    {
-        t_ilm_uint screenid = 0;
-
-        ilmErrorTypes callResult = ilm_getPropertiesOfScreen(screenid, &screenProperties);
-        if (ILM_SUCCESS != callResult)
-        {
-            cout << "LayerManagerService returned: " << ILM_ERROR_STRING(callResult) << "\n";
-            cout << "Failed to get properties for screen with ID " << screenid << "\n";
-            return;
-        }
-
-        ++runs;
-    }
-
-    signal(SIGALRM, SIG_DFL);
-
-    cout << (runs / runtimeInSec) << " transactions/second\n";
-}
-
 void layerNotificationCallback(t_ilm_layer layer, struct ilmLayerProperties* properties, t_ilm_notification_mask mask)
 {
     cout << "\nNotification: layer " << layer << " updated properties:\n";
@@ -95,11 +51,6 @@ void layerNotificationCallback(t_ilm_layer layer, struct ilmLayerProperties* pro
     if (ILM_NOTIFICATION_OPACITY & mask)
     {
         cout << "\topacity = " << properties->opacity << "\n";
-    }
-
-    if (ILM_NOTIFICATION_ORIENTATION & mask)
-    {
-        cout << "\torientation = " << properties->orientation << "\n";
     }
 
     if (ILM_NOTIFICATION_SOURCE_RECT & mask)
@@ -209,11 +160,6 @@ void surfaceNotificationCallback(t_ilm_layer surface, struct ilmSurfacePropertie
     if (ILM_NOTIFICATION_OPACITY & mask)
     {
         cout << "\topacity = " << properties->opacity << "\n";
-    }
-
-    if (ILM_NOTIFICATION_ORIENTATION & mask)
-    {
-        cout << "\torientation = " << properties->orientation << "\n";
     }
 
     if (ILM_NOTIFICATION_SOURCE_RECT & mask)

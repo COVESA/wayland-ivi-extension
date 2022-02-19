@@ -16,7 +16,6 @@
  * limitations under the License.
  *
  ****************************************************************************/
-#include "ilm_client.h"
 #include "ilm_control.h"
 #include "ilm_input.h"
 #include "LMControl.h"
@@ -116,6 +115,8 @@ COMMAND3(51,"set|unset surfaces [<idarray>] input focus pointer|keyboard|touch|a
     {
         cout << "LayerManagerService succeeded" << endl;
     }
+
+    delete[] surfaceIDs;
 }
 
 //=============================================================================

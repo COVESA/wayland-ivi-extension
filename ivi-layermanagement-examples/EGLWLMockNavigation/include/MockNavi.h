@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2010,2011 BMW Car IT GmbH
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +24,9 @@
 #include "IRenderable.h"
 #include "IUpdateable.h"
 #include "Camera.h"
+#include "ShaderLighting.h"
+#include "ShaderTexture.h"
+#include "ShaderGradient.h"
 
 #include <list>
 using std::list;
@@ -33,6 +37,7 @@ class MockNavi : public OpenGLES2App
 {
 public:
     MockNavi(float fps, float animationSpeed, SurfaceConfiguration* config);
+    ~MockNavi();
 
     virtual void update(int currentTimeInMs, int lastFrameTime);
     virtual void render();
@@ -45,6 +50,10 @@ private:
     int m_houseCount;
     list<IRenderable*> m_renderList;
     list<IUpdateable*> m_updateList;
+    ShaderLighting* pShader = nullptr;
+    ShaderTexture* pShaderTexture = nullptr;
+    ShaderGradient* pShaderGradient = nullptr;
+    bool nosky;
 };
 
 #endif /* _MOCKNAVI_H */

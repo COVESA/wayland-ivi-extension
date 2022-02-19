@@ -23,26 +23,37 @@ cmake_minimum_required (VERSION 2.6)
 project(ivi-controller)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(WAYLAND_SERVER wayland-server>=1.11.0 REQUIRED)
-pkg_check_modules(WESTON weston>=1.11.0 REQUIRED)
+pkg_check_modules(WAYLAND_SERVER wayland-server>=1.13.0 REQUIRED)
+pkg_check_modules(WESTON weston>=5.0.0 REQUIRED)
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
 
-find_package(Threads REQUIRED)
-if (IVI_SHARE)
-    pkg_check_modules(GBM gbm REQUIRED)
-    pkg_check_modules(LIBDRM libdrm REQUIRED)
-    ADD_DEFINITIONS("-DIVI_SHARE_ENABLE")
-    SET(BUFFER_SHARING_SRC_FILES
-        src/ivi-share.c
-        src/ivi-share-gbm.c
-    )
-endif (IVI_SHARE)
+find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
 
-GET_TARGET_PROPERTY(IVI_EXTENSION_INCLUDE_DIRS ivi-extension-protocol INCLUDE_DIRECTORIES)
+add_custom_command(
+    OUTPUT  ivi-wm-server-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} server-header
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-server-protocol.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+)
+
+add_custom_command(
+    OUTPUT  ivi-wm-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+            < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+            > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-protocol.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+)
+
+INCLUDE (CheckFunctionExists)
+
+CHECK_FUNCTION_EXISTS(posix_fallocate HAVE_POSIX_FALLOCATE)
+
+configure_file(src/config.h.cmake config.h)
 
 include_directories(
     src
-    ${IVI_EXTENSION_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
     ${PIXMAN_INCLUDE_DIRS}
@@ -56,48 +67,21 @@ link_directories(
 
 add_library(${PROJECT_NAME} MODULE
     src/ivi-controller.c
-    src/bitmap.c
-    ${BUFFER_SHARING_SRC_FILES}
+    ivi-wm-protocol.c
+    ivi-wm-server-protocol.h
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 add_dependencies(${PROJECT_NAME}
-    ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
     ${PIXMAN_LIBRARIES}
 )
 
 set(LIBS
     ${LIBS}
-    ivi-extension-protocol
     ${WAYLAND_SERVER_LIBRARIES}
 )
-
-if (IVI_SHARE)
-     include_directories(
-         ${include_directories}
-         ${GBM_INCLUDE_DIRS}
-         ${LIBDRM_INCLUDE_DIRS}
-     )
-
-     link_directories(
-         ${link_directories}
-         ${GBM_LIBRARY_DIRS}
-         ${LIBDRM_LIBRARY_DIRS}
-     )
-
-     add_dependencies(${PROJECT_NAME}
-         ${GBM_LIBRARIES}
-         ${LIBDRM_LIBRARIES}
-     )
-
-     set(LIBS
-         ${LIBS}
-         ${GBM_LIBRARIES}
-         ${LIBDRM_LIBRARIES}
-     )
-endif (IVI_SHARE)
 
 set(CMAKE_C_LDFLAGS "-module -avoid-version")
 

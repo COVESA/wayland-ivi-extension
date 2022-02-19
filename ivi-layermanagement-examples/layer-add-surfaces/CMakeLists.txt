@@ -24,7 +24,6 @@ include_directories(
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmCommon/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmClient/include"
     "${CMAKE_SOURCE_DIR}/ivi-layermanagement-api/ilmControl/include"
-    "${CMAKE_SOURCE_DIR}/ivi-input-api/ilmInput/include"
     ${WAYLAND_CLIENT_INCLUDE_DIR}
 )
 
@@ -33,7 +32,7 @@ link_directories(
 )
 
 SET(LIBS
-    ilmControl
+    ilmCommon
 )
 
 SET(SRC_FILES

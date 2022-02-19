@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2010,2011 BMW Car IT GmbH
+ * Copyright (C) 2018 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,13 +23,15 @@
 #include "IRenderable.h"
 #include "IUpdateable.h"
 #include "vec.h"
+#include "TextureLoader.h"
+#include "ShaderTexture.h"
 
 class ShaderBase;
 
 class House : public IRenderable, public IUpdateable
 {
 public:
-    House(vec3f position, vec3f size, vec4f houseColor, ShaderBase* pShader);
+    House(vec3f position, vec3f size, vec4f houseColor, ShaderBase* pShader, TextureLoader* houseTexture = nullptr, float numElements = 3.0);
     virtual ~House();
 
     virtual void render();
@@ -46,6 +49,10 @@ private:
     vec3f m_normals[6];
     vec3u m_index[12];
     vec3f m_vertex[8];
+    vec2f m_texCoords[8];
+    bool withTexture = false;
+    TextureLoader* texture = nullptr;
+    float numElements;
 
     ShaderBase* m_pShader;
 };

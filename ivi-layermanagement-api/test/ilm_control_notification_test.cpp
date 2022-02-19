@@ -1,6 +1,7 @@
 /***************************************************************************
  *
  * Copyright 2012 BMW Car IT GmbH
+ * Copyright (C) 2016 Advanced Driver Information Technology Joint Venture GmbH
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +30,6 @@
 #include <assert.h>
 
 extern "C" {
-    #include "ilm_client.h"
     #include "ilm_control.h"
 }
 
@@ -73,7 +73,6 @@ public:
     void SetUp()
     {
         ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay((t_ilm_nativedisplay)wlDisplay));
-        ASSERT_EQ(ILM_SUCCESS, ilmClient_init((t_ilm_nativedisplay)wlDisplay));
 
         // set default values
         callbackLayerId = -1;
@@ -89,9 +88,7 @@ public:
         ilm_commitChanges();
         // create a surface
         surface = 456;
-        ilm_surfaceRemove(surface);
-        ilm_commitChanges();
-        ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[0],10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
+        ivi_surface = (struct ivi_surface*)ivi_application_surface_create(iviApp, surface, wlSurfaces[0]);
         ilm_commitChanges();
         timesCalled=0;
 
@@ -111,17 +108,9 @@ public:
        };
        free(layers);
 
-       t_ilm_surface* surfaces = NULL;
-       t_ilm_int numSurfaces=0;
-       EXPECT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&numSurfaces, &surfaces));
-       for (t_ilm_int i=0; i<numSurfaces; i++)
-       {
-           EXPECT_EQ(ILM_SUCCESS, ilm_surfaceRemove(surfaces[i]));
-       };
-       free(surfaces);
+       ivi_surface_destroy(ivi_surface);
 
        EXPECT_EQ(ILM_SUCCESS, ilm_commitChanges());
-       EXPECT_EQ(ILM_SUCCESS, ilmClient_destroy());
        EXPECT_EQ(ILM_SUCCESS, ilm_destroy());
     }
 
@@ -137,6 +126,7 @@ public:
     static struct ilmLayerProperties LayerProperties;
     static unsigned int mask;
     static t_ilm_surface surface;
+    struct ivi_surface* ivi_surface;
     static ilmSurfaceProperties SurfaceProperties;
 
     static void assertCallbackcalled(int numberOfExpectedCalls=1){
@@ -179,11 +169,6 @@ public:
             LayerProperties.opacity = layerProperties->opacity;
         }
 
-        if ((unsigned)m & ILM_NOTIFICATION_ORIENTATION)
-        {
-            LayerProperties.orientation = layerProperties->orientation;
-        }
-
         if ((unsigned)m & ILM_NOTIFICATION_SOURCE_RECT)
         {
             LayerProperties.sourceX = layerProperties->sourceX;
@@ -222,11 +207,6 @@ public:
             SurfaceProperties.opacity = surfaceProperties->opacity;
         }
 
-        if ((unsigned)m & ILM_NOTIFICATION_ORIENTATION)
-        {
-            SurfaceProperties.orientation = surfaceProperties->orientation;
-        }
-
         if ((unsigned)m & ILM_NOTIFICATION_SOURCE_RECT)
         {
             SurfaceProperties.sourceX = surfaceProperties->sourceX;
@@ -257,11 +237,8 @@ t_ilm_layer NotificationTest::callbackLayerId;
 t_ilm_surface NotificationTest::callbackSurfaceId;
 struct ilmLayerProperties NotificationTest::LayerProperties;
 unsigned int NotificationTest::mask;
-t_ilm_surface NotificationTest::surface;
+unsigned int NotificationTest::surface;
 ilmSurfaceProperties NotificationTest::SurfaceProperties;
-
-
-
 
 TEST_F(NotificationTest, ilm_layerAddNotificationWithoutCallback)
 {
@@ -285,15 +262,14 @@ TEST_F(NotificationTest, ilm_surfaceAddNotificationWithoutCallback)
 {
     // create a layer
     t_ilm_uint surface = 67;
-
-    ilm_surfaceCreate((t_ilm_nativehandle)wlSurfaces[1],10,10,ILM_PIXELFORMAT_RGBA_8888,&surface);
-    ilm_commitChanges();
+    struct ivi_surface* ivi_surface = (struct ivi_surface*)
+        ivi_application_surface_create(iviApp, surface, wlSurfaces[1]);
 
     // add notification
     ilmErrorTypes status = ilm_surfaceAddNotification(surface,NULL);
     ASSERT_EQ(ILM_SUCCESS, status);
 
-    ilm_surfaceRemove(surface);
+    ivi_surface_destroy(ivi_surface);
     ilm_commitChanges();
 }
 
@@ -331,24 +307,6 @@ TEST_F(NotificationTest, NotifyOnLayerSetOpacity)
     EXPECT_EQ(layer,callbackLayerId);
     EXPECT_NEAR(0.789, LayerProperties.opacity, 0.1);
     EXPECT_EQ(ILM_NOTIFICATION_OPACITY,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
-}
-
-TEST_F(NotificationTest, NotifyOnLayerSetOrientation)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
-    // change something
-    e_ilmOrientation orientation = ILM_ONEHUNDREDEIGHTY;
-    ilm_layerSetOrientation(layer,orientation);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled();
-
-    EXPECT_EQ(layer,callbackLayerId);
-    EXPECT_EQ(ILM_ONEHUNDREDEIGHTY,LayerProperties.orientation);
-    EXPECT_EQ(ILM_NOTIFICATION_ORIENTATION,mask);
 
     ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
 }
@@ -396,7 +354,7 @@ TEST_F(NotificationTest, NotifyOnLayerMultipleValues1)
     ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
     // change something
     ilm_layerSetSourceRectangle(layer,33,567,55,99);
-    ilm_layerSetOrientation(layer,ILM_ONEHUNDREDEIGHTY);
+    ilm_layerSetVisibility(layer,true);
     ilm_commitChanges();
 
     // expect callback to have been called
@@ -407,8 +365,8 @@ TEST_F(NotificationTest, NotifyOnLayerMultipleValues1)
     EXPECT_EQ(567u,LayerProperties.sourceY);
     EXPECT_EQ(55u,LayerProperties.sourceWidth);
     EXPECT_EQ(99u,LayerProperties.sourceHeight);
-    EXPECT_EQ(ILM_ONEHUNDREDEIGHTY,LayerProperties.orientation);
-    EXPECT_EQ(ILM_NOTIFICATION_SOURCE_RECT|ILM_NOTIFICATION_ORIENTATION,mask);
+    EXPECT_TRUE(LayerProperties.visibility);
+    EXPECT_EQ(ILM_NOTIFICATION_SOURCE_RECT|ILM_NOTIFICATION_VISIBILITY,mask);
 
     ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
 }
@@ -447,18 +405,16 @@ TEST_F(NotificationTest, NotifyOnLayerAllValues)
     ilm_layerSetVisibility(layer,true);
     ilm_layerSetDestinationRectangle(layer,133,1567,155,199);
     ilm_layerSetSourceRectangle(layer,33,567,55,99);
-    ilm_layerSetOrientation(layer,ILM_ONEHUNDREDEIGHTY);
     ilm_commitChanges();
 
     // expect callback to have been called
-    assertCallbackcalled(5);
+    assertCallbackcalled(4);
 
     EXPECT_EQ(layer,callbackLayerId);
     EXPECT_EQ(33u,LayerProperties.sourceX);
     EXPECT_EQ(567u,LayerProperties.sourceY);
     EXPECT_EQ(55u,LayerProperties.sourceWidth);
     EXPECT_EQ(99u,LayerProperties.sourceHeight);
-    EXPECT_EQ(ILM_ONEHUNDREDEIGHTY,LayerProperties.orientation);
 
     EXPECT_TRUE(LayerProperties.visibility);
     EXPECT_NEAR(opacity, LayerProperties.opacity, 0.1);
@@ -466,7 +422,7 @@ TEST_F(NotificationTest, NotifyOnLayerAllValues)
     EXPECT_EQ(1567u,LayerProperties.destY);
     EXPECT_EQ(155u,LayerProperties.destWidth);
     EXPECT_EQ(199u,LayerProperties.destHeight);
-    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT|ILM_NOTIFICATION_VISIBILITY|ILM_NOTIFICATION_OPACITY|ILM_NOTIFICATION_SOURCE_RECT|ILM_NOTIFICATION_ORIENTATION,mask);
+    EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT|ILM_NOTIFICATION_VISIBILITY|ILM_NOTIFICATION_OPACITY|ILM_NOTIFICATION_SOURCE_RECT,mask);
 
     ASSERT_EQ(ILM_SUCCESS,ilm_layerRemoveNotification(layer));
 }
@@ -475,7 +431,7 @@ TEST_F(NotificationTest, DoNotSendNotificationsAfterRemoveLayer)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
     // get called once
-    ilm_layerSetOrientation(layer,ILM_ONEHUNDREDEIGHTY);
+    ilm_layerSetVisibility(layer,true);
     ilm_commitChanges();
     assertCallbackcalled();
 
@@ -487,7 +443,6 @@ TEST_F(NotificationTest, DoNotSendNotificationsAfterRemoveLayer)
     ilm_layerSetVisibility(layer,true);
     ilm_layerSetDestinationRectangle(layer,133,1567,155,199);
     ilm_layerSetSourceRectangle(layer,33,567,55,99);
-    ilm_layerSetOrientation(layer,ILM_ONEHUNDREDEIGHTY);
     ilm_commitChanges();
 
     // assert that we have not been notified
@@ -499,7 +454,7 @@ TEST_F(NotificationTest, MultipleRegistrationsLayer)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
     // get called once
-    ilm_layerSetOrientation(layer,ILM_ONEHUNDREDEIGHTY);
+    ilm_layerSetVisibility(layer,true);
     ilm_commitChanges();
     assertCallbackcalled();
 
@@ -511,7 +466,6 @@ TEST_F(NotificationTest, MultipleRegistrationsLayer)
     ilm_layerSetVisibility(layer,true);
     ilm_layerSetDestinationRectangle(layer,133,1567,155,199);
     ilm_layerSetSourceRectangle(layer,33,567,55,99);
-    ilm_layerSetOrientation(layer,ILM_ONEHUNDREDEIGHTY);
     ilm_commitChanges();
 
     // assert that we have not been notified
@@ -520,7 +474,7 @@ TEST_F(NotificationTest, MultipleRegistrationsLayer)
     // register for notifications again
     ASSERT_EQ(ILM_SUCCESS,ilm_layerAddNotification(layer,&LayerCallbackFunction));
 
-    ilm_layerSetOrientation(layer,ILM_ZERO);
+    ilm_layerSetVisibility(layer,false);
     ilm_commitChanges();
     assertCallbackcalled();
 
@@ -530,7 +484,7 @@ TEST_F(NotificationTest, MultipleRegistrationsLayer)
 TEST_F(NotificationTest, DefaultIsNotToReceiveNotificationsLayer)
 {
     // get called once
-    ilm_layerSetOrientation(layer,ILM_ONEHUNDREDEIGHTY);
+    ilm_layerSetVisibility(layer,true);
     ilm_commitChanges();
 
     // change a lot of things
@@ -539,7 +493,6 @@ TEST_F(NotificationTest, DefaultIsNotToReceiveNotificationsLayer)
     ilm_layerSetVisibility(layer,true);
     ilm_layerSetDestinationRectangle(layer,133,1567,155,199);
     ilm_layerSetSourceRectangle(layer,33,567,55,99);
-    ilm_layerSetOrientation(layer,ILM_ONEHUNDREDEIGHTY);
     ilm_commitChanges();
 
     // assert that we have not been notified
@@ -580,24 +533,6 @@ TEST_F(NotificationTest, NotifyOnSurfaceSetOpacity)
     EXPECT_EQ(surface,callbackSurfaceId);
     EXPECT_NEAR(0.789, SurfaceProperties.opacity, 0.1);
     EXPECT_EQ(ILM_NOTIFICATION_OPACITY|ILM_NOTIFICATION_CONTENT_AVAILABLE,mask);
-
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
-}
-
-TEST_F(NotificationTest, NotifyOnSurfaceSetOrientation)
-{
-    ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
-    // change something
-    e_ilmOrientation orientation = ILM_ONEHUNDREDEIGHTY;
-    ilm_surfaceSetOrientation(surface,orientation);
-    ilm_commitChanges();
-
-    // expect callback to have been called
-    assertCallbackcalled(2);
-
-    EXPECT_EQ(surface,callbackSurfaceId);
-    EXPECT_EQ(ILM_ONEHUNDREDEIGHTY,SurfaceProperties.orientation);
-    EXPECT_EQ(ILM_NOTIFICATION_ORIENTATION|ILM_NOTIFICATION_CONTENT_AVAILABLE,mask);
 
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
 }
@@ -645,7 +580,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceMultipleValues1)
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
     // change something
     ilm_surfaceSetSourceRectangle(surface,33,567,55,99);
-    ilm_surfaceSetOrientation(surface,ILM_ONEHUNDREDEIGHTY);
+    ilm_surfaceSetVisibility(surface,true);
     ilm_commitChanges();
 
     // expect callback to have been called
@@ -656,8 +591,8 @@ TEST_F(NotificationTest, NotifyOnSurfaceMultipleValues1)
     EXPECT_EQ(567u,SurfaceProperties.sourceY);
     EXPECT_EQ(55u,SurfaceProperties.sourceWidth);
     EXPECT_EQ(99u,SurfaceProperties.sourceHeight);
-    EXPECT_EQ(ILM_ONEHUNDREDEIGHTY,SurfaceProperties.orientation);
-    EXPECT_EQ(ILM_NOTIFICATION_SOURCE_RECT|ILM_NOTIFICATION_ORIENTATION|ILM_NOTIFICATION_CONTENT_AVAILABLE,mask);
+    EXPECT_TRUE(SurfaceProperties.visibility);
+    EXPECT_EQ(ILM_NOTIFICATION_SOURCE_RECT|ILM_NOTIFICATION_VISIBILITY|ILM_NOTIFICATION_CONTENT_AVAILABLE,mask);
 
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
 }
@@ -697,18 +632,16 @@ TEST_F(NotificationTest, NotifyOnSurfaceAllValues)
     ilm_surfaceSetVisibility(surface,true);
     ilm_surfaceSetDestinationRectangle(surface,133,1567,155,199);
     ilm_surfaceSetSourceRectangle(surface,33,567,55,99);
-    ilm_surfaceSetOrientation(surface,ILM_ONEHUNDREDEIGHTY);
     ilm_commitChanges();
 
     // expect callback to have been called
-    assertCallbackcalled(6);
+    assertCallbackcalled(5);
 
     EXPECT_EQ(surface,callbackSurfaceId);
     EXPECT_EQ(33u,SurfaceProperties.sourceX);
     EXPECT_EQ(567u,SurfaceProperties.sourceY);
     EXPECT_EQ(55u,SurfaceProperties.sourceWidth);
     EXPECT_EQ(99u,SurfaceProperties.sourceHeight);
-    EXPECT_EQ(ILM_ONEHUNDREDEIGHTY,SurfaceProperties.orientation);
 
     EXPECT_TRUE(SurfaceProperties.visibility);
     EXPECT_NEAR(opacity, SurfaceProperties.opacity, 0.1);
@@ -717,7 +650,7 @@ TEST_F(NotificationTest, NotifyOnSurfaceAllValues)
     EXPECT_EQ(155u,SurfaceProperties.destWidth);
     EXPECT_EQ(199u,SurfaceProperties.destHeight);
     EXPECT_EQ(ILM_NOTIFICATION_DEST_RECT|ILM_NOTIFICATION_VISIBILITY|ILM_NOTIFICATION_OPACITY|
-              ILM_NOTIFICATION_SOURCE_RECT|ILM_NOTIFICATION_ORIENTATION|ILM_NOTIFICATION_CONTENT_AVAILABLE,mask);
+              ILM_NOTIFICATION_SOURCE_RECT|ILM_NOTIFICATION_CONTENT_AVAILABLE,mask);
 
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceRemoveNotification(surface));
 }
@@ -726,7 +659,7 @@ TEST_F(NotificationTest, DoNotSendNotificationsAfterRemoveSurface)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
     // get called once
-    ilm_surfaceSetOrientation(surface,ILM_ONEHUNDREDEIGHTY);
+    ilm_surfaceSetVisibility(surface,true);
     ilm_commitChanges();
     assertCallbackcalled(2);
 
@@ -738,7 +671,6 @@ TEST_F(NotificationTest, DoNotSendNotificationsAfterRemoveSurface)
     ilm_surfaceSetVisibility(surface,true);
     ilm_surfaceSetDestinationRectangle(surface,133,1567,155,199);
     ilm_surfaceSetSourceRectangle(surface,33,567,55,99);
-    ilm_surfaceSetOrientation(surface,ILM_ONEHUNDREDEIGHTY);
     ilm_commitChanges();
 
     // assert that we have not been notified
@@ -750,7 +682,7 @@ TEST_F(NotificationTest, MultipleRegistrationsSurface)
 {
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
     // get called once
-    ilm_surfaceSetOrientation(surface,ILM_ONEHUNDREDEIGHTY);
+    ilm_surfaceSetVisibility(surface,true);
     ilm_commitChanges();
     assertCallbackcalled(2);
 
@@ -762,7 +694,6 @@ TEST_F(NotificationTest, MultipleRegistrationsSurface)
     ilm_surfaceSetVisibility(surface,true);
     ilm_surfaceSetDestinationRectangle(surface,133,1567,155,199);
     ilm_surfaceSetSourceRectangle(surface,33,567,55,99);
-    ilm_surfaceSetOrientation(surface,ILM_ONEHUNDREDEIGHTY);
     ilm_commitChanges();
 
     // assert that we have not been notified
@@ -771,7 +702,7 @@ TEST_F(NotificationTest, MultipleRegistrationsSurface)
     // register for notifications again
     ASSERT_EQ(ILM_SUCCESS,ilm_surfaceAddNotification(surface,&SurfaceCallbackFunction));
 
-    ilm_surfaceSetOrientation(surface,ILM_ZERO);
+    ilm_surfaceSetVisibility(surface,false);
     ilm_commitChanges();
     assertCallbackcalled(2);
 
@@ -781,7 +712,7 @@ TEST_F(NotificationTest, MultipleRegistrationsSurface)
 TEST_F(NotificationTest, DefaultIsNotToReceiveNotificationsSurface)
 {
     // get called once
-    ilm_surfaceSetOrientation(surface,ILM_ONEHUNDREDEIGHTY);
+    ilm_surfaceSetVisibility(surface,true);
     ilm_commitChanges();
 
     // change a lot of things
@@ -790,7 +721,6 @@ TEST_F(NotificationTest, DefaultIsNotToReceiveNotificationsSurface)
     ilm_surfaceSetVisibility(surface,true);
     ilm_surfaceSetDestinationRectangle(surface,133,1567,155,199);
     ilm_surfaceSetSourceRectangle(surface,33,567,55,99);
-    ilm_surfaceSetOrientation(surface,ILM_ONEHUNDREDEIGHTY);
     ilm_commitChanges();
 
     // assert that we have not been notified
