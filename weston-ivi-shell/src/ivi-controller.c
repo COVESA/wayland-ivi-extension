@@ -48,7 +48,6 @@
 #define IVI_CLIENT_ENABLE_CURSOR_ENV_NAME "IVI_CLIENT_ENABLE_CURSOR"
 
 struct ivilayer;
-struct iviscreen;
 
 struct notification {
     struct wl_list link;
@@ -63,14 +62,6 @@ struct ivilayer {
     const struct ivi_layout_layer_properties *prop;
     struct wl_listener property_changed;
     struct wl_list notification_list;
-};
-
-struct iviscreen {
-    struct wl_list link;
-    struct ivishell *shell;
-    uint32_t id_screen;
-    struct weston_output *output;
-    struct wl_list resource_list;
 };
 
 struct ivicontroller {
