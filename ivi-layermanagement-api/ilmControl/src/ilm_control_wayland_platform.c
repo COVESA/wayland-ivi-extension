@@ -70,6 +70,10 @@ struct screen_context {
 struct screenshot_context {
     const char *filename;
     ilmErrorTypes result;
+    int (*callback_done)(void *priv, t_ilm_int fd, t_ilm_int width, t_ilm_int height,
+			 t_ilm_int stride, t_ilm_uint format, t_ilm_uint timestamp);
+    int (*callback_error)(void *priv, t_ilm_uint error, const char *message);
+    void *callback_priv;
 };
 
 static inline void lock_context(struct ilm_control_context *ctx)
@@ -2122,13 +2126,24 @@ static void screenshot_done(void *data, struct ivi_screenshot *ivi_screenshot,
     size_t size = stride * height;
     const char *filename = ctx_scrshot->filename;
     char *filename_ext = NULL;
+    int ret;
 
     ctx_scrshot->filename = NULL;
     ivi_screenshot_destroy(ivi_screenshot);
 
-    if (filename == NULL) {
-        ctx_scrshot->result = ILM_FAILED;
-        fprintf(stderr, "screenshot file name not provided: %m\n");
+    if (ctx_scrshot->callback_done) {
+        ret = ctx_scrshot->callback_done(ctx_scrshot->callback_priv, fd,
+					 width, height, stride, format,
+					 timestamp);
+        ctx_scrshot->result = ret;
+	if (ret != ILM_SUCCESS) {
+	    close(fd);
+	    return;
+	}
+    }
+
+    if (!ctx_scrshot->filename) {
+        close(fd);
         return;
     }
 
@@ -2172,6 +2187,8 @@ static void screenshot_error(void *data, struct ivi_screenshot *ivi_screenshot,
     struct screenshot_context *ctx_scrshot = data;
     ctx_scrshot->filename = NULL;
     ivi_screenshot_destroy(ivi_screenshot);
+    if (ctx_scrshot->callback_error)
+        ctx_scrshot->callback_error(ctx_scrshot->callback_priv, error, message);
     fprintf(stderr, "screenshot failed, error 0x%x: %s\n", error, message);
 }
 
@@ -2181,7 +2198,13 @@ static struct ivi_screenshot_listener screenshot_listener = {
 };
 
 ILM_EXPORT ilmErrorTypes
-ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
+ilm_takeScreenshot5(t_ilm_uint screen, t_ilm_const_string filename,
+		    int (*callback_done)(void *priv, t_ilm_int fd, t_ilm_int width,
+					 t_ilm_int height, t_ilm_int stride,
+					 t_ilm_uint format, t_ilm_uint timestamp),
+		    int (*callback_error)(void *priv, t_ilm_uint error, const char *message),
+		    void *callback_priv
+)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *const ctx = &ilm_context;
@@ -2193,6 +2216,9 @@ ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
         struct screenshot_context ctx_scrshot = {
             .filename = filename,
             .result = ILM_FAILED,
+	    .callback_done = callback_done,
+	    .callback_error = callback_error,
+	    .callback_priv = callback_priv,
         };
 
         struct ivi_screenshot *scrshot =
@@ -2216,8 +2242,19 @@ ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
 }
 
 ILM_EXPORT ilmErrorTypes
-ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
-                              t_ilm_surface surfaceid)
+ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
+{
+	ilm_takeScreenshot5(screen, filename, NULL, NULL, NULL);
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_takeSurfaceScreenshot5(t_ilm_const_string filename, t_ilm_surface surfaceid,
+			   int (*callback_done)(void *priv, t_ilm_int fd, t_ilm_int width,
+						t_ilm_int height, t_ilm_int stride,
+						t_ilm_uint format, t_ilm_uint timestamp),
+			   int (*callback_error)(void *priv, t_ilm_uint error, const char *message),
+			   void *callback_priv
+)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *const ctx = &ilm_context;
@@ -2227,6 +2264,9 @@ ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
           struct screenshot_context ctx_scrshot = {
             .filename = filename,
             .result = ILM_FAILED,
+	    .callback_done = callback_done,
+	    .callback_error = callback_error,
+	    .callback_priv = callback_priv,
         };
 
         struct ivi_screenshot *scrshot =
@@ -2247,6 +2287,13 @@ ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
     unlock_context(ctx);
 
     return returnValue;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
+                              t_ilm_surface surfaceid)
+{
+	return ilm_takeSurfaceScreenshot5(filename, surfaceid, NULL, NULL, NULL);
 }
 
 ILM_EXPORT ilmErrorTypes

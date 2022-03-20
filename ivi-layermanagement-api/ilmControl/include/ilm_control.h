@@ -366,6 +366,30 @@ ilmErrorTypes ilm_displaySetRenderOrder(t_ilm_display display, t_ilm_layer *pLay
 ilmErrorTypes ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename);
 
 /**
+ * \brief Take a screenshot from the current displayed layer scene with callbacks
+ * The screenshot is saved as bmp file with the corresponding filename in case
+ * filename is non-NULL. In case callback_done or callback_error are non-NULL,
+ * they are called when the screenshot has been acquired and in case failure
+ * to acquire screenshot occured respectively.
+ * \ingroup ilmControl
+ * \param[in] screen Id of screen where screenshot should be taken
+ * \param[in] filename Location where the screenshot should be stored or NULL
+ * \param[in] callback_done Optional callback called when screenshot is acquired
+ * \param[in] callback_error Optional callback called when screenshot acqusition failed
+ * \param[in] callback_priv Optional callback private data passed in by called
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+
+ilmErrorTypes ilm_takeScreenshot5(t_ilm_uint screen, t_ilm_const_string filename,
+				  int (*callback_done)(void *priv, t_ilm_int fd, t_ilm_int width,
+						       t_ilm_int height, t_ilm_int stride,
+						       t_ilm_uint format, t_ilm_uint timestamp),
+				  int (*callback_error)(void *priv, t_ilm_uint error, const char *message),
+				  void *callback_priv
+);
+
+/**
  * \brief Take a screenshot of a certain surface
  * The screenshot is saved as bmp file with the corresponding filename.
  * \ingroup ilmControl
@@ -375,6 +399,29 @@ ilmErrorTypes ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_takeSurfaceScreenshot(t_ilm_const_string filename, t_ilm_surface surfaceid);
+
+/**
+ * \brief Take a screenshot of a certain surface with callbacks
+ * The screenshot is saved as bmp file with the corresponding filename in case
+ * filename is non-NULL. In case callback_done or callback_error are non-NULL,
+ * they are called when the screenshot has been acquired and in case failure
+ * to acquire screenshot occured respectively.
+ * \ingroup ilmControl
+ * \param[in] filename Location where the screenshot should be stored
+ * \param[in] surfaceid Identifier of the surface to take the screenshot of
+ * \param[in] callback_done Optional callback called when screenshot is acquired
+ * \param[in] callback_error Optional callback called when screenshot acqusition failed
+ * \param[in] callback_priv Optional callback private data passed in by called
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_takeSurfaceScreenshot5(t_ilm_const_string filename, t_ilm_surface surfaceid,
+					 int (*callback_done)(void *priv, t_ilm_int fd, t_ilm_int width,
+							      t_ilm_int height, t_ilm_int stride,
+							      t_ilm_uint format, t_ilm_uint timestamp),
+					 int (*callback_error)(void *priv, t_ilm_uint error, const char *message),
+					 void *callback_priv
+);
 
 /**
  * \brief register for notification on property changes of layer
