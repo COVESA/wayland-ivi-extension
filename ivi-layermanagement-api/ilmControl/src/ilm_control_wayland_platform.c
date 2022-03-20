@@ -70,6 +70,9 @@ struct screen_context {
 struct screenshot_context {
     const char *filename;
     ilmErrorTypes result;
+    screenshotDoneNotificationFunc callback_done;
+    screenshotErrorNotificationFunc callback_error;
+    void *callback_priv;
 };
 
 static inline void lock_context(struct ilm_control_context *ctx)
@@ -2126,9 +2129,17 @@ static void screenshot_done(void *data, struct ivi_screenshot *ivi_screenshot,
     ctx_scrshot->filename = NULL;
     ivi_screenshot_destroy(ivi_screenshot);
 
-    if (filename == NULL) {
-        ctx_scrshot->result = ILM_FAILED;
-        fprintf(stderr, "screenshot file name not provided: %m\n");
+    if (ctx_scrshot->callback_done)
+        if (ctx_scrshot->callback_done(ctx_scrshot->callback_priv,
+                fd, width, height, stride, format, timestamp) == ILM_FAILED) {
+            ctx_scrshot->result = ILM_FAILED;
+            close(fd);
+            return;
+        }
+    // if filename is null, free resource and return
+    if (!filename) {
+        close(fd);
+        free(ctx_scrshot);
         return;
     }
 
@@ -2170,9 +2181,15 @@ static void screenshot_error(void *data, struct ivi_screenshot *ivi_screenshot,
                              uint32_t error, const char *message)
 {
     struct screenshot_context *ctx_scrshot = data;
+    const char *filename = ctx_scrshot->filename;
     ctx_scrshot->filename = NULL;
     ivi_screenshot_destroy(ivi_screenshot);
+    if (ctx_scrshot->callback_error)
+        ctx_scrshot->callback_error(ctx_scrshot->callback_priv, error, message);
     fprintf(stderr, "screenshot failed, error 0x%x: %s\n", error, message);
+    // free resource
+    if (!filename)
+        free(ctx_scrshot);
 }
 
 static struct ivi_screenshot_listener screenshot_listener = {
@@ -2180,73 +2197,143 @@ static struct ivi_screenshot_listener screenshot_listener = {
     screenshot_error,
 };
 
-ILM_EXPORT ilmErrorTypes
-ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
+static ilmErrorTypes
+ilm_takeShoot(t_ilm_uint screen, t_ilm_const_string filename,
+                screenshotDoneNotificationFunc callback_done,
+                screenshotErrorNotificationFunc callback_error,
+                void *user_data)
 {
     ilmErrorTypes returnValue = ILM_FAILED;
     struct ilm_control_context *const ctx = &ilm_context;
     struct screen_context *ctx_scrn = NULL;
 
+    // if filename, callback_done and callback_error are null, don't do anything, then return success
+    if (!filename && !callback_done && !callback_error) {
+        return ILM_SUCCESS;
+    }
+
     lock_context(ctx);
     ctx_scrn = get_screen_context_by_id(&ctx->wl, (uint32_t)screen);
     if (ctx_scrn != NULL) {
-        struct screenshot_context ctx_scrshot = {
-            .filename = filename,
-            .result = ILM_FAILED,
-        };
+        struct screenshot_context *ctx_scrshot = calloc(1, sizeof(struct screenshot_context));
 
-        struct ivi_screenshot *scrshot =
-            ivi_wm_screen_screenshot(ctx_scrn->controller);
+        if (!ctx_scrshot) {
+            fprintf(stderr, "Failed to allocate memory for screenshot_context\n");
+            goto exit;
+        }
+        ctx_scrshot->filename = filename;
+        ctx_scrshot->result = ILM_FAILED;
+        ctx_scrshot->callback_done = callback_done;
+        ctx_scrshot->callback_error = callback_error;
+        ctx_scrshot->callback_priv = user_data;
+
+        struct ivi_screenshot *scrshot = ivi_wm_screen_screenshot(ctx_scrn->controller);
         if (scrshot) {
-            ivi_screenshot_add_listener(scrshot, &screenshot_listener,
-                                        &ctx_scrshot);
+            ivi_screenshot_add_listener(scrshot, &screenshot_listener, ctx_scrshot);
+            // don't need to wait if file name is empty
+            if (!filename) {
+                wl_display_flush(ctx->wl.display);
+                returnValue = ILM_SUCCESS;
+                goto exit;
+            }
             // dispatch until filename has been reset in done or error callback
             int ret;
             do {
                 ret =
                     wl_display_dispatch_queue(ctx->wl.display, ctx->wl.queue);
-            } while ((ret != -1) && ctx_scrshot.filename);
+            } while ((ret != -1) && ctx_scrshot->filename);
 
-            returnValue = ctx_scrshot.result;
+            returnValue = ctx_scrshot->result;
         }
+        free(ctx_scrshot);
     }
+exit:
     unlock_context(ctx);
-
     return returnValue;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_takeAsyncScreenshot(t_ilm_uint screen,
+                            screenshotDoneNotificationFunc callback_done,
+                            screenshotErrorNotificationFunc callback_error,
+                            void *user_data)
+{
+    return ilm_takeShoot(screen, NULL, callback_done, callback_error, user_data);
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
+{
+    return ilm_takeShoot(screen, filename, NULL, NULL, NULL);
+}
+
+static ilmErrorTypes
+ilm_takeSurfaceShoot(t_ilm_surface surfaceid, t_ilm_const_string filename,
+                screenshotDoneNotificationFunc callback_done,
+                screenshotErrorNotificationFunc callback_error,
+                void *user_data)
+{
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *const ctx = &ilm_context;
+
+    // if filename, callback_done and callback_error are null, don't do anything, then return success
+    if (!filename && !callback_done && !callback_error) {
+        return ILM_SUCCESS;
+    }
+
+    lock_context(ctx);
+    if (ctx->wl.controller) {
+        struct screenshot_context *ctx_scrshot = calloc(1, sizeof(struct screenshot_context));
+
+        if (!ctx_scrshot) {
+            fprintf(stderr, "Failed to allocate memory for screenshot_context\n");
+            goto exit;
+        }
+        ctx_scrshot->filename = filename;
+        ctx_scrshot->result = ILM_FAILED;
+        ctx_scrshot->callback_done = callback_done;
+        ctx_scrshot->callback_error = callback_error;
+        ctx_scrshot->callback_priv = user_data;
+
+        struct ivi_screenshot *scrshot = ivi_wm_surface_screenshot(ctx->wl.controller, surfaceid);
+        if (scrshot) {
+            ivi_screenshot_add_listener(scrshot, &screenshot_listener, ctx_scrshot);
+            // don't need to wait if file name is empty
+            if (!filename) {
+                wl_display_flush(ctx->wl.display);
+                returnValue = ILM_SUCCESS;
+                goto exit;
+            }
+            // dispatch until filename has been reset in done or error callback
+            int ret;
+            do {
+                ret =
+                    wl_display_dispatch_queue(ctx->wl.display, ctx->wl.queue);
+            } while ((ret != -1) && ctx_scrshot->filename);
+
+            returnValue = ctx_scrshot->result;
+        }
+        free(ctx_scrshot);
+    }
+exit:
+    unlock_context(ctx);
+    return returnValue;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_takeAsyncSurfaceScreenshot(t_ilm_surface surfaceid,
+                        screenshotDoneNotificationFunc callback_done,
+                        screenshotErrorNotificationFunc callback_error,
+                        void *user_data)
+{
+    return ilm_takeSurfaceShoot(surfaceid, NULL, callback_done, callback_error, user_data);
 }
 
 ILM_EXPORT ilmErrorTypes
 ilm_takeSurfaceScreenshot(t_ilm_const_string filename,
                               t_ilm_surface surfaceid)
 {
-    ilmErrorTypes returnValue = ILM_FAILED;
-    struct ilm_control_context *const ctx = &ilm_context;
-
-    lock_context(ctx);
-    if (ctx->wl.controller) {
-          struct screenshot_context ctx_scrshot = {
-            .filename = filename,
-            .result = ILM_FAILED,
-        };
-
-        struct ivi_screenshot *scrshot =
-            ivi_wm_surface_screenshot(ctx->wl.controller, surfaceid);
-        if (scrshot) {
-            ivi_screenshot_add_listener(scrshot, &screenshot_listener,
-                                        &ctx_scrshot);
-            // dispatch until filename has been reset in done or error callback
-            int ret;
-            do {
-                ret =
-                    wl_display_dispatch_queue(ctx->wl.display, ctx->wl.queue);
-            } while ((ret != -1) && ctx_scrshot.filename);
-
-            returnValue = ctx_scrshot.result;
-        }
-    }
-    unlock_context(ctx);
-
-    return returnValue;
+    return ilm_takeSurfaceShoot(surfaceid, filename, NULL, NULL, NULL);
 }
 
 ILM_EXPORT ilmErrorTypes
