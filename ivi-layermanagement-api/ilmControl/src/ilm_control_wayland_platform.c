@@ -815,17 +815,7 @@ input_listener_input_focus(void *data,
                            struct ivi_input *ivi_input,
                            uint32_t surface, uint32_t device, int32_t enabled)
 {
-    struct wayland_context *ctx = data;
-    struct surface_context *surf_ctx;
-    wl_list_for_each(surf_ctx, &ctx->list_surface, link) {
-        if (surface != surf_ctx->id_surface)
-            continue;
-
-        if (enabled == ILM_TRUE)
-            surf_ctx->prop.focus |= device;
-        else
-            surf_ctx->prop.focus &= ~device;
-    }
+/* XXX: deprecated */
 }
 
 static void
@@ -889,12 +879,42 @@ input_listener_input_acceptance(void *data,
     wl_list_insert(&surface_ctx->list_accepted_seats, &accepted_seat->link);
 }
 
+static void
+input_listener_input_focus_change(void *data,
+                                  struct ivi_input *ivi_input,
+                                  uint32_t surface, const char *seat,
+                                  uint32_t device, uint32_t screen,
+                                  int32_t enabled)
+{
+    struct wayland_context *ctx = data;
+    struct surface_context *surf_ctx;
+
+    wl_list_for_each(surf_ctx, &ctx->list_surface, link) {
+        if (surface != surf_ctx->id_surface)
+            continue;
+
+        if (enabled == ILM_TRUE)
+            surf_ctx->prop.focus |= device;
+        else
+            surf_ctx->prop.focus &= ~device;
+    }
+
+    // enabled = true, focus changed to surface
+    // enabled = false, focus changed from surface
+    if (ctx->input_focus_notification.callback)
+        ctx->input_focus_notification.callback(
+                surface, device, (char *) seat,
+                screen, enabled,
+                ctx->input_focus_notification.user_data);
+}
+
 static struct ivi_input_listener input_listener = {
     input_listener_seat_created,
     input_listener_seat_capabilities,
     input_listener_seat_destroyed,
     input_listener_input_focus,
-    input_listener_input_acceptance
+    input_listener_input_acceptance,
+    input_listener_input_focus_change
 };
 
 static void
@@ -1110,6 +1130,53 @@ error:
     return returnValue;
 }
 
+ILM_EXPORT ilmErrorTypes
+ilm_registerInputFocusNotification(inputFocusNotificationFunc callback, void *user_data)
+{
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+
+    if (!callback) {
+        fprintf(stderr, "[Error] focusNotificationFunc is invalid\n");
+        goto error;
+    }
+
+    if (ctx->wl.input_focus_notification.callback) {
+        fprintf(stderr, "[Error] input focus notification is already registered \n");
+        goto error;
+    }
+
+    ctx->wl.input_focus_notification.callback = callback;
+    ctx->wl.input_focus_notification.user_data = user_data;
+
+    returnValue = ILM_SUCCESS;
+
+error:
+    release_instance();
+    return returnValue;
+}
+
+ILM_EXPORT ilmErrorTypes
+ilm_unregisterInputFocusNotification()
+{
+    ilmErrorTypes returnValue = ILM_FAILED;
+    struct ilm_control_context *ctx = sync_and_acquire_instance();
+
+    if (!ctx->wl.input_focus_notification.callback) {
+        fprintf(stderr, "[Error] input focus notification is not registered \n");
+        goto error;
+    }
+
+    ctx->wl.input_focus_notification.callback = NULL;
+    ctx->wl.input_focus_notification.user_data = NULL;
+
+    returnValue = ILM_SUCCESS;
+
+error:
+    release_instance();
+    return returnValue;
+}
+
 ILM_EXPORT void
 ilmControl_destroy(void)
 {
@@ -1294,6 +1361,9 @@ init_control(void)
     struct wayland_context *wl = &ctx->wl;
     struct screen_context *ctx_scrn;
     int ret = 0;
+
+    wl->input_focus_notification.callback = NULL;
+    wl->input_focus_notification.user_data = NULL;
 
     wl->queue = wl_display_create_queue(wl->display);
     if (! wl->queue) {
