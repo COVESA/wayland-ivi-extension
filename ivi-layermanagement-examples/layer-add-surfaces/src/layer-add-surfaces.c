@@ -125,6 +125,21 @@ static void shutdownCallbackFunction(t_ilm_shutdown_error_type error_type,
     exit(1);
 }
 
+static void inputFocusCallbackFunction(t_ilm_surface surface_id, ilmInputDevice device,
+                                       t_ilm_string seat_name, t_ilm_uint screen_id,
+                                       t_ilm_bool status, void* user_data)
+{
+   (void) user_data;
+
+   printf("layer-add-surfaces: input focus change event: %s device '%s' %s on "
+          "surface %d of screen %d \n",
+           device == ILM_INPUT_DEVICE_KEYBOARD ? "keyboard" :
+           device == ILM_INPUT_DEVICE_POINTER ? "pointer" :
+           device == ILM_INPUT_DEVICE_TOUCH ? "touch" : "unknown",
+           seat_name, status ? "enabled" : "disabled",
+           surface_id, screen_id);
+}
+
 /* Choose the display with the largest resolution.*/
 static t_ilm_uint choose_screen(void)
 {
@@ -266,6 +281,11 @@ int main (int argc, char *argv[])
 
     ilm_registerShutdownNotification(shutdownCallbackFunction, NULL);
 
+    if (ilm_registerInputFocusNotification(inputFocusCallbackFunction, NULL) != ILM_SUCCESS) {
+        fprintf(stderr, "layer-add-surfaces: failed to register for input focus"
+                " change notification\n");
+    }
+
     screen_ID = choose_screen();
     ilm_layerCreateWithDimension(&layer, screenWidth, screenHeight);
     printf("layer-add-surfaces: layer (%d) destination region: x:0 y:0 w:%u h:%u\n", layer, screenWidth, screenHeight);
@@ -278,6 +298,11 @@ int main (int argc, char *argv[])
     while (number_of_surfaces > 0) {
         pthread_mutex_lock(&mutex);
         pthread_cond_wait( &waiterVariable, &mutex);
+    }
+
+    if (ilm_unregisterInputFocusNotification() != ILM_SUCCESS) {
+        fprintf(stderr, "layer-add-surfaces: failed to unregister for input focus"
+                " change notification\n");
     }
 
     ilm_unregisterNotification();
