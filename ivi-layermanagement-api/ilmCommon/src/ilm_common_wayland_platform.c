@@ -32,6 +32,8 @@ static t_ilm_nativedisplay wayland_getNativedisplay(void);
 static t_ilm_bool wayland_isInitialized(void);
 static ilmErrorTypes wayland_destroy(void);
 
+ILM_COMMON_PLATFORM_FUNC gIlmCommonPlatformFunc;
+
 void init_ilmCommonPlatformTable(void)
 {
     gIlmCommonPlatformFunc.init = wayland_init;

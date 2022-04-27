@@ -35,6 +35,8 @@ static ilmErrorTypes wayland_surfaceRemove(const t_ilm_surface surfaceId);
 static ilmErrorTypes wayland_init(t_ilm_nativedisplay nativedisplay);
 static ilmErrorTypes wayland_destroy(void);
 
+ILM_CLIENT_PLATFORM_FUNC gIlmClientPlatformFunc;
+
 void init_ilmClientPlatformTable(void)
 {
     gIlmClientPlatformFunc.surfaceCreate =
