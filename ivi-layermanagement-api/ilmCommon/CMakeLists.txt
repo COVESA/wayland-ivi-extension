@@ -53,7 +53,7 @@ add_dependencies(${PROJECT_NAME}
 
 install (
     TARGETS             ${PROJECT_NAME}
-    LIBRARY DESTINATION lib${LIB_SUFFIX}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 install (
