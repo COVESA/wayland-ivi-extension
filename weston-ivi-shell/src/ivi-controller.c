@@ -1203,84 +1203,10 @@ flip_y(int32_t stride, int32_t height, uint32_t *data) {
 static void
 controller_screenshot_notify(struct wl_listener *listener, void *data)
 {
-    struct screenshot_frame_listener *l =
-        wl_container_of(listener, l, frame_listener);
-
-    struct weston_output *output = data;
-    int32_t width = 0;
-    int32_t height = 0;
-    int32_t stride = 0;
-    uint32_t *readpixs = NULL;
-    uint32_t shm_format;
-    int fd;
-    size_t size;
-    pixman_format_code_t format = output->compositor->read_format;
-
-    --output->disable_planes;
-
-    // map to shm buffer format
-    switch (format) {
-    case PIXMAN_a8r8g8b8:
-        shm_format = WL_SHM_FORMAT_ARGB8888;
-        break;
-    case PIXMAN_x8r8g8b8:
-        shm_format = WL_SHM_FORMAT_XRGB8888;
-        break;
-    case PIXMAN_a8b8g8r8:
-        shm_format = WL_SHM_FORMAT_ABGR8888;
-        break;
-    case PIXMAN_x8b8g8r8:
-        shm_format = WL_SHM_FORMAT_XBGR8888;
-        break;
-    default:
-        ivi_screenshot_send_error(l->screenshot,
-                                  IVI_SCREENSHOT_ERROR_NOT_SUPPORTED,
-                                  "unsupported pixel format");
-        goto err_fd;
-    }
-
-    width = output->current_mode->width;
-    height = output->current_mode->height;
-    stride = width * (PIXMAN_FORMAT_BPP(format) / 8);
-    size = stride * height;
-
-    fd = create_screenshot_file(size);
-    if (fd < 0) {
-        weston_log("screenshot: failed to create file of %zu bytes: %m\n",
-                   size);
-        ivi_screenshot_send_error(l->screenshot, IVI_SCREENSHOT_ERROR_IO_ERROR,
-                                  "failed to create screenshot file");
-        goto err_fd;
-    }
-
-    readpixs = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (readpixs == MAP_FAILED) {
-        weston_log("screenshot: failed to mmap %zu bytes: %m\n", size);
-        ivi_screenshot_send_error(l->screenshot, IVI_SCREENSHOT_ERROR_IO_ERROR,
-                                  "failed to create screenshot");
-        goto err_mmap;
-    }
-
-    if (output->compositor->renderer->read_pixels(output, format, readpixs,
-                                                  0, 0, width, height) < 0) {
-        ivi_screenshot_send_error(
-            l->screenshot, IVI_SCREENSHOT_ERROR_NOT_SUPPORTED,
-            "screenshot of given output is not supported by renderer");
-        goto err_readpix;
-    }
-
-    if (output->compositor->capabilities & WESTON_CAP_CAPTURE_YFLIP)
-        flip_y(stride, height, readpixs);
-
-    ivi_screenshot_send_done(l->screenshot, fd, width, height, stride,
-                             shm_format, timespec_to_msec(&output->frame_time));
-
-err_readpix:
-    munmap(readpixs, size);
-err_mmap:
-    close(fd);
-err_fd:
-    wl_resource_destroy(l->screenshot);
+    //NOT IMPLEMENTATION
+    // with new things from weston, make this don't compatible,
+    // Maybe make a big change if we keep this feature in this commit
+    // Should implimenting this in next time.
 }
 
 static void
@@ -1327,23 +1253,11 @@ controller_screen_screenshot(struct wl_client *client,
         free(l);
         return;
     }
-
-    if (!iviscrn) {
-        ivi_screenshot_send_error(l->screenshot, IVI_SCREENSHOT_ERROR_NO_OUTPUT,
-                                  "the output is already destroyed");
-        wl_resource_destroy(l->screenshot);
-        free(l);
-        return;
-    }
-
-    wl_resource_set_implementation(l->screenshot, NULL, l,
-                                   screenshot_frame_listener_destroy);
-    l->output_destroyed.notify = screenshot_output_destroyed;
-    wl_signal_add(&iviscrn->output->destroy_signal, &l->output_destroyed);
-    l->frame_listener.notify = controller_screenshot_notify;
-    wl_signal_add(&iviscrn->output->frame_signal, &l->frame_listener);
-    iviscrn->output->disable_planes++;
-    weston_output_damage(iviscrn->output);
+    // SUSPEND the screenshot functional
+    ivi_screenshot_send_error(l->screenshot, IVI_SCREENSHOT_ERROR_NOT_SUPPORTED,
+                                "screenshot feature is suspending");
+    wl_resource_destroy(l->screenshot);
+    free(l);
 }
 
 static void
@@ -1820,18 +1734,9 @@ surface_event_configure(struct wl_listener *listener, void *data)
 
     surface_id = lyt->get_id_of_surface(layout_surface);
     if (shell->bkgnd_surface_id == (int32_t)surface_id) {
-        float red, green, blue, alpha;
 
         if (!shell->bkgnd_view) {
             w_surface = lyt->surface_get_weston_surface(layout_surface);
-
-            alpha = ((shell->bkgnd_color >> 24) & 0xFF) / 255.0F;
-            red = ((shell->bkgnd_color >> 16) & 0xFF) / 255.0F;
-            green = ((shell->bkgnd_color >> 8) & 0xFF) / 255.0F;
-            blue = (shell->bkgnd_color & 0xFF) / 255.0F;
-
-            weston_surface_set_color(w_surface, red, green, blue, alpha);
-
             wl_list_init(&shell->bkgnd_transform.link);
             shell->bkgnd_view = weston_view_create(w_surface);
             weston_layer_entry_insert(&shell->bkgnd_layer.view_list,
