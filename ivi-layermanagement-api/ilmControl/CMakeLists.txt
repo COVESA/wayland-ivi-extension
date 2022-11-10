@@ -65,7 +65,7 @@ add_custom_command(
 include_directories(
     include
     ${ILM_COMMON_INCLUDE_DIRS}
-    ${WAYLAND_CLIENT_INCLUDE_DIR}
+    ${WAYLAND_CLIENT_INCLUDE_DIRS}
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 

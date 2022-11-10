@@ -35,7 +35,7 @@ typedef struct _ILM_CLIENT_PLATFORM_FUNC
     ilmErrorTypes (*destroy)();
 } ILM_CLIENT_PLATFORM_FUNC;
 
-ILM_CLIENT_PLATFORM_FUNC gIlmClientPlatformFunc;
+extern ILM_CLIENT_PLATFORM_FUNC gIlmClientPlatformFunc;
 
 void init_ilmClientPlatformTable();
 
