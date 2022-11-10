@@ -24,8 +24,9 @@ project(ivi-id-agent)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_SERVER wayland-server REQUIRED)
 pkg_check_modules(WESTON weston>=6.0.0 REQUIRED)
+string(REGEX MATCH "^[0-9]*" WESTON_MAJOR_VERSION ${WESTON_VERSION})
 pkg_check_modules(PIXMAN pixman-1 REQUIRED)
-pkg_check_modules(LIBWESTON_DESKTOP libweston-desktop-6 REQUIRED)
+pkg_check_modules(LIBWESTON_DESKTOP libweston-desktop-${WESTON_MAJOR_VERSION} REQUIRED)
 
 find_package(Threads REQUIRED)
 
