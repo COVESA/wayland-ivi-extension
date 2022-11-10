@@ -25,13 +25,13 @@
 #include <string.h>
 
 #include <weston.h>
-#include <weston/ivi-layout-export.h>
+#include <ivi-layout-export.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "plugin-registry.h"
+#include "libweston/plugin-registry.h"
 #include "ilm_types.h"
 
 #include "ivi-input-server-protocol.h"
