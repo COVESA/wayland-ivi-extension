@@ -56,7 +56,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${GLESv2_INCLUDE_DIRS}
     ${EGL_INCLUDE_DIRS}
-    ${WAYLAND_CLIENT_INCLUDE_DIR}
+    ${WAYLAND_CLIENT_INCLUDE_DIRS}
 )
 
 link_directories(
