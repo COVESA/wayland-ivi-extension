@@ -46,6 +46,9 @@ struct wayland_context {
     ilmErrorTypes error_flag;
 
     struct ivi_input *input_controller;
+
+    struct wl_shm *wl_shm;
+    bool has_argb8888;
 };
 
 struct ilm_control_context {

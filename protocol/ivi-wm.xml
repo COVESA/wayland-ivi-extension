@@ -23,7 +23,7 @@
     THE SOFTWARE.
   </copyright>
 
-  <interface name="ivi_wm_screen" version="1">
+  <interface name="ivi_wm_screen" version="2">
     <description summary="controller interface to screen in ivi compositor"/>
 
     <request name="destroy" type="destructor">
@@ -59,11 +59,13 @@
     </request>
 
     <request name="screenshot">
-     <description summary="take screenshot of screen">
+      <description summary="take screenshot of screen">
         An ivi_screenshot object is created which will receive the screenshot
         data of the specified output.
-     </description>
-     <arg name="screenshot" type="new_id" interface="ivi_screenshot"/>
+      </description>
+      <!-- Version 2 additions -->
+      <arg name="buffer" type="object" interface="wl_buffer"/>
+      <arg name="screenshot" type="new_id" interface="ivi_screenshot"/>
     </request>
 
     <request name="get">
@@ -112,7 +114,7 @@
      </event>
   </interface>
 
-  <interface name="ivi_screenshot" version="1">
+  <interface name="ivi_screenshot" version="2">
     <description summary="screenshot of an output or a surface">
       An ivi_screenshot object receives a single "done" or "error" event.
       The server will destroy this resource after the event has been send,
@@ -121,15 +123,10 @@
 
     <event name="done">
       <description summary="screenshot finished">
-        This event contains a filedescriptor for a file with raw image data.
-        Furthermore size, stride, format and timestamp of screenshot are
-        provided.
+        This event notifies the filling data to buffer is done. The client
+        can handle the buffer. This also provide the time of dumping data.
       </description>
-      <arg name="fd" type="fd" summary="fd for file containing image data"/>
-      <arg name="width" type="int" summary="image width in pixels"/>
-      <arg name="height" type="int" summary="image height in pixels"/>
-      <arg name="stride" type="int" summary="number of bytes per pixel row"/>
-      <arg name="format" type="uint" summary="image format of type wl_shm.format"/>
+      <!-- Version 2 updating -->
       <arg name="timestamp" type="uint" summary="timestamp in milliseconds"/>
     </event>
 
@@ -144,6 +141,11 @@
              summary="surface has been destroyed"/>
       <entry name="no_content" value="4"
              summary="surface has no content"/>
+      <!-- Version 2 additions -->
+      <entry name="bad_buffer" value="5"
+             summary="bad buffer input"/>
+      <entry name="no_memory" value="6"
+             summary="internal allocation failed"/>
     </enum>
 
     <event name="error">
@@ -155,7 +157,7 @@
     </event>
   </interface>
 
-  <interface name="ivi_wm" version="1">
+  <interface name="ivi_wm" version="2">
     <description summary="interface for ivi managers to use ivi compositor features"/>
 
     <request name="commit_changes">
@@ -342,6 +344,8 @@
         is no surface with such name the server will respond with an
         ivi_screenshot.error event.
       </description>
+      <!-- Version 2 addition -->
+      <arg name="buffer" type="object" interface="wl_buffer"/>
       <arg name="screenshot" type="new_id" interface="ivi_screenshot"/>
       <arg name="surface_id" type="uint"/>
     </request>
