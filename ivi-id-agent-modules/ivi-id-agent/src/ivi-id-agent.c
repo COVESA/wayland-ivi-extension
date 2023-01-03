@@ -28,7 +28,7 @@
 #include <weston.h>
 #include <libweston-6/libweston-desktop.h>
 #include "config-parser.h"
-#include <weston/ivi-layout-export.h>
+#include <ivi-layout-export.h>
 
 #ifndef INVALID_ID
 #define INVALID_ID 0xFFFFFFFF
