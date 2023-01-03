@@ -39,6 +39,7 @@ include_directories(
 link_directories(
     ${WAYLAND_SERVER_LIBRARY_DIRS}
     ${PIXMAN_LIBRARY_DIRS}
+    ${LIBWESTON_DESKTOP_LIBRARY_DIRS}
 )
 
 
