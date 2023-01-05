@@ -887,24 +887,8 @@ int main (int argc, const char * argv[])
 
 Error:
 #ifdef LIBWESTON_DEBUG_PROTOCOL
-    weston_debug_v1_destroy(wlcontext->debug_iface);
-
-    while (1) {
-        struct debug_stream *stream;
-        int empty = 1;
-
-        wl_list_for_each(stream, &wlcontext->stream_list, link)
-            if (stream->obj) {
-                empty = 0;
-                break;
-            }
-
-        if (empty)
-            break;
-
-        if (wl_display_dispatch(wlcontext->wl_display) < 0)
-            break;
-    }
+    if(wlcontext->debug_iface)
+        weston_debug_v1_destroy(wlcontext->debug_iface);
 
     destroy_streams(wlcontext);
     wl_display_roundtrip(wlcontext->wl_display);
