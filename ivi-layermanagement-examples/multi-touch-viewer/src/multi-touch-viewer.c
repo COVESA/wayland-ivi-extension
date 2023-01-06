@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <wayland-client-protocol.h>
 #include "multi-touch-viewer.h"
+#include "getopt.h"
 
 #define WINDOW_TITLE "multi_touch_viewer"
 #define WINDOW_WIDTH  1080
@@ -69,6 +70,7 @@ static const char *gp_frag_shader_text =
 static struct touch_event_test_params *gp_test_params = NULL;
 
 static int g_is_print_log = 0;
+static enum TypeOfShell g_shell_type = IVI_SHELL;
 
 /******************************************************************************/
 
@@ -587,7 +589,7 @@ setup_signal()
 
 /******************************************************************************/
 
-int
+static int
 touch_event_test_main(struct touch_event_test_params *p_params)
 {
     struct WaylandDisplay   *p_display;
@@ -595,7 +597,7 @@ touch_event_test_main(struct touch_event_test_params *p_params)
 
     setup_signal();
 
-    p_display = CreateDisplay(0, NULL);
+    p_display = CreateDisplay(0, NULL, g_shell_type);
     if (NULL == p_display)
     {
         LOG_ERROR("Failed to create display\n");
@@ -641,39 +643,65 @@ touch_event_test_main(struct touch_event_test_params *p_params)
     return 0;
 }
 
-void
+static void
 usage(int status)
 {
-    printf("usage: multi-touch-viewer [OPTION]\n");
-    printf("  -p : print received touch point\n");
+    fprintf(stderr, "    -h,  --help              display this help and exit.\n"
+                    "    -p,  --print-log         print received touch point.\n"
+                    "    -s,  --shell-type        select the type of shell, default is the ivi_shell:\n"
+                    "                              - wl_shell: to using the wl_shell.\n"
+                    "                              - ivi_shell: to using the ivi_shell.\n");
     exit(status);
+}
+
+static void 
+parse_options(int argc, char *argv[])
+{
+    int opt = -1, option_index = 0;
+    static const struct option options[] = {
+        { "help", no_argument, NULL, 'h' },
+        { "print-log", no_argument, NULL, 'p' },
+        { "shell-type", required_argument, NULL, 's' },
+        { 0, 0, NULL, 0 }
+    };
+
+    while (1) {
+        opt = getopt_long(argc, argv, "hps:", options, NULL);
+
+        if (opt == -1)
+            break;
+
+        switch (opt) {
+            case 'h':
+                usage(0);
+                break;
+            case 'p':
+                g_is_print_log = 1;
+                break;
+            case 's':
+                if (strcmp(optarg, "wl_shell") == 0)
+                    g_shell_type = WL_SHELL;
+                break;
+            default:
+                usage(-1);
+                break;
+        }
+    }
+    printf("multi-touch-viewer runs with %s and logging %s\n", 
+        (g_shell_type == WL_SHELL) ? "wl_shell" : "ivi_shell",
+        (g_is_print_log == 1) ? "enable" : "disable");
 }
 
 int
 main(int argc, char **argv)
 {
-    _UNUSED_(argc);
-    _UNUSED_(argv);
-    struct touch_event_test_params params;
+    parse_options(argc, argv);
 
+    struct touch_event_test_params params;
     memset(&params, 0x00, sizeof params);
 
-    if (argc == 2)
-    {
-        if (0 == strcmp(argv[1], "-p"))
-        {
-            g_is_print_log = 1;
-        }
-        else
-        {
-            usage(EXIT_SUCCESS);
-        }
-    }
-
     gp_test_params = &params;
-
     wl_list_init(&params.touch_point_list);
-
     log_array_init(&params.log_array, 500);
 
     return touch_event_test_main(&params);
