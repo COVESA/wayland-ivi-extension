@@ -79,12 +79,14 @@ registry_handle_global(void *p_data, struct wl_registry *p_registry,
         p_display->p_compositor = wl_registry_bind(p_registry, id,
             &wl_compositor_interface, 1);
     }
-    else if (0 == strcmp(p_interface, "wl_shell"))
+    else if ((0 == strcmp(p_interface, "wl_shell")) &&
+            (p_display->shell_type == WL_SHELL))
     {
         p_display->p_shell = wl_registry_bind(p_registry, id,
             &wl_shell_interface, 1);
     }
-    else if (0 == strcmp(p_interface, "ivi_application"))
+    else if ((0 == strcmp(p_interface, "ivi_application")) &&
+            (p_display->shell_type == IVI_SHELL))
     {
         p_display->p_ivi_application = wl_registry_bind(p_registry, id,
             &ivi_application_interface, 1);
@@ -500,7 +502,7 @@ DisplayAcquireWindowSurface(struct WaylandDisplay *p_display,
 }
 
 struct WaylandDisplay *
-CreateDisplay(int argc, char **argv)
+CreateDisplay(int argc, char **argv, enum TypeOfShell shell_type)
 {
     struct WaylandDisplay *p_display;
 
@@ -521,6 +523,7 @@ CreateDisplay(int argc, char **argv)
         return NULL;
     }
 
+    p_display->shell_type = shell_type;
     p_display->epoll_fd = os_epoll_create_cloexec();
     p_display->display_fd = wl_display_get_fd(p_display->p_display);
     p_display->display_task.run = handle_display_data;

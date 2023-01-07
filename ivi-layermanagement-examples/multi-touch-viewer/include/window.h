@@ -46,6 +46,12 @@ struct Task
     struct wl_list link;
 };
 
+enum TypeOfShell
+{
+    WL_SHELL  = 1,
+    IVI_SHELL = 2
+};
+
 struct WaylandDisplay
 {
     struct Task           display_task;
@@ -57,6 +63,7 @@ struct WaylandDisplay
     EGLDisplay            egldisplay;
     EGLConfig             eglconfig;
     EGLContext            eglcontext;
+    enum TypeOfShell      shell_type;
 
     int                   running;
     int                   epoll_fd;
@@ -102,7 +109,7 @@ struct WaylandEglWindow
 };
 
 struct WaylandDisplay*
-CreateDisplay(int argc, char **argv);
+CreateDisplay(int argc, char **argv, enum TypeOfShell shell_type);
 
 void
 DestroyDisplay(struct WaylandDisplay *p_display);
