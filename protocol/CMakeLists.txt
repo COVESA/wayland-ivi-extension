@@ -60,6 +60,11 @@ add_library(${PROJECT_NAME} SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ivi-application-protocol.c
 )
 
+target_link_libraries (
+  ${PROJECT_NAME}
+  ${WAYLAND_CLIENT_LIBRARIES}
+)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
                       COMPILE_FLAGS "-fPIC")
 
