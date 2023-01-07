@@ -50,7 +50,7 @@ include_directories(
     include
     ${CMAKE_CURRENT_BINARY_DIR}
     ${ILM_CONTROL_INCLUDE_DIRS}
-    ${WAYLAND_CLIENT_INCLUDE_DIR}
+    ${WAYLAND_CLIENT_INCLUDE_DIRS}
 )
 
 link_directories(

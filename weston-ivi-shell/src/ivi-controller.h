@@ -24,7 +24,7 @@
 #define WESTON_IVI_SHELL_SRC_IVI_CONTROLLER_H_
 
 #include "ivi-wm-server-protocol.h"
-#include <weston/ivi-layout-export.h>
+#include <ivi-layout-export.h>
 
 /* Convert timespec to milliseconds
  *
