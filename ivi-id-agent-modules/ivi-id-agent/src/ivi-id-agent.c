@@ -365,8 +365,10 @@ ivi_failed:
 static int32_t
 deinit(struct ivi_id_agent *ida)
 {
-    struct db_elem *db_elem;
-    wl_list_for_each(db_elem, &ida->app_list, link) {
+    struct db_elem *db_elem, *dl_elem_next;
+    wl_list_for_each_safe(db_elem, dl_elem_next, &ida->app_list, link) {
+        wl_list_remove(&db_elem->link);
+
         free(db_elem->cfg_app_id);
         free(db_elem->cfg_title);
         free(db_elem);
