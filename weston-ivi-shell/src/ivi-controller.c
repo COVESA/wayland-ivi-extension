@@ -28,6 +28,7 @@
 
 #include "config.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -436,6 +437,42 @@ create_screenshot_file(off_t size) {
     return fd;
 }
 
+/** Read the current time from the Presentation clock
+ *
+ * \param compositor
+ * \param[out] ts The current time.
+ *
+ * \note Reading the current time in user space is always imprecise to some
+ * degree.
+ *
+ * This function is never meant to fail. If reading the clock does fail,
+ * an error message is logged and a zero time is returned. Callers are not
+ * supposed to detect or react to failures.
+ *
+ * \ingroup compositor
+ */
+static void
+ivi_weston_compositor_read_presentation_clock(
+			const struct weston_compositor *compositor,
+			struct timespec *ts)
+{
+	static bool warned;
+	int ret;
+
+	ret = clock_gettime(compositor->presentation_clock, ts);
+	if (ret < 0) {
+		ts->tv_sec = 0;
+		ts->tv_nsec = 0;
+
+		if (!warned)
+			weston_log("Error: failure to read "
+				   "the presentation clock %#x: '%s' (%d)\n",
+				   compositor->presentation_clock,
+				   strerror(errno), errno);
+		warned = true;
+	}
+}
+
 static void
 controller_surface_screenshot(struct wl_client *client,
                               struct wl_resource *resource,
@@ -519,7 +556,7 @@ controller_surface_screenshot(struct wl_client *client,
     }
 
     // get current timestamp
-    weston_compositor_read_presentation_clock(compositor, &stamp);
+    ivi_weston_compositor_read_presentation_clock(compositor, &stamp);
     stamp_ms = stamp.tv_sec * 1000 + stamp.tv_nsec / 1000000;
 
     ivi_screenshot_send_done(screenshot, fd, width, height, stride, format,
@@ -853,6 +890,23 @@ calc_trans_matrix(struct weston_geometry *source_rect,
     weston_matrix_translate(m, translate_x, translate_y, 0.0f);
 }
 
+/**
+ * \param surface  The surface to be repainted
+ *
+ * Marks the output(s) that the surface is shown on as needing to be
+ * repainted.  See weston_output_schedule_repaint().
+ */
+
+static void
+ivi_weston_surface_schedule_repaint(struct weston_surface *surface)
+{
+	struct weston_output *output;
+
+	wl_list_for_each(output, &surface->compositor->output_list, link)
+		if (surface->output_mask & (1u << output->id))
+			weston_output_schedule_repaint(output);
+}
+
 void
 set_bkgnd_surface_prop(struct ivishell *shell)
 {
@@ -910,7 +964,7 @@ set_bkgnd_surface_prop(struct ivishell *shell)
     wl_list_insert(&view->geometry.transformation_list,
                    &shell->bkgnd_transform.link);
     weston_view_update_transform(view);
-    weston_surface_schedule_repaint(w_surface);
+    ivi_weston_surface_schedule_repaint(w_surface);
 }
 
 static void
@@ -1305,6 +1359,20 @@ screenshot_frame_listener_destroy(struct wl_resource *resource)
     free(l);
 }
 
+/**
+ * \ingroup output
+ */
+static void
+ivi_weston_output_damage(struct weston_output *output)
+{
+	struct weston_compositor *compositor = output->compositor;
+
+	pixman_region32_union(&compositor->primary_plane.damage,
+			      &compositor->primary_plane.damage,
+			      &output->region);
+	weston_output_schedule_repaint(output);
+}
+
 static void
 controller_screen_screenshot(struct wl_client *client,
                              struct wl_resource *resource,
@@ -1346,7 +1414,7 @@ controller_screen_screenshot(struct wl_client *client,
     l->frame_listener.notify = controller_screenshot_notify;
     wl_signal_add(&iviscrn->output->frame_signal, &l->frame_listener);
     iviscrn->output->disable_planes++;
-    weston_output_damage(iviscrn->output);
+    ivi_weston_output_damage(iviscrn->output);
 }
 
 static void
