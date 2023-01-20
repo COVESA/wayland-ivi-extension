@@ -26,6 +26,7 @@
 #include <stdbool.h>
 #include <arpa/inet.h>
 #include "ivi-wm-client-protocol.h"
+#include <endian.h>
 
 struct __attribute__ ((__packed__)) BITMAPFILEHEADER {
     char bfType[2];

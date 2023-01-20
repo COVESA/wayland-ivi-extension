@@ -175,67 +175,6 @@ void exportSceneToTXTHelper(ostream& stream, StringMapTree* tree, string prefix 
     stream << prefix + "}";
 }
 
-string decodeEscapesequences(string s)
-{
-    map<string, string> code;
-    code["\\[\\]"] = "\\";
-    code["\\[n]"] = "\n";
-    code["\\[t]"] = "\t";
-    code["\\[v]"] = "\v";
-    code["\\[b]"] = "\b";
-    code["\\[f]"] = "\f";
-    code["\\[r]"] = "\r";
-    return replaceAll(s, code);
-}
-
-void importSceneFromTXTHelper(istream& stream, StringMapTree* node)
-{
-    string in;
-    //Type
-    getline(stream, in);
-    int typeSize = in.find(":") - in.find_first_not_of('\t');
-    int typeStart = in.find_first_not_of('\t');
-    node->mNodeLabel = in.substr(typeStart, typeSize);
-    while (true)
-    {
-        long streamPosition = stream.tellg();
-        getline(stream, in);
-        in = rtrim(in);
-
-        //end of object
-        if (in.substr(0, 1) == "}")
-            return;
-
-        //start of object property
-        if (in.substr(0, 1) == "[")
-        {
-            int startIndex = in.find('[') + 1;
-            int endIndex = in.find(":");
-            string propertyName = in.substr(startIndex, endIndex - startIndex);
-            propertyName = decodeEscapesequences(propertyName);
-
-            startIndex = endIndex + 1;
-            endIndex = in.find("]");
-            string propertyType = in.substr(startIndex, endIndex - startIndex);
-            propertyType = decodeEscapesequences(propertyType);
-
-            startIndex = in.find('[', endIndex) + 1;
-            endIndex = in.find_last_of(']');
-            string propertyValue = in.substr(startIndex, endIndex - startIndex);
-            propertyValue = decodeEscapesequences(propertyValue);
-
-            node->mNodeValues[propertyName] = make_pair(propertyType, propertyValue);
-        }
-        else
-        {
-            stream.seekg(streamPosition);
-            StringMapTree* child = new StringMapTree;
-            node->mChildren.push_back(child);
-            importSceneFromTXTHelper(stream, child);
-        }
-    }
-}
-
 string makeValidXMLCharacters(string s)
 {
     map<string, string> code;

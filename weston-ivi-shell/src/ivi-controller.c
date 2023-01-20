@@ -86,6 +86,7 @@ struct screenshot_frame_listener {
     struct wl_listener frame_listener;
     struct wl_listener output_destroyed;
     struct wl_resource *screenshot;
+    struct weston_output *output;
 };
 
 struct screen_id_info {
@@ -1206,7 +1207,7 @@ controller_screenshot_notify(struct wl_listener *listener, void *data)
     struct screenshot_frame_listener *l =
         wl_container_of(listener, l, frame_listener);
 
-    struct weston_output *output = data;
+    struct weston_output *output = l->output;
     int32_t width = 0;
     int32_t height = 0;
     int32_t stride = 0;
@@ -1335,6 +1336,8 @@ controller_screen_screenshot(struct wl_client *client,
         free(l);
         return;
     }
+
+    l->output = iviscrn->output;
 
     wl_resource_set_implementation(l->screenshot, NULL, l,
                                    screenshot_frame_listener_destroy);
