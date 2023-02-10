@@ -833,7 +833,7 @@ input_listener_input_acceptance(void *data,
     struct accepted_seat *accepted_seat, *next;
     struct wayland_context *ctx = data;
     struct surface_context *surface_ctx = NULL;
-    int surface_found = 1;
+    int surface_found = 0;
     int accepted_seat_found = 0;
 
     wl_list_for_each(surface_ctx, &ctx->list_surface, link) {
