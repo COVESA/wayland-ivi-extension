@@ -33,6 +33,12 @@ extern "C" {
     #include "ilm_control.h"
 }
 
+struct screenshot_data_t {
+    std::atomic<int32_t> fd;
+    std::atomic<uint32_t> error;
+    ilmErrorTypes result = ILM_SUCCESS;
+};
+
 void add_nsecs(struct timespec *tv, long nsec)
 {
    assert(nsec < 1000000000);
@@ -228,6 +234,25 @@ public:
         mask |= (unsigned)m;
         timesCalled++;
 
+        pthread_cond_signal( &waiterVariable );
+    }
+
+    static ilmErrorTypes ScreenshotDoneCallbackFunc(void *user_data, t_ilm_int fd, t_ilm_uint width, t_ilm_uint height, t_ilm_uint stride, t_ilm_uint format, t_ilm_uint timestamp)
+    {
+        PthreadMutexLock lock(notificationMutex);
+        screenshot_data_t *screenshotData = static_cast<screenshot_data_t*>(user_data);
+        screenshotData->fd.store(fd);
+        timesCalled++;
+        pthread_cond_signal( &waiterVariable );
+        return screenshotData->result;
+    }
+
+    static void ScreenshotErrorCallbackFunc(void *user_data, t_ilm_uint error, const char *message)
+    {
+        PthreadMutexLock lock(notificationMutex);
+        screenshot_data_t *screenshotData = static_cast<screenshot_data_t*>(user_data);
+        screenshotData->error.store(error);
+        timesCalled++;
         pthread_cond_signal( &waiterVariable );
     }
 };
@@ -725,4 +750,39 @@ TEST_F(NotificationTest, DefaultIsNotToReceiveNotificationsSurface)
 
     // assert that we have not been notified
     assertNoCallbackIsCalled();
+}
+
+TEST_F(NotificationTest, getNotificationWhenScreenshotDone)
+{
+    /* Call ilm_takeAsyncScreenshot with right screen id
+     * The ilm_takeAsyncScreenshot should return ILM_SUCCESS
+     * Screenshot done callback should trigged
+     */ 
+    screenshot_data_t screenshotData;
+    screenshotData.fd.store(-1);
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncScreenshot(0, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    assertCallbackcalled();
+    ASSERT_NE(screenshotData.fd.load(), -1);
+
+    /* Call ilm_takeAsyncSurfaceScreenshot with right surface id
+     * The ilm_takeAsyncSurfaceScreenshot should return ILM_SUCCESS
+     * Screenshot done callback should trigged
+     */ 
+    screenshotData.fd.store(-1);
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(surface, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    assertCallbackcalled();
+    ASSERT_NE(screenshotData.fd.load(), -1);
+}
+
+TEST_F(NotificationTest, getNotificationWhenScreenshotError)
+{
+    /* Call ilm_takeAsyncSurfaceScreenshot with wrong surface id
+     * The ilm_takeAsyncSurfaceScreenshot should return ILM_SUCCESS
+     * Screenshot error callback should trigged
+     */
+    screenshot_data_t screenshotData;
+    screenshotData.error.store(0);
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(surface + 1, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    assertCallbackcalled();
+    ASSERT_EQ(screenshotData.error.load(), 3); //IVI_SCREENSHOT_ERROR_NO_SURFACE is 3
 }
