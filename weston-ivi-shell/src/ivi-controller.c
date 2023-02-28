@@ -1429,13 +1429,13 @@ controller_screen_get(struct wl_client *client,
     int32_t layer_count, i;
     uint32_t id;
 
-    lyt = iviscrn->shell->interface;
-
     if (!iviscrn) {
         ivi_wm_screen_send_error(resource, IVI_WM_SCREEN_ERROR_NO_SCREEN,
                                  "the output is already destroyed");
         return;
     }
+
+    lyt = iviscrn->shell->interface;
 
     if (param & IVI_WM_PARAM_RENDER_ORDER) {
         lyt->get_layers_on_screen(iviscrn->output, &layer_count, &layer_list);
