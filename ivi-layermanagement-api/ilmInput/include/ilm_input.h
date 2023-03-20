@@ -117,6 +117,18 @@ ilmErrorTypes
 ilm_getInputFocus(t_ilm_surface **surfaceIDs, ilmInputDevice** bitmasks,
                   t_ilm_uint *num_ids);
 
+/**
+ * \brief      get the name of default seat
+ * \ingroup    ilmControl
+ * \param[out] seat_name   A pointer to the memory where the seat name is
+ *                         stored. It is the caller's responsibility to free
+ *                         this memory after use.
+ * \return     ILM_SUCCESS if the default seat is available
+ * \return     ILM_FAILED  if the default seat isn't available
+ */
+ilmErrorTypes
+ilm_getDefaultSeat(t_ilm_string *seat_name);
+
 #ifdef __cplusplus
 } /**/
 #endif /* __cplusplus */

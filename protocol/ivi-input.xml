@@ -21,7 +21,7 @@
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     THE SOFTWARE.
     </copyright>
-    <interface name="ivi_input" version="1">
+    <interface name="ivi_input" version="2">
         <description summary="controller interface to the input system">
             This includes handling the existence of seats, seat capabilities,
             seat acceptance and input focus.
@@ -31,6 +31,8 @@
             </description>
             <arg name="name" type="string"/>
             <arg name="capabilities" type="uint"/>
+            <!-- Version 2 additions -->
+            <arg name="is_default" type="int"/>
         </event>
         <event name="seat_capabilities">
             <description summary="A seat's capabilities have changed">

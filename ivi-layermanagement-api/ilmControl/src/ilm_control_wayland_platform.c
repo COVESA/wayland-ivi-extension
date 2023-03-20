@@ -754,7 +754,8 @@ static void
 input_listener_seat_created(void *data,
                             struct ivi_input *ivi_input,
                             const char *name,
-                            uint32_t capabilities)
+                            uint32_t capabilities,
+                            int32_t is_default)
 {
     struct wayland_context *ctx = data;
     struct seat_context *seat;
@@ -771,6 +772,7 @@ input_listener_seat_created(void *data,
     }
     seat->seat_name = strdup(name);
     seat->capabilities = capabilities;
+    seat->is_default = (is_default == ILM_TRUE) ? true : false;
     wl_list_insert(&ctx->list_seat, &seat->link);
 }
 
@@ -900,7 +902,6 @@ registry_handle_control(void *data,
 {
     struct wayland_context *ctx = data;
     (void)version;
-
     if (strcmp(interface, "ivi_wm") == 0) {
         ctx->controller = wl_registry_bind(registry, name,
                                            &ivi_wm_interface, 1);
@@ -913,7 +914,7 @@ registry_handle_control(void *data,
 
     } else if (strcmp(interface, "ivi_input") == 0) {
         ctx->input_controller =
-            wl_registry_bind(registry, name, &ivi_input_interface, 1);
+            wl_registry_bind(registry, name, &ivi_input_interface, 2);
 
         if (ctx->input_controller == NULL) {
             fprintf(stderr, "Failed to registry bind input controller\n");
