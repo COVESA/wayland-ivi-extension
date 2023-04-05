@@ -66,5 +66,5 @@ target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 install (
     TARGETS             ${PROJECT_NAME}
-    LIBRARY DESTINATION lib${LIB_SUFFIX}/weston
+    LIBRARY DESTINATION ${WESTON_LIBDIR}/weston
 )
