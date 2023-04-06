@@ -87,7 +87,7 @@ struct ivishell {
 
     int32_t bkgnd_surface_id;
     uint32_t bkgnd_color;
-    int enable_cursor;
+    bool enable_cursor;
     struct ivisurface *bkgnd_surface;
     struct weston_layer bkgnd_layer;
     struct weston_view  *bkgnd_view;
