@@ -2063,7 +2063,7 @@ get_config(struct weston_compositor *compositor, struct ivishell *shell)
 
 	weston_config_section_get_bool(section,
 	                   "enable-cursor",
-	                   &shell->enable_cursor, 0);
+	                   &shell->enable_cursor, false);
 
 	wl_array_init(&shell->screen_ids);
 
