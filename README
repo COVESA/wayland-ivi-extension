@@ -57,10 +57,18 @@ EGLWLMockNavigation:
    Syntax:  [wayland_display_to_connect_to] <your installation path>/bin/EGLWLMockNavigation
    Example: WAYLAND_DISPLAY=wayland-1 $HOME/bin/EGLWLMockNavigation
 
-How to test
+How to test functional testing
 ====================================
 1. Build the testsuite by setting BUILD_ILM_API_TESTS option.
    Example: cmake -DBUILD_ILM_API_TESTS
 2. After starting up Weston run the testsuite.
    Syntax:  [wayland_display_to_connect_to] <your installation path>/bin/ivi-layermanagement-api-test
    Example: WAYLAND_DISPLAY=wayland-1 $HOME/bin/ivi-layermanagement-api-test
+
+How to test unit testing
+====================================
+1. Build the testsuite by setting BUILD_ILM_UNIT_TESTS option.
+   Example: cmake -DBUILD_ILM_UNIT_TESTS=ON
+2. After build successfully, just run the testsuite right away.
+   Syntax: <your installation path>/bin/unittest*
+   Example: $HOME/install/bin/unittest-ivi-controller
