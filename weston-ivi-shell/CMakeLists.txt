@@ -73,11 +73,6 @@ add_library(${PROJECT_NAME} MODULE
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
-add_dependencies(${PROJECT_NAME}
-    ${WAYLAND_SERVER_LIBRARIES}
-    ${PIXMAN_LIBRARIES}
-)
-
 set(LIBS
     ${LIBS}
     ${WAYLAND_SERVER_LIBRARIES}

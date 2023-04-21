@@ -25,7 +25,6 @@ project(ilmCommon)
 find_package(Threads)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
-GET_TARGET_PROPERTY(ILM_CONTROL_INCLUDE_DIRS ilmControl INCLUDE_DIRECTORIES)
 
 include_directories(
     include
@@ -47,7 +46,6 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 add_dependencies(${PROJECT_NAME}
-    ${WAYLAND_CLIENT_LIBRARIES}
     ilmControl
 )
 

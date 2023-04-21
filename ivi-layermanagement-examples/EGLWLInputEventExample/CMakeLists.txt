@@ -89,13 +89,6 @@ add_executable(EGLWLInputEventExample
     ivi-application-client-protocol.h
 )
 
-add_dependencies(EGLWLInputEventExample
-    wayland-client
-    wayland-cursor
-    wayland-egl
-    ${LIBS}
-)
-
 set(LIBS
     ${LIBS}
     ${GLESv2_LIBRARIES}

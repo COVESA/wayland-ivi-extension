@@ -92,8 +92,6 @@ add_executable(${PROJECT_NAME}
                ivi-application-client-protocol.h
 )
 
-add_dependencies(${PROJECT_NAME} ${LIBS})
-
 add_definitions(${EGL_CFLAGS})
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})

@@ -83,10 +83,6 @@ add_library(${PROJECT_NAME} SHARED
     ivi-input-protocol.c
 )
 
-add_dependencies(${PROJECT_NAME}
-    ${WAYLAND_CLIENT_LIBRARIES}
-)
-
 set(LIBS
     ${LIBS}
     rt

@@ -117,10 +117,6 @@ set(LIBS
 
 SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
 
-add_dependencies(${PROJECT_NAME}
-    ${LIBS}
-)
-
 add_definitions(${EGL_CFLAGS})
 
 target_link_libraries(${PROJECT_NAME}
