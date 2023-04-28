@@ -366,6 +366,23 @@ ilmErrorTypes ilm_displaySetRenderOrder(t_ilm_display display, t_ilm_layer *pLay
 ilmErrorTypes ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename);
 
 /**
+ * \brief Take a screenshot from the current displayed layer scene with non-blocking.
+ * The function allows to setup callbacks when capturing the display,
+ * It helps to avoid a blocking, user can handle screenshot data or error in 
+ * the callbacks.
+ * \param[in] screen Id of screen where screenshot should be taken
+ * \param[in] callback_done callback called when screenshot is acquired
+ * \param[in] callback_error callback called when screenshot acqusition failed
+ * \param[in] user_data callback user data passed in by called
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_takeAsyncScreenshot(t_ilm_uint screen,
+						screenshotDoneNotificationFunc callback_done,
+						screenshotErrorNotificationFunc callback_error,
+						void *user_data);
+
+/**
  * \brief Take a screenshot of a certain surface
  * The screenshot is saved as bmp file with the corresponding filename.
  * \ingroup ilmControl
@@ -375,6 +392,24 @@ ilmErrorTypes ilm_takeScreenshot(t_ilm_uint screen, t_ilm_const_string filename)
  * \return ILM_FAILED if the client can not call the method on the service.
  */
 ilmErrorTypes ilm_takeSurfaceScreenshot(t_ilm_const_string filename, t_ilm_surface surfaceid);
+
+/**
+ * \brief Take a screenshot of a certain surface with non-blocking.
+ * The function allows to setup callbacks when capturing a surface,
+ * It helps to avoid a blocking, user can handle screenshot data or error in 
+ * the callbacks.
+ * \ingroup ilmControl
+ * \param[in] surfaceid Identifier of the surface to take the screenshot of
+ * \param[in] callback_done callback called when screenshot is acquired
+ * \param[in] callback_error callback called when screenshot acqusition failed
+ * \param[in] user_data callback user data passed in by called
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ */
+ilmErrorTypes ilm_takeAsyncSurfaceScreenshot(t_ilm_surface surfaceid,
+						screenshotDoneNotificationFunc callback_done,
+						screenshotErrorNotificationFunc callback_error,
+						void *user_data);
 
 /**
  * \brief register for notification on property changes of layer

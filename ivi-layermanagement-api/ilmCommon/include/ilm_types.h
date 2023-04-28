@@ -287,4 +287,33 @@ typedef void(*notificationFunc)(ilmObjectType object,
 typedef void(*shutdownNotificationFunc)(t_ilm_shutdown_error_type error_type,
                                         int errornum,
                                         void* user_data);
+
+/**
+ * Typedef for notification callback on screenshot send done event
+ * @param user_data the use data, be passed when call the screenshot api
+ * @param fd fd for file containing image data, don't close it in callback,
+ * it will be closed and shouldn't be accessed any longer after the callback execution. 
+ * @param width image width in pixels
+ * @param height image height in pixels
+ * @param stride number of bytes per pixel row
+ * @param format image format of type wl_shm.format
+ * @param timestamp timestamp in milliseconds
+ */
+typedef ilmErrorTypes(*screenshotDoneNotificationFunc)(void *user_data,
+                                        t_ilm_int fd,
+                                        t_ilm_uint width,
+                                        t_ilm_uint height,
+                                        t_ilm_uint stride,
+                                        t_ilm_uint format,
+                                        t_ilm_uint timestamp);
+
+/**
+ * Typedef for notification callback on screenshot send error event
+ * @param user_data the use data, be passed when call the screenshot api
+ * @param error error code
+ * @param message error description
+ */
+typedef void(*screenshotErrorNotificationFunc)(void *user_data,
+                                        t_ilm_uint error,
+                                        const char *message);
 #endif /* _ILM_TYPES_H_*/
