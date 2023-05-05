@@ -30,20 +30,53 @@ IF(BUILD_ILM_API_TESTS)
 
     PROJECT(ivi-layermanagement-api-test)
 
-    INCLUDE_DIRECTORIES(
-        ${CMAKE_CURRENT_SOURCE_DIR}/../ilmCommon/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../ilmControl/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../ilmInput/include
-        ${CMAKE_CURRENT_BINARY_DIR}/../../protocol
-        ${WAYLAND_CLIENT_INCLUDE_DIRS}
-        ${gtest_INCLUDE_DIRS}
+    SET(TARGET_API ivi-layermanagement-api-test)
+    SET(TARGET_ENV_CHECKING ivi-layermanagement-env-checking-test)
+
+    find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+    add_custom_command(
+        OUTPUT  ivi-wm-client-protocol.h
+        COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+                < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+                > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-client-protocol.h
+        DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+    )
+
+    add_custom_command(
+        OUTPUT  ivi-wm-protocol.c
+        COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+                < ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+                > ${CMAKE_CURRENT_BINARY_DIR}/ivi-wm-protocol.c
+        DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-wm.xml
+    )
+
+    add_custom_command(
+        OUTPUT  ivi-input-client-protocol.h
+        COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header
+                < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+                > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-client-protocol.h
+        DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+    )
+
+    add_custom_command(
+        OUTPUT  ivi-input-protocol.c
+        COMMAND ${WAYLAND_SCANNER_EXECUTABLE} code
+                < ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
+                > ${CMAKE_CURRENT_BINARY_DIR}/ivi-input-protocol.c
+        DEPENDS ${CMAKE_SOURCE_DIR}/protocol/ivi-input.xml
     )
 
     LINK_DIRECTORIES(
         ${WAYLAND_CLIENT_LIBRARY_DIRS}
     )
 
-    SET(LIBS
+    SET(GCC_SANITIZER_COMPILE_FLAGS "-fsanitize=address -fsanitize=undefined -fno-sanitize-recover -fstack-protector-all")
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_SANITIZER_COMPILE_FLAGS}" )
+    SET( CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -static-libasan -static-libubsan" )
+
+    #api tests
+    SET(TARGET_API_LIBS
         ilmCommon
         ilmControl
         ilmInput
@@ -51,31 +84,53 @@ IF(BUILD_ILM_API_TESTS)
         ${gtest_LIBRARIES}
         ${WAYLAND_CLIENT_LIBRARIES}
     )
-
-    SET(SRC_FILES
+    SET(TARGET_API_SRC_FILES
         TestBase.cpp
         ilm_control_test.cpp
         ilm_control_notification_test.cpp
         ilm_input_test.cpp
         ilm_input_null_pointer_test.cpp
     )
+    ADD_EXECUTABLE(${TARGET_API} ${TARGET_API_SRC_FILES})
+    TARGET_INCLUDE_DIRECTORIES(${TARGET_API}
+        PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/../ilmCommon/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../ilmControl/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../ilmInput/include
+        ${CMAKE_CURRENT_BINARY_DIR}/../../protocol
+        ${WAYLAND_CLIENT_INCLUDE_DIRS}
+        ${gtest_INCLUDE_DIRS}
+    )
+    TARGET_LINK_LIBRARIES(${TARGET_API} ${TARGET_API_LIBS})
+    ADD_DEPENDENCIES(${TARGET_API} ${TARGET_API_LIBS})
+    INSTALL(TARGETS ${TARGET_API} DESTINATION bin)
 
-    SET(GCC_SANITIZER_COMPILE_FLAGS "-fsanitize=address -fsanitize=undefined -fno-sanitize-recover -fstack-protector-all")
-    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_SANITIZER_COMPILE_FLAGS}" )
-    SET( CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -static-libasan -static-libubsan" )
-
-    ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_FILES})
-
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${LIBS})
-
-    ADD_DEPENDENCIES(${PROJECT_NAME} ${LIBS})
-
-    INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)
+    # check env test
+    SET(TARGET_ENV_CHECKING_LIBS
+        ${gtest_LIBRARIES}
+        ${WAYLAND_CLIENT_LIBRARIES}
+    )
+    SET(TARGET_ENV_CHECKING_SRC_FILES
+        ivi-wm-client-protocol.h
+        ivi-wm-protocol.c
+        ivi-input-client-protocol.h
+        ivi-input-protocol.c
+        ilm_check_env.cpp
+    )
+    ADD_EXECUTABLE(${TARGET_ENV_CHECKING} ${TARGET_ENV_CHECKING_SRC_FILES})
+    TARGET_INCLUDE_DIRECTORIES(${TARGET_ENV_CHECKING}
+        PUBLIC
+        ${WAYLAND_CLIENT_INCLUDE_DIRS}
+        ${gtest_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    TARGET_LINK_LIBRARIES(${TARGET_ENV_CHECKING} ${TARGET_ENV_CHECKING_LIBS})
+    ADD_DEPENDENCIES(${TARGET_ENV_CHECKING} ${TARGET_ENV_CHECKING_LIBS})
+    INSTALL(TARGETS ${TARGET_ENV_CHECKING} DESTINATION bin)
 
     # use CTest
     ENABLE_TESTING()
-    ADD_TEST(ilmCommon  ${PROJECT_NAME})
-    ADD_TEST(ilmControl ${PROJECT_NAME})
-    ADD_TEST(ilmInput ${PROJECT_NAME})
+    ADD_TEST(NAME ${TARGET_API} COMMAND ${TARGET_API})
+    ADD_TEST(NAME ${TARGET_ENV_CHECKING} COMMAND ${TARGET_ENV_CHECKING})
 
 ENDIF() 
