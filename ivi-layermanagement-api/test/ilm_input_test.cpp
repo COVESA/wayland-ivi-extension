@@ -96,6 +96,13 @@ TEST_F(IlmInputTest, ilm_input_focus) {
     ilmInputDevice *bitmasks;
     t_ilm_uint num_ids;
     t_ilm_uint layer = 0xbeef;
+    t_ilm_string set_seats = NULL;
+
+    /*ilm_set/get_input_focus test only work if default seat is avaiable*/
+    if (ilm_getDefaultSeat(&set_seats) == ILM_FAILED) {
+        GTEST_SKIP() << "Skipping input focus, there isn't a default seat";
+    }
+    free(set_seats);
 
     /* We have to add surfaces to a layer. Otherwise, they would not have a view.
        We need a view to be able to set pointer focus. */
@@ -120,7 +127,6 @@ TEST_F(IlmInputTest, ilm_input_focus) {
 
     /* Can set all focus to keyboard */
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputFocus(&surfaces[0], surfaceCount, ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE));
-
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputFocus(&surfaceIDs, &bitmasks, &num_ids));
     for (unsigned int i = 0; i < num_ids; i++) {
         /* All surfaces now have keyboard focus */
@@ -174,16 +180,20 @@ TEST_F(IlmInputTest, ilm_input_event_acceptance) {
     t_ilm_surface surface1 = iviSurfaces[0].surface_id;
     t_ilm_uint num_seats = 0;
     t_ilm_string *seats = NULL;
-    char const *set_seats = "default";
+    t_ilm_string set_seats = NULL;
     t_ilm_uint set_seats_count = 1;
 
+    /*ilm_input_event_acceptance test only work if default seat is available*/
+    if (ilm_getDefaultSeat(&set_seats) == ILM_FAILED) {
+        GTEST_SKIP() << "Skipping input event acceptace, there isn't a default seat";
+    }
     /* All seats accept the "default" seat when created */
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputAcceptanceOn(surface1, &num_seats,
                                                     &seats));
     EXPECT_EQ(1, num_seats);
     /* googletest doesn't like comparing to null pointers */
     ASSERT_FALSE(seats == NULL);
-    EXPECT_STREQ("default", seats[0]);
+    EXPECT_STREQ(set_seats, seats[0]);
     free(seats[0]);
     free(seats);
 
@@ -196,12 +206,12 @@ TEST_F(IlmInputTest, ilm_input_event_acceptance) {
 
     /* Can add a seat to acceptance */
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, set_seats_count,
-                                                    (t_ilm_string*)&set_seats));
+                                                    &set_seats));
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputAcceptanceOn(surface1, &num_seats,
                                                     &seats));
     EXPECT_EQ(set_seats_count, num_seats);
     bool found = false;
-    if (!strcmp(*seats, (t_ilm_string)set_seats))
+    if (!strcmp(*seats, set_seats))
         found = true;
     EXPECT_EQ(true, found) << set_seats[0] << " not found in returned seats";
 
@@ -209,7 +219,9 @@ TEST_F(IlmInputTest, ilm_input_event_acceptance) {
     free(seats);
 
     /* Seats can be set, unset, then reset */
-    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, (t_ilm_string*)&set_seats));
+    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, &set_seats));
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 0, NULL));
-    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, (t_ilm_string*)&set_seats));
+    ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(surface1, 1, &set_seats));
+
+    free(set_seats);
 }

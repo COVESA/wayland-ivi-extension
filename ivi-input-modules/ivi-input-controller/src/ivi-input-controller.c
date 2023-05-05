@@ -73,6 +73,8 @@ struct input_context {
     struct wl_listener surface_destroyed;
     struct wl_listener compositor_destroy_listener;
     struct wl_listener seat_create_listener;
+
+    char *seat_default_name;
 };
 
 enum kbd_events {
@@ -969,6 +971,7 @@ handle_seat_create(struct wl_listener *listener, void *data)
     struct ivisurface *surf;
     const struct ivi_layout_interface *interface =
         input_ctx->ivishell->interface;
+    int32_t is_default_seat = ILM_FALSE;
     struct seat_ctx *ctx = calloc(1, sizeof *ctx);
     if (ctx == NULL) {
         weston_log("%s: Failed to allocate memory\n", __FUNCTION__);
@@ -989,20 +992,22 @@ handle_seat_create(struct wl_listener *listener, void *data)
     ctx->updated_caps_listener.notify = &handle_seat_updated_caps;
     wl_signal_add(&seat->updated_caps_signal, &ctx->updated_caps_listener);
 
+    is_default_seat = (strcmp(input_ctx->seat_default_name, seat->seat_name))
+                        ? ILM_FALSE : ILM_TRUE;
     wl_resource_for_each(resource, &input_ctx->resource_list) {
         ivi_input_send_seat_created(resource,
                                     seat->seat_name,
-                                    get_seat_capabilities(seat));
+                                    get_seat_capabilities(seat), is_default_seat);
     }
 
     /* If default seat is created, we have to add it to the accepted_seat_list
      * of all surfaces. Also we have to send an acceptance event to all clients */
-    if (!strcmp(ctx->west_seat->seat_name, "default")) {
+    if (!strcmp(ctx->west_seat->seat_name, input_ctx->seat_default_name)) {
         wl_list_for_each(surf, &input_ctx->ivishell->list_surface, link) {
             add_accepted_seat(surf, ctx);
             send_input_acceptance(input_ctx,
                                  interface->get_id_of_surface(surf->layout_surface),
-                                 "default", ILM_TRUE);
+                                 input_ctx->seat_default_name, ILM_TRUE);
         }
     }
 }
@@ -1049,12 +1054,12 @@ handle_surface_create(struct wl_listener *listener, void *data)
 
     wl_list_init(&ivisurface->accepted_seat_list);
 
-    seat_ctx = input_ctrl_get_seat_ctx(input_ctx, "default");
+    seat_ctx = input_ctrl_get_seat_ctx(input_ctx, input_ctx->seat_default_name);
     if (seat_ctx) {
         add_accepted_seat(ivisurface, seat_ctx);
         send_input_acceptance(input_ctx,
                               interface->get_id_of_surface(ivisurface->layout_surface),
-                              "default", ILM_TRUE);
+                              input_ctx->seat_default_name, ILM_TRUE);
     }
 }
 
@@ -1209,6 +1214,7 @@ bind_ivi_input(struct wl_client *client, void *data,
         ctx->ivishell->interface;
     struct seat_focus *st_focus;
     uint32_t ivi_surf_id;
+    int32_t is_default_seat = ILM_FALSE;
 
     resource = wl_resource_create(client, &ivi_input_interface, 1, id);
     wl_resource_set_implementation(resource, &input_implementation,
@@ -1218,8 +1224,10 @@ bind_ivi_input(struct wl_client *client, void *data,
 
     /* Send seat events for all known seats to the client */
     wl_list_for_each(seat, &ctx->ivishell->compositor->seat_list, link) {
+        is_default_seat = (strcmp(ctx->seat_default_name, seat->seat_name))
+                            ? ILM_FALSE : ILM_TRUE;
         ivi_input_send_seat_created(resource, seat->seat_name,
-                                    get_seat_capabilities(seat));
+                                    get_seat_capabilities(seat), is_default_seat);
     }
     /* Send focus and acceptance events for all known surfaces to the client */
     wl_list_for_each(ivisurface, &ctx->ivishell->list_surface, link) {
@@ -1263,6 +1271,10 @@ destroy_input_context(struct input_context *ctx)
          * free up the controller structure*/
         wl_resource_destroy(resource);
     }
+
+    if (ctx->seat_default_name) {
+        free(ctx->seat_default_name);
+    }
     free(ctx);
 }
 
@@ -1304,6 +1316,36 @@ input_controller_destroy(struct wl_listener *listener, void *data)
     }
 }
 
+static int
+get_config( struct input_context *ctx)
+{
+    int ret = 0;
+    struct weston_config *config = NULL;
+    struct weston_config_section *section = NULL;
+    ctx->seat_default_name = NULL;
+
+    config = wet_get_config(ctx->ivishell->compositor);
+    if (!config)
+        goto exit;
+
+    section = weston_config_get_section(config, "ivi-shell", NULL, NULL);
+    if (!section)
+        goto exit;
+
+    weston_config_section_get_string(section,
+                       "default-seat",
+                       &ctx->seat_default_name, "default");
+exit:
+    if (!ctx->seat_default_name) {
+        ctx->seat_default_name = strdup("default");
+        if (!ctx->seat_default_name) {
+            weston_log("%s: Failed to allocate memory for seat default name\n", __FUNCTION__);
+            ret = -1;
+        }
+    }
+
+    return ret;
+}
 
 static struct input_context *
 create_input_context(struct ivishell *shell)
@@ -1320,6 +1362,12 @@ create_input_context(struct ivishell *shell)
     ctx->ivishell = shell;
     wl_list_init(&ctx->resource_list);
     wl_list_init(&ctx->seat_list);
+
+    /* get the default seat*/
+    if (get_config(ctx) != 0) {
+        free(ctx);
+        return NULL;
+    }
 
     /* Add signal handlers for ivi surfaces. */
     ctx->surface_created.notify = handle_surface_create;
@@ -1341,7 +1389,6 @@ create_input_context(struct ivishell *shell)
     return ctx;
 }
 
-
 static int
 input_controller_init(struct ivishell *shell)
 {
@@ -1361,7 +1408,7 @@ input_controller_init(struct ivishell *shell)
                 successful_init_stage++;
             break;
         case 1:
-            if (wl_global_create(shell->compositor->wl_display, &ivi_input_interface, 1,
+            if (wl_global_create(shell->compositor->wl_display, &ivi_input_interface, 2,
                                  ctx, bind_ivi_input) != NULL) {
                 successful_init_stage++;
             }

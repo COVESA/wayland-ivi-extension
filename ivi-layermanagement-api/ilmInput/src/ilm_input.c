@@ -333,3 +333,27 @@ ilm_getInputFocus(t_ilm_surface **surfaceIDs, ilmInputDevice **bitmasks,
     return ILM_SUCCESS;
 
 }
+
+ILM_EXPORT ilmErrorTypes
+ilm_getDefaultSeat(t_ilm_string *seat_name)
+{
+    struct ilm_control_context *ctx = NULL;
+    struct seat_context *seat = NULL;
+
+    if (seat_name == NULL) {
+        fprintf(stderr, "Invalid Argument\n");
+        return ILM_FAILED;
+    }
+
+    *seat_name = NULL;
+    ctx = sync_and_acquire_instance();
+    wl_list_for_each(seat, &ctx->wl.list_seat, link) {
+        if (seat->is_default) {
+            *seat_name = strdup(seat->seat_name);
+            break;
+        }
+    }
+
+    release_instance();
+    return (*seat_name) ? ILM_SUCCESS : ILM_FAILED;
+}

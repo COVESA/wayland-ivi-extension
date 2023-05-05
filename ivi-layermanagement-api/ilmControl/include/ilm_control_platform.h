@@ -66,6 +66,7 @@ struct ilm_control_context {
 struct seat_context {
     struct wl_list link;
     char *seat_name;
+    bool is_default;
     ilmInputDevice capabilities;
 };
 
