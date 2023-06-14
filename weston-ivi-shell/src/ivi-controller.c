@@ -43,6 +43,7 @@
 #include "wayland-util.h"
 
 #define IVI_CLIENT_SURFACE_ID_ENV_NAME "IVI_CLIENT_SURFACE_ID"
+#define IVI_CLIENT_BKGND_COLOR_ENV_NAME "IVI_CLIENT_BKGND_COLOR"
 #define IVI_CLIENT_DEBUG_SCOPES_ENV_NAME "IVI_CLIENT_DEBUG_STREAM_NAMES"
 #define IVI_CLIENT_ENABLE_CURSOR_ENV_NAME "IVI_CLIENT_ENABLE_CURSOR"
 
@@ -1891,18 +1892,9 @@ surface_event_configure(struct wl_listener *listener, void *data)
 
     surface_id = lyt->get_id_of_surface(layout_surface);
     if (shell->bkgnd_surface_id == (int32_t)surface_id) {
-        float red, green, blue, alpha;
 
         if (!shell->bkgnd_view) {
             w_surface = lyt->surface_get_weston_surface(layout_surface);
-
-            alpha = ((shell->bkgnd_color >> 24) & 0xFF) / 255.0F;
-            red = ((shell->bkgnd_color >> 16) & 0xFF) / 255.0F;
-            green = ((shell->bkgnd_color >> 8) & 0xFF) / 255.0F;
-            blue = (shell->bkgnd_color & 0xFF) / 255.0F;
-
-            weston_surface_set_color(w_surface, red, green, blue, alpha);
-
             wl_list_init(&shell->bkgnd_transform.link);
             shell->bkgnd_view = weston_view_create(w_surface);
             weston_layer_entry_insert(&shell->bkgnd_layer.view_list,
@@ -2265,6 +2257,9 @@ launch_client_process(void *data)
 
     sprintf(option, "%d", shell->bkgnd_surface_id);
     setenv(IVI_CLIENT_SURFACE_ID_ENV_NAME, option, 0x1);
+    sprintf(option, "%d", shell->bkgnd_color);
+    setenv(IVI_CLIENT_BKGND_COLOR_ENV_NAME, option, 0x1);
+
     if (shell->debug_scopes) {
         setenv(IVI_CLIENT_DEBUG_SCOPES_ENV_NAME, shell->debug_scopes, 0x1);
         free(shell->debug_scopes);

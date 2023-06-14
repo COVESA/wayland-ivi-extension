@@ -63,6 +63,7 @@ typedef struct _BkGndSettings
     uint32_t surface_width;
     uint32_t surface_height;
     uint32_t surface_stride;
+    uint32_t bkgnd_color;
 }BkGndSettingsStruct;
 
 typedef struct _WaylandContext {
@@ -131,6 +132,12 @@ get_bkgnd_settings_cursor_info(WaylandContextStruct* wlcontext)
         bkgnd_settings->surface_id = strtol(option, &end, 0);
     else
         bkgnd_settings->surface_id = 10;
+
+    option = getenv("IVI_CLIENT_BKGND_COLOR");
+    if(option)
+        bkgnd_settings->bkgnd_color = strtol(option, &end, 0);
+    else
+        bkgnd_settings->bkgnd_color = 0xFF000000;
 
     bkgnd_settings->surface_width = 1;
     bkgnd_settings->surface_height = 1;
@@ -655,10 +662,12 @@ create_shm_buffer(WaylandContextStruct* wlcontext)
 int draw_bkgnd_surface(WaylandContextStruct* wlcontext)
 {
     BkGndSettingsStruct *bkgnd_settings = wlcontext->bkgnd_settings;
-    uint32_t* pixels;
-
-    pixels = (uint32_t*)wlcontext->bkgnddata;
-    *pixels = 0x0;
+    /*The buffer size only 4 bytes.
+     * @todo may need to use the cairo lib to set color
+     * keep this simple for review solution.
+    */
+    uint32_t *pixels = (uint32_t*)wlcontext->bkgnddata;
+    *pixels = bkgnd_settings->bkgnd_color;
 
     wl_surface_attach(wlcontext->wlBkgndSurface, wlcontext->wlBkgndBuffer, 0, 0);
     wl_surface_damage(wlcontext->wlBkgndSurface, 0, 0,
