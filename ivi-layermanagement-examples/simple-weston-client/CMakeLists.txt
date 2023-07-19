@@ -22,14 +22,24 @@ project (simple-weston-client)
 find_package(PkgConfig)
 pkg_check_modules(WAYLAND_CLIENT wayland-client REQUIRED)
 pkg_check_modules(WAYLAND_CURSOR wayland-cursor REQUIRED)
-pkg_check_modules(LIBWESTON_PROTOCOLS libweston-9-protocols QUIET)
+
+if(NOT DEFINED WESTON_MAJOR_VERSION)
+    pkg_check_modules(WESTON weston>=6.0.0 QUIET)
+    if (${WESTON_FOUND})
+        string(REGEX MATCH ^[0-9]* WESTON_MAJOR_VERSION ${WESTON_VERSION})
+    else()
+        message(FATAL_ERROR "Need to pass the Weston major version via -DWESTON_MAJOR_VERSION")
+    endif()
+endif()
+
+pkg_check_modules(LIBWESTON_PROTOCOLS libweston-${WESTON_MAJOR_VERSION}-protocols QUIET)
 
 if(${LIBWESTON_PROTOCOLS_FOUND})
     #check for DLT
     pkg_check_modules(DLT automotive-dlt QUIET)
 
     #import the pkgdatadir from libweston-protocols pkgconfig file
-    execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=pkgdatadir libweston-9-protocols
+    execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=pkgdatadir libweston-${WESTON_MAJOR_VERSION}-protocols
                     OUTPUT_VARIABLE WestonProtocols_PKGDATADIR)
     string(REGEX REPLACE "[\r\n]" "" WestonProtocols_PKGDATADIR "${WestonProtocols_PKGDATADIR}")
     SET(LIBWESTON_PROTOCOLS_PKGDATADIR ${WestonProtocols_PKGDATADIR})
