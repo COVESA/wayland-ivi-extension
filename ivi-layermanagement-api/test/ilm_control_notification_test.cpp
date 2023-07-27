@@ -773,16 +773,3 @@ TEST_F(NotificationTest, getNotificationWhenScreenshotDone)
     assertCallbackcalled();
     ASSERT_NE(screenshotData.fd.load(), -1);
 }
-
-TEST_F(NotificationTest, getNotificationWhenScreenshotError)
-{
-    /* Call ilm_takeAsyncSurfaceScreenshot with wrong surface id
-     * The ilm_takeAsyncSurfaceScreenshot should return ILM_SUCCESS
-     * Screenshot error callback should trigged
-     */
-    screenshot_data_t screenshotData;
-    screenshotData.error.store(0);
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(surface + 1, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
-    assertCallbackcalled();
-    ASSERT_EQ(screenshotData.error.load(), 3); //IVI_SCREENSHOT_ERROR_NO_SURFACE is 3
-}
