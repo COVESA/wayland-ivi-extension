@@ -773,3 +773,21 @@ TEST_F(NotificationTest, getNotificationWhenScreenshotDone)
     assertCallbackcalled();
     ASSERT_NE(screenshotData.fd.load(), -1);
 }
+
+TEST_F(NotificationTest, invalidInputsIsNotToReceiveNotificationsScreenshot)
+{
+    /* Call ilm_takeAsyncScreenshot with wrong screen id
+     * The ilm_takeAsyncScreenshot should return ILM_FAILED
+     * Screenshot callback should not trigged
+     */ 
+    screenshot_data_t screenshotData;
+    ASSERT_EQ(ILM_FAILED, ilm_takeAsyncScreenshot(0xdeadbeef, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    assertNoCallbackIsCalled();
+
+    /* Call ilm_takeAsyncSurfaceScreenshot with wrong surface id
+     * The ilm_takeAsyncSurfaceScreenshot should return ILM_FAILED
+     * Screenshot callback should not trigged
+     */
+    ASSERT_EQ(ILM_FAILED, ilm_takeAsyncSurfaceScreenshot(0xdeadbeef, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    assertNoCallbackIsCalled();
+}
