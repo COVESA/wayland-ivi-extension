@@ -17,7 +17,7 @@
 #
 ###############################################################################
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.6...3.22)
 
 project(ivi-id-agent)
 
