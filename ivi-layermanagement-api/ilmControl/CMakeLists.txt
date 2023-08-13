@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.6...3.22)
 
 project(ilmControl)
 
@@ -81,10 +81,6 @@ add_library(${PROJECT_NAME} SHARED
     ivi-wm-protocol.c
     ivi-input-client-protocol.h
     ivi-input-protocol.c
-)
-
-add_dependencies(${PROJECT_NAME}
-    ${WAYLAND_CLIENT_LIBRARIES}
 )
 
 set(LIBS

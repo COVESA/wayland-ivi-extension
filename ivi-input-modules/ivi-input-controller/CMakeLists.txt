@@ -17,7 +17,7 @@
 #
 ############################################################################
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.6...3.22)
 
 project(ivi-input-controller)
 
@@ -74,9 +74,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 add_dependencies(${PROJECT_NAME}
     ilmCommon
-    ${WAYLAND_SERVER_LIBRARIES}
-    ${WESTON_LIBRARIES}
-    ${PIXMAN_LIBRARIES}
 )
 
 set(LIBS

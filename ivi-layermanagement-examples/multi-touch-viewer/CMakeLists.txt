@@ -19,7 +19,7 @@
 #
 ############################################################################
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.6...3.22)
 
 project (generate-protocol-src)
 
@@ -91,8 +91,6 @@ add_executable(${PROJECT_NAME}
                ivi-application-protocol.c
                ivi-application-client-protocol.h
 )
-
-add_dependencies(${PROJECT_NAME} ${LIBS})
 
 add_definitions(${EGL_CFLAGS})
 

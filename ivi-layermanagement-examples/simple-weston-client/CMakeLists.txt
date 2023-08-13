@@ -114,8 +114,6 @@ endif(${LIBWESTON_PROTOCOLS_FOUND})
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${WESTON_DEBUG_SRC_FILES})
 
-add_dependencies(${PROJECT_NAME} ${LIBS})
-
 add_definitions(${DLT_CFLAGS})
 
 if(${DLT_FOUND})
