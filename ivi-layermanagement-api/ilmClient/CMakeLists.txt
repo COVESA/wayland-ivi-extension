@@ -17,7 +17,7 @@
 #
 ############################################################################
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.6...3.22)
 
 project(ilmClient)
 
@@ -66,10 +66,6 @@ add_library(${PROJECT_NAME} SHARED
 set(LIBS
     ${LIBS}
     ${WAYLAND_CLIENT_LIBRARIES}
-)
-
-add_dependencies(${PROJECT_NAME}
-    ${LIBS}
 )
 
 target_link_libraries(${PROJECT_NAME}

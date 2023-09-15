@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.6...3.22)
 
 project(EGLWLInputEventExample)
 
@@ -87,13 +87,6 @@ add_executable(EGLWLInputEventExample
     ivi-application-protocol.c
     ${HEADER_FILES}
     ivi-application-client-protocol.h
-)
-
-add_dependencies(EGLWLInputEventExample
-    wayland-client
-    wayland-cursor
-    wayland-egl
-    ${LIBS}
 )
 
 set(LIBS

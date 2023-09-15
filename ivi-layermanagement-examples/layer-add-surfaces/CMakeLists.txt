@@ -33,6 +33,8 @@ link_directories(
 
 SET(LIBS
     ilmCommon
+    ilmControl
+    ilmInput
 )
 
 SET(SRC_FILES

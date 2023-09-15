@@ -19,7 +19,7 @@
 #
 ############################################################################
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.6...3.22)
 
 project(EGLWLMockNavigation)
 
@@ -116,10 +116,6 @@ set(LIBS
 )
 
 SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
-
-add_dependencies(${PROJECT_NAME}
-    ${LIBS}
-)
 
 add_definitions(${EGL_CFLAGS})
 

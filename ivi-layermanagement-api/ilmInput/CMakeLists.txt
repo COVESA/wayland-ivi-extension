@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.6...3.22)
 
 project(ilmInput)
 
@@ -65,7 +65,6 @@ add_library(${PROJECT_NAME} SHARED
 
 add_dependencies(${PROJECT_NAME}
     ilmControl
-    ${WAYLAND_CLIENT_LIBRARIES}
 )
 
 set(LIBS
