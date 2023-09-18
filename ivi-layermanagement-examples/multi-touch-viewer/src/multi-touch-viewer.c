@@ -657,7 +657,7 @@ usage(int status)
 static void 
 parse_options(int argc, char *argv[])
 {
-    int opt = -1, option_index = 0;
+    int opt = -1;
     static const struct option options[] = {
         { "help", no_argument, NULL, 'h' },
         { "print-log", no_argument, NULL, 'p' },
