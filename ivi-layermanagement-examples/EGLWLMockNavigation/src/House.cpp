@@ -145,7 +145,7 @@ void House::render()
                 m_texCoords[6].x = numElements;
                 m_texCoords[6].y = numElements;
             } else {
-                memset(m_texCoords, 0, sizeof(m_texCoords));
+                memset((void*)m_texCoords, 0, sizeof(m_texCoords));
             }
             glEnableVertexAttribArray(0);
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, m_vertex);
