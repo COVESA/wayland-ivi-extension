@@ -54,6 +54,14 @@ struct ivisurface {
     struct wl_list accepted_seat_list;
 };
 
+struct iviscreen {
+    struct wl_list link;
+    struct ivishell *shell;
+    uint32_t id_screen;
+    struct weston_output *output;
+    struct wl_list resource_list;
+};
+
 struct ivishell {
     struct weston_compositor *compositor;
     const struct ivi_layout_interface *interface;

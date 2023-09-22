@@ -97,5 +97,25 @@
             <arg name="seat" type="string"/>
             <arg name="accepted" type="int"/>
         </event>
+
+        <!-- Version 2 additions -->
+
+        <event name="input_focus_change" since="2">
+            <description summary="input focus of surface in ivi compositor has changed">
+                The new input focus state is provided in argument enabled:
+                If enabled is ILM_TRUE, this surface now has input focus enabled.
+                If enabled is not ILM_TRUE, this surface no longer has input focus.
+                Additionaly the event indicates:
+                - the seat whose focus has changed.
+                - the screen on which the focus change happened. (which is relevant
+                  only for pointer and touch devices, and set to INVALID_ID for
+                  keyboard devices)
+            </description>
+            <arg name="surface" type="uint"/>
+            <arg name="seat" type="string" allow-null="true"/>
+            <arg name="device" type="uint"/>
+            <arg name="screen" type="uint"/>
+            <arg name="enabled" type="int"/>
+        </event>
     </interface>
 </protocol>

@@ -316,4 +316,27 @@ typedef ilmErrorTypes(*screenshotDoneNotificationFunc)(void *user_data,
 typedef void(*screenshotErrorNotificationFunc)(void *user_data,
                                         t_ilm_uint error,
                                         const char *message);
+
+/**
+ * Typedef for notification callback on input focus change.
+ * Callback parameters:
+ * surface_id : surface id on which the input device focus change happened.
+ * device     : one of the touch, pointer and keyboard devices.
+ * seatName   : seat to which the device is assigned to. This pointer
+ *              is freed by ilm library after callback returns.
+ * screen_id  : screen_id on which this focus change happened. This
+ *              makes sense only for pointer and touch devices. For
+ *              keyboard, this parameter is set to INVALID_ID which is 0xFFFFFFFF.
+ * status     : set to true if focus is moved into the surface and false
+ *              if focus is moved out of the surface
+ * user_data  : This is the parameter passed to ilm_registerInputFocusNotification
+ *             API.
+ */
+typedef void (*inputFocusNotificationFunc)(t_ilm_surface surface_id,
+                                           ilmInputDevice device,
+                                           t_ilm_string seat_name,
+                                           t_ilm_display screen_id,
+                                           t_ilm_bool status,
+                                           void* user_data);
+
 #endif /* _ILM_TYPES_H_*/

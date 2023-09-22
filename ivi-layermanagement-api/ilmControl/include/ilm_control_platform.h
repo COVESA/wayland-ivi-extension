@@ -46,6 +46,11 @@ struct wayland_context {
     ilmErrorTypes error_flag;
 
     struct ivi_input *input_controller;
+
+    struct {
+        inputFocusNotificationFunc callback;
+        void *user_data;
+    } input_focus_notification;
 };
 
 struct ilm_control_context {

@@ -474,6 +474,26 @@ ilmErrorTypes ilm_registerNotification(notificationFunc callback, void *user_dat
 ilmErrorTypes ilm_unregisterNotification();
 
 /**
+ * \brief register for notification on change of focus surface for Touch, Pointer and keyboard
+ * \ingroup ilmControl
+ * \param[in] callback pointer to function to be called for notification
+ * \param[in] user_data pointer to user defined data
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ * \return ILM_ERROR_INVALID_ARGUMENT if the current process already has notification callback registered
+ */
+ilmErrorTypes ilm_registerInputFocusNotification(inputFocusNotificationFunc callback, void *user_data);
+
+/**
+ * \brief remove notification on change of focus surface for Touch, Pointer and keyboard
+ * \ingroup ilmControl
+ * \return ILM_SUCCESS if the method call was successful
+ * \return ILM_FAILED if the client can not call the method on the service.
+ * \return ILM_ERROR_INVALID_ARGUMENT if the current process has no notification callback registered
+ */
+ilmErrorTypes ilm_unregisterInputFocusNotification();
+
+/**
  * \brief returns the global error flag.
  * When compositor sends an error, the error flag is set to appropriate error code
  * value. No other errors are recorded until ilm_getError is called. Calling this
