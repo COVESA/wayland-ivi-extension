@@ -37,7 +37,7 @@
 #include <sys/mman.h>
 
 #include <weston.h>
-#include <libweston-desktop/libweston-desktop.h>
+#include <libweston/desktop.h>
 #include "ivi-wm-server-protocol.h"
 #include "ivi-controller.h"
 

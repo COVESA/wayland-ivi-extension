@@ -26,7 +26,7 @@
 #include <limits.h>
 
 #include <weston.h>
-#include <libweston-desktop/libweston-desktop.h>
+#include <libweston/desktop.h>
 #include <libweston/config-parser.h>
 #include <ivi-layout-export.h>
 #include "ivi-controller.h"
