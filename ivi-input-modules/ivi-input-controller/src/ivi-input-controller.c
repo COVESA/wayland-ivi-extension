@@ -728,7 +728,7 @@ static struct weston_pointer_grab_interface pointer_grab_interface = {
 static void
 input_ctrl_touch_set_west_focus(struct seat_ctx *ctx_seat,
         struct weston_touch *touch, const struct timespec *time,
-        int touch_id, wl_fixed_t x, wl_fixed_t y)
+        int touch_id, struct weston_coord_global pos)
 {
     /*Weston would have set the focus here*/
     struct ivisurface *surf_ctx;
@@ -749,14 +749,14 @@ input_ctrl_touch_set_west_focus(struct seat_ctx *ctx_seat,
         }
 
         if (st_focus != NULL) {
-            weston_touch_send_down(touch, time, touch_id, x, y);
+            weston_touch_send_down(touch, time, touch_id, pos);
 
         } else {
             weston_touch_set_focus(touch, NULL);
         }
     } else {
         /*Support non ivi-surfaces like input panel*/
-        weston_touch_send_down(touch, time, touch_id, x, y);
+        weston_touch_send_down(touch, time, touch_id, pos);
     }
 }
 
@@ -816,13 +816,14 @@ touch_grab_down(struct weston_touch_grab *grab, const struct timespec *time,
                 int touch_id, wl_fixed_t x, wl_fixed_t y)
 {
     struct seat_ctx *seat = wl_container_of(grab, seat, touch_grab);
+    struct weston_coord_global pos;
 
     /* if touch device has no focused view, there is nothing to do*/
     if (grab->touch->focus == NULL)
         return;
 
-    input_ctrl_touch_set_west_focus(seat, grab->touch, time, touch_id,
-                                    x, y);
+    pos.c = weston_coord_from_fixed(x, y);
+    input_ctrl_touch_set_west_focus(seat, grab->touch, time, touch_id, pos);
 }
 
 static void
@@ -850,7 +851,10 @@ static void
 touch_grab_motion(struct weston_touch_grab *grab, const struct timespec *time, int touch_id,
                   wl_fixed_t x, wl_fixed_t y)
 {
-    weston_touch_send_motion(grab->touch, time, touch_id, x, y);
+    struct weston_coord_global pos;
+
+    pos.c = weston_coord_from_fixed(x, y);
+    weston_touch_send_motion(grab->touch, time, touch_id, pos);
 }
 
 static void
