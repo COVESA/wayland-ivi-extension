@@ -1,1 +1,3 @@
-#cmakedefine HAVE_POSIX_FALLOCATE 1
+#pragma once
+
+#define MODULEDIR "@LIBWESTON_LIBDIR@/weston"
