@@ -538,14 +538,10 @@ input_ctrl_ptr_set_west_focus(struct seat_ctx *ctx_seat,
     struct ivisurface *surf_ctx;
     struct input_context *ctx = ctx_seat->input_ctx;
     struct seat_focus *st_focus;
-    wl_fixed_t sx, sy;
 
     if (NULL == view) {
         view = weston_compositor_pick_view(pointer->seat->compositor,
                 pointer->pos);
-    } else {
-        weston_view_from_global_fixed(view, pointer->x,
-                        pointer->y, &sx, &sy);
     }
 
     if (pointer->focus != view) {
