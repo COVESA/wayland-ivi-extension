@@ -909,6 +909,7 @@ set_bkgnd_surface_prop(struct ivishell *shell)
 
     wl_list_insert(&view->geometry.transformation_list,
                    &shell->bkgnd_transform.link);
+    weston_view_geometry_dirty(view);
     weston_view_update_transform(view);
     ivi_weston_surface_schedule_repaint(w_surface);
 }
