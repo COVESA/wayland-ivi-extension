@@ -900,18 +900,24 @@ set_bkgnd_surface_prop(struct ivishell *shell)
     dest_rect.width = dest_width;
     dest_rect.height = dest_height;
 
-    calc_trans_matrix(&source_rect, &dest_rect,
-                      &shell->bkgnd_transform.matrix);
-    weston_matrix_translate(&shell->bkgnd_transform.matrix, x, y, 0.0f);
+    /* Only update transformation of view and repain the surface
+     * when size of destination bigger than 0. The destination is 0 when
+     * there isn't any outputs, don't need to repaint.
+     */
+    if (dest_rect.width != 0 && dest_rect.height != 0) {
+        calc_trans_matrix(&source_rect, &dest_rect,
+                    &shell->bkgnd_transform.matrix);
+        weston_matrix_translate(&shell->bkgnd_transform.matrix, x, y, 0.0f);
 
-    weston_log("set_bkgnd_surface_prop: x:%d y:%d s_width:%d s_height:%d d_width:%d d_height:%d\n",
-               x, y, src_width, src_height, dest_width, dest_height);
+        weston_log("set_bkgnd_surface_prop: x:%d y:%d s_width:%d s_height:%d d_width:%d d_height:%d\n",
+                x, y, src_width, src_height, dest_width, dest_height);
 
-    wl_list_insert(&view->geometry.transformation_list,
-                   &shell->bkgnd_transform.link);
-    weston_view_geometry_dirty(view);
-    weston_view_update_transform(view);
-    ivi_weston_surface_schedule_repaint(w_surface);
+        wl_list_insert(&view->geometry.transformation_list,
+                    &shell->bkgnd_transform.link);
+        weston_view_geometry_dirty(view);
+        weston_view_update_transform(view);
+        ivi_weston_surface_schedule_repaint(w_surface);
+    }
 }
 
 static void
