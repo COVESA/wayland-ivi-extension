@@ -66,10 +66,12 @@ struct ivishell {
 
     struct wl_signal ivisurface_created_signal;
     struct wl_signal ivisurface_removed_signal;
+    struct wl_signal id_allocation_request_signal;
 
     struct wl_listener surface_created;
     struct wl_listener surface_removed;
     struct wl_listener surface_configured;
+    struct wl_listener desktop_surface_configured;
 
     struct wl_listener layer_created;
     struct wl_listener layer_removed;
