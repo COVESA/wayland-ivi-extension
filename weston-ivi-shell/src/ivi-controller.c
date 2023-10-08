@@ -1783,6 +1783,8 @@ surface_event_configure(struct wl_listener *listener, void *data)
             shell->bkgnd_view = weston_view_create(w_surface);
             weston_layer_entry_insert(&shell->bkgnd_layer.view_list,
                                       &shell->bkgnd_view->layer_link);
+            weston_surface_map(w_surface);
+            shell->bkgnd_view->is_mapped = true;
         }
 
         set_bkgnd_surface_prop(shell);
