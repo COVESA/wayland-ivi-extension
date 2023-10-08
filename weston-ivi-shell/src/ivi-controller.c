@@ -1651,7 +1651,7 @@ output_destroyed_event(struct wl_listener *listener, void *data)
 static void
 output_resized_event(struct wl_listener *listener, void *data)
 {
-    struct ivishell *shell = wl_container_of(listener, shell, output_destroyed);
+    struct ivishell *shell = wl_container_of(listener, shell, output_resized);
 
     if (shell->bkgnd_view && shell->client)
         set_bkgnd_surface_prop(shell);
