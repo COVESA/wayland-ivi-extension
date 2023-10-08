@@ -32,7 +32,7 @@ class TestEnvChecking
     struct ivi_input *mpInputController;
     bool mCheck;
 
-    static constexpr uint32_t IVI_CONTROLLER_VERSION{1U};
+    static constexpr uint32_t IVI_CONTROLLER_VERSION{2U};
     static constexpr uint32_t IVI_INPUT_VERSION{2U};
 
     static TestEnvChecking *GetInstance();
