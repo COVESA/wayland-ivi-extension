@@ -1252,6 +1252,21 @@ destroy_input_context(struct input_context *ctx)
     struct wl_resource *resource, *tmp_resource;
 
     wl_list_for_each_safe(seat, tmp, &ctx->seat_list, seat_node) {
+        /* The ivi-input-controller destroys a seat proactively, need to
+         * end grab of all devices. Avoid the weston call them later*/
+        if (seat->keyboard_grab.keyboard) {
+            keyboard_grab_cancel(&seat->keyboard_grab);
+            weston_keyboard_end_grab(seat->keyboard_grab.keyboard);
+        }
+        if (seat->pointer_grab.pointer) {
+            pointer_grab_cancel(&seat->pointer_grab);
+            weston_pointer_end_grab(seat->pointer_grab.pointer);
+        }
+        if (seat->touch_grab.touch) {
+            touch_grab_cancel(&seat->touch_grab);
+            weston_touch_end_grab(seat->touch_grab.touch);
+        }
+
         destroy_seat(seat);
     }
 
