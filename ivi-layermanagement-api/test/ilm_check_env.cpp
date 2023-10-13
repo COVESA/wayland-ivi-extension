@@ -44,11 +44,6 @@ class TestEnvChecking
         const char *acpInterface,
         uint32_t aVersion);
 
-    static constexpr struct wl_registry_listener mRegistryListener = {
-      RegistryHandleGlobal,
-      nullptr
-    };
-
     static TestEnvChecking *mpInstance;
     TestEnvChecking();
 };
@@ -75,6 +70,11 @@ TestEnvChecking::TestEnvChecking(): mpDisplay(nullptr), mpRegistry(nullptr),
     mCheck = false;
     return;
   }
+
+  static struct wl_registry_listener mRegistryListener;
+
+  memset(&mRegistryListener, 0, sizeof mRegistryListener);
+  mRegistryListener.global = RegistryHandleGlobal;
 
   ret = wl_registry_add_listener(mpRegistry, &mRegistryListener, this);
   if (ret < 0) {

@@ -27,15 +27,40 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-static struct wl_registry_listener registryListener = {
-    WLContext::RegistryHandleGlobal,
-    NULL
+struct registryListener_t {
+public:
+    registryListener_t ()
+    {
+        memset(&mRegistryListener, 0, sizeof mRegistryListener);
+        mRegistryListener.global = WLContext::RegistryHandleGlobal;
+    }
+    const struct wl_registry_listener * GetCoreListener() const
+    {
+        const struct wl_registry_listener * ret = &mRegistryListener;
+        return ret;
+    }
+private:
+    struct wl_registry_listener mRegistryListener;
 };
 
-static struct wl_seat_listener seatListener = {
-    WLContext::SeatHandleCapabilities,
-    NULL
+struct seatListener_t {
+public:
+    seatListener_t ()
+    {
+        memset(&mSeatListener, 0, sizeof mSeatListener);
+        mSeatListener.capabilities = WLContext::SeatHandleCapabilities;
+    }
+    const struct wl_seat_listener * GetCoreListener() const
+    {
+        const struct wl_seat_listener * ret = &mSeatListener;
+        return ret;
+    }
+private:
+    struct wl_seat_listener mSeatListener;
 };
+
+static const struct registryListener_t registryListener;
+static const struct seatListener_t seatListener;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -139,7 +164,7 @@ WLContext::RegistryHandleGlobal(void* data,
             seat_data->ctx = surface;
             seat_data->wlSeat = (wl_seat*)wl_registry_bind(
                                  registry, name, &wl_seat_interface, 1);
-            wl_seat_add_listener(seat_data->wlSeat, &seatListener,
+            wl_seat_add_listener(seat_data->wlSeat, seatListener.GetCoreListener(),
                                  (void *)seat_data);
         }
     } while (0);
@@ -213,7 +238,7 @@ WLContext::InitWLContext(const struct wl_pointer_listener* wlPointerListener,
     m_wlDisplay = wl_display_connect(NULL);
 
     m_wlRegistry = wl_display_get_registry(m_wlDisplay);
-    wl_registry_add_listener(m_wlRegistry, &registryListener, this);
+    wl_registry_add_listener(m_wlRegistry, registryListener.GetCoreListener(), this);
     wl_display_dispatch(m_wlDisplay);
     wl_display_roundtrip(m_wlDisplay);
 

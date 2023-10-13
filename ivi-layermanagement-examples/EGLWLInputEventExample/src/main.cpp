@@ -78,7 +78,9 @@ int main(int argc, char **argv)
     signal(SIGINT,SigFunc);
 
     wlContext = new WLContext();
-    wlContext->InitWLContext(&PointerListener, &KeyboardListener, &TouchListener);
+    wlContext->InitWLContext(PointerListener.GetCoreListener(),
+                             KeyboardListener.GetCoreListener(),
+                             TouchListener.GetCoreListener());
 
     int const fd = wl_display_get_fd(wlContext->GetWLDisplay());
 

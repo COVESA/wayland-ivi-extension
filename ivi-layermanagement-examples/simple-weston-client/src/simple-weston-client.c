@@ -267,7 +267,7 @@ shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
 }
 
 static struct wl_shm_listener shm_listenter = {
-    shm_format
+    .format = shm_format
 };
 
 static int create_cursors(WaylandContextStruct* wlcontext) {
@@ -392,15 +392,15 @@ PointerHandleAxisDiscrete(void *data, struct wl_pointer *wl_pointer,
 }
 
 static struct wl_pointer_listener pointer_listener = {
-    PointerHandleEnter,
-    PointerHandleLeave,
-    PointerHandleMotion,
-    PointerHandleButton,
-    PointerHandleAxis,
-    PointerHandleFrame,
-    PointerHandleAxisSource,
-    PointerHandleAxisStop,
-    PointerHandleAxisDiscrete
+    .enter = PointerHandleEnter,
+    .leave = PointerHandleLeave,
+    .motion = PointerHandleMotion,
+    .button = PointerHandleButton,
+    .axis = PointerHandleAxis,
+    .frame = PointerHandleFrame,
+    .axis_source = PointerHandleAxisSource,
+    .axis_stop = PointerHandleAxisStop,
+    .axis_discrete = PointerHandleAxisDiscrete
 };
 
 static void
@@ -439,8 +439,8 @@ seat_name(void *data, struct wl_seat *wl_seat, const char *name)
 }
 
 static struct wl_seat_listener seat_Listener = {
-    seat_handle_capabilities,
-    seat_name
+    .capabilities = seat_handle_capabilities,
+    .name = seat_name
 };
 
 #ifdef LIBWESTON_DEBUG_PROTOCOL
@@ -520,8 +520,8 @@ registry_handle_global_remove(void *data, struct wl_registry *registry,
 }
 
 static const struct wl_registry_listener registry_listener = {
-    registry_handle_global,
-    registry_handle_global_remove
+    .global = registry_handle_global,
+    .global_remove = registry_handle_global_remove
 };
 
 int init_wayland_context(WaylandContextStruct* wlcontext)
