@@ -139,7 +139,7 @@ frame_callback(void *p_data, struct wl_callback *p_cb, uint32_t time)
 }
 
 static const struct wl_callback_listener frame_listener = {
-    frame_callback
+    .done = frame_callback
 };
 
 static void
@@ -225,13 +225,13 @@ touch_handle_orientation(void *p_data, struct wl_touch *p_touch,
 }
 
 static const struct wl_touch_listener touch_listener = {
-    touch_handle_down,
-    touch_handle_up,
-    touch_handle_motion,
-    touch_handle_frame,
-    touch_handle_cancel,
-    touch_handle_shape,
-    touch_handle_orientation
+    .down = touch_handle_down,
+    .up = touch_handle_up,
+    .motion = touch_handle_motion,
+    .frame = touch_handle_frame,
+    .cancel = touch_handle_cancel,
+    .shape = touch_handle_shape,
+    .orientation = touch_handle_orientation
 };
 
 static void
@@ -253,8 +253,7 @@ seat_capabilities(void *p_data, struct wl_seat *p_seat, uint32_t caps)
 }
 
 static const struct wl_seat_listener seat_listener = {
-    seat_capabilities,
-    NULL /* name: since version 2 */
+    .capabilities = seat_capabilities
 };
 
 static void

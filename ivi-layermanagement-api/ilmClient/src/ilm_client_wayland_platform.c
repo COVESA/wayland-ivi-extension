@@ -126,8 +126,8 @@ registry_handle_client_remove(void *data, struct wl_registry *registry,
 }
 
 static const struct wl_registry_listener registry_client_listener = {
-    registry_handle_client,
-    registry_handle_client_remove
+    .global = registry_handle_client,
+    .global_remove = registry_handle_client_remove
 };
 
 static struct ilm_client_context ilm_context = {0};

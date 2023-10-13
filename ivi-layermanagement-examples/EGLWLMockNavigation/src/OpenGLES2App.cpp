@@ -73,11 +73,26 @@ extern "C"
         (void)shellSurface;
     }
 
-    static const struct wl_shell_surface_listener shellSurfaceListener = {
-        handlePing,
-        handleConfigure,
-        handlePopupDone,
+    struct shellSurfaceListener_t {
+    public:
+        shellSurfaceListener_t ()
+        {
+            memset(&mShellSurfaceListener, 0, sizeof mShellSurfaceListener);
+            mShellSurfaceListener.ping = handlePing;
+            mShellSurfaceListener.configure = handleConfigure;
+            mShellSurfaceListener.popup_done = handlePopupDone;
+        }
+
+        const struct wl_shell_surface_listener * GetCoreListener() const
+        {
+            const struct wl_shell_surface_listener * ret = &mShellSurfaceListener;
+            return ret;
+        }
+    private:
+        struct wl_shell_surface_listener mShellSurfaceListener;
     };
+
+    static const struct shellSurfaceListener_t shellSurfaceListener;
 
     ///////////////////////////////////////////////////////////////////////////////
 
@@ -113,10 +128,24 @@ extern "C"
         } while(0);
     }
 
-    static const struct wl_registry_listener registry_listener = {
-        OpenGLES2App::registry_handle_global,
-        NULL
+    struct registry_listener_t {
+        public:
+            registry_listener_t ()
+            {
+                memset(&m_registry_listener, 0, sizeof m_registry_listener);
+                m_registry_listener.global = OpenGLES2App::registry_handle_global;
+            }
+
+            const struct wl_registry_listener * GetCoreListener() const
+            {
+                const struct wl_registry_listener * ret = &m_registry_listener;
+                return ret;
+            }
+        private:
+            struct wl_registry_listener m_registry_listener;
     };
+
+    static const struct registry_listener_t registry_listener;
 }
 
 #define RUNTIME_IN_MS() (GetTickCount() - startTimeInMS)
@@ -198,7 +227,8 @@ bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
     }
 
     m_wlContextStruct.wlRegistry = wl_display_get_registry(m_wlContextStruct.wlDisplay);
-    wl_registry_add_listener(m_wlContextStruct.wlRegistry, &registry_listener, &m_wlContextStruct);
+    wl_registry_add_listener(m_wlContextStruct.wlRegistry, registry_listener.GetCoreListener(),
+                                &m_wlContextStruct);
     wl_display_dispatch(m_wlContextStruct.wlDisplay);
     wl_display_roundtrip(m_wlContextStruct.wlDisplay);
 
@@ -222,7 +252,7 @@ bool OpenGLES2App::createWLContext(SurfaceConfiguration* config)
     if (m_wlContextStruct.wlShellSurface) {
         wl_shell_surface_add_listener(
             reinterpret_cast<struct wl_shell_surface*>(m_wlContextStruct.wlShellSurface),
-            &shellSurfaceListener, &m_wlContextStruct);
+            shellSurfaceListener.GetCoreListener(), &m_wlContextStruct);
     }
 
     m_wlContextStruct.wlNativeWindow = wl_egl_window_create(m_wlContextStruct.wlSurface, width, height);

@@ -194,10 +194,10 @@ output_listener_scale(void *data,
 }
 
 static struct wl_output_listener output_listener = {
-    output_listener_geometry,
-    output_listener_mode,
-    output_listener_done,
-    output_listener_scale
+    .geometry = output_listener_geometry,
+    .mode = output_listener_mode,
+    .done = output_listener_done,
+    .scale = output_listener_scale
 };
 
 static void
@@ -987,8 +987,8 @@ registry_handle_control_remove(void *data, struct wl_registry *registry, uint32_
 
 static const struct wl_registry_listener
 registry_control_listener= {
-    registry_handle_control,
-    registry_handle_control_remove
+    .global = registry_handle_control,
+    .global_remove = registry_handle_control_remove
 };
 
 struct ilm_control_context ilm_context;
