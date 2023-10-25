@@ -34,6 +34,7 @@ int  custom_wl_list_empty(const struct wl_list *list);
 void custom_wl_array_init(struct wl_array *array);
 void custom_wl_array_release(struct wl_array *array);
 void *custom_wl_array_add(struct wl_array *array, size_t size);
+int custom_wl_list_length(const struct wl_list *list);
 
 #ifdef __cplusplus
 }

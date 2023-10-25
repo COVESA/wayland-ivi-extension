@@ -23,6 +23,7 @@ cmake_policy(SET CMP0046 OLD)
 PROJECT(ilm_client_unittest)
 
 INCLUDE_DIRECTORIES(
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-layermanagement-api/ilmControl/src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-layermanagement-api/ilmCommon/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-layermanagement-api/ilmControl/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-layermanagement-api/ilmInput/include
@@ -39,9 +40,6 @@ LINK_DIRECTORIES(
 )
 
 SET(LIBS
-    ilmCommon
-    ilmControl
-    ilmInput
     ${gtest_LIBRARIES}
 )
 
@@ -57,9 +55,7 @@ SET(SRC_IVI_COMMON_FILES
 )
 
 SET(SRC_IVI_CONTROL_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ilm_control_base_class.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ilm_control_unittests.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-layermanagement-api/ilmControl/src/ilm_control_wayland_platform.c
 )
 
 SET(SRC_IVI_INPUT_FILES

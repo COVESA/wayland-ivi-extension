@@ -47,6 +47,8 @@ add_custom_command(
 
 INCLUDE_DIRECTORIES(
     ${CMAKE_CURRENT_SOURCE_DIR}/../../weston-ivi-shell/src/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-input-modules/ivi-input-controller/src/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-id-agent-modules/ivi-id-agent/src/
     ${CMAKE_CURRENT_BINARY_DIR}/../../ivi-input-modules/ivi-input-controller/
     ${CMAKE_CURRENT_BINARY_DIR}/../../weston-ivi-shell/
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -62,7 +64,6 @@ LINK_DIRECTORIES(
 )
 
 SET(LIBS
-    ${WAYLAND_SERVER_LIBRARIES}
     ${gtest_LIBRARIES}
 )
 
@@ -73,22 +74,16 @@ SET(SRC_COMMON_FILES
 )
 
 SET(SRC_ID_AGENT_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ivi_id_agent_base_class.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ivi_id_agent_unittests.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-id-agent-modules/ivi-id-agent/src/ivi-id-agent.c
 )
 
 SET(SRC_CONTROLLER_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ivi_controller_base_class.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ivi_controller_uinttests.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../weston-ivi-shell/src/ivi-controller.c
     ivi-wm-protocol.c
 )
 
 SET(SRC_INPUT_CONTROLLER_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ivi_input_controller_base_class.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ivi_input_controller_uinttests.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../ivi-input-modules/ivi-input-controller/src/ivi-input-controller.c
     ivi-input-protocol.c
 )
 

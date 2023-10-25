@@ -17,18 +17,25 @@
  *
  ****************************************************************************/
 
-#include "ivi_id_agent_base_class.hpp"
 #include <gtest/gtest.h>
+#include <string>
+#include "server_api_fake.h"
+#include "ivi_layout_interface_fake.h"
+
+extern "C"
+{
+#include "ivi-id-agent.c"
+}
 
 #define INVALID_ID 0xFFFFFFFF
 static constexpr uint8_t MAX_NUMBER = 2;
 
-class IdAgentTest: public ::testing::Test, public IdAgentBase
+class IdAgentTest: public ::testing::Test
 {
 public:
     void SetUp()
     {
-        ASSERT_EQ(initBaseModule(), true);
+        // ASSERT_EQ(initBaseModule(), true);
         IVI_LAYOUT_FAKE_LIST(RESET_FAKE);
         SERVER_API_FAKE_LIST(RESET_FAKE);
         init_controller_content();
@@ -41,7 +48,14 @@ public:
 
     void init_controller_content()
     {
-
+        m_iviShell.interface = &g_iviLayoutInterfaceFake;
+        m_iviShell.compositor = &m_westonCompositor;
+        custom_wl_list_init(&m_westonCompositor.seat_list);
+        custom_wl_list_init(&m_iviShell.list_surface);
+        custom_wl_list_init(&m_westonCompositor.seat_list);
+        wl_signal_init(&m_iviShell.id_allocation_request_signal);
+        wl_signal_init(&m_iviShell.ivisurface_created_signal);
+        wl_signal_init(&m_iviShell.ivisurface_removed_signal);
         mp_iviIdAgent = (struct ivi_id_agent*)malloc(sizeof(struct ivi_id_agent));
         mp_iviIdAgent->compositor = &m_westonCompositor;
         mp_iviIdAgent->interface = &g_iviLayoutInterfaceFake;
@@ -50,6 +64,9 @@ public:
         mp_iviIdAgent->default_behavior_set = 0;
 
         custom_wl_list_init(&mp_iviIdAgent->app_list);
+        custom_wl_list_init(&mp_iviIdAgent->id_allocation_listener.link);
+        custom_wl_list_init(&mp_iviIdAgent->surface_removed.link);
+        custom_wl_list_init(&mp_iviIdAgent->destroy_listener.link);
         custom_wl_list_init(&m_westonCompositor.destroy_signal.listener_list);
 
         for(uint8_t i = 0; i < MAX_NUMBER; i++)
@@ -82,6 +99,7 @@ public:
         }
     }
 
+    struct ivishell m_iviShell = {};
     struct ivi_id_agent *mp_iviIdAgent = nullptr;
     struct weston_compositor m_westonCompositor = {};
 
@@ -94,7 +112,6 @@ public:
     static uint32_t ms_defaultSurfaceIdMax;
     static char *ms_appId;
     static char *ms_appTitle;
-
 };
 
 char *IdAgentTest::ms_appId = (char*)"0";
@@ -159,14 +176,16 @@ static int custom_weston_config_section_get_string(struct weston_config_section 
  */
 TEST_F(IdAgentTest, desktop_surface_event_configure_hasDataInList)
 {
-    SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[0]->cfg_app_id, 1);
-    SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
+    // desktop_surface_event_configure() is removed
 
-    desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
+    // SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[0]->cfg_app_id, 1);
+    // SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
 
-    ASSERT_EQ(mp_dbElem[0]->layout_surface, mp_fakePointer);
-    ASSERT_EQ(surface_set_id_fake.call_count, 1);
-    ASSERT_EQ(surface_set_id_fake.arg1_history[0], mp_dbElem[0]->surface_id);
+    // desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
+
+    // ASSERT_EQ(mp_dbElem[0]->layout_surface, mp_fakePointer);
+    // ASSERT_EQ(surface_set_id_fake.call_count, 1);
+    // ASSERT_EQ(surface_set_id_fake.arg1_history[0], mp_dbElem[0]->surface_id);
 }
 
 /** ================================================================================================
@@ -182,12 +201,13 @@ TEST_F(IdAgentTest, desktop_surface_event_configure_hasDataInList)
  */
 TEST_F(IdAgentTest, desktop_surface_event_configure_noDataInListNoDefaultBehavior)
 {
-    SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[1]->cfg_app_id, 1);
-    SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
+    // desktop_surface_event_configure() is removed
+    // SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[1]->cfg_app_id, 1);
+    // SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
 
-    desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
+    // desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
 
-    ASSERT_EQ(surface_set_id_fake.call_count, 0);
+    // ASSERT_EQ(surface_set_id_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -206,14 +226,15 @@ TEST_F(IdAgentTest, desktop_surface_event_configure_noDataInListNoDefaultBehavio
  */
 TEST_F(IdAgentTest, desktop_surface_event_configure_noDataInListHasDefaultBehavior)
 {
-    mp_iviIdAgent->default_behavior_set = 1;
-    SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[1]->cfg_app_id, 1);
-    SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
+    // desktop_surface_event_configure() is removed
+    // mp_iviIdAgent->default_behavior_set = 1;
+    // SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[1]->cfg_app_id, 1);
+    // SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
 
-    desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
+    // desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
 
-    ASSERT_EQ(surface_set_id_fake.call_count, 1);
-    ASSERT_EQ(surface_set_id_fake.arg1_history[0], mp_iviIdAgent->default_surface_id - 1);
+    // ASSERT_EQ(surface_set_id_fake.call_count, 1);
+    // ASSERT_EQ(surface_set_id_fake.arg1_history[0], mp_iviIdAgent->default_surface_id - 1);
 }
 
 /** ================================================================================================
@@ -232,16 +253,17 @@ TEST_F(IdAgentTest, desktop_surface_event_configure_noDataInListHasDefaultBehavi
  */
 TEST_F(IdAgentTest, desktop_surface_event_configure_noDataInListHasDefaultBehaviorExistSurfaceId)
 {
-    mp_iviIdAgent->default_behavior_set = 1;
-    SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[1]->cfg_app_id, 1);
-    SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
+    // desktop_surface_event_configure() is removed
+    // mp_iviIdAgent->default_behavior_set = 1;
+    // SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[1]->cfg_app_id, 1);
+    // SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
 
-    struct ivi_layout_surface *lp_fakeLayoutLayer = (struct ivi_layout_surface *)0xFFFFFF00;
-    SET_RETURN_SEQ(get_surface_from_id, &lp_fakeLayoutLayer, 1);
+    // struct ivi_layout_surface *lp_fakeLayoutLayer = (struct ivi_layout_surface *)0xFFFFFF00;
+    // SET_RETURN_SEQ(get_surface_from_id, &lp_fakeLayoutLayer, 1);
 
-    desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
+    // desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
 
-    ASSERT_EQ(surface_set_id_fake.call_count, 0);
+    // ASSERT_EQ(surface_set_id_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -260,15 +282,16 @@ TEST_F(IdAgentTest, desktop_surface_event_configure_noDataInListHasDefaultBehavi
  */
 TEST_F(IdAgentTest, desktop_surface_event_configure_noDataInListHasDefaultBehaviorOverMaxId)
 {
-    mp_iviIdAgent->default_behavior_set = 1;
-    mp_iviIdAgent->default_surface_id = 200;
-    mp_iviIdAgent->default_surface_id_max = 200;
-    SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[1]->cfg_app_id, 1);
-    SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
+    // desktop_surface_event_configure() is removed
+    // mp_iviIdAgent->default_behavior_set = 1;
+    // mp_iviIdAgent->default_surface_id = 200;
+    // mp_iviIdAgent->default_surface_id_max = 200;
+    // SET_RETURN_SEQ(weston_desktop_surface_get_app_id, (const char**)&mp_dbElem[1]->cfg_app_id, 1);
+    // SET_RETURN_SEQ(weston_desktop_surface_get_title, (const char**)&mp_dbElem[0]->cfg_title, 1);
 
-    desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
+    // desktop_surface_event_configure(&mp_iviIdAgent->desktop_surface_configured, mp_fakePointer);
 
-    ASSERT_EQ(surface_set_id_fake.call_count, 0);
+    // ASSERT_EQ(surface_set_id_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -330,10 +353,9 @@ TEST_F(IdAgentTest, id_agent_module_deinit)
 TEST_F(IdAgentTest, id_agent_module_init_cannotGetwestonConfig)
 {
     wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_insert_fake.custom_fake = custom_wl_list_insert;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
 
-    ASSERT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_FAILED);
+    ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
     ASSERT_EQ(wet_get_config_fake.call_count, 1);
     ASSERT_EQ(weston_config_get_section_fake.call_count, 0);
@@ -360,12 +382,11 @@ TEST_F(IdAgentTest, id_agent_module_init_cannotGetwestonConfig)
 TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorNoDesktopApp)
 {
     wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_insert_fake.custom_fake = custom_wl_list_insert;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
 
     SET_RETURN_SEQ(wet_get_config, (struct weston_config **)&mp_fakePointer, 1);
 
-    ASSERT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_FAILED);
+    ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
     ASSERT_EQ(wet_get_config_fake.call_count, 1);
     ASSERT_EQ(weston_config_get_section_fake.call_count, 1);
@@ -400,7 +421,6 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorNoDesktopApp)
 TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorNoDesktopApp)
 {
     wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_insert_fake.custom_fake = custom_wl_list_insert;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
 
     SET_RETURN_SEQ(wet_get_config, (struct weston_config **)&mp_fakePointer, 1);
@@ -410,11 +430,11 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorNoDesktopApp)
     IdAgentTest::ms_defaultSurfaceIdMax = INVALID_ID;
     weston_config_section_get_uint_fake.custom_fake = custom_weston_config_section_get_uint;
 
-    EXPECT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_FAILED);
+    EXPECT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
     IdAgentTest::ms_defaultSurfaceId = 100;
     IdAgentTest::ms_defaultSurfaceIdMax = INVALID_ID;
-    EXPECT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_FAILED);
+    EXPECT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
     ASSERT_EQ(wet_get_config_fake.call_count, 2);
     ASSERT_EQ(weston_config_get_section_fake.call_count, 2);
@@ -445,7 +465,6 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorNoDesktopApp)
 TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithInvalidSurfaceId)
 {
     wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_insert_fake.custom_fake = custom_wl_list_insert;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
 
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
@@ -458,12 +477,15 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithInval
     IdAgentTest::ms_surfaceId = INVALID_ID;
     weston_config_section_get_uint_fake.custom_fake = custom_weston_config_section_get_uint;
 
-    ASSERT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_FAILED);
+    ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
     ASSERT_EQ(wet_get_config_fake.call_count, 1);
     ASSERT_EQ(weston_config_next_section_fake.call_count, 1);
     ASSERT_EQ(weston_config_section_get_uint_fake.call_count, 1);
     ASSERT_EQ(weston_config_section_get_string_fake.call_count, 0);
+
+    struct db_elem *db_elem = (struct db_elem *)((uintptr_t)weston_config_section_get_uint_fake.arg2_history[0] - offsetof(struct db_elem, surface_id));
+    free(db_elem);
 }
 
 /** ================================================================================================
@@ -491,7 +513,6 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithInval
 TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithNullOfAppIdAndAppTitle)
 {
     wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_insert_fake.custom_fake = custom_wl_list_insert;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
 
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
@@ -507,12 +528,15 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithNullO
     weston_config_section_get_uint_fake.custom_fake = custom_weston_config_section_get_uint;
     weston_config_section_get_string_fake.custom_fake = custom_weston_config_section_get_string;
 
-    ASSERT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_FAILED);
+    ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
     ASSERT_EQ(wet_get_config_fake.call_count, 1);
     ASSERT_EQ(weston_config_next_section_fake.call_count, 1);
     ASSERT_EQ(weston_config_section_get_uint_fake.call_count, 1);
     ASSERT_EQ(weston_config_section_get_string_fake.call_count, 2);
+
+    struct db_elem *db_elem = (struct db_elem *)((uintptr_t)weston_config_section_get_uint_fake.arg2_history[0] - offsetof(struct db_elem, surface_id));
+    free(db_elem);
 }
 
 /** ================================================================================================
@@ -542,7 +566,6 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithNullO
 TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithRightConfig)
 {
     wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_insert_fake.custom_fake = custom_wl_list_insert;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
 
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
@@ -558,12 +581,17 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithRight
     weston_config_section_get_uint_fake.custom_fake = custom_weston_config_section_get_uint;
     weston_config_section_get_string_fake.custom_fake = custom_weston_config_section_get_string;
 
-    ASSERT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_FAILED);
+    ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
     ASSERT_EQ(wet_get_config_fake.call_count, 1);
     ASSERT_EQ(weston_config_next_section_fake.call_count, 1);
     ASSERT_EQ(weston_config_section_get_uint_fake.call_count, 1);
     ASSERT_EQ(weston_config_section_get_string_fake.call_count, 2);
+
+    struct db_elem *db_elem = (struct db_elem *)((uintptr_t)weston_config_section_get_uint_fake.arg2_history[0] - offsetof(struct db_elem, surface_id));
+    free(db_elem->cfg_app_id);
+    free(db_elem->cfg_title);
+    free(db_elem);
 }
 
 /** ================================================================================================
@@ -596,7 +624,6 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopAppWithRight
 TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorHasDesktopAppWithRightConfig)
 {
     wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_insert_fake.custom_fake = custom_wl_list_insert;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
 
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
@@ -615,13 +642,17 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorHasDesktopAppWithRigh
     weston_config_section_get_uint_fake.custom_fake = custom_weston_config_section_get_uint;
     weston_config_section_get_string_fake.custom_fake = custom_weston_config_section_get_string;
 
-    ASSERT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_FAILED);
+    ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
     ASSERT_EQ(wet_get_config_fake.call_count, 1);
     ASSERT_EQ(weston_config_get_section_fake.call_count, 1);
     ASSERT_EQ(weston_config_next_section_fake.call_count, 1);
     ASSERT_EQ(weston_config_section_get_uint_fake.call_count, 3);
     ASSERT_EQ(weston_config_section_get_string_fake.call_count, 2);
+    struct db_elem *db_elem = (struct db_elem *)((uintptr_t)weston_config_section_get_uint_fake.arg2_history[2] - offsetof(struct db_elem, surface_id));
+    free(db_elem->cfg_app_id);
+    free(db_elem->cfg_title);
+    free(db_elem);
 }
 
 /** ================================================================================================
@@ -652,7 +683,6 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorHasDesktopAppWithRigh
 TEST_F(IdAgentTest, id_agent_module_init_success)
 {
     wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_insert_fake.custom_fake = custom_wl_list_insert;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
 
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
@@ -671,7 +701,7 @@ TEST_F(IdAgentTest, id_agent_module_init_success)
     weston_config_section_get_uint_fake.custom_fake = custom_weston_config_section_get_uint;
     weston_config_section_get_string_fake.custom_fake = custom_weston_config_section_get_string;
 
-    ASSERT_EQ(id_agent_module_init(&m_westonCompositor, &g_iviLayoutInterfaceFake), IVI_SUCCEEDED);
+    ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_SUCCEEDED);
 
     ASSERT_EQ(wet_get_config_fake.call_count, 1);
     ASSERT_EQ(weston_config_get_section_fake.call_count, 1);

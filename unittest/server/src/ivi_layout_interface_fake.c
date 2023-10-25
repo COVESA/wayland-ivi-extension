@@ -59,7 +59,7 @@ DEFINE_FAKE_VALUE_FUNC(int32_t, surface_set_visibility, struct ivi_layout_surfac
 DEFINE_FAKE_VALUE_FUNC(struct ivi_layout_layer *, get_layer_from_id, uint32_t );
 DEFINE_FAKE_VALUE_FUNC(struct ivi_layout_layer *, layer_create_with_dimension, uint32_t , int32_t , int32_t );
 DEFINE_FAKE_VALUE_FUNC(struct ivi_layout_surface *, get_surface_from_id, uint32_t );
-DEFINE_FAKE_VALUE_FUNC(struct ivi_layout_surface *, get_surface, struct weston_surface *);
+// DEFINE_FAKE_VALUE_FUNC(struct ivisurface *, get_surface, struct wl_list *, struct ivi_layout_surface *);    // have another get_surface() in ivi-controller.c
 DEFINE_FAKE_VALUE_FUNC(struct weston_surface *, surface_get_weston_surface, struct ivi_layout_surface *);
 DEFINE_FAKE_VALUE_FUNC(uint32_t, get_id_of_layer, struct ivi_layout_layer *);
 DEFINE_FAKE_VALUE_FUNC(uint32_t, get_id_of_surface, struct ivi_layout_surface *);
@@ -67,6 +67,7 @@ DEFINE_FAKE_VOID_FUNC(focus, struct weston_pointer_grab *);
 DEFINE_FAKE_VOID_FUNC(layer_destroy, struct ivi_layout_layer *);
 DEFINE_FAKE_VOID_FUNC(layer_remove_surface, struct ivi_layout_layer *, struct ivi_layout_surface *);
 DEFINE_FAKE_VOID_FUNC(transition_move_layer_cancel, struct ivi_layout_layer *);
+DEFINE_FAKE_VALUE_FUNC(int32_t, shell_add_destroy_listener_once, struct wl_listener *, wl_notify_func_t);
 
 struct ivi_layout_interface g_iviLayoutInterfaceFake = {
     .commit_changes = commit_changes,
@@ -114,8 +115,9 @@ struct ivi_layout_interface g_iviLayoutInterfaceFake = {
     .layer_set_fade_info = layer_set_fade_info,
     .surface_get_size = surface_get_size,
     .surface_dump = surface_dump,
-    .get_surface = get_surface,
+    // .get_surface = get_surface,
     .screen_remove_layer = screen_remove_layer,
+    .shell_add_destroy_listener_once = shell_add_destroy_listener_once,
 };
 
 struct weston_pointer_grab_interface g_grabInterfaceFake = {

@@ -58,7 +58,7 @@ DECLARE_FAKE_VOID_FUNC(wl_array_init, struct wl_array *);
 DECLARE_FAKE_VOID_FUNC(wl_array_release, struct wl_array *);
 DECLARE_FAKE_VOID_FUNC(wl_list_init, struct wl_list *);
 DECLARE_FAKE_VOID_FUNC(wl_list_remove, struct wl_list *);
-// DECLARE_FAKE_VALUE_FUNC(int, wl_list_length, const struct wl_list *);
+DECLARE_FAKE_VALUE_FUNC(int, wl_list_length, const struct wl_list *);
 
 #define CLIENT_API_FAKE_LIST(FAKE) \
     FAKE(wl_display_connect) \
@@ -87,6 +87,7 @@ DECLARE_FAKE_VOID_FUNC(wl_list_remove, struct wl_list *);
     FAKE(wl_array_release) \
     FAKE(wl_list_init) \
     FAKE(wl_list_remove) \
+    FAKE(wl_list_length) \
     FFF_RESET_HISTORY()
 
 #ifdef __cplusplus
