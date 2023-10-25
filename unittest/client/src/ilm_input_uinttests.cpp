@@ -24,7 +24,7 @@
 #include "client_api_fake.h"
 
 extern "C"{
-    extern struct ilm_control_context ilm_context;
+    struct ilm_control_context ilm_context;
     FAKE_VALUE_FUNC(ilmErrorTypes, impl_sync_and_acquire_instance, struct ilm_control_context *);
     FAKE_VOID_FUNC(release_instance);
 }
@@ -298,6 +298,7 @@ TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_cannotFindSurfaceId)
  */
 TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_success)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     mp_ilmErrorType[0] = ILM_SUCCESS;
     SET_RETURN_SEQ(impl_sync_and_acquire_instance, mp_ilmErrorType, 1);
 
@@ -365,6 +366,7 @@ TEST_F(IlmInputTest, ilm_getInputDevices_cannotSyncAcquireInstance)
  */
 TEST_F(IlmInputTest, ilm_getInputDevices_success)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     mp_ilmErrorType[0] = ILM_SUCCESS;
     SET_RETURN_SEQ(impl_sync_and_acquire_instance, mp_ilmErrorType, 1);
 
@@ -604,6 +606,7 @@ TEST_F(IlmInputTest, ilm_getInputFocus_cannotSyncAcquireInstance)
  */
 TEST_F(IlmInputTest, ilm_getInputFocus_success)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     mp_ilmErrorType[0] = ILM_SUCCESS;
     SET_RETURN_SEQ(impl_sync_and_acquire_instance, mp_ilmErrorType, 1);
 

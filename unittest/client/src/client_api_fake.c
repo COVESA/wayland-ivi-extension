@@ -49,5 +49,4 @@ DEFINE_FAKE_VOID_FUNC(wl_list_remove, struct wl_list *);
 DEFINE_FAKE_VOID_FUNC(wl_list_init, struct wl_list *);
 DEFINE_FAKE_VOID_FUNC(wl_array_init, struct wl_array *);
 DEFINE_FAKE_VOID_FUNC(wl_array_release, struct wl_array *);
-
-//DEFINE_FAKE_VALUE_FUNC(int, wl_list_length, const struct wl_list *);
+DEFINE_FAKE_VALUE_FUNC(int, wl_list_length, const struct wl_list *);

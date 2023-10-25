@@ -38,6 +38,21 @@ void custom_wl_list_insert(struct wl_list *list, struct wl_list *elm)
     elm->next->prev = elm;
 }
 
+int custom_wl_list_length(const struct wl_list *list)
+{
+	struct wl_list *e;
+	int count;
+
+	count = 0;
+	e = list->next;
+	while (e != list) {
+		e = e->next;
+		count++;
+	}
+
+	return count;
+}
+
 void custom_wl_list_remove(struct wl_list *elm)
 {
     elm->prev->next = elm->next;

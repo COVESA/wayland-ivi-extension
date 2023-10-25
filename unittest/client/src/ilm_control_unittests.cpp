@@ -22,13 +22,73 @@
 #include "ilm_control.h"
 #include "ilm_control_platform.h"
 #include "client_api_fake.h"
-#include "ilm_control_base_class.hpp"
 #include "ivi-wm-client-protocol.h"
+#include "ivi-input-client-protocol.h"
 
 extern "C"{
-    ILM_EXPORT ilmErrorTypes ilmControl_init(t_ilm_nativedisplay);
-    extern struct ilm_control_context ilm_context;
+WL_EXPORT const struct wl_interface ivi_screenshot_interface = {
+	"ivi_screenshot", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface ivi_wm_screen_interface = {
+	"ivi_wm_screen", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface ivi_wm_interface = {
+	"ivi_wm", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface ivi_input_interface = {
+	"ivi_input", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface wl_registry_interface = {
+	"wl_registry", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface wl_buffer_interface = {
+	"wl_buffer", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface wl_shm_pool_interface = {
+	"wl_shm_pool", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface wl_shm_interface = {
+	"wl_shm", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface wl_output_interface = {
+	"wl_output", 1,
+	0, NULL,
+	0, NULL,
+};
+
+FAKE_VALUE_FUNC(int, save_as_png, const char *, const char *, int32_t , int32_t , uint32_t );
+FAKE_VALUE_FUNC(int, save_as_bitmap, const char *, const char *, int32_t , int32_t , uint32_t );
+
 }
+
+extern "C"{
+#include "ilm_control_wayland_platform.c"
+}
+
 static constexpr uint8_t MAX_NUMBER = 5;
 
 enum ilmControlStatus
@@ -66,12 +126,11 @@ static void layerCallbackFunction(t_ilm_layer layer, struct ilmLayerProperties* 
     std::cout << "Notification: layer " << layer << "\n";
 }
 
-class IlmControlTest : public ::testing::Test, public IlmControlInitBase
+class IlmControlTest : public ::testing::Test
 {
 public:
     void SetUp()
     {
-        ASSERT_EQ(initBaseModule(), true);
         init_ctx_list_content();
         CLIENT_API_FAKE_LIST(RESET_FAKE);
         g_ilmControlStatus = NONE;
@@ -530,6 +589,7 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfScreen_success)
  */
 TEST_F(IlmControlTest, ilm_getScreenIDs_cannotSyncAcquireInstance)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     t_ilm_uint l_numberIds = 0;
     t_ilm_uint *lp_listIds = nullptr;
 
@@ -581,6 +641,7 @@ TEST_F(IlmControlTest, ilm_getScreenIDs_invaildInput)
  */
 TEST_F(IlmControlTest, ilm_getScreenIDs_success)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     ilm_context.initialized = true;
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
@@ -689,6 +750,7 @@ TEST_F(IlmControlTest, ilm_getScreenResolution_success)
  */
 TEST_F(IlmControlTest, ilm_getLayerIDs_cannotSyncAcquireInstance)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     t_ilm_int l_numberLayers = 0;
     t_ilm_layer *lp_listLayers = nullptr;
 
@@ -740,6 +802,7 @@ TEST_F(IlmControlTest, ilm_getLayerIDs_invaildInput)
  */
 TEST_F(IlmControlTest, ilm_getLayerIDs_success)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     ilm_context.initialized = true;
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
@@ -848,6 +911,7 @@ TEST_F(IlmControlTest, ilm_getLayerIDsOnScreen_success)
  */
 TEST_F(IlmControlTest, ilm_getSurfaceIDs_cannotSyncAcquireInstance)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     t_ilm_int l_numberSurfaces = 0;
     t_ilm_surface *lp_listSurfaces = nullptr;
 
@@ -897,6 +961,7 @@ TEST_F(IlmControlTest, ilm_getSurfaceIDs_invaildInput)
  */
 TEST_F(IlmControlTest, ilm_getSurfaceIDs_success)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     ilm_context.initialized = true;
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
@@ -1053,6 +1118,7 @@ TEST_F(IlmControlTest, ilm_layerCreateWithDimension_invaildInput)
  */
 TEST_F(IlmControlTest, ilm_layerCreateWithDimension_success)
 {
+    wl_list_length_fake.custom_fake = custom_wl_list_length;
     ilm_context.initialized = true;
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
@@ -3645,7 +3711,7 @@ TEST_F(IlmControlTest, wm_screen_listener_error_success)
  */
 TEST_F(IlmControlTest, input_listener_seat_created_validSeat)
 {
-    input_listener_seat_created(&ilm_context.wl, nullptr, "TOUCH", 0);
+    input_listener_seat_created(&ilm_context.wl, nullptr, "TOUCH", 0, 1);
 
     ASSERT_EQ(0, wl_list_insert_fake.call_count);
 }
@@ -3661,7 +3727,7 @@ TEST_F(IlmControlTest, input_listener_seat_created_validSeat)
  */
 TEST_F(IlmControlTest, input_listener_seat_created_newOne)
 {
-    input_listener_seat_created(&ilm_context.wl, nullptr, "", 0);
+    input_listener_seat_created(&ilm_context.wl, nullptr, "", 0, 1);
 
     ASSERT_EQ(1, wl_list_insert_fake.call_count);
 
@@ -4149,7 +4215,7 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_validScreen)
 
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_successResult, 1);
 
-    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(10, NULL));
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeScreenshot(10, NULL));
 }
 
 /** ================================================================================================
@@ -4187,5 +4253,5 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_validScreen)
 
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_successResult, 1);
 
-    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(NULL, 1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(NULL, 1));
 }

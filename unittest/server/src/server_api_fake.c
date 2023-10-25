@@ -22,7 +22,7 @@ DEFINE_FFF_GLOBALS;
 
 DEFINE_FAKE_VALUE_FUNC(struct weston_config_section *, weston_config_get_section, struct weston_config *, const char *, const char *, const char *);
 DEFINE_FAKE_VALUE_FUNC(const void *, weston_plugin_api_get, struct weston_compositor *, const char *, size_t );
-DEFINE_FAKE_VALUE_FUNC(void *, wet_load_module_entrypoint, const char *, const char *);
+DEFINE_FAKE_VALUE_FUNC(void *, weston_load_module, const char *, const char *, const char *);
 DEFINE_FAKE_VALUE_FUNC(int, weston_config_section_get_bool, struct weston_config_section *, const char *, bool *, bool );
 DEFINE_FAKE_VALUE_FUNC(int, weston_config_section_get_string, struct weston_config_section *, const char *, char **, const char *);
 DEFINE_FAKE_VALUE_FUNC(struct weston_view *, weston_view_create, struct weston_surface *);
@@ -32,7 +32,7 @@ DEFINE_FAKE_VALUE_FUNC(int, weston_config_next_section, struct weston_config *, 
 DEFINE_FAKE_VALUE_FUNC(int, weston_config_section_get_int, struct weston_config_section *, const char *, int32_t *, int32_t);
 DEFINE_FAKE_VALUE_FUNC(struct weston_config *, wet_get_config, struct weston_compositor *);
 DEFINE_FAKE_VALUE_FUNC(int, weston_config_section_get_uint, struct weston_config_section *, const char *, uint32_t *, uint32_t);
-DEFINE_FAKE_VALUE_FUNC(struct weston_view *, weston_compositor_pick_view, struct weston_compositor *, wl_fixed_t, wl_fixed_t, wl_fixed_t *, wl_fixed_t *);
+DEFINE_FAKE_VALUE_FUNC(struct weston_view *, weston_compositor_pick_view, struct weston_compositor *, struct weston_coord_global);
 DEFINE_FAKE_VALUE_FUNC(const char *, weston_desktop_surface_get_app_id, struct weston_desktop_surface *);
 DEFINE_FAKE_VALUE_FUNC(const char *, weston_desktop_surface_get_title, struct weston_desktop_surface *);
 DEFINE_FAKE_VALUE_FUNC(struct weston_desktop_surface *, weston_surface_get_desktop_surface, struct weston_surface *);
@@ -46,9 +46,9 @@ DEFINE_FAKE_VALUE_FUNC(uint32_t, wl_display_next_serial, struct wl_display *);
 DEFINE_FAKE_VALUE_FUNC(struct wl_event_source *, wl_event_loop_add_idle, struct wl_event_loop *, wl_event_loop_idle_func_t , void *);
 DEFINE_FAKE_VALUE_FUNC(struct wl_global *, wl_global_create, struct wl_display *, const struct wl_interface *, int ,  void *, wl_global_bind_func_t);
 DEFINE_FAKE_VALUE_FUNC(struct wl_resource *, wl_resource_create, struct wl_client *, const struct wl_interface *, int , uint32_t );
-// DEFINE_FAKE_VALUE_FUNC(struct wl_resource *, wl_resource_from_link, struct wl_list *);
+DEFINE_FAKE_VALUE_FUNC(struct wl_resource *, wl_resource_from_link, struct wl_list *);
 DEFINE_FAKE_VALUE_FUNC(struct wl_client *, wl_resource_get_client, struct wl_resource *);
-// DEFINE_FAKE_VALUE_FUNC(struct wl_list *, wl_resource_get_link, struct wl_resource *);
+DEFINE_FAKE_VALUE_FUNC(struct wl_list *, wl_resource_get_link, struct wl_resource *);
 DEFINE_FAKE_VALUE_FUNC(void *, wl_resource_get_user_data, struct wl_resource *);
 DEFINE_FAKE_VALUE_FUNC(int, wl_resource_get_version, struct wl_resource *);
 DEFINE_FAKE_VOID_FUNC(weston_layer_entry_remove, struct weston_layer_entry *);
@@ -69,15 +69,15 @@ DEFINE_FAKE_VOID_FUNC(weston_keyboard_send_keymap, struct weston_keyboard *, str
 DEFINE_FAKE_VOID_FUNC(weston_keyboard_start_grab, struct weston_keyboard *, struct weston_keyboard_grab *);
 DEFINE_FAKE_VOID_FUNC(weston_pointer_clear_focus, struct weston_pointer *);
 DEFINE_FAKE_VOID_FUNC(weston_pointer_send_axis, struct weston_pointer *, const struct timespec *, struct weston_pointer_axis_event *);
-DEFINE_FAKE_VOID_FUNC(weston_pointer_send_axis_source, struct weston_pointer *, uint32_t);
-DEFINE_FAKE_VOID_FUNC(weston_pointer_send_button, struct weston_pointer *, const struct timespec *, uint32_t, uint32_t);
+DEFINE_FAKE_VOID_FUNC(weston_pointer_send_axis_source, struct weston_pointer *, enum wl_pointer_axis_source);
+DEFINE_FAKE_VOID_FUNC(weston_pointer_send_button, struct weston_pointer *, const struct timespec *, uint32_t, enum wl_pointer_button_state);
 DEFINE_FAKE_VOID_FUNC(weston_pointer_send_frame, struct weston_pointer *);
 DEFINE_FAKE_VOID_FUNC(weston_pointer_send_motion, struct weston_pointer *, const struct timespec *, struct weston_pointer_motion_event *);
-DEFINE_FAKE_VOID_FUNC(weston_pointer_set_focus, struct weston_pointer *, struct weston_view *, wl_fixed_t, wl_fixed_t);
+DEFINE_FAKE_VOID_FUNC(weston_pointer_set_focus, struct weston_pointer *, struct weston_view *);
 DEFINE_FAKE_VOID_FUNC(weston_pointer_start_grab, struct weston_pointer *, struct weston_pointer_grab *);
-DEFINE_FAKE_VOID_FUNC(weston_touch_send_down, struct weston_touch *, const struct timespec *, int , wl_fixed_t , wl_fixed_t );
+DEFINE_FAKE_VOID_FUNC(weston_touch_send_down, struct weston_touch *, const struct timespec *, int , struct weston_coord_global);
 DEFINE_FAKE_VOID_FUNC(weston_touch_send_frame, struct weston_touch *);
-DEFINE_FAKE_VOID_FUNC(weston_touch_send_motion, struct weston_touch *, const struct timespec *, int , wl_fixed_t , wl_fixed_t );
+DEFINE_FAKE_VOID_FUNC(weston_touch_send_motion, struct weston_touch *, const struct timespec *, int , struct weston_coord_global);
 DEFINE_FAKE_VOID_FUNC(weston_touch_send_up, struct weston_touch *, const struct timespec *, int );
 DEFINE_FAKE_VOID_FUNC(weston_touch_set_focus, struct weston_touch *, struct weston_view *);
 DEFINE_FAKE_VOID_FUNC(weston_touch_start_grab, struct weston_touch *, struct weston_touch_grab *);
@@ -99,11 +99,26 @@ DEFINE_FAKE_VOID_FUNC(wl_list_remove, struct wl_list *);
 DEFINE_FAKE_VOID_FUNC(wl_array_init, struct wl_array *);
 DEFINE_FAKE_VOID_FUNC(wl_array_release, struct wl_array *);
 DEFINE_FAKE_VALUE_FUNC(int, wl_list_empty, const struct wl_list *);
+
+DEFINE_FAKE_VALUE_FUNC(int32_t, wl_shm_buffer_get_stride, struct wl_shm_buffer *);
+DEFINE_FAKE_VALUE_FUNC(int32_t, wl_shm_buffer_get_width, struct wl_shm_buffer *);
+DEFINE_FAKE_VALUE_FUNC(int32_t, wl_shm_buffer_get_height, struct wl_shm_buffer *);
+DEFINE_FAKE_VALUE_FUNC(void *, wl_shm_buffer_get_data, struct wl_shm_buffer *);
+DEFINE_FAKE_VOID_FUNC_VARARG(wl_client_post_implementation_error,struct wl_client *, char const *, ...);
+
 DEFINE_FAKE_VOID_FUNC(weston_keyboard_end_grab, struct weston_keyboard *);
 DEFINE_FAKE_VOID_FUNC(weston_pointer_end_grab, struct weston_pointer *);
 DEFINE_FAKE_VOID_FUNC(weston_touch_end_grab, struct weston_touch *);
 DEFINE_FAKE_VOID_FUNC(weston_output_schedule_repaint, struct weston_output *);
 DEFINE_FAKE_VALUE_FUNC(pixman_bool_t, pixman_region32_union, pixman_region32_t *, pixman_region32_t *, pixman_region32_t *);
+
+DEFINE_FAKE_VALUE_FUNC(struct weston_buffer *, weston_buffer_from_resource, struct weston_compositor *, struct wl_resource *);
+DEFINE_FAKE_VOID_FUNC(weston_view_geometry_dirty, struct weston_view *);
+DEFINE_FAKE_VALUE_FUNC(int, weston_screenshooter_shoot, struct weston_output *, struct weston_buffer *, weston_screenshooter_done_func_t, void *);
+DEFINE_FAKE_VOID_FUNC(weston_surface_map, struct weston_surface *);
+DEFINE_FAKE_VALUE_FUNC(bool, weston_surface_has_content, struct weston_surface *);
+DEFINE_FAKE_VALUE_FUNC(bool, weston_surface_is_mapped, struct weston_surface *);
+DEFINE_FAKE_VALUE_FUNC(int, wl_list_length, const struct wl_list *);
 
 int custom_weston_log(const char *format, va_list ap)
 {

@@ -18,8 +18,47 @@
  ****************************************************************************/
 
 #include <gtest/gtest.h>
-#include "ivi_controller_base_class.hpp"
+#include <dlfcn.h>
+#include <string>
+#include "server_api_fake.h"
+#include "ivi_layout_interface_fake.h"
 #include "ivi_layout_structure.hpp"
+
+enum {
+    WESTON_BUFFER_SHM,
+    WESTON_BUFFER_DMABUF,
+    WESTON_BUFFER_RENDERER_OPAQUE,
+    WESTON_BUFFER_SOLID,
+} type;
+
+extern "C"
+{
+WL_EXPORT const struct wl_interface wl_buffer_interface = {
+	"wl_buffer", 1,
+	0, NULL,
+	0, NULL,
+};
+
+WL_EXPORT const struct wl_interface wl_output_interface = {
+	"wl_output", 4,
+	0, NULL,
+	0, NULL,
+};
+
+struct wl_resource * custom_wl_resource_from_link(struct wl_list *link)
+{
+	struct wl_resource *resource;
+
+	return wl_container_of(link, resource, link);
+}
+
+struct wl_list * custom_wl_resource_get_link(struct wl_resource *resource)
+{
+	return &resource->link;
+}
+
+#include "ivi-controller.c"
+}
 
 static constexpr uint8_t MAX_NUMBER = 2;
 static uint32_t g_SurfaceCreatedCount = 0;
@@ -82,12 +121,11 @@ static void surface_create_callback(struct wl_listener *listener, void *data)
     g_SurfaceCreatedCount++;
 }
 
-class ControllerTests : public ::testing::Test, public ControllerBase
+class ControllerTests : public ::testing::Test
 {
 public:
     void SetUp()
     {
-        ASSERT_EQ(initBaseModule(), true);
         IVI_LAYOUT_FAKE_LIST(RESET_FAKE);
         SERVER_API_FAKE_LIST(RESET_FAKE);
         get_id_of_surface_fake.custom_fake = custom_get_id_of_surface;
@@ -149,13 +187,14 @@ public:
             m_layoutSurfaceProperties[i].visibility = true;
             m_layoutSurfaceProperties[i].transition_type = 1;
             m_layoutSurfaceProperties[i].transition_duration = 20;
-            m_layoutSurfaceProperties[i].event_mask = 0;
+            m_layoutSurfaceProperties[i].event_mask = 0xFFFFFFFF;
 
             // Prepare the ivi surface
             mp_iviSurface[i] = (struct ivisurface*)malloc(sizeof(struct ivisurface));
             mp_iviSurface[i]->shell = mp_iviShell;
             mp_iviSurface[i]->layout_surface = &m_layoutSurface[i];
             mp_iviSurface[i]->prop = &m_layoutSurfaceProperties[i];
+            mp_iviSurface[i]->type = IVI_WM_SURFACE_TYPE_DESKTOP;
             custom_wl_list_insert(&mp_iviShell->list_surface, &mp_iviSurface[i]->link);
 
             // the client callback, it listen the change from specific ivi surface id
@@ -251,6 +290,7 @@ public:
     }
 
     struct wl_resource *mp_wlResourceDefault = (struct wl_resource *)0xFFFFFF00;
+    struct weston_buffer *mp_westonBuffer = (struct weston_buffer *)0xFFFFFF00;
 
     struct wl_listener m_listenSurface[MAX_NUMBER] = {};
     struct ivisurface *mp_iviSurface[MAX_NUMBER] = {nullptr};
@@ -697,7 +737,8 @@ TEST_F(ControllerTests, output_created_event_defaultConfigScreen)
  */
 TEST_F(ControllerTests, bind_ivi_controller_nullResource)
 {
-    bind_ivi_controller(mp_fakeClient, mp_iviShell, 1, 1);
+    // update version >= 2
+    bind_ivi_controller(mp_fakeClient, mp_iviShell, 2, 1);
 
     ASSERT_EQ(wl_resource_create_fake.call_count, 1);
     ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 0);
@@ -724,7 +765,8 @@ TEST_F(ControllerTests, bind_ivi_controller_success)
 {
     SET_RETURN_SEQ(wl_resource_create, &mp_wlResourceDefault, 1);
 
-    bind_ivi_controller(mp_fakeClient, mp_iviShell, 1, 1);
+    // update version >= 2
+    bind_ivi_controller(mp_fakeClient, mp_iviShell, 2, 1);
 
     ASSERT_EQ(wl_resource_create_fake.call_count, 1);
     ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 1);
@@ -858,7 +900,7 @@ TEST_F(ControllerTests, wet_module_init_cannotGetIviLayoutInterface)
  *                         +# wet_module_init() must return 0
  *                         +# weston_plugin_api_get() must be called once time
  *                         +# wl_global_create() must be called once time
- *                         +# wet_load_module_entrypoint() not be called
+ *                         +# weston_load_module() not be called
  */
 TEST_F(ControllerTests, wet_module_init_cannotCreateGlobalWmIviInterface)
 {
@@ -869,7 +911,7 @@ TEST_F(ControllerTests, wet_module_init_cannotCreateGlobalWmIviInterface)
 
     ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
     ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    ASSERT_EQ(wet_load_module_entrypoint_fake.call_count, 0);
+    ASSERT_EQ(weston_load_module_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -880,13 +922,13 @@ TEST_F(ControllerTests, wet_module_init_cannotCreateGlobalWmIviInterface)
  *                      -# Set ms_inputControllerModuleValue is -1
  *                      -# Mocking the weston_plugin_api_get() does return an object
  *                      -# Mocking the wl_global_create() does return an object
- *                      -# Mocking the wet_load_module_entrypoint() does return an object
+ *                      -# Mocking the weston_load_module() does return an object
  *                      -# Calling the wet_module_init()
  *                      -# Verification point:
  *                         +# wet_module_init() must return 0
  *                         +# weston_plugin_api_get() must be called once time
  *                         +# wl_global_create() must be called once time
- *                         +# wet_load_module_entrypoint() must be called once time
+ *                         +# weston_load_module() must be called once time
  */
 TEST_F(ControllerTests, wet_module_init_cannotInitIviInputModule)
 {
@@ -897,13 +939,14 @@ TEST_F(ControllerTests, wet_module_init_cannotInitIviInputModule)
     struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF;
     SET_RETURN_SEQ(wl_global_create, &lp_wlGlobal, 1);
     void *lp_iviInputInitModule = (void*)custom_input_controller_module_init;
-    SET_RETURN_SEQ(wet_load_module_entrypoint, &lp_iviInputInitModule, 1);
+    SET_RETURN_SEQ(weston_load_module, &lp_iviInputInitModule, 1);
 
     ASSERT_NE(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
 
     ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
     ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    ASSERT_EQ(wet_load_module_entrypoint_fake.call_count, 1);
+    // this API dont have anymore
+    ASSERT_EQ(weston_load_module_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -917,13 +960,13 @@ TEST_F(ControllerTests, wet_module_init_cannotInitIviInputModule)
  *                      -# Set ms_idAgentModuleValue is -1
  *                      -# Mocking the weston_plugin_api_get() does return an object
  *                      -# Mocking the wl_global_create() does return an object
- *                      -# Mocking the wet_load_module_entrypoint() does return an object
+ *                      -# Mocking the weston_load_module() does return an object
  *                      -# Calling the wet_module_init()
  *                      -# Verification point:
  *                         +# wet_module_init() must return 0
  *                         +# weston_plugin_api_get() must be called once time
  *                         +# wl_global_create() must be called once time
- *                         +# wet_load_module_entrypoint() must be called 2 times
+ *                         +# weston_load_module() must be called 2 times
  *                         +# The result output should same with prepare data
  *                         +# Free resources are allocated when running the test
  */
@@ -939,13 +982,14 @@ TEST_F(ControllerTests, wet_module_init_cannotGetWestonConfig)
     struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF;
     SET_RETURN_SEQ(wl_global_create, &lp_wlGlobal, 1);
     void *lp_iviInputInitModule[] ={(void *)custom_input_controller_module_init, (void *)custom_id_agent_module_init};
-    SET_RETURN_SEQ(wet_load_module_entrypoint, lp_iviInputInitModule, 2);
+    SET_RETURN_SEQ(weston_load_module, lp_iviInputInitModule, 2);
 
+    // this API dont have anymore
     ASSERT_EQ(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
 
     ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
     ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    ASSERT_EQ(wet_load_module_entrypoint_fake.call_count, 2);
+    ASSERT_EQ(weston_load_module_fake.call_count, 2);
 
     struct ivishell *lp_iviShell = (struct ivishell*)wl_global_create_fake.arg3_history[0];
     EXPECT_EQ(lp_iviShell->interface, lp_iviLayoutInterface);
@@ -956,10 +1000,10 @@ TEST_F(ControllerTests, wet_module_init_cannotGetWestonConfig)
     EXPECT_EQ(lp_iviShell->bkgnd_color, 0);
     EXPECT_EQ(lp_iviShell->enable_cursor, 0);
     EXPECT_EQ(lp_iviShell->screen_ids.size, 0);
-    EXPECT_EQ(wl_list_length(&lp_iviShell->list_surface), 0);
-    EXPECT_EQ(wl_list_length(&lp_iviShell->list_layer), 0);
-    EXPECT_EQ(wl_list_length(&lp_iviShell->list_screen), 0);
-    EXPECT_EQ(wl_list_length(&lp_iviShell->list_controller), 0);
+    EXPECT_EQ(custom_wl_list_length(&lp_iviShell->list_surface), 0);
+    EXPECT_EQ(custom_wl_list_length(&lp_iviShell->list_layer), 0);
+    EXPECT_EQ(custom_wl_list_length(&lp_iviShell->list_screen), 0);
+    EXPECT_EQ(custom_wl_list_length(&lp_iviShell->list_controller), 0);
     EXPECT_NE(lp_iviShell->layer_created.notify, nullptr);
     EXPECT_NE(lp_iviShell->layer_removed.notify, nullptr);
     EXPECT_NE(lp_iviShell->surface_created.notify, nullptr);
@@ -968,11 +1012,9 @@ TEST_F(ControllerTests, wet_module_init_cannotGetWestonConfig)
     EXPECT_NE(lp_iviShell->output_created.notify, nullptr);
     EXPECT_NE(lp_iviShell->output_destroyed.notify, nullptr);
     EXPECT_NE(lp_iviShell->output_resized.notify, nullptr);
-    EXPECT_NE(lp_iviShell->destroy_listener.notify, nullptr);
-    EXPECT_EQ(wl_list_length(&m_westonCompositor.output_created_signal.listener_list), 1);
-    EXPECT_EQ(wl_list_length(&m_westonCompositor.output_destroyed_signal.listener_list), 1);
-    EXPECT_EQ(wl_list_length(&m_westonCompositor.output_resized_signal.listener_list), 1);
-    EXPECT_EQ(wl_list_length(&m_westonCompositor.destroy_signal.listener_list), 1);
+    EXPECT_EQ(custom_wl_list_length(&m_westonCompositor.output_created_signal.listener_list), 1);
+    EXPECT_EQ(custom_wl_list_length(&m_westonCompositor.output_destroyed_signal.listener_list), 1);
+    EXPECT_EQ(custom_wl_list_length(&m_westonCompositor.output_resized_signal.listener_list), 1);
 
     free(lp_iviShell);
 }
@@ -991,14 +1033,14 @@ TEST_F(ControllerTests, wet_module_init_cannotGetWestonConfig)
  *                      -# Mocking the wet_get_config() does return an object
  *                      -# Mocking the weston_config_get_section() does return an object
  *                      -# Mocking the weston_config_next_section() does return an object
- *                      -# Mocking the wet_load_module_entrypoint() does return an object
+ *                      -# Mocking the weston_load_module() does return an object
  *                      -# Set config data
  *                      -# Calling the wet_module_init()
  *                      -# Verification point:
  *                         +# wet_module_init() must return 0
  *                         +# weston_plugin_api_get() must be called once time
  *                         +# wl_global_create() must be called once time
- *                         +# wet_load_module_entrypoint() must be called 2 times
+ *                         +# weston_load_module() must be called 2 times
  *                         +# wet_get_config() must be called 3 times
  *                         +# weston_config_get_section() must be called 3 times
  *                         +# The result output should same with prepare data
@@ -1022,7 +1064,7 @@ TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
     SET_RETURN_SEQ(wet_get_config, &lp_westonConfig, 1);
     SET_RETURN_SEQ(weston_config_get_section, &lp_westonConfigSection, 1);
     SET_RETURN_SEQ(weston_config_next_section, lpp_westonConfigNextSection, 2);
-    SET_RETURN_SEQ(wet_load_module_entrypoint, lp_iviInputInitModule, 2);
+    SET_RETURN_SEQ(weston_load_module, lp_iviInputInitModule, 2);
 
     ControllerTests::ms_screenIdOffset = 100;
     ControllerTests::ms_screenId = 10;
@@ -1040,11 +1082,13 @@ TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
     weston_config_section_get_bool_fake.custom_fake = custom_weston_config_section_get_bool;
     weston_config_next_section_fake.custom_fake = custom_weston_config_next_section;
 
+
+    // this API dont have anymore
     ASSERT_EQ(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
 
     ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
     ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    ASSERT_EQ(wet_load_module_entrypoint_fake.call_count, 2);
+    ASSERT_EQ(weston_load_module_fake.call_count, 2);
     ASSERT_EQ(wet_get_config_fake.call_count, 3);
     ASSERT_EQ(weston_config_get_section_fake.call_count, 3);
 
@@ -1057,10 +1101,10 @@ TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
     EXPECT_EQ(lp_iviShell->bkgnd_color, ControllerTests::ms_bkgndColor);
     EXPECT_EQ(lp_iviShell->enable_cursor, ControllerTests::ms_enableCursor);
     EXPECT_EQ(lp_iviShell->screen_ids.size, sizeof(struct screen_id_info));
-    EXPECT_EQ(wl_list_length(&lp_iviShell->list_surface), 0);
-    EXPECT_EQ(wl_list_length(&lp_iviShell->list_layer), 0);
-    EXPECT_EQ(wl_list_length(&lp_iviShell->list_screen), 0);
-    EXPECT_EQ(wl_list_length(&lp_iviShell->list_controller), 0);
+    EXPECT_EQ(custom_wl_list_length(&lp_iviShell->list_surface), 0);
+    EXPECT_EQ(custom_wl_list_length(&lp_iviShell->list_layer), 0);
+    EXPECT_EQ(custom_wl_list_length(&lp_iviShell->list_screen), 0);
+    EXPECT_EQ(custom_wl_list_length(&lp_iviShell->list_controller), 0);
     EXPECT_NE(lp_iviShell->layer_created.notify, nullptr);
     EXPECT_NE(lp_iviShell->layer_removed.notify, nullptr);
     EXPECT_NE(lp_iviShell->surface_created.notify, nullptr);
@@ -1069,11 +1113,9 @@ TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
     EXPECT_NE(lp_iviShell->output_created.notify, nullptr);
     EXPECT_NE(lp_iviShell->output_destroyed.notify, nullptr);
     EXPECT_NE(lp_iviShell->output_resized.notify, nullptr);
-    EXPECT_NE(lp_iviShell->destroy_listener.notify, nullptr);
-    EXPECT_EQ(wl_list_length(&m_westonCompositor.output_created_signal.listener_list), 1);
-    EXPECT_EQ(wl_list_length(&m_westonCompositor.output_destroyed_signal.listener_list), 1);
-    EXPECT_EQ(wl_list_length(&m_westonCompositor.output_resized_signal.listener_list), 1);
-    EXPECT_EQ(wl_list_length(&m_westonCompositor.destroy_signal.listener_list), 1);
+    EXPECT_EQ(custom_wl_list_length(&m_westonCompositor.output_created_signal.listener_list), 1);
+    EXPECT_EQ(custom_wl_list_length(&m_westonCompositor.output_destroyed_signal.listener_list), 1);
+    EXPECT_EQ(custom_wl_list_length(&m_westonCompositor.output_resized_signal.listener_list), 1);
 
     struct screen_id_info *screen_info = NULL;
     wl_array_for_each(screen_info, &lp_iviShell->screen_ids) {
@@ -1263,7 +1305,7 @@ TEST_F(ControllerTests, controller_screen_remove_layer_success)
 TEST_F(ControllerTests, controller_screen_screenshot_nullScreenShot)
 {
     uint32_t l_id = 10;
-    controller_screen_screenshot(nullptr, nullptr, l_id);
+    controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
 
     ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 1);
 }
@@ -1285,7 +1327,7 @@ TEST_F(ControllerTests, controller_screen_screenshot_nullScreen)
     SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
 
     uint32_t l_id = 10;
-    controller_screen_screenshot(nullptr, nullptr, l_id);
+    controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
 
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
@@ -1309,12 +1351,14 @@ TEST_F(ControllerTests, controller_screen_screenshot_success)
     struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
     SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
+    SET_RETURN_SEQ(weston_buffer_from_resource, &mp_westonBuffer, 1);
 
     uint32_t l_id = 10;
-    controller_screen_screenshot(nullptr, nullptr, l_id);
+    controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
 
     ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 2);
+    ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 1);
+    ASSERT_EQ(weston_screenshooter_shoot_fake.call_count, 1);
 
     struct screenshot_frame_listener *lp_l = (struct screenshot_frame_listener*)wl_resource_set_implementation_fake.arg2_history[0];
     free(lp_l);
@@ -2273,7 +2317,7 @@ TEST_F(ControllerTests, controller_surface_screenshot_nullScreenShot)
 {
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
 
-    controller_surface_screenshot(nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
 
     ASSERT_EQ(wl_client_post_no_memory_fake.call_count, 1);
 }
@@ -2295,7 +2339,7 @@ TEST_F(ControllerTests, controller_surface_screenshot_errByLayoutSurface)
     struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
     SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
 
-    controller_surface_screenshot(nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
 
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
@@ -2324,7 +2368,7 @@ TEST_F(ControllerTests, controller_surface_screenshot_errByResult)
 
     surface_get_size_fake.custom_fake = nullptr;
 
-    controller_surface_screenshot(nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
 
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
@@ -2355,7 +2399,7 @@ TEST_F(ControllerTests, controller_surface_screenshot_errReadpixByResult)
     surface_get_size_fake.custom_fake = custom_surface_get_size;
     SET_RETURN_SEQ(surface_dump, &mp_failureResult[0], 1);
 
-    controller_surface_screenshot(nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
 
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
@@ -2386,7 +2430,7 @@ TEST_F(ControllerTests, controller_surface_screenshot_success)
     surface_get_size_fake.custom_fake = custom_surface_get_size;
     SET_RETURN_SEQ(surface_dump, mp_successResult, 1);
 
-    controller_surface_screenshot(nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
 
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
@@ -2704,16 +2748,17 @@ TEST_F(ControllerTests, destroy_ivicontroller_screen_success)
  */
 TEST_F(ControllerTests, controller_screenshot_notify_error)
 {
-    struct screenshot_frame_listener l_listener;
-    l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
+    // controller_screenshot_notify() is removed in ivi-controller.c
+    // struct screenshot_frame_listener l_listener;
+    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
+    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
 
-    controller_screenshot_notify(&l_listener.frame_listener, nullptr);
+    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
 
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
 
-    free(l_listener.output->compositor);
-    free(l_listener.output);
+    // free(l_listener.output->compositor);
+    // free(l_listener.output);
 }
 
 /** ================================================================================================
@@ -2729,25 +2774,26 @@ TEST_F(ControllerTests, controller_screenshot_notify_error)
  */
 TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatARGB)
 {
-    struct screenshot_frame_listener l_listener;
-    l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-    l_listener.output->compositor->read_format = PIXMAN_a8r8g8b8;
-    l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
-    l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
-    l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
-    l_listener.output->current_mode->width = 1;
-    l_listener.output->current_mode->height = 10;
+    // controller_screenshot_notify() is removed in ivi-controller.c
+    // struct screenshot_frame_listener l_listener;
+    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
+    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
+    // l_listener.output->compositor->read_format = PIXMAN_a8r8g8b8;
+    // l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
+    // l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
+    // l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
+    // l_listener.output->current_mode->width = 1;
+    // l_listener.output->current_mode->height = 10;
 
-    controller_screenshot_notify(&l_listener.frame_listener, nullptr);
+    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
 
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
 
-    free(l_listener.output->current_mode);
-    free(l_listener.output->compositor->renderer);
-    free(l_listener.output->compositor);
-    free(l_listener.output);
+    // free(l_listener.output->current_mode);
+    // free(l_listener.output->compositor->renderer);
+    // free(l_listener.output->compositor);
+    // free(l_listener.output);
 }
 
 /** ================================================================================================
@@ -2763,25 +2809,26 @@ TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatARGB)
  */
 TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatXRGB)
 {
-    struct screenshot_frame_listener l_listener;
-    l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-    l_listener.output->compositor->read_format = PIXMAN_x8r8g8b8;
-    l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
-    l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
-    l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
-    l_listener.output->current_mode->width = 1;
-    l_listener.output->current_mode->height = 1;
+    // controller_screenshot_notify() is removed in ivi-controller.c
+    // struct screenshot_frame_listener l_listener;
+    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
+    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
+    // l_listener.output->compositor->read_format = PIXMAN_x8r8g8b8;
+    // l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
+    // l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
+    // l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
+    // l_listener.output->current_mode->width = 1;
+    // l_listener.output->current_mode->height = 1;
 
-    controller_screenshot_notify(&l_listener.frame_listener, nullptr);
+    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
 
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
 
-    free(l_listener.output->current_mode);
-    free(l_listener.output->compositor->renderer);
-    free(l_listener.output->compositor);
-    free(l_listener.output);
+    // free(l_listener.output->current_mode);
+    // free(l_listener.output->compositor->renderer);
+    // free(l_listener.output->compositor);
+    // free(l_listener.output);
 }
 
 /** ================================================================================================
@@ -2797,25 +2844,26 @@ TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatXRGB)
  */
 TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatABGR)
 {
-    struct screenshot_frame_listener l_listener;
-    l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-    l_listener.output->compositor->read_format = PIXMAN_a8b8g8r8;
-    l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
-    l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
-    l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
-    l_listener.output->current_mode->width = 1;
-    l_listener.output->current_mode->height = 1;
+    // controller_screenshot_notify() is removed in ivi-controller.c
+    // struct screenshot_frame_listener l_listener;
+    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
+    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
+    // l_listener.output->compositor->read_format = PIXMAN_a8b8g8r8;
+    // l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
+    // l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
+    // l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
+    // l_listener.output->current_mode->width = 1;
+    // l_listener.output->current_mode->height = 1;
 
-    controller_screenshot_notify(&l_listener.frame_listener, nullptr);
+    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
 
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
 
-    free(l_listener.output->current_mode);
-    free(l_listener.output->compositor->renderer);
-    free(l_listener.output->compositor);
-    free(l_listener.output);
+    // free(l_listener.output->current_mode);
+    // free(l_listener.output->compositor->renderer);
+    // free(l_listener.output->compositor);
+    // free(l_listener.output);
 }
 
 /** ================================================================================================
@@ -2831,26 +2879,27 @@ TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatABGR)
  */
 TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatXBGR)
 {
-    struct screenshot_frame_listener l_listener;
-    l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-    l_listener.output->compositor->read_format = PIXMAN_x8b8g8r8;
-    l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
-    l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
-    l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
-    l_listener.output->current_mode->width = 1;
-    l_listener.output->current_mode->height = 1;
-    l_listener.output->compositor->capabilities = 1;
+    // controller_screenshot_notify() is removed in ivi-controller.c
+    // struct screenshot_frame_listener l_listener;
+    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
+    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
+    // l_listener.output->compositor->read_format = PIXMAN_x8b8g8r8;
+    // l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
+    // l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
+    // l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
+    // l_listener.output->current_mode->width = 1;
+    // l_listener.output->current_mode->height = 1;
+    // l_listener.output->compositor->capabilities = 1;
 
-    controller_screenshot_notify(&l_listener.frame_listener, nullptr);
+    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
 
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
 
-    free(l_listener.output->current_mode);
-    free(l_listener.output->compositor->renderer);
-    free(l_listener.output->compositor);
-    free(l_listener.output);
+    // free(l_listener.output->current_mode);
+    // free(l_listener.output->compositor->renderer);
+    // free(l_listener.output->compositor);
+    // free(l_listener.output);
 }
 
 /** ================================================================================================
@@ -2865,13 +2914,14 @@ TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatXBGR)
  */
 TEST_F(ControllerTests, screenshot_output_destroyed_success)
 {
-    struct screenshot_frame_listener *l_listener = (struct screenshot_frame_listener *)malloc(sizeof(struct screenshot_frame_listener));
-    screenshot_output_destroyed(&l_listener->output_destroyed, nullptr);
+    // screenshot_output_destroyed() is removed in ivi-controller.c
+    // struct screenshot_frame_listener *l_listener = (struct screenshot_frame_listener *)malloc(sizeof(struct screenshot_frame_listener));
+    // screenshot_output_destroyed(&l_listener->output_destroyed, nullptr);
 
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
 
-    free(l_listener);
+    // free(l_listener);
 }
 
 /** ================================================================================================
@@ -2885,12 +2935,13 @@ TEST_F(ControllerTests, screenshot_output_destroyed_success)
  */
 TEST_F(ControllerTests, screenshot_frame_listener_destroy_success)
 {
-    struct screenshot_frame_listener *l_listener[1] = {(struct screenshot_frame_listener*)malloc(sizeof(struct screenshot_frame_listener))};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_listener, 1);
+    // struct screenshot_frame_listener_destroy() is removed in ivi-controller.c
+    // struct screenshot_frame_listener *l_listener[1] = {(struct screenshot_frame_listener*)malloc(sizeof(struct screenshot_frame_listener))};
+    // SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_listener, 1);
 
-    screenshot_frame_listener_destroy(nullptr);
+    // screenshot_frame_listener_destroy(nullptr);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 2);
+    // ASSERT_EQ(wl_list_remove_fake.call_count, 2);
 }
 
 /** ================================================================================================
@@ -2924,6 +2975,8 @@ TEST_F(ControllerTests, output_destroyed_event_invalidOutput)
  */
 TEST_F(ControllerTests, output_destroyed_event_success)
 {
+    wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
+    wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
     mp_iviShell->bkgnd_view = (struct weston_view*)malloc(sizeof(struct weston_view));
     mp_iviShell->bkgnd_view->surface = (struct weston_surface*)malloc(sizeof(struct weston_surface));
     mp_iviShell->bkgnd_view->surface->width = 1;
@@ -2932,6 +2985,7 @@ TEST_F(ControllerTests, output_destroyed_event_success)
     custom_wl_list_init(&mp_iviShell->compositor->output_list);
     struct weston_output *l_output = (struct weston_output *)malloc(sizeof(struct weston_output));
     l_output->name = (char*)"default";
+    l_output->id = 1;
     l_output->x = 1;
     l_output->y = 1;
     l_output->width = 1;
@@ -2940,6 +2994,7 @@ TEST_F(ControllerTests, output_destroyed_event_success)
     custom_wl_list_init(&mp_iviShell->bkgnd_view->surface->compositor->output_list);
     struct weston_output *l_output2 = (struct weston_output *)malloc(sizeof(struct weston_output));
     l_output2->name = (char*)"default";
+    l_output2->id = 1;
     l_output2->x = 1;
     l_output2->y = 1;
     l_output2->width = 1;
@@ -2975,7 +3030,7 @@ TEST_F(ControllerTests, output_resized_event_nullBkgndView)
     mp_iviShell->bkgnd_view = nullptr;
     mp_iviShell->client = (struct wl_client*)&mp_fakeClient;
 
-    output_resized_event(&mp_iviShell->output_destroyed, nullptr);
+    output_resized_event(&mp_iviShell->output_resized, nullptr);
 
     ASSERT_EQ(wl_list_remove_fake.call_count, 0);
 }
@@ -2995,7 +3050,7 @@ TEST_F(ControllerTests, output_resized_event_nullClient)
     mp_iviShell->bkgnd_view = (struct weston_view*)malloc(sizeof(struct weston_view));
     mp_iviShell->client = nullptr;
 
-    output_resized_event(&mp_iviShell->output_destroyed, nullptr);
+    output_resized_event(&mp_iviShell->output_resized, nullptr);
 
     ASSERT_EQ(wl_list_remove_fake.call_count, 0);
 
@@ -3021,13 +3076,22 @@ TEST_F(ControllerTests, output_resized_event_success)
     mp_iviShell->bkgnd_view->surface->height = 1;
     mp_iviShell->bkgnd_view->surface->compositor = (struct weston_compositor*)malloc(sizeof(weston_compositor));
     custom_wl_list_init(&mp_iviShell->bkgnd_view->surface->compositor->output_list);
+    struct weston_output *l_output = (struct weston_output *)malloc(sizeof(struct weston_output));
+    l_output->name = (char*)"default";
+    l_output->id = 1;
+    l_output->x = 1;
+    l_output->y = 1;
+    l_output->width = 1;
+    l_output->height = 1;
+    custom_wl_list_insert(&mp_iviShell->compositor->output_list, &l_output->link);
     mp_iviShell->client = (struct wl_client*)&mp_fakeClient;
 
-    output_resized_event(&mp_iviShell->output_destroyed, nullptr);
+    output_resized_event(&mp_iviShell->output_resized, nullptr);
 
     ASSERT_EQ(wl_list_remove_fake.call_count, 1);
     ASSERT_EQ(wl_list_insert_fake.call_count, 1);
 
+    free(l_output);
     free(mp_iviShell->bkgnd_view->surface->compositor);
     free(mp_iviShell->bkgnd_view->surface);
     free(mp_iviShell->bkgnd_view);
@@ -3093,8 +3157,9 @@ TEST_F(ControllerTests, layer_event_remove_success)
  */
 TEST_F(ControllerTests, surface_event_remove_wrongIviSurface)
 {
-    surface_event_remove(&mp_iviShell->surface_removed, nullptr);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 0);
+    // logic is changed, cannot pass nullptr argument
+    // surface_event_remove(&mp_iviShell->surface_removed, nullptr);
+    // ASSERT_EQ(wl_list_remove_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -3113,7 +3178,7 @@ TEST_F(ControllerTests, surface_event_remove_wrongIdSurface)
 
     ASSERT_EQ(wl_list_remove_fake.call_count, 5);
 
-    mp_surfaceNotification[0] = (struct notification*)malloc(sizeof(struct notification));
+    mp_surfaceNotification[0] = (struct notification *)malloc(sizeof(struct notification));
     mp_iviSurface[0] = (struct ivisurface*)malloc(sizeof(struct ivisurface));
 }
 
@@ -3134,15 +3199,20 @@ TEST_F(ControllerTests, surface_event_remove_wrongIdSurface)
 TEST_F(ControllerTests, surface_event_remove_success)
 {
     mp_iviShell->bkgnd_surface_id = 10;
+    mp_iviShell->bkgnd_surface = mp_iviSurface[0];
+    struct weston_view * tmp;
     mp_iviShell->bkgnd_view = (struct weston_view*)malloc(sizeof(struct weston_view));
+    // need this to avoid leak memory
+    tmp = mp_iviShell->bkgnd_view;
 
     surface_event_remove(&mp_iviShell->surface_removed, m_layoutSurface);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 5);
+    ASSERT_EQ(wl_list_remove_fake.call_count, 3);
     ASSERT_EQ(weston_layer_entry_remove_fake.call_count, 1);
     ASSERT_EQ(weston_view_destroy_fake.call_count, 1);
 
     free(mp_iviShell->bkgnd_view);
+    free(tmp);
 
     mp_surfaceNotification[0] = (struct notification*)malloc(sizeof(struct notification));
     mp_iviSurface[0] = (struct ivisurface*)malloc(sizeof(struct ivisurface));
@@ -3159,12 +3229,17 @@ TEST_F(ControllerTests, surface_event_remove_success)
  */
 TEST_F(ControllerTests, surface_event_configure_wrongSurfaceId)
 {
+    m_layoutSurface[0].surface = (struct weston_surface*)malloc(sizeof(struct weston_surface));
+    m_layoutSurface[0].surface->width = 1;
+    m_layoutSurface[0].surface->height = 1;
+    struct weston_surface* tmp[1] = {m_layoutSurface[0].surface};
+    SET_RETURN_SEQ(surface_get_weston_surface, (struct weston_surface**)(tmp), 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
 
     mp_iviShell->bkgnd_surface_id = 0;
-    surface_event_configure(&mp_iviShell->surface_configured, m_layoutSurface);
-
+    surface_event_configure(&mp_iviShell->surface_configured, &m_layoutSurface[0]);
     ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
+    free(m_layoutSurface[0].surface);
 }
 
 /** ================================================================================================
@@ -3190,14 +3265,17 @@ TEST_F(ControllerTests, surface_event_configure_validBkgndView)
     mp_iviShell->bkgnd_view->surface->height = 1;
     mp_iviShell->bkgnd_view->surface->compositor = (struct weston_compositor*)malloc(sizeof(weston_compositor));
     custom_wl_list_init(&mp_iviShell->bkgnd_view->surface->compositor->output_list);
-
+    uint32_t tmp[1] = {m_layoutSurface[0].id_surface};
+    SET_RETURN_SEQ(get_id_of_surface, (uint32_t *)tmp, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
 
     surface_event_configure(&mp_iviShell->surface_configured, m_layoutSurface);
 
     ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 0);
     ASSERT_EQ(wl_list_remove_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
+    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    ASSERT_EQ(get_id_of_surface_fake.call_count, 1);
+    ASSERT_EQ(weston_matrix_init_fake.call_count, 1);
 
     free(mp_iviShell->bkgnd_view->surface->compositor);
     free(mp_iviShell->bkgnd_view->surface);
@@ -3231,14 +3309,18 @@ TEST_F(ControllerTests, surface_event_configure_nullBkgndView)
     l_bkgnd_view[0]->surface->compositor = (struct weston_compositor*)malloc(sizeof(weston_compositor));
     custom_wl_list_init(&l_bkgnd_view[0]->surface->compositor->output_list);
 
+    uint32_t tmp[1] = {m_layoutSurface[0].id_surface};
+    SET_RETURN_SEQ(get_id_of_surface, (uint32_t *)tmp, 1);
     SET_RETURN_SEQ(weston_view_create, l_bkgnd_view, 1);
 
     surface_event_configure(&mp_iviShell->surface_configured, m_layoutSurface);
 
     ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 0);
     ASSERT_EQ(wl_list_remove_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
+    ASSERT_EQ(wl_list_init_fake.call_count, 1);
     ASSERT_EQ(weston_view_create_fake.call_count, 1);
+    ASSERT_EQ(weston_layer_entry_insert_fake.call_count, 1);
+    ASSERT_EQ(weston_surface_map_fake.call_count, 1);
 
     free(l_bkgnd_view[0]->surface->compositor);
     free(l_bkgnd_view[0]->surface);
@@ -3258,12 +3340,15 @@ TEST_F(ControllerTests, surface_event_configure_nullBkgndView)
  */
 TEST_F(ControllerTests, ivi_shell_destroy_nullClient)
 {
+    wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
+    wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
     mp_iviShell->client = nullptr;
     mp_screenInfo->screen_name = (char *)malloc(30);
 
     ivi_shell_destroy(&mp_iviShell->destroy_listener, nullptr);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 15);
+    ASSERT_EQ(wl_list_remove_fake.call_count, 16);
+    ASSERT_EQ(wl_client_destroy_fake.call_count, 0);
 
     for(uint8_t i = 0; i < MAX_NUMBER; i++)
     {
@@ -3295,7 +3380,7 @@ TEST_F(ControllerTests, ivi_shell_destroy_success)
 
     ivi_shell_destroy(&mp_iviShell->destroy_listener, nullptr);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 16);
+    ASSERT_EQ(wl_list_remove_fake.call_count, 17);
 
     for(uint8_t i = 0; i < MAX_NUMBER; i++)
     {
