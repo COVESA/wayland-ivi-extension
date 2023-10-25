@@ -2156,7 +2156,7 @@ ilm_displaySetRenderOrder(t_ilm_display display,
 static int
 create_screenshot_file(size_t size)
 {
-    const char template[] = "/ivi-shell-screenshot-XXXXXX";
+    const char templatename[] = "/ivi-shell-screenshot-XXXXXX";
     const char *runtimedir;
     char *tmpname;
     int fd;
@@ -2165,11 +2165,11 @@ create_screenshot_file(size_t size)
     if (runtimedir == NULL)
         return -1;
 
-    tmpname = malloc(strlen(runtimedir) + sizeof(template));
+    tmpname = malloc(strlen(runtimedir) + sizeof(templatename));
     if (tmpname == NULL)
         return -1;
 
-    fd = mkstemp(strcat(strcpy(tmpname, runtimedir), template));
+    fd = mkstemp(strcat(strcpy(tmpname, runtimedir), templatename));
 
     if (fd < 0) {
     	free(tmpname);

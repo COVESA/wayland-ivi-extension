@@ -98,12 +98,12 @@ struct screen_id_info {
 static void
 clear_notification_list(struct wl_list* notification_list)
 {
-    struct notification *not, *next;
+    struct notification *noti, *next;
 
-    wl_list_for_each_safe(not, next, notification_list, link) {
-         wl_list_remove(&not->layout_link);
-         wl_list_remove(&not->link);
-         free(not);
+    wl_list_for_each_safe(noti, next, notification_list, link) {
+         wl_list_remove(&noti->layout_link);
+         wl_list_remove(&noti->link);
+         free(noti);
     }
 }
 
@@ -214,15 +214,15 @@ send_surface_prop(struct wl_listener *listener, void *data)
     enum ivi_layout_notification_mask mask;
     struct ivicontroller *ctrl;
     const struct ivi_layout_interface *lyt = ivisurf->shell->interface;
-    struct notification *not;
+    struct notification *noti;
     uint32_t surface_id;
 
     mask = ivisurf->prop->event_mask;
 
     surface_id = lyt->get_id_of_surface(ivisurf->layout_surface);
 
-    wl_list_for_each(not, &ivisurf->notification_list, layout_link) {
-        ctrl = wl_resource_get_user_data(not->resource);
+    wl_list_for_each(noti, &ivisurf->notification_list, layout_link) {
+        ctrl = wl_resource_get_user_data(noti->resource);
         send_surface_event(ctrl, ivisurf->layout_surface, surface_id, ivisurf->prop, mask);
     }
 }
@@ -261,15 +261,15 @@ send_layer_prop(struct wl_listener *listener, void *data)
     enum ivi_layout_notification_mask mask;
     struct ivicontroller *ctrl;
     const struct ivi_layout_interface *lyt = ivilayer->shell->interface;
-    struct notification *not;
+    struct notification *noti;
     uint32_t layer_id;
 
     mask = ivilayer->prop->event_mask;
 
     layer_id = lyt->get_id_of_layer(ivilayer->layout_layer);
 
-    wl_list_for_each(not, &ivilayer->notification_list, layout_link) {
-        ctrl = wl_resource_get_user_data(not->resource);
+    wl_list_for_each(noti, &ivilayer->notification_list, layout_link) {
+        ctrl = wl_resource_get_user_data(noti->resource);
         send_layer_event(ctrl, ivilayer->layout_layer, layer_id, ivilayer->prop, mask);
     }
 }
@@ -553,7 +553,7 @@ controller_surface_sync(struct wl_client *client,
     struct ivi_layout_surface *layout_surface;
     struct ivisurface *ivisurf;
     (void)client;
-    struct notification *not;
+    struct notification *noti;
 
     layout_surface = lyt->get_surface_from_id(surface_id);
     if (!layout_surface) {
@@ -568,23 +568,23 @@ controller_surface_sync(struct wl_client *client,
     switch (sync_state) {
     case IVI_WM_SYNC_ADD:
         /*Check if a notification for the surface is already initialized*/
-        not= calloc(1, sizeof *not);
-        if (not == NULL) {
+        noti= calloc(1, sizeof *noti);
+        if (noti == NULL) {
             wl_resource_post_no_memory(resource);
             return;
         }
 
-        wl_list_insert(&ctrl->surface_notifications, &not->link);
-        wl_list_insert(&ivisurf->notification_list, &not->layout_link);
-        not->resource = resource;
+        wl_list_insert(&ctrl->surface_notifications, &noti->link);
+        wl_list_insert(&ivisurf->notification_list, &noti->layout_link);
+        noti->resource = resource;
         break;
     case IVI_WM_SYNC_REMOVE:
-        wl_list_for_each(not, &ivisurf->notification_list, layout_link)
+        wl_list_for_each(noti, &ivisurf->notification_list, layout_link)
         {
-            if (not->resource == resource) {
-                wl_list_remove(&not->link);
-                wl_list_remove(&not->layout_link);
-                free(not);
+            if (noti->resource == resource) {
+                wl_list_remove(&noti->link);
+                wl_list_remove(&noti->layout_link);
+                free(noti);
                 break;
             }
         }
@@ -986,7 +986,7 @@ controller_layer_sync(struct wl_client *client,
     struct ivi_layout_layer *layout_layer;
     struct ivilayer *ivilayer;
     (void)client;
-    struct notification *not;
+    struct notification *noti;
 
     layout_layer = lyt->get_layer_from_id(layer_id);
     if (!layout_layer) {
@@ -1001,25 +1001,25 @@ controller_layer_sync(struct wl_client *client,
     switch (sync_state) {
     case IVI_WM_SYNC_ADD:
         /*Check if a notification for the surface is already initialized*/
-        not= calloc(1, sizeof *not);
-        if (not == NULL) {
+        noti= calloc(1, sizeof *noti);
+        if (noti == NULL) {
             wl_resource_post_no_memory(resource);
             return;
         }
 
-        wl_list_insert(&ctrl->layer_notifications, &not->link);
-        wl_list_insert(&ivilayer->notification_list, &not->layout_link);
-        not->resource = resource;
+        wl_list_insert(&ctrl->layer_notifications, &noti->link);
+        wl_list_insert(&ivilayer->notification_list, &noti->layout_link);
+        noti->resource = resource;
         break;
     case IVI_WM_SYNC_REMOVE:
         ivilayer = get_layer(&ctrl->shell->list_layer, layout_layer);
 
-        wl_list_for_each(not, &ivilayer->notification_list, layout_link)
+        wl_list_for_each(noti, &ivilayer->notification_list, layout_link)
         {
-            if (not->resource == resource) {
-                wl_list_remove(&not->link);
-                wl_list_remove(&not->layout_link);
-                free(not);
+            if (noti->resource == resource) {
+                wl_list_remove(&noti->link);
+                wl_list_remove(&noti->layout_link);
+                free(noti);
                 break;
             }
         }
@@ -1224,6 +1224,7 @@ controller_screen_screenshot(struct wl_client *client,
 {
     struct iviscreen *iviscrn = wl_resource_get_user_data(resource);
     struct ivi_screenshooter *screenshooter = NULL;
+    struct weston_buffer *buffer = NULL;
 
     screenshooter = malloc(sizeof(struct ivi_screenshooter));
     if(screenshooter == NULL) {
@@ -1247,7 +1248,7 @@ controller_screen_screenshot(struct wl_client *client,
     }
 
     screenshooter->output = iviscrn->output;
-    struct weston_buffer *buffer = weston_buffer_from_resource
+    buffer = weston_buffer_from_resource
             (screenshooter->output->compositor, buffer_resource);
 
     if (buffer == NULL) {
@@ -1642,7 +1643,7 @@ layer_event_remove(struct wl_listener *listener, void *data)
     struct ivi_layout_layer *layout_layer =
            (struct ivi_layout_layer *) data;
     uint32_t id_layer = 0;
-    struct notification *not, *next;
+    struct notification *noti, *next;
 
     ivilayer = get_layer(&shell->list_layer, layout_layer);
     if (ivilayer == NULL) {
@@ -1650,11 +1651,11 @@ layer_event_remove(struct wl_listener *listener, void *data)
         return;
     }
 
-    wl_list_for_each_safe(not, next, &ivilayer->notification_list, layout_link)
+    wl_list_for_each_safe(noti, next, &ivilayer->notification_list, layout_link)
     {
-        wl_list_remove(&not->link);
-        wl_list_remove(&not->layout_link);
-        free(not);
+        wl_list_remove(&noti->link);
+        wl_list_remove(&noti->layout_link);
+        free(noti);
     }
 
     wl_list_remove(&ivilayer->link);
@@ -1720,7 +1721,7 @@ surface_event_remove(struct wl_listener *listener, void *data)
     struct ivi_layout_surface *layout_surface =
            (struct ivi_layout_surface *) data;
     uint32_t id_surface = 0;
-    struct notification *not, *next;
+    struct notification *noti, *next;
 
     ivisurf = get_surface(&shell->list_surface, layout_surface);
     if (ivisurf == NULL) {
@@ -1729,11 +1730,11 @@ surface_event_remove(struct wl_listener *listener, void *data)
     }
 
     wl_signal_emit(&shell->ivisurface_removed_signal, ivisurf);
-    wl_list_for_each_safe(not, next, &ivisurf->notification_list, layout_link)
+    wl_list_for_each_safe(noti, next, &ivisurf->notification_list, layout_link)
     {
-        wl_list_remove(&not->link);
-        wl_list_remove(&not->layout_link);
-        free(not);
+        wl_list_remove(&noti->link);
+        wl_list_remove(&noti->layout_link);
+        free(noti);
     }
 
     wl_list_remove(&ivisurf->link);
@@ -1764,7 +1765,7 @@ surface_event_configure(struct wl_listener *listener, void *data)
     struct ivi_layout_surface *layout_surface =
            (struct ivi_layout_surface *) data;
     struct ivicontroller *ctrl;
-    struct notification *not;
+    struct notification *noti;
     uint32_t surface_id;
     struct weston_surface *w_surface;
 
@@ -1812,8 +1813,8 @@ surface_event_configure(struct wl_listener *listener, void *data)
         lyt->commit_changes();
     }
 
-    wl_list_for_each(not, &ivisurf->notification_list, layout_link) {
-        ctrl = wl_resource_get_user_data(not->resource);
+    wl_list_for_each(noti, &ivisurf->notification_list, layout_link) {
+        ctrl = wl_resource_get_user_data(noti->resource);
         send_surface_event(ctrl, ivisurf->layout_surface, surface_id, ivisurf->prop,
                            IVI_NOTIFICATION_CONFIGURE);
     }
