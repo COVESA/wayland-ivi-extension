@@ -544,7 +544,7 @@ TEST_F(ControllerTests, send_layer_prop_hasEvents)
  *                         +# get_properties_of_surface() must be called once time
  *                         +# wl_list_init() must be called once time
  *                         +# surface_get_weston_surface() must be called once time
- *                         +# wl_list_insert() must be called once time
+ *                         +# wl_list_insert() must be called 2 times
  *                         +# surface_add_listener() must be called once time
  *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
  *                         +# The result output should same with prepare data
@@ -754,7 +754,7 @@ TEST_F(ControllerTests, bind_ivi_controller_nullResource)
  *                         +# wl_resource_create() must be called once time
  *                         +# wl_resource_set_implementation() must be called once time
  *                         +# wl_list_insert() must be called once time
- *                         +# wl_list_init() must be called once time
+ *                         +# wl_list_init() must be called 2 times
  *                         +# get_id_of_surface() must be called {MAX_NUMBER} times
  *                         +# get_id_of_layer() must be called {MAX_NUMBER} times
  *                         +# wl_resource_post_event() must be called {MAX_NUMBER*2} times
@@ -877,7 +877,7 @@ TEST_F(ControllerTests, controller_create_screen_correctWestonHead)
  * @test_procedure Steps:
  *                      -# Calling the wet_module_init()
  *                      -# Verification point:
- *                         +# wet_module_init() must return 0
+ *                         +# wet_module_init() must not return 0
  *                         +# weston_plugin_api_get() must be called once time
  *                         +# wet_get_config() not be called
  */
@@ -897,7 +897,7 @@ TEST_F(ControllerTests, wet_module_init_cannotGetIviLayoutInterface)
  *                      -# Mocking the weston_plugin_api_get() does return an object
  *                      -# Calling the wet_module_init()
  *                      -# Verification point:
- *                         +# wet_module_init() must return 0
+ *                         +# wet_module_init() must not return 0
  *                         +# weston_plugin_api_get() must be called once time
  *                         +# wl_global_create() must be called once time
  *                         +# weston_load_module() not be called
@@ -925,7 +925,7 @@ TEST_F(ControllerTests, wet_module_init_cannotCreateGlobalWmIviInterface)
  *                      -# Mocking the weston_load_module() does return an object
  *                      -# Calling the wet_module_init()
  *                      -# Verification point:
- *                         +# wet_module_init() must return 0
+ *                         +# wet_module_init() must not return 0
  *                         +# weston_plugin_api_get() must be called once time
  *                         +# wl_global_create() must be called once time
  *                         +# weston_load_module() must be called once time
@@ -1308,6 +1308,8 @@ TEST_F(ControllerTests, controller_screen_screenshot_nullScreenShot)
     controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
 
     ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_no_memory_fake.arg0_history[0], NULL);
+    ASSERT_EQ(wl_resource_get_user_data_fake.return_val_history[0], NULL);
 }
 
 /** ================================================================================================
@@ -1329,8 +1331,38 @@ TEST_F(ControllerTests, controller_screen_screenshot_nullScreen)
     uint32_t l_id = 10;
     controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
 
+    ASSERT_EQ(wl_resource_get_user_data_fake.return_val_history[0], NULL);
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_SCREENSHOT_ERROR);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+}
+
+/** ================================================================================================
+ * @test_id             controller_screen_screenshot_nullWestonBuffer
+ * @brief               Test case of controller_screen_screenshot() where wl_resource_create() success, return an object
+ *                      but wl_resource_get_user_data() fails, return null pointer
+ * @test_procedure Steps:
+ *                      -# Mocking the wl_resource_create() does return an object
+ *                      -# Calling the controller_screen_screenshot()
+ *                      -# Verification point:
+ *                         +# wl_resource_post_event() must be called once time
+ */
+TEST_F(ControllerTests, controller_screen_screenshot_nullWestonBuffer)
+{
+    void * buffer[1] = {nullptr};
+    struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
+    SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
+    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
+    SET_RETURN_SEQ(weston_buffer_from_resource, buffer, 1);
+    uint32_t l_id = 10;
+    controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
+
+    ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 0);
+    ASSERT_EQ(wl_resource_create_fake.call_count, 1);
+    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_SCREENSHOT_ERROR);
+    ASSERT_EQ(wl_shm_buffer_get_data_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1356,9 +1388,10 @@ TEST_F(ControllerTests, controller_screen_screenshot_success)
     uint32_t l_id = 10;
     controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
 
-    ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 1);
-    ASSERT_EQ(weston_screenshooter_shoot_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 0);
+    ASSERT_EQ(wl_resource_create_fake.call_count, 1);
+    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_destroy_fake.call_count, 0);
 
     struct screenshot_frame_listener *lp_l = (struct screenshot_frame_listener*)wl_resource_set_implementation_fake.arg2_history[0];
     free(lp_l);
@@ -2310,130 +2343,362 @@ TEST_F(ControllerTests, controller_layer_get_success)
  * @test_procedure Steps:
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_surface_screenshot()
- *                      -# Verification point:
+ *                      -# Verification point:`
  *                         +# wl_client_post_no_memory() must be called once time
  */
 TEST_F(ControllerTests, controller_surface_screenshot_nullScreenShot)
 {
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct wl_client * lClient;
+    struct wl_resource * lResource;
+    struct wl_resource * lBufferResource;
+    uint32_t lScreenshotId{1};
+    uint32_t lSurfaceId{1};
 
-    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
+    struct wl_resource * lScreenshotRetList[1] = {NULL};
+    SET_RETURN_SEQ(wl_resource_get_user_data,(void**)mp_iviController, 1);
+    SET_RETURN_SEQ(wl_resource_create, (void**)lScreenshotRetList, 1);
+
+    controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
     ASSERT_EQ(wl_client_post_no_memory_fake.call_count, 1);
+    ASSERT_EQ(get_surface_from_id_fake.call_count, 0);
 }
 
 /** ================================================================================================
- * @test_id             controller_surface_screenshot_errByLayoutSurface
+ * @test_id             controller_surface_screenshot_GetLayoutSurfaceFailed
  * @brief               Test case of controller_surface_screenshot() where get_surface_from_id() fails, return null pointer
  * @test_procedure Steps:
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Mocking the wl_resource_create() does return an object
  *                      -# Calling the controller_surface_screenshot()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# get_surface_from_id() must be called once time
  *                         +# wl_resource_destroy() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode should be IVI_SCREENSHOT_ERROR
+ *                         +# surface_get_size() should not be called
  */
-TEST_F(ControllerTests, controller_surface_screenshot_errByLayoutSurface)
+TEST_F(ControllerTests, controller_surface_screenshot_GetLayoutSurfaceFailed)
 {
+    struct wl_client * lClient;
+    struct wl_resource * lResource;
+    struct wl_resource * lBufferResource;
+    uint32_t lScreenshotId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
-    SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
+    struct wl_resource * lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
 
-    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    ASSERT_EQ(surface_get_size_fake.call_count, 0);
 }
 
 /** ================================================================================================
- * @test_id             controller_surface_screenshot_errByResult
- * @brief               Test case of controller_surface_screenshot() where surface_get_size() fails, return null pointer
+ * @test_id             controller_surface_screenshot_ContentOfSurfaceInvalid
+ * @brief               Test case of controller_surface_screenshot() where the content of surface are invalid
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the wl_resource_create() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Set the surface_get_size() does return null pointer
+ *                      -# Mocking the wl_resource_get_user_data() does return an success object
+ *                      -# Mocking the wl_resource_create() does return an success object
+ *                      -# Mocking the get_surface_from_id() does return an success object
  *                      -# Calling the controller_surface_screenshot()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# get_surface_from_id() must be called once time
  *                         +# wl_resource_destroy() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode should be IVI_SCREENSHOT_ERROR
+ *                         +# surface_get_size() should not be called
+ *                         +# weston_buffer_from_resource() should not be called
  */
-TEST_F(ControllerTests, controller_surface_screenshot_errByResult)
+TEST_F(ControllerTests, controller_surface_screenshot_ContentOfSurfaceInvalid)
 {
+    struct wl_client * lClient;
+    struct wl_resource * lResource;
+    struct wl_resource * lBufferResource;
+    uint32_t lScreenshotId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource *screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
-    SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
-    SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
+    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
+    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    SET_RETURN_SEQ(get_surface_from_id, lLayoutSurfaceRetList, 1);
 
     surface_get_size_fake.custom_fake = nullptr;
 
-    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
+    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    ASSERT_EQ(surface_get_size_fake.call_count, 1);
+    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 0);
+}
+
+/** ================================================================================================
+ * @test_id             controller_surface_screenshot_WhenGetWestonBuffer
+ * @brief               Test case of controller_surface_screenshot() where cannot get weston buffer from buffer resource
+ * @test_procedure Steps:
+ *                      -# Mocking the wl_resource_get_user_data() does return an success object
+ *                      -# Mocking the wl_resource_create() does return an success object
+ *                      -# Mocking the get_surface_from_id() does return an success object
+ *                      -# Mocking the weston_buffer_from_resource() does return an null pointer
+ *                      -# Calling the controller_surface_screenshot()
+ *                      -# Verification point:
+ *                         +# get_surface_from_id() must be called once time
+ *                         +# wl_resource_destroy() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode should be IVI_SCREENSHOT_ERROR
+ *                         +# surface_get_size() must be called once time
+ *                         +# weston_buffer_from_resource() must be called once time and return a NULL pointer
+ *                         +# wl_shm_buffer_get_data() should not be called
+ */
+TEST_F(ControllerTests, controller_surface_screenshot_WhenGetWestonBuffer)
+{
+    struct wl_client * lClient;
+    struct wl_resource * lResource;
+    struct wl_resource * lBufferResource;
+    uint32_t lScreenshotId{1};
+    uint32_t lSurfaceId{1};
+
+    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
+    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    SET_RETURN_SEQ(get_surface_from_id, lLayoutSurfaceRetList, 1);
+    surface_get_size_fake.custom_fake = custom_surface_get_size;
+    struct weston_buffer * lWestonBufferRetList[1] = {NULL};
+    SET_RETURN_SEQ(weston_buffer_from_resource, (struct weston_buffer **)lWestonBufferRetList, 1);
+
+    controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
+
+    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
+    ASSERT_EQ(surface_get_size_fake.call_count, 1);
+    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    ASSERT_EQ(weston_buffer_from_resource_fake.return_val, NULL);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    ASSERT_EQ(wl_shm_buffer_get_data_fake.call_count, 0);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
 }
 
 /** ================================================================================================
- * @test_id             controller_surface_screenshot_errReadpixByResult
- * @brief               Test case of controller_surface_screenshot() where surface_dump() fails, return -1
+ * @test_id             controller_surface_screenshot_SurfaceDumpDataFailed
+ * @brief               controller_surface_screenshot() is called when surface dump data to buffer failed
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the wl_resource_create() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Set the surface_get_size() does return null pointer
- *                      -# Mocking the surface_dump() does return -1
+ *                      -# Mocking the wl_resource_get_user_data() does return an success object
+ *                      -# Mocking the wl_resource_create() does return an success object
+ *                      -# Mocking the get_surface_from_id() does return an success object
+ *                      -# Mocking the weston_buffer_from_resource() does return an success object
+ *                      -# Mocking the wl_shm_buffer_get_stride() does return an success object
+ *                      -# Mocking the wl_shm_buffer_get_width() does return an success object
+ *                      -# Mocking the wl_shm_buffer_get_height() does return an success object
+ *                      -# Mocking the surface_dump() does return an failure object
  *                      -# Calling the controller_surface_screenshot()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# get_surface_from_id() must be called once time
  *                         +# wl_resource_destroy() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode should be IVI_SCREENSHOT_ERROR
+ *                         +# surface_get_size() must be called once time
+ *                         +# weston_buffer_from_resource() must be called once time
+ *                         +# wl_shm_buffer_get_data() must be called once time
+ *                         +# surface_dump() must be called once time
  */
-TEST_F(ControllerTests, controller_surface_screenshot_errReadpixByResult)
+TEST_F(ControllerTests, controller_surface_screenshot_SurfaceDumpDataFailed)
 {
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource *screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
-    SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
-    SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
+    struct wl_client * lClient;
+    struct wl_resource * lResource;
+    struct wl_resource * lBufferResource;
+    uint32_t lScreenshotId{1};
+    uint32_t lSurfaceId{1};
 
+    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
+    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    SET_RETURN_SEQ(get_surface_from_id, lLayoutSurfaceRetList, 1);
     surface_get_size_fake.custom_fake = custom_surface_get_size;
+    struct weston_buffer * westonBuffer = (struct weston_buffer*)malloc(sizeof(weston_buffer));
+    westonBuffer->type = 0; // WESTON_BUFFER_SHM
+    struct weston_buffer * lWestonBufferRetList[1] = {westonBuffer};
+    SET_RETURN_SEQ(weston_buffer_from_resource, (struct weston_buffer **)lWestonBufferRetList, 1);
+    int validStride[1] = {4};
+    int validWidth[1] = {1};
+    int validheight[1] = {1};
+    SET_RETURN_SEQ(wl_shm_buffer_get_stride, validStride, 1);
+    SET_RETURN_SEQ(wl_shm_buffer_get_width, validWidth, 1);
+    SET_RETURN_SEQ(wl_shm_buffer_get_height, validheight, 1);
     SET_RETURN_SEQ(surface_dump, &mp_failureResult[0], 1);
 
-    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    ASSERT_EQ(surface_get_size_fake.call_count, 1);
+    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    ASSERT_EQ(wl_shm_buffer_get_data_fake.call_count, 1);
+    ASSERT_EQ(surface_dump_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    free(westonBuffer);
 }
 
 /** ================================================================================================
  * @test_id             controller_surface_screenshot_success
- * @brief               Test case of controller_surface_screenshot() where surface_dump() success, return 0
+ * @brief               controller_surface_screenshot() is called successfully
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the wl_resource_create() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Set the surface_get_size() does return null pointer
- *                      -# Mocking the surface_dump() does return 0
+ *                      -# Mocking the wl_resource_get_user_data() does return an success object
+ *                      -# Mocking the wl_resource_create() does return an success object
+ *                      -# Mocking the get_surface_from_id() does return an success object
+ *                      -# Mocking the weston_buffer_from_resource() does return an success object
+ *                      -# Mocking the wl_shm_buffer_get_stride() does return an success object
+ *                      -# Mocking the wl_shm_buffer_get_width() does return an success object
+ *                      -# Mocking the wl_shm_buffer_get_height() does return an success object
+ *                      -# Mocking the surface_dump() does return an success object
  *                      -# Calling the controller_surface_screenshot()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# get_surface_from_id() must be called once time
  *                         +# wl_resource_destroy() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode should be IVI_SCREENSHOT_DONE
+ *                         +# surface_get_size() must be called once time
+ *                         +# weston_buffer_from_resource() must be called once time
+ *                         +# wl_shm_buffer_get_data() must be called once time
+ *                         +# surface_dump() must be called once time
  */
 TEST_F(ControllerTests, controller_surface_screenshot_success)
 {
+    struct wl_client * lClient;
+    struct wl_resource * lResource;
+    struct wl_resource * lBufferResource;
+    uint32_t lScreenshotId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource *screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
-    SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
-    SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
-
+    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
+    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    SET_RETURN_SEQ(get_surface_from_id, lLayoutSurfaceRetList, 1);
     surface_get_size_fake.custom_fake = custom_surface_get_size;
-    SET_RETURN_SEQ(surface_dump, mp_successResult, 1);
+    struct weston_buffer * westonBuffer = (struct weston_buffer*)malloc(sizeof(weston_buffer));
+    westonBuffer->type = 0; // WESTON_BUFFER_SHM
+    struct weston_buffer * lWestonBufferRetList[1] = {westonBuffer};
+    SET_RETURN_SEQ(weston_buffer_from_resource, (struct weston_buffer **)lWestonBufferRetList, 1);
+    int validStride[1] = {4};
+    int validWidth[1] = {1};
+    int validheight[1] = {1};
+    SET_RETURN_SEQ(wl_shm_buffer_get_stride, validStride, 1);
+    SET_RETURN_SEQ(wl_shm_buffer_get_width, validWidth, 1);
+    SET_RETURN_SEQ(wl_shm_buffer_get_height, validheight, 1);
 
-    controller_surface_screenshot(nullptr, nullptr, nullptr, 1, 1);
+    controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    ASSERT_EQ(surface_get_size_fake.call_count, 1);
+    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    ASSERT_EQ(wl_shm_buffer_get_data_fake.call_count, 1);
+    ASSERT_EQ(surface_dump_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_DONE);
+    free(westonBuffer);
+}
+
+/** ================================================================================================
+ * @test_id             controller_screenshooter_done_WESTON_SCREENSHOOTER_SUCCESS_option
+ * @brief               Test case of controller_screenshooter_done() when process WESTON_SCREENSHOOTER_SUCCESS option
+ * @test_procedure Steps:
+ *                      -# Call controller_screenshooter_done() with arg is WESTON_SCREENSHOOTER_SUCCESS option
+ *                      -# Verification point:
+ *                         +# wl_resource_post_event() must be called once time with opcode is IVI_SCREENSHOT_DONE
+ */
+TEST_F(ControllerTests, controller_screenshooter_done_WESTON_SCREENSHOOTER_SUCCESS_option)
+{
+    struct ivi_screenshooter *screenshooter = (struct ivi_screenshooter *)malloc(sizeof(struct ivi_screenshooter));
+    screenshooter->output = &m_westonOutput[0];
+    weston_screenshooter_outcome outcome = WESTON_SCREENSHOOTER_SUCCESS;
+    controller_screenshooter_done(screenshooter, outcome);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_DONE);
+    free(screenshooter);
+}
+
+/** ================================================================================================
+ * @test_id             controller_screenshooter_done_WESTON_SCREENSHOOTER_NO_MEMORY_option
+ * @brief               Test case of controller_screenshooter_done() when process WESTON_SCREENSHOOTER_NO_MEMORY option
+ * @test_procedure Steps:
+ *                      -# Call controller_screenshooter_done() with arg is WESTON_SCREENSHOOTER_NO_MEMORY option
+ *                      -# Verification point:
+ *                         +# wl_resource_post_event() must be called once time with opcode is IVI_SCREENSHOT_ERROR
+ */
+TEST_F(ControllerTests, controller_screenshooter_done_WESTON_SCREENSHOOTER_NO_MEMORY_option)
+{
+    struct ivi_screenshooter *screenshooter = (struct ivi_screenshooter *)malloc(sizeof(struct ivi_screenshooter));
+    screenshooter->output = &m_westonOutput[0];
+    weston_screenshooter_outcome outcome = WESTON_SCREENSHOOTER_NO_MEMORY;
+    controller_screenshooter_done(screenshooter, outcome);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    free(screenshooter);
+}
+
+/** ================================================================================================
+ * @test_id             controller_screenshooter_done_WESTON_SCREENSHOOTER_BAD_BUFFER_option
+ * @brief               Test case of controller_screenshooter_done() when process WESTON_SCREENSHOOTER_BAD_BUFFER option
+ * @test_procedure Steps:
+ *                      -# Call controller_screenshooter_done() with arg is WESTON_SCREENSHOOTER_BAD_BUFFER option
+ *                      -# Verification point:
+ *                         +# wl_resource_post_event() must be called once time with opcode is IVI_SCREENSHOT_ERROR
+ */
+TEST_F(ControllerTests, controller_screenshooter_done_WESTON_SCREENSHOOTER_BAD_BUFFER_option)
+{
+    struct ivi_screenshooter *screenshooter = (struct ivi_screenshooter *)malloc(sizeof(struct ivi_screenshooter));
+    screenshooter->output = &m_westonOutput[0];
+    weston_screenshooter_outcome outcome = WESTON_SCREENSHOOTER_BAD_BUFFER;
+    controller_screenshooter_done(screenshooter, outcome);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    free(screenshooter);
+}
+
+/** ================================================================================================
+ * @test_id             controller_screenshooter_done_InvalidArg
+ * @brief               Test case of controller_screenshooter_done() when process invalid option
+ * @test_procedure Steps:
+ *                      -# Call controller_screenshooter_done() with invalid option
+ *                      -# Verification point:
+ *                         +# wl_resource_post_event() should not be called
+ */
+TEST_F(ControllerTests, controller_screenshooter_done_InvalidArg)
+{
+    struct ivi_screenshooter *screenshooter = (struct ivi_screenshooter *)malloc(sizeof(struct ivi_screenshooter));
+    screenshooter->output = &m_westonOutput[0];
+    weston_screenshooter_outcome outcome = (weston_screenshooter_outcome)10;
+    controller_screenshooter_done(screenshooter, outcome);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    free(screenshooter);
+}
+
+/** ================================================================================================
+ * @test_id             controller_screenshoot_destroy_call
+ * @brief               Check behavior of controller_screenshoot_destroy()
+ * @test_procedure Steps:
+ *                      -# Mocking wl_resource_get_user_data() to return an success object
+ *                      -# Call controller_screenshoot_destroy() with invalid option
+ *                      -# Verification point:
+ *                         +# wl_resource_get_user_data() should be called 1 time
+ */
+TEST_F(ControllerTests, controller_screenshoot_destroy_call)
+{
+    struct wl_resource *lResource;
+    struct ivi_screenshooter * screenshooter = (struct ivi_screenshooter *)malloc(sizeof(struct ivi_screenshooter));
+    screenshooter->output = &m_westonOutput[0];
+    struct ivi_screenshooter * screenshooterRet[1] = {screenshooter};
+    SET_RETURN_SEQ(wl_resource_get_user_data, (struct ivi_screenshooter **)screenshooterRet, 1);
+    controller_screenshoot_destroy(lResource);
+    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2737,214 +3002,6 @@ TEST_F(ControllerTests, destroy_ivicontroller_screen_success)
 }
 
 /** ================================================================================================
- * @test_id             controller_screenshot_notify_error
- * @brief               Test case of controller_screenshot_notify() where input compositor read_format is null value
- * @test_procedure Steps:
- *                      -# Set data for screenshot_frame_listener with read_format is null
- *                      -# Calling the controller_screenshot_notify()
- *                      -# Verification point:
- *                         +# wl_resource_destroy() must be called once time
- *                         +# Free resources are allocated when running the test
- */
-TEST_F(ControllerTests, controller_screenshot_notify_error)
-{
-    // controller_screenshot_notify() is removed in ivi-controller.c
-    // struct screenshot_frame_listener l_listener;
-    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-
-    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
-
-    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-
-    // free(l_listener.output->compositor);
-    // free(l_listener.output);
-}
-
-/** ================================================================================================
- * @test_id             controller_screenshot_notify_successWithFormatARGB
- * @brief               Test case of controller_screenshot_notify() where input compositor read_format is PIXMAN_a8r8g8b8
- * @test_procedure Steps:
- *                      -# Set data for screenshot_frame_listener with read_format is PIXMAN_a8r8g8b8
- *                      -# Calling the controller_screenshot_notify()
- *                      -# Verification point:
- *                         +# wl_resource_destroy() must be called once time
- *                         +# wl_resource_post_event() must be called once time
- *                         +# Free resources are allocated when running the test
- */
-TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatARGB)
-{
-    // controller_screenshot_notify() is removed in ivi-controller.c
-    // struct screenshot_frame_listener l_listener;
-    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-    // l_listener.output->compositor->read_format = PIXMAN_a8r8g8b8;
-    // l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
-    // l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
-    // l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
-    // l_listener.output->current_mode->width = 1;
-    // l_listener.output->current_mode->height = 10;
-
-    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
-
-    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-
-    // free(l_listener.output->current_mode);
-    // free(l_listener.output->compositor->renderer);
-    // free(l_listener.output->compositor);
-    // free(l_listener.output);
-}
-
-/** ================================================================================================
- * @test_id             controller_screenshot_notify_successWithFormatXRGB
- * @brief               Test case of controller_screenshot_notify() where input compositor read_format is PIXMAN_x8r8g8b8
- * @test_procedure Steps:
- *                      -# Set data for screenshot_frame_listener with read_format is PIXMAN_x8r8g8b8
- *                      -# Calling the controller_screenshot_notify()
- *                      -# Verification point:
- *                         +# wl_resource_destroy() must be called once time
- *                         +# wl_resource_post_event() must be called once time
- *                         +# Free resources are allocated when running the test
- */
-TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatXRGB)
-{
-    // controller_screenshot_notify() is removed in ivi-controller.c
-    // struct screenshot_frame_listener l_listener;
-    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-    // l_listener.output->compositor->read_format = PIXMAN_x8r8g8b8;
-    // l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
-    // l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
-    // l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
-    // l_listener.output->current_mode->width = 1;
-    // l_listener.output->current_mode->height = 1;
-
-    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
-
-    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-
-    // free(l_listener.output->current_mode);
-    // free(l_listener.output->compositor->renderer);
-    // free(l_listener.output->compositor);
-    // free(l_listener.output);
-}
-
-/** ================================================================================================
- * @test_id             controller_screenshot_notify_successWithFormatABGR
- * @brief               Test case of controller_screenshot_notify() where input compositor read_format is PIXMAN_a8b8g8r8
- * @test_procedure Steps:
- *                      -# Set data for screenshot_frame_listener with read_format is PIXMAN_a8b8g8r8
- *                      -# Calling the controller_screenshot_notify()
- *                      -# Verification point:
- *                         +# wl_resource_destroy() must be called once time
- *                         +# wl_resource_post_event() must be called once time
- *                         +# Free resources are allocated when running the test
- */
-TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatABGR)
-{
-    // controller_screenshot_notify() is removed in ivi-controller.c
-    // struct screenshot_frame_listener l_listener;
-    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-    // l_listener.output->compositor->read_format = PIXMAN_a8b8g8r8;
-    // l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
-    // l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
-    // l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
-    // l_listener.output->current_mode->width = 1;
-    // l_listener.output->current_mode->height = 1;
-
-    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
-
-    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-
-    // free(l_listener.output->current_mode);
-    // free(l_listener.output->compositor->renderer);
-    // free(l_listener.output->compositor);
-    // free(l_listener.output);
-}
-
-/** ================================================================================================
- * @test_id             controller_screenshot_notify_successWithFormatXBGR
- * @brief               Test case of controller_screenshot_notify() where input compositor read_format is PIXMAN_x8b8g8r8
- * @test_procedure Steps:
- *                      -# Set data for screenshot_frame_listener with read_format is PIXMAN_x8b8g8r8
- *                      -# Calling the controller_screenshot_notify()
- *                      -# Verification point:
- *                         +# wl_resource_destroy() must be called once time
- *                         +# wl_resource_post_event() must be called once time
- *                         +# Free resources are allocated when running the test
- */
-TEST_F(ControllerTests, controller_screenshot_notify_successWithFormatXBGR)
-{
-    // controller_screenshot_notify() is removed in ivi-controller.c
-    // struct screenshot_frame_listener l_listener;
-    // l_listener.output = (struct weston_output*)malloc(sizeof(weston_output));
-    // l_listener.output->compositor = (struct weston_compositor*)malloc(sizeof(struct weston_compositor));
-    // l_listener.output->compositor->read_format = PIXMAN_x8b8g8r8;
-    // l_listener.output->compositor->renderer = (struct weston_renderer*)malloc(sizeof(struct weston_renderer));
-    // l_listener.output->compositor->renderer->read_pixels = &custom_read_pixels;
-    // l_listener.output->current_mode = (struct weston_mode*)malloc(sizeof(struct weston_mode));
-    // l_listener.output->current_mode->width = 1;
-    // l_listener.output->current_mode->height = 1;
-    // l_listener.output->compositor->capabilities = 1;
-
-    // controller_screenshot_notify(&l_listener.frame_listener, nullptr);
-
-    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-
-    // free(l_listener.output->current_mode);
-    // free(l_listener.output->compositor->renderer);
-    // free(l_listener.output->compositor);
-    // free(l_listener.output);
-}
-
-/** ================================================================================================
- * @test_id             screenshot_output_destroyed_success
- * @brief               Test case of screenshot_output_destroyed() where valid input params
- * @test_procedure Steps:
- *                      -# Calling the screenshot_output_destroyed()
- *                      -# Verification point:
- *                         +# wl_resource_destroy() must be called once time
- *                         +# wl_resource_post_event() must be called once time
- *                         +# Free resources are allocated when running the test
- */
-TEST_F(ControllerTests, screenshot_output_destroyed_success)
-{
-    // screenshot_output_destroyed() is removed in ivi-controller.c
-    // struct screenshot_frame_listener *l_listener = (struct screenshot_frame_listener *)malloc(sizeof(struct screenshot_frame_listener));
-    // screenshot_output_destroyed(&l_listener->output_destroyed, nullptr);
-
-    // ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    // ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-
-    // free(l_listener);
-}
-
-/** ================================================================================================
- * @test_id             screenshot_frame_listener_destroy_success
- * @brief               Test case of screenshot_frame_listener_destroy() where wl_resource_get_user_data() success, return an object
- * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Calling the screenshot_frame_listener_destroy()
- *                      -# Verification point:
- *                         +# wl_list_remove() must be called 2 times
- */
-TEST_F(ControllerTests, screenshot_frame_listener_destroy_success)
-{
-    // struct screenshot_frame_listener_destroy() is removed in ivi-controller.c
-    // struct screenshot_frame_listener *l_listener[1] = {(struct screenshot_frame_listener*)malloc(sizeof(struct screenshot_frame_listener))};
-    // SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_listener, 1);
-
-    // screenshot_frame_listener_destroy(nullptr);
-
-    // ASSERT_EQ(wl_list_remove_fake.call_count, 2);
-}
-
-/** ================================================================================================
  * @test_id             output_destroyed_event_invalidOutput
  * @brief               Test case of output_destroyed_event() where invalid ivi shell
  * @test_procedure Steps:
@@ -3148,21 +3205,6 @@ TEST_F(ControllerTests, layer_event_remove_success)
 }
 
 /** ================================================================================================
- * @test_id             surface_event_remove_wrongIviSurface
- * @brief               Test case of surface_event_remove() where input ivi layout surface is null pointer
- * @test_procedure Steps:
- *                      -# Calling the surface_event_remove()
- *                      -# Verification point:
- *                         +# wl_list_remove() not be called
- */
-TEST_F(ControllerTests, surface_event_remove_wrongIviSurface)
-{
-    // logic is changed, cannot pass nullptr argument
-    // surface_event_remove(&mp_iviShell->surface_removed, nullptr);
-    // ASSERT_EQ(wl_list_remove_fake.call_count, 0);
-}
-
-/** ================================================================================================
  * @test_id             surface_event_remove_wrongIdSurface
  * @brief               Test case of surface_event_remove() where valid input ivi layout surfacey
  *                      but ivi shell bkgnd_surface_id is null pointer
@@ -3191,8 +3233,8 @@ TEST_F(ControllerTests, surface_event_remove_wrongIdSurface)
  *                      -# Calling the surface_event_remove()
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called 5 times
- *                         +# weston_layer_entry_remove() must be called once time
- *                         +# weston_view_destroy() must be called once time
+ *                         +# weston_layer_entry_remove() not be called
+ *                         +# weston_view_destroy() not be called
  *                         +# Free resources are allocated when running the test
  *                         +# Allocate memory for resources are freed when running the test
  */
@@ -3200,19 +3242,15 @@ TEST_F(ControllerTests, surface_event_remove_success)
 {
     mp_iviShell->bkgnd_surface_id = 10;
     mp_iviShell->bkgnd_surface = mp_iviSurface[0];
-    struct weston_view * tmp;
     mp_iviShell->bkgnd_view = (struct weston_view*)malloc(sizeof(struct weston_view));
-    // need this to avoid leak memory
-    tmp = mp_iviShell->bkgnd_view;
 
     surface_event_remove(&mp_iviShell->surface_removed, m_layoutSurface);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 3);
-    ASSERT_EQ(weston_layer_entry_remove_fake.call_count, 1);
-    ASSERT_EQ(weston_view_destroy_fake.call_count, 1);
+    ASSERT_EQ(wl_list_remove_fake.call_count, 5);
+    ASSERT_EQ(weston_layer_entry_remove_fake.call_count, 0);
+    ASSERT_EQ(weston_view_destroy_fake.call_count, 0);
 
     free(mp_iviShell->bkgnd_view);
-    free(tmp);
 
     mp_surfaceNotification[0] = (struct notification*)malloc(sizeof(struct notification));
     mp_iviSurface[0] = (struct ivisurface*)malloc(sizeof(struct ivisurface));
@@ -3253,7 +3291,6 @@ TEST_F(ControllerTests, surface_event_configure_wrongSurfaceId)
  *                      -# Verification point:
  *                         +# wl_resource_get_user_data() not be called
  *                         +# wl_list_remove() must be called once time
- *                         +# wl_list_insert() must be called once time
  *                         +# Free resources are allocated when running the test
  */
 TEST_F(ControllerTests, surface_event_configure_validBkgndView)
@@ -3293,7 +3330,6 @@ TEST_F(ControllerTests, surface_event_configure_validBkgndView)
  *                      -# Verification point:
  *                         +# wl_resource_get_user_data() not be called
  *                         +# wl_list_remove() must be called once time
- *                         +# wl_list_insert() must be called once time
  *                         +# weston_view_create() must be called once time
  *                         +# Free resources are allocated when running the test
  */
@@ -3334,7 +3370,7 @@ TEST_F(ControllerTests, surface_event_configure_nullBkgndView)
  *                      -# Set data for ivi shell with client is null pointer
  *                      -# Calling the ivi_shell_destroy()
  *                      -# Verification point:
- *                         +# wl_list_remove() must be called 15 times
+ *                         +# wl_list_remove() must be called 16 times
  *                         +# Allocate memory for resources are freed when running the test
  *                         +# Free resources are allocated when running the test
  */
@@ -3369,7 +3405,7 @@ TEST_F(ControllerTests, ivi_shell_destroy_nullClient)
  *                      -# Set data for ivi shell with client is valid value
  *                      -# Calling the ivi_shell_destroy()
  *                      -# Verification point:
- *                         +# wl_list_remove() must be called 16 times
+ *                         +# wl_list_remove() must be called 17 times
  *                         +# Allocate memory for resources are freed when running the test
  *                         +# Free resources are allocated when running the test
  */

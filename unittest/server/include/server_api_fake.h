@@ -23,7 +23,7 @@
 #include "fff.h"
 #include "ivi-wm-server-protocol.h"
 #include "ivi-layout-export.h"
-#include "libweston-desktop/libweston-desktop.h"
+#include <libweston/desktop.h>
 #include "weston.h"
 #include "common_fake_api.h"
 

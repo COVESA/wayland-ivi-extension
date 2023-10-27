@@ -165,8 +165,8 @@ public:
  * @test_procedure Steps:
  *                      -# Calling the handle_seat_create()
  *                      -# Verification point:
- *                         +# wl_list_insert() must be called 3 times
- *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
+ *                         +# wl_list_insert() must be called 5 times
+ *                         +# wl_resource_post_event() must be called 6 times
  *                         +# Free resources are allocated when running the test
  */
 TEST_F(InputControllerTest, handle_seat_create_customSeat)
@@ -383,7 +383,7 @@ TEST_F(InputControllerTest, handle_seat_destroy_withSurfaceAccepted)
  * @test_procedure Steps:
  *                      -# Calling the input_controller_module_init()
  *                      -# Verification point:
- *                         +# input_controller_module_init() must return 0
+ *                         +# input_controller_module_init() must not return 0
  */
 TEST_F(InputControllerTest, input_controller_module_init_WrongInput)
 {
@@ -748,7 +748,6 @@ TEST_F(InputControllerTest, pointer_grab_focus_nullSurfCtx)
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
  *                         +# surface_get_weston_surface() must be called once time
- *                         +# weston_pointer_set_focus() must be called once time
  *                         +# weston_pointer_clear_focus() not be called
  *                         +# Free resources are allocated when running the test
  */
@@ -776,8 +775,6 @@ TEST_F(InputControllerTest, pointer_grab_focus_success)
     pointer_grab_focus(&mpp_ctxSeat[0]->pointer_grab);
 
     ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    // maybe logic is changed, need to check
-    // ASSERT_EQ(weston_pointer_set_focus_fake.call_count, 1);
     ASSERT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
 
     free(l_surf[0]);
@@ -1485,7 +1482,7 @@ TEST_F(InputControllerTest, input_set_input_focus_toTouch)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the setup_input_acceptance()
  *                      -# Verification point:
- *                         +# wl_resource_get_user_data() must be called once time
+ *                         +# get_surface_from_id() not be called
  */
 TEST_F(InputControllerTest, input_set_input_acceptance_wrongSeatName)
 {
@@ -1506,6 +1503,8 @@ TEST_F(InputControllerTest, input_set_input_acceptance_wrongSeatName)
  *                      -# Verification point:
  *                         +# wl_resource_get_user_data() must be called once time
  *                         +# get_surface_from_id() must be called once time
+ *                         +# weston_seat_get_pointer() not be called
+ *                         +# wl_resource_post_event() not be called
  */
 TEST_F(InputControllerTest, input_set_input_acceptance_nullSurface)
 {
@@ -1517,35 +1516,6 @@ TEST_F(InputControllerTest, input_set_input_acceptance_nullSurface)
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 0);
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
-}
-
-/** ================================================================================================
- * @test_id             input_set_input_acceptance_withNullPointerAndApccepted
- * @brief               Test case of setup_input_acceptance() where ctxSeat pointer is null pointer
- *                      and input accepted is enable {1}
- * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Calling the setup_input_acceptance() with valid seat name
- *                      -# Verification point:
- *                         +# wl_resource_get_user_data() must be called once time
- *                         +# get_surface_from_id() must be called once time
- *                         +# weston_seat_get_pointer() must be called once time
- */
-TEST_F(InputControllerTest, input_set_input_acceptance_withNullPointerAndApccepted)
-{
-    // error runtime: not allow pass nullptr
-    // struct input_context *l_input[1] = {mp_ctxInput};
-    // SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
-
-    // struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    // SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
-
-    // setup_input_acceptance(nullptr, 10, "default", 1);
-
-    // ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
-    // ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    // ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1561,7 +1531,6 @@ TEST_F(InputControllerTest, input_set_input_acceptance_withNullPointerAndApccept
  *                      -# Mocking the get_surface_from_id() does return an object
  *                      -# Calling the setup_input_acceptance() with input accepted is 0
  *                      -# Verification point:
- *                         +# wl_resource_get_user_data() must be called once time
  *                         +# get_surface_from_id() must be called once time
  *                         +# weston_seat_get_pointer() must be called once time
  *                         +# surface_get_weston_surface() must be called once time
@@ -1609,7 +1578,6 @@ TEST_F(InputControllerTest, input_set_input_acceptance_withValidPointerAndUnapcc
  *                      -# Mocking the weston_seat_get_pointer() does return an object
  *                      -# Calling the setup_input_acceptance() with input accepted is 1
  *                      -# Verification point:
- *                         +# wl_resource_get_user_data() must be called once time
  *                         +# get_surface_from_id() must be called once time
  *                         +# weston_seat_get_pointer() must be called once time
  *                         +# Free resources are allocated when running the test

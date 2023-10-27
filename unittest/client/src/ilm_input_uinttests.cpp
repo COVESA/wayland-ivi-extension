@@ -143,7 +143,7 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotSyncAcquireInstance)
  *                      -# Calling the ilm_setInputAcceptanceOn() with input seats is SEAT_DEFAULT
  *                      -# Verification point:
  *                         +# ilm_setInputAcceptanceOn() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time
+ *                         +# release_instance() must be called once time
  */
 TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotFindSurfaceId)
 {
@@ -164,7 +164,7 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotFindSurfaceId)
  *                      -# Calling the ilm_setInputAcceptanceOn() with input seats is SEAT_DEFAULT
  *                      -# Verification point:
  *                         +# ilm_setInputAcceptanceOn() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time
+ *                         +# release_instance() must be called once time
  */
 TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotFindSeat)
 {

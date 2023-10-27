@@ -83,6 +83,12 @@ WL_EXPORT const struct wl_interface wl_output_interface = {
 FAKE_VALUE_FUNC(int, save_as_png, const char *, const char *, int32_t , int32_t , uint32_t );
 FAKE_VALUE_FUNC(int, save_as_bitmap, const char *, const char *, int32_t , int32_t , uint32_t );
 
+struct screenshot_data_t {
+    std::atomic<int32_t> fd;
+    std::atomic<uint32_t> error;
+    ilmErrorTypes result = ILM_SUCCESS;
+};
+
 }
 
 extern "C"{
@@ -289,6 +295,20 @@ public:
     int mp_successResult[1] = {0};
     int mp_failureResult[1] = {-1};
     ilmErrorTypes mp_ilmErrorType[1];
+
+    static ilmErrorTypes ScreenshotDoneCallbackFunc(void *user_data, t_ilm_int fd, t_ilm_uint width, t_ilm_uint height, t_ilm_uint stride, t_ilm_uint format, t_ilm_uint timestamp)
+    {
+        screenshot_data_t *screenshotData = static_cast<screenshot_data_t*>(user_data);
+        screenshotData->fd.store(fd);
+        return screenshotData->result;
+    }
+
+    static void ScreenshotErrorCallbackFunc(void *user_data, t_ilm_uint error, const char *message)
+    {
+        screenshot_data_t *screenshotData = static_cast<screenshot_data_t*>(user_data);
+        screenshotData->error.store(error);
+    }
+
 };
 
 /** ================================================================================================
@@ -1768,7 +1788,7 @@ TEST_F(IlmControlTest, ilm_surfaceGetVisibility_invalidSurfaceId)
  *                      -# Verification point:
  *                         +# ilm_surfaceGetVisibility() must return ILM_SUCCESS
  *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# wl_display_roundtrip_queue() must be called once time
  */
 TEST_F(IlmControlTest, ilm_surfaceGetVisibility_success)
 {
@@ -4179,7 +4199,7 @@ TEST_F(IlmControlTest, ilmControl_init_success)
 
 /** ================================================================================================
  * @test_id             ilm_takeScreenshot_invalidScreen
- * @brief               Test case of ilm_takeScreenshot() where invalid input screen
+ * @brief               Test case of ilm_takeScreenshot() where invalid input screen ID
  * @test_procedure Steps:
  *                      -# Calling the ilm_takeScreenshot()
  *                      -# Verification point:
@@ -4187,71 +4207,865 @@ TEST_F(IlmControlTest, ilmControl_init_success)
  */
 TEST_F(IlmControlTest, ilm_takeScreenshot_invalidScreen)
 {
-    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(1, "test"));
+    t_ilm_uint lScreenID{1};
+    t_ilm_const_string filename{"name_test"};
+    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
 }
 
 /** ================================================================================================
  * @test_id             ilm_takeScreenshot_validScreen
- * @brief               Test case of ilm_takeScreenshot() where valid input screen
+ * @brief               ilm_takeScreenshot() is called with valid screen ID and valid/invalid file name
  * @test_procedure Steps:
- *                      -# Calling the ilm_takeScreenshot() time 1
- *                      -# Mocking the wl_proxy_marshal_flags() does return an object
- *                      -# Mocking the wl_display_dispatch_queue() does return -1 (failure)
- *                      -# Calling the ilm_takeScreenshot() time 2
- *                      -# Mocking the wl_display_dispatch_queue() does return 0 (success)
- *                      -# Calling the ilm_takeScreenshot() time 3
+ *                      -# Calling the ilm_takeScreenshot() time 1 with valid screen ID and invalid file name
+ *                      -# Calling the ilm_takeScreenshot() time 2 with valid screen ID and valid file name
  *                      -# Verification point:
- *                         +# ilm_takeScreenshot() time 1 and time 2 and time 3 must return ILM_FAILED
+ *                         +# ilm_takeScreenshot() time 1 should return ILM_SUCCESS
+ *                         +# ilm_takeScreenshot() time 2 should return ILM_FAILED
  */
 TEST_F(IlmControlTest, ilm_takeScreenshot_validScreen)
 {
-    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(10, "test"));
-
-    struct wl_proxy *screenshot[1] = {(struct wl_proxy *)0xFFFFFFFF};
-    SET_RETURN_SEQ(wl_proxy_marshal_flags, screenshot, 1);
-    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
-
-    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(10, "test"));
-
-    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_successResult, 1);
-
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeScreenshot(10, NULL));
+    t_ilm_uint lScreenID{10};
+    t_ilm_const_string filename(NULL);
+    /*- valid screen ID
+      - invalid file name*/
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeScreenshot(lScreenID, filename));
+    /*- valid screen ID
+      - valid file name*/
+    filename = "name_test";
+    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
 }
 
 /** ================================================================================================
- * @test_id             ilm_takeSurfaceScreenshot_invalidScreen
- * @brief               Test case of ilm_takeSurfaceScreenshot() where do not mock for some functions
+ * @test_id             ilm_takeScreenshot_SupportArgb8888AndUnsupportWlshmGlobal
+ * @brief               ilm_takeScreenshot() is called when argb8888 is supported and wl_shm global is unsupported
  * @test_procedure Steps:
- *                      -# Calling the ilm_takeSurfaceScreenshot()
+ *                      -# make argb8888 is supported
+ *                      -# point wl_shm to NULL
+ *                      -# call ilm_takeScreenshot with valid screenID and file name
+ *                      -# Verification point:
+ *                         +# ilm_takeScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags should not be called
+ */
+TEST_F(IlmControlTest, ilm_takeScreenshot_SupportArgb8888AndUnsupportWlshmGlobal)
+{
+    t_ilm_uint lScreenID{10};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = true;
+    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 0);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeScreenshot_SupportWlshmGlobalAndUnsupportArgb8888
+ * @brief               ilm_takeScreenshot() is called when wl_shm global is supported and argb8888 is unsupported
+ * @test_procedure Steps:
+ *                      -# make wl_shm global is supported
+ *                      -# make argb8888 is unsupported
+ *                      -# call ilm_takeScreenshot with valid screenID and file name
+ *                      -# Verification point:
+ *                         +# ilm_takeScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags should not be called
+ */
+TEST_F(IlmControlTest, ilm_takeScreenshot_SupportWlshmGlobalAndUnsupportArgb8888)
+{
+    t_ilm_uint lScreenID{10};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = false;
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 0);
+    // revert to default data
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeScreenshot_SendScreenshotRequestFailed
+ * @brief               Send request take screenshot to server failed when ilm_takeScreenshot() is called
+ * @test_procedure Steps:
+ *                      -# make wl_shm global and argb8888 are supported
+ *                      -# Mocking the wl_proxy_get_version() to return success object
+ *                      -# Mocking the wl_proxy_marshal_flags() to return NULL object when ivi_wm_screen_screenshot() 
+ *                         is called to send request to server
+ *                      -# Verification point:
+ *                         +# ilm_takeScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags should be called 5 times
+ */
+TEST_F(IlmControlTest, ilm_takeScreenshot_SendScreenshotRequestFailed)
+{
+    t_ilm_uint lScreenID{10};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[3] = {(void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    // revert to default data
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeScreenshot_CreateBufferFailed
+ * @brief               Create buffer in sharemem pool failed when ilm_takeScreenshot() is called
+ * @test_procedure Steps:
+ *                      -# make wl_shm global and argb8888 are supported
+ *                      -# Mocking the wl_proxy_get_version() to return success object
+ *                      -# Mocking the wl_proxy_marshal_flags() to return NULL object when wl_shm_pool_create_buffer() 
+ *                         is called to create buffer in sharemem pool
+ *                      -# Call ilm_takeScreenshot()
+ *                      -# Verification point:
+ *                         +# ilm_takeScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags should be called 3 times
+ */
+TEST_F(IlmControlTest, ilm_takeScreenshot_CreateBufferFailed)
+{
+    t_ilm_uint lScreenID{10};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[3] = {(void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 2);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 3);
+    // revert to default data
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeScreenshot_Successfully
+ * @brief               ilm_takeScreenshot() is called with all valid data
+ * @test_procedure Steps:
+ *                      -# make wl_shm global and argb8888 are supported
+ *                      -# Mocking the wl_proxy_get_version() to return success object
+ *                      -# Mocking the wl_proxy_marshal_flags() to return success object
+ *                      -# Mocking the wl_display_dispatch_queue() to return failure object
+ *                      -# Verification point:
+ *                         +# ilm_takeScreenshot() must return ILM_FAILED - Attually this function is done 
+ *                            with successfully status, but need to assert with ILM_FAILED because in unittest 
+ *                            context, client side does not get event from server, so need to make wl_display_dispatch_queue() 
+ *                            return failure object to finish ilm_takeScreenshot() function.
+ *                         +# wl_proxy_marshal_flags should be called 5 times
+ *                         +# wl_proxy_add_listener should be called 1 times
+ */
+TEST_F(IlmControlTest, ilm_takeScreenshot_Successfully)
+{
+    t_ilm_uint lScreenID{10};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[1] = {(void *)lValidAddress};
+    int lVersionRetList[1] = {1};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 1);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    // revert to default data
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeAsyncScreenshot_Successfully
+ * @brief               ilm_takeAsyncScreenshot() is called with all valid data
+ * @test_procedure Steps:
+ *                      -# make wl_shm global and argb8888 are supported
+ *                      -# Mocking the wl_proxy_get_version() to return success object
+ *                      -# Mocking the wl_proxy_marshal_flags() to return success object
+ *                      -# Call ilm_takeAsyncScreenshot() with valid screenID, callback_done, callback_error, user_data
+ *                      -# Verification point:
+ *                         +# ilm_takeAsyncScreenshot() must return ILM_SUCCESS
+ *                         +# wl_proxy_marshal_flags should be called 4 times
+ *                         +# wl_proxy_add_listener should be called 1 times
+ *                         +# wl_display_flush should be called 1 times
+ *                         +# All callback of screenshot_context should be setted
+ */
+TEST_F(IlmControlTest, ilm_takeAsyncScreenshot_Successfully)
+{
+    t_ilm_uint lScreenID{10};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[1] = {(void *)lValidAddress};
+    int lVersionRetList[1] = {1};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncScreenshot(lScreenID, lValidAddress, lValidAddress, lValidAddress));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 4);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
+    ASSERT_EQ(ctx_scrshot->callback_done, lValidAddress);
+    ASSERT_EQ(ctx_scrshot->callback_error, lValidAddress);
+    ASSERT_EQ(ctx_scrshot->callback_priv, lValidAddress);
+    // release resource and revert to default data
+    destroy_shm_buffer(ctx_scrshot->ivi_buffer);
+    free(ctx_scrshot);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeSurfaceScreenshot_FileNameNull
+ * @brief               ilm_takeSurfaceScreenshot() is called with file name is NULL
+ * @test_procedure Steps:
+ *                      -# Calling the ilm_takeSurfaceScreenshot() with file name is NULL
+ *                      -# Verification point:
+ *                         +# ilm_takeSurfaceScreenshot() must return ILM_SUCCESS
+ */
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_FileNameNull)
+{
+    t_ilm_uint lSurfaceID{1};
+    t_ilm_const_string filename{NULL};
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeSurfaceScreenshot_InvalidSurfaceID
+ * @brief               ilm_takeSurfaceScreenshot() is called with invalid surfaceID
+ * @test_procedure Steps:
+ *                      -# Mocking the wl_proxy_marshal_flags() return an success object
+ *                      -# Call ilm_takeSurfaceScreenshot()
  *                      -# Verification point:
  *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags should be called 1 time
+ *                         +# wl_display_roundtrip_queue should be called 1 time
  */
-TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_invalidScreen)
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_InvalidSurfaceID)
 {
-    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot("test", 1));
+    t_ilm_uint lInvalidSurfaceID{10};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    struct wl_proxy *lScreenshotRetList[1] = {(struct wl_proxy *)lValidAddress};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lInvalidSurfaceID));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 1);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
 }
 
 /** ================================================================================================
- * @test_id             ilm_takeSurfaceScreenshot_invalidScreen
- * @brief               Test case of ilm_takeSurfaceScreenshot() where do mock for some functions
+ * @test_id             ilm_takeSurfaceScreenshot_controllderIsNull
+ * @brief               ilm_takeSurfaceScreenshot() is called when controller is point to NULL
  * @test_procedure Steps:
- *                      -# Mocking the wl_proxy_marshal_flags() does return an object
- *                      -# Mocking the wl_display_dispatch_queue() does return -1 (failure)
- *                      -# Calling the ilm_takeSurfaceScreenshot() time 1
- *                      -# Mocking the wl_display_dispatch_queue() does return 0 (success)
- *                      -# Calling the ilm_takeSurfaceScreenshot() time 2
+ *                      -# MaKe controller point to NULL
+ *                      -# Call ilm_takeSurfaceScreenshot()
  *                      -# Verification point:
- *                         +# ilm_takeSurfaceScreenshot() time 1 and time 2 must return ILM_FAILED
+ *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags should not be called
+ *                         +# wl_display_roundtrip_queue should not be called
  */
-TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_validScreen)
+
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_controllderIsNull)
 {
-    struct wl_proxy *screenshot[1] = {(struct wl_proxy *)0xFFFFFFFF};
-    SET_RETURN_SEQ(wl_proxy_marshal_flags, screenshot, 1);
-    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    t_ilm_uint lSurfaceID{1};
+    t_ilm_const_string filename{"name_test"};
+    // prepare data
+    ilm_context.wl.controller = NULL;
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 0);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 0);
+}
 
-    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot("test", 1));
+/** ================================================================================================
+ * @test_id             ilm_takeSurfaceScreenshot_wl_display_roundtrip_queue_Failed
+ * @brief               Client wait server process all pending request when ilm_takeSurfaceScreenshot() is called
+ * @test_procedure Steps:
+ *                      -# Mocking the wl_display_roundtrip_queue() return failure object
+ *                      -# Call ilm_takeSurfaceScreenshot()
+ *                      -# Verification point:
+ *                         +# ilm_takeScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags() should be called 1 time
+ *                         +# wl_display_roundtrip_queue() should be called 1 time
+ */
 
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_wl_display_roundtrip_queue_Failed)
+{
+    t_ilm_uint lSurfaceID{1};
+    t_ilm_const_string filename{"name_test"};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 1);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeSurfaceScreenshot_SupportArgb8888AndUnsupportWlshmGlobal
+ * @brief               ilm_takeSurfaceScreenshot() is called when argb8888 is supported and wl_shm global is unsupported
+ * @test_procedure Steps:
+ *                      -# make argb8888 is supported
+ *                      -# point wl_shm to NULL
+ *                      -# call ilm_takeSurfaceScreenshot() with valid screenID and file name
+ *                      -# Verification point:
+ *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags() should be called 1 time
+ *                         +# wl_display_roundtrip_queue() should be called 1 time
+ */
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SupportArgb8888AndUnsupportWlshmGlobal)
+{
+    t_ilm_uint lSurfaceID{1};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[1] = {(void *)lValidAddress};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 1);
+    SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 1);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeSurfaceScreenshot_SupportWlshmGlobalAndUnsupportArgb8888
+ * @brief               ilm_takeSurfaceScreenshot() is called when wl_shm global is supported and argb8888 is unsupported
+ * @test_procedure Steps:
+ *                      -# make wl_shm global is supported
+ *                      -# call ilm_takeSurfaceScreenshot() with valid screenID and file name
+ *                      -# Verification point:
+ *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags() should be called 1 time
+ *                         +# wl_display_roundtrip_queue() should be called 1 time
+ */
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SupportWlshmGlobalAndUnsupportArgb8888)
+{
+    t_ilm_uint lSurfaceID{1};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = false;
+    void *lScreenshotRetList[1] = {(void *)lValidAddress};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 1);
+    SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 1);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeSurfaceScreenshot_CreateBufferFailed
+ * @brief               Create buffer in sharemem pool failed when ilm_takeSurfaceScreenshot() is called
+ * @test_procedure Steps:
+ *                      -# make wl_shm global and argb8888 are supported
+ *                      -# Mocking the wl_proxy_get_version() to return success object
+ *                      -# Mocking the wl_display_dispatch_queue() to return success object
+ *                      -# Mocking the wl_proxy_marshal_flags() to return NULL object when wl_shm_pool_create_buffer() 
+ *                         is called to create buffer in sharemem pool
+ *                      -# Call ilm_takeSurfaceScreenshot()
+ *                      -# Verification point:
+ *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags() should be called 4 times
+ *                         +# wl_display_roundtrip_queue() should be called 1 time
+ */
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_CreateBufferFailed)
+{
+    t_ilm_uint lSurfaceID{1};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[3] = {(void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_successResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 4);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+}
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeSurfaceScreenshot(NULL, 1));
+/** ================================================================================================
+ * @test_id             ilm_takeSurfaceScreenshot_SendSurfaceScreenShotFailed
+ * @brief               Send request take surface screenshot to server failed when ilm_takeSurfaceScreenshot() is called
+ * @test_procedure Steps:
+ *                      -# make wl_shm global and argb8888 are supported
+ *                      -# Mocking the wl_proxy_get_version() to return success object
+ *                      -# Mocking the wl_display_dispatch_queue() to return success object
+ *                      -# Mocking the wl_proxy_marshal_flags() to return NULL object when ivi_wm_surface_screenshot() 
+ *                         is called to send request to server
+ *                      -# Verification point:
+ *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
+ *                         +# wl_proxy_marshal_flags() should be called 6 times
+ *                         +# wl_display_roundtrip_queue() should be called 1 time
+ *                         +# wl_proxy_add_listener() should not be called
+ */
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SendSurfaceScreenShotFailed)
+{
+    t_ilm_uint lSurfaceID{1};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 4);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_successResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 6);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 0);
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeSurfaceScreenshot_Successfully
+ * @brief               ilm_takeSurfaceScreenshot() is called with all valid data
+ * @test_procedure Steps:
+ *                      -# make wl_shm global and argb8888 are supported
+ *                      -# Mocking the wl_proxy_get_version() to return success object
+ *                      -# Mocking the wl_proxy_marshal_flags() to return success object
+ *                      -# Mocking the wl_display_dispatch_queue() to return failure object
+ *                      -# Verification point:
+ *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED - Attually this function is done 
+ *                            with successfully status, but need to assert with ILM_FAILED because in unittest 
+ *                            context, client side does not get event from server, so need to make wl_display_dispatch_queue() 
+ *                            return failure object to finish ilm_takeSurfaceScreenshot() function.
+ *                         +# wl_proxy_marshal_flags should be called 6 times
+ *                         +# wl_display_roundtrip_queue should be called 1 time
+ *                         +# wl_proxy_add_listener should be called 1 time
+ *                         +# wl_display_dispatch_queue should be called 1 time
+ *                         +# wl_display_flush should not be called
+ */
+TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_Successfully)
+{
+    t_ilm_uint lSurfaceID{1};
+    t_ilm_const_string filename{"name_test"};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 6);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 0);
+    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 1);
+}
+
+/** ================================================================================================
+ * @test_id             ilm_takeAsyncSurfaceScreenshot_Successfully
+ * @brief               ilm_takeAsyncScreenshot() is called with all valid data
+ * @test_procedure Steps:
+ *                      -# make wl_shm global and argb8888 are supported
+ *                      -# Mocking the wl_proxy_get_version() to return success object
+ *                      -# Mocking the wl_proxy_marshal_flags() to return success object
+ *                      -# Call ilm_takeAsyncScreenshot() with valid screenID, callback_done, callback_error, user_data
+ *                      -# Verification point:
+ *                         +# ilm_takeAsyncScreenshot() must return ILM_SUCCESS
+ *                         +# wl_proxy_marshal_flags should be called 4 times
+ *                         +# wl_proxy_add_listener should be called 1 times
+ *                         +# wl_display_flush should be called 1 times
+ *                         +# All callback of screenshot_context should be setted
+ */
+TEST_F(IlmControlTest, ilm_takeAsyncSurfaceScreenshot_Successfully)
+{
+    t_ilm_uint lSurfaceID{1};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    // mock wayland APIs
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // call and verify data
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, lValidAddress, lValidAddress, lValidAddress));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
+    ASSERT_EQ(ctx_scrshot->callback_done, lValidAddress);
+    ASSERT_EQ(ctx_scrshot->callback_error, lValidAddress);
+    ASSERT_EQ(ctx_scrshot->callback_priv, lValidAddress);
+    // release resource and revert to default data
+    destroy_shm_buffer(ctx_scrshot->ivi_buffer);
+    free(ctx_scrshot);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+}
+
+/** ================================================================================================
+ * @test_id             screenshot_done_UnknownFileFormat
+ * @brief               screenshot_done() process data when file format is not png or bmp
+ * @test_procedure Steps:
+ *                      -# Setup data to make ilm_takeAsyncSurfaceScreenshot() process successfully
+ *                      -# Setup file format is .txt format
+ *                      -# call screenshot_done() to process
+ *                      -# Verification point:
+ *                         +# The callback ScreenshotDoneCallbackFunc() should be called
+ */
+TEST_F(IlmControlTest, screenshot_done_UnknownFileFormat)
+{
+    t_ilm_uint lSurfaceID{1};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    RESET_FAKE(save_as_png);
+    RESET_FAKE(save_as_bitmap);
+    screenshot_data_t screenshotData;
+    screenshotData.fd.store(-1);
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // setup callback for ilm_context
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
+    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    // set file format
+    ctx_scrshot->filename = "test.txt";
+    // call API and verify data
+    screenshot_done(ctx_scrshot, lValidAddress, 1);
+    ASSERT_EQ(save_as_png_fake.call_count, 0);
+    ASSERT_EQ(save_as_bitmap_fake.call_count, 1);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+    destroy_shm_buffer(ctx_scrshot->ivi_buffer);
+    // make sure call back is called
+    ASSERT_NE(screenshotData.fd.load(), -1);
+    free(ctx_scrshot);
+}
+
+/** ================================================================================================
+ * @test_id             screenshot_done_pngFileFormatSaveAsPngPassed
+ * @brief               screenshot_done() process data when file format is png and can save as png file successfully
+ * @test_procedure Steps:
+ *                      -# Setup data to make ilm_takeAsyncSurfaceScreenshot() process successfully
+ *                      -# Setup file format is .png format
+ *                      -# Mocking save_as_png to return success object
+ *                      -# call screenshot_done() to process
+ *                      -# Verification point:
+ *                         +# The callback ScreenshotDoneCallbackFunc() should be called
+ *                         +# The ctx_scrshot->result should be passed
+ */
+TEST_F(IlmControlTest, screenshot_done_pngFileFormatSaveAsPngPassed)
+{
+    t_ilm_uint lSurfaceID{1};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    RESET_FAKE(save_as_png);
+    RESET_FAKE(save_as_bitmap);
+    screenshot_data_t screenshotData;
+    screenshotData.fd.store(-1);
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // setup callback for ilm_context
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
+    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    // set file format
+    ctx_scrshot->filename = "test.png";
+    // mock save_as_png
+    int save_as_png_passed[1] = {0};
+    SET_RETURN_SEQ(save_as_png, save_as_png_passed, 1);
+    // call API and verify data
+    screenshot_done(ctx_scrshot, lValidAddress, 1);
+    ASSERT_EQ(save_as_png_fake.call_count, 1);
+    ASSERT_EQ(save_as_bitmap_fake.call_count, 0);
+    ASSERT_EQ(ctx_scrshot->result, ILM_SUCCESS);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+    destroy_shm_buffer(ctx_scrshot->ivi_buffer);
+    // make sure call back is called
+    ASSERT_NE(screenshotData.fd.load(), -1);
+    free(ctx_scrshot);
+}
+
+/** ================================================================================================
+ * @test_id             screenshot_done_pngFileFormatSaveAsPngFailed
+ * @brief               screenshot_done() process data when file format is png and cannot save as png file
+ * @test_procedure Steps:
+ *                      -# Setup data to make ilm_takeAsyncSurfaceScreenshot() process successfully
+ *                      -# Setup file format is .png format
+ *                      -# Mocking save_as_png to return failure object
+ *                      -# call screenshot_done() to process
+ *                      -# Verification point:
+ *                         +# The callback ScreenshotDoneCallbackFunc() should be called
+ *                         +# The ctx_scrshot->result should be failed
+ */
+TEST_F(IlmControlTest, screenshot_done_pngFileFormatSaveAsPngFailed)
+{
+    t_ilm_uint lSurfaceID{1};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    RESET_FAKE(save_as_png);
+    RESET_FAKE(save_as_bitmap);
+    screenshot_data_t screenshotData;
+    screenshotData.fd.store(-1);
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // setup callback for ilm_context
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
+    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    // set file format
+    ctx_scrshot->filename = "test.png";
+    // mock save_as_png
+    int save_as_png_failed[1] = {1};
+    SET_RETURN_SEQ(save_as_png, save_as_png_failed, 1);
+    // call API and verify data
+    screenshot_done(ctx_scrshot, lValidAddress, 1);
+    ASSERT_EQ(save_as_png_fake.call_count, 1);
+    ASSERT_EQ(save_as_bitmap_fake.call_count, 0);
+    ASSERT_EQ(ctx_scrshot->result, ILM_FAILED);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+    destroy_shm_buffer(ctx_scrshot->ivi_buffer);
+    // make sure call back is called
+    ASSERT_NE(screenshotData.fd.load(), -1);
+    free(ctx_scrshot);
+}
+
+/** ================================================================================================
+ * @test_id             screenshot_done_bitmapFileFormatSaveAsBitmapPassed
+ * @brief               screenshot_done() process data when file format is bmp and can save as bmp file successfully
+ * @test_procedure Steps:
+ *                      -# Setup data to make ilm_takeAsyncSurfaceScreenshot() process successfully
+ *                      -# Setup file format is .bmp format
+ *                      -# Mocking save_as_bitmap to return success object
+ *                      -# call screenshot_done() to process
+ *                      -# Verification point:
+ *                         +# The callback ScreenshotDoneCallbackFunc() should be called
+ *                         +# The ctx_scrshot->result should be passed
+ */
+TEST_F(IlmControlTest, screenshot_done_bitmapFileFormatSaveAsBitmapPassed)
+{
+    t_ilm_uint lSurfaceID{1};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    RESET_FAKE(save_as_png);
+    RESET_FAKE(save_as_bitmap);
+    screenshot_data_t screenshotData;
+    screenshotData.fd.store(-1);
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // setup callback for ilm_context
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
+    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    // set file format
+    ctx_scrshot->filename = "test.bmp";
+    // mock save_as_bitmap
+    int save_as_bitmap_passed[1] = {0};
+    SET_RETURN_SEQ(save_as_bitmap, save_as_bitmap_passed, 1);
+    // call API and verify data
+    screenshot_done(ctx_scrshot, lValidAddress, 1);
+    ASSERT_EQ(save_as_png_fake.call_count, 0);
+    ASSERT_EQ(save_as_bitmap_fake.call_count, 1);
+    ASSERT_EQ(ctx_scrshot->result, ILM_SUCCESS);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+    destroy_shm_buffer(ctx_scrshot->ivi_buffer);
+    // make sure call back is called
+    ASSERT_NE(screenshotData.fd.load(), -1);
+    free(ctx_scrshot);
+}
+
+/** ================================================================================================
+ * @test_id             screenshot_done_bitmapFileFormatSaveAsBitmapFailed
+ * @brief               screenshot_done() process data when file format is bmp and can not save as bmp file
+ * @test_procedure Steps:
+ *                      -# Setup data to make ilm_takeAsyncSurfaceScreenshot() process successfully
+ *                      -# Setup file format is .bmp format
+ *                      -# Mocking save_as_bitmap to return failure object
+ *                      -# call screenshot_done() to process
+ *                      -# Verification point:
+ *                         +# The callback ScreenshotDoneCallbackFunc() should be called
+ *                         +# The ctx_scrshot->result should be failed
+ */
+TEST_F(IlmControlTest, screenshot_done_bitmapFileFormatSaveAsBitmapFailed)
+{
+    t_ilm_uint lSurfaceID{1};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    RESET_FAKE(save_as_png);
+    RESET_FAKE(save_as_bitmap);
+    screenshot_data_t screenshotData;
+    screenshotData.fd.store(-1);
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *lScreenshotRetList[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int lVersionRetList[1] = {1};
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 3);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
+    // setup callback for ilm_context
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
+    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    // set file format
+    ctx_scrshot->filename = "test.bmp";
+    // mock save_as_bitmap
+    int save_as_bitmap_failed[1] = {1};
+    SET_RETURN_SEQ(save_as_bitmap, save_as_bitmap_failed, 1);
+    // call API and verify data
+    screenshot_done(ctx_scrshot, lValidAddress, 1);
+    ASSERT_EQ(save_as_png_fake.call_count, 0);
+    ASSERT_EQ(save_as_bitmap_fake.call_count, 1);
+    ASSERT_EQ(ctx_scrshot->result, ILM_FAILED);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+    destroy_shm_buffer(ctx_scrshot->ivi_buffer);
+    // make sure call back is called
+    ASSERT_NE(screenshotData.fd.load(), -1);
+    free(ctx_scrshot);
+}
+
+/** ================================================================================================
+ * @test_id             screenshot_error_CheckCall
+ * @brief               screenshot_error() should raise our setted callback
+ * @test_procedure Steps:
+ *                      -# Setup data to make ilm_takeAsyncSurfaceScreenshot() process successfully
+ *                      -# call screenshot_error() to process
+ *                      -# Verification point:
+ *                         +# The callback ScreenshotErrorCallbackFunc() should be called
+ */
+TEST_F(IlmControlTest, screenshot_error_CheckCall)
+{
+    t_ilm_uint lSurfaceID{1};
+    constexpr uint32_t lValidAddress{0xFFFFFFFF};
+    // prepare data
+    RESET_FAKE(save_as_png);
+    RESET_FAKE(save_as_bitmap);
+    screenshot_data_t screenshotData;
+    screenshotData.error.store(-1);
+    ilm_context.wl.wl_shm = lValidAddress;
+    ilm_context.wl.has_argb8888 = true;
+    void *screenshot[4] = {(void *)lValidAddress, (void *)lValidAddress, (void *)lValidAddress, NULL};
+    int version[1] = {1};
+    SET_RETURN_SEQ(wl_proxy_marshal_flags, screenshot, 3);
+    SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
+    SET_RETURN_SEQ(wl_proxy_get_version, version, 1);
+    // setup callback for ilm_context
+    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
+    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    ctx_scrshot->filename = "test.txt";
+    screenshot_error(ctx_scrshot, lValidAddress, 1, "Error message");
+    ASSERT_EQ(save_as_png_fake.call_count, 0);
+    ASSERT_EQ(save_as_bitmap_fake.call_count, 0);
+    ilm_context.wl.wl_shm = NULL;
+    ilm_context.wl.has_argb8888 = false;
+    destroy_shm_buffer(ctx_scrshot->ivi_buffer);
+    // make sure call back is called
+    ASSERT_NE(screenshotData.error.load(), -1);
+    free(ctx_scrshot);
 }
