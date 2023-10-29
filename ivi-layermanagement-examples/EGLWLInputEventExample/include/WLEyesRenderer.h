@@ -34,8 +34,32 @@ bool DrawEyes(WLEGLSurface* surface, WLEyes* eyes);
 void DrawFillPoly(const int nPoint, const float* points, const float color[4]);
 void DrawPoly(const int nPoint, const float* points, const float color[4], int width);
 
-extern const struct wl_pointer_listener PointerListener;
-extern const struct wl_keyboard_listener KeyboardListener;
-extern const struct wl_touch_listener TouchListener;
+struct PointerListener_t {
+public:
+    PointerListener_t ();
+    const struct wl_pointer_listener * GetCoreListener() const;
+private:
+    struct wl_pointer_listener mPointerListener;
+};
+
+struct KeyboardListener_t {
+public:
+    KeyboardListener_t ();
+    const struct wl_keyboard_listener * GetCoreListener() const;
+private:
+    struct wl_keyboard_listener mKeyboardListener;
+};
+
+struct TouchListener_t {
+public:
+    TouchListener_t ();
+    const struct wl_touch_listener * GetCoreListener() const;
+private:
+    struct wl_touch_listener mTouchListener;
+};
+
+extern const struct PointerListener_t PointerListener;
+extern const struct KeyboardListener_t KeyboardListener;
+extern const struct TouchListener_t TouchListener;
 
 #endif /* _WLEYESRENDERER_H_ */

@@ -25,6 +25,7 @@
 #include "WLEyes.h"
 #include "WLEyesRenderer.h"
 #include <poll.h>
+#include <cstring>
 #include <wayland-cursor.h>
 
 #define WL_UNUSED(A) (A)=(A)
@@ -376,36 +377,66 @@ TouchHandleOrientation(void* data, struct wl_touch* touch,
     printf("ENTER EGLWLINPUT TouchHandleOrientation\n");
 }
 
-const struct wl_pointer_listener PointerListener = {
-    PointerHandleEnter,
-    PointerHandleLeave,
-    PointerHandleMotion,
-    PointerHandleButton,
-    PointerHandleAxis,
-    PointerHandleFrame,
-    PointerHandleAxisSource,
-    PointerHandleAxisStop,
-    PointerHandleAxisDiscrete
-};
+PointerListener_t::PointerListener_t()
+{
+    memset(&mPointerListener, 0, sizeof mPointerListener);
+    mPointerListener.enter = PointerHandleEnter;
+    mPointerListener.leave = PointerHandleLeave;
+    mPointerListener.motion = PointerHandleMotion;
+    mPointerListener.button = PointerHandleButton;
+    mPointerListener.axis = PointerHandleAxis;
+    mPointerListener.frame = PointerHandleFrame;
+    mPointerListener.axis_source = PointerHandleAxisSource;
+    mPointerListener.axis_stop = PointerHandleAxisStop;
+    mPointerListener.axis_discrete = PointerHandleAxisDiscrete;
+}
 
-const struct wl_keyboard_listener KeyboardListener = {
-    KeyboardHandleKeymap,
-    KeyboardHandleEnter,
-    KeyboardHandleLeave,
-    KeyboardHandleKey,
-    KeyboardHandleModifiers,
-    KeyboardHandleRepeatInfo
-};
+const struct wl_pointer_listener * PointerListener_t::GetCoreListener() const
+{
+    const struct wl_pointer_listener * ret = &mPointerListener;
+    return ret;
+}
 
-const struct wl_touch_listener TouchListener = {
-    TouchHandleDown,
-    TouchHandleUp,
-    TouchHandleMotion,
-    TouchHandleFrame,
-    TouchHandleCancel,
-    TouchHandleShape,
-    TouchHandleOrientation
-};
+const struct PointerListener_t PointerListener;
+
+KeyboardListener_t::KeyboardListener_t()
+{
+    memset(&mKeyboardListener, 0, sizeof mKeyboardListener);
+    mKeyboardListener.keymap = KeyboardHandleKeymap;
+    mKeyboardListener.enter = KeyboardHandleEnter;
+    mKeyboardListener.leave = KeyboardHandleLeave;
+    mKeyboardListener.key = KeyboardHandleKey;
+    mKeyboardListener.modifiers = KeyboardHandleModifiers;
+    mKeyboardListener.repeat_info = KeyboardHandleRepeatInfo;
+}
+
+const struct wl_keyboard_listener * KeyboardListener_t::GetCoreListener() const
+{
+    const struct wl_keyboard_listener * ret = &mKeyboardListener;
+    return ret;
+}
+
+const struct KeyboardListener_t KeyboardListener;
+
+TouchListener_t::TouchListener_t()
+{
+    memset(&mTouchListener, 0, sizeof mTouchListener);
+    mTouchListener.down = TouchHandleDown;
+    mTouchListener.up = TouchHandleUp;
+    mTouchListener.motion = TouchHandleMotion;
+    mTouchListener.frame = TouchHandleFrame;
+    mTouchListener.cancel = TouchHandleCancel;
+    mTouchListener.shape = TouchHandleShape;
+    mTouchListener.orientation = TouchHandleOrientation;
+}
+
+const struct wl_touch_listener * TouchListener_t::GetCoreListener() const
+{
+    const struct wl_touch_listener * ret = &mTouchListener;
+    return ret;
+}
+
+const struct TouchListener_t TouchListener;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -577,9 +608,22 @@ static void FrameListenerFunc(void*, struct wl_callback* cb, uint32_t)
     }
 }
 
-static const struct wl_callback_listener FrameListener = {
-    FrameListenerFunc,
+struct FrameListener_t {
+    FrameListener_t ()
+    {
+        memset(&mFrameListener, 0, sizeof mFrameListener);
+        mFrameListener.done = FrameListenerFunc;
+    }
+    const struct wl_callback_listener * GetCoreListener() const
+    {
+        const struct wl_callback_listener * ret = &mFrameListener;
+        return ret;
+    }
+private:
+    struct wl_callback_listener mFrameListener;
 };
+
+static const struct FrameListener_t FrameListener;
 
 void
 DrawFillPoly(const int nPoint, const float* points, const float color[4])
@@ -657,7 +701,7 @@ DrawEyes(WLEGLSurface* surface, WLEyes* eyes)
     eglSwapBuffers(surface->GetEGLDisplay(), surface->GetEGLSurface());
 
     struct wl_callback* cb = wl_surface_frame(surface->GetWLSurface());
-    wl_callback_add_listener(cb, &FrameListener, NULL);
+    wl_callback_add_listener(cb, FrameListener.GetCoreListener(), NULL);
     wl_surface_commit(surface->GetWLSurface());
     wl_display_flush(surface->GetWLDisplay());
 

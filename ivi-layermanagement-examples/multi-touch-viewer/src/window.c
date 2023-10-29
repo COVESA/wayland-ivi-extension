@@ -109,8 +109,8 @@ registry_handle_remove(void *p_data, struct wl_registry *p_registry,
 }
 
 static const struct wl_registry_listener registry_listener = {
-    registry_handle_global,
-    registry_handle_remove
+    .global = registry_handle_global,
+    .global_remove = registry_handle_remove
 };
 
 /**
@@ -135,8 +135,8 @@ surface_leave(void *p_data, struct wl_surface *p_surface,
 }
 
 static const struct wl_surface_listener surface_listener = {
-    surface_enter,
-    surface_leave
+    .enter = surface_enter,
+    .leave = surface_leave
 };
 
 /**
@@ -171,9 +171,9 @@ shell_surface_handle_popup_done(void *p_data,
 }
 
 static const struct wl_shell_surface_listener shell_surface_listener = {
-    shell_surface_handle_ping,
-    shell_surface_handle_configure,
-    shell_surface_handle_popup_done
+    .ping = shell_surface_handle_ping,
+    .configure = shell_surface_handle_configure,
+    .popup_done = shell_surface_handle_popup_done
 };
 
 /**
@@ -199,7 +199,7 @@ frame_callback(void *p_data, struct wl_callback *p_cb, uint32_t time)
 }
 
 static const struct wl_callback_listener frame_listener = {
-    frame_callback
+    .done = frame_callback
 };
 
 static void

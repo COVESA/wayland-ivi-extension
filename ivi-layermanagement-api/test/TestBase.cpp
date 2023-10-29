@@ -78,9 +78,24 @@ shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
     base->SetShmFormats(format);
 }
 
-static struct wl_shm_listener shm_listener = {
-    shm_format
+class shm_listener_t {
+public:
+    shm_listener_t ()
+    {
+        memset(&m_shm_listener, 0, sizeof m_shm_listener);
+        m_shm_listener.format = shm_format;
+    }
+    const struct wl_shm_listener * GetCoreListener()
+    {
+        const struct wl_shm_listener * ret = &m_shm_listener;
+        return ret;
+    }
+private:
+    struct wl_shm_listener m_shm_listener;
 };
+
+static shm_listener_t shm_listener;
+
 
 void registry_listener_callback(void* data, struct wl_registry* registry, uint32_t id, const char* interface, uint32_t version)
 {
@@ -95,7 +110,7 @@ void registry_listener_callback(void* data, struct wl_registry* registry, uint32
     if (0 == strcmp(interface, "wl_shm"))
     {
         shm = (struct wl_shm*) wl_registry_bind(registry, id, &wl_shm_interface, 1);
-        wl_shm_add_listener(shm, &shm_listener, base);
+        wl_shm_add_listener(shm, shm_listener.GetCoreListener(), base);
         base->SetShm(shm);
     }
 
@@ -122,10 +137,10 @@ TestBase::TestBase()
     }
     wlRegistry = wl_display_get_registry(wlDisplay);
 
-    static const struct wl_registry_listener registry_listener = {
-        registry_listener_callback,
-        NULL
-    };
+    static struct wl_registry_listener registry_listener;
+
+    memset(&registry_listener, 0, sizeof registry_listener);
+    registry_listener.global = registry_listener_callback;
 
     shmFormats = 0;
 
