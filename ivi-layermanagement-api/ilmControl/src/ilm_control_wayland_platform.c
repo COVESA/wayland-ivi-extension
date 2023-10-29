@@ -1099,14 +1099,14 @@ static void destroy_control_resources(void)
         ctx->wl.registry = NULL;
     }
 
-    if (ctx->wl.queue) {
-        wl_event_queue_destroy(ctx->wl.queue);
-        ctx->wl.queue = NULL;
-    }
-
     if (ctx->wl.input_controller) {
         ivi_input_destroy(ctx->wl.input_controller);
         ctx->wl.input_controller = NULL;
+    }
+
+    if (ctx->wl.queue) {
+        wl_event_queue_destroy(ctx->wl.queue);
+        ctx->wl.queue = NULL;
     }
 
     if (0 != pthread_mutex_destroy(&ctx->mutex)) {
