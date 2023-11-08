@@ -27,75 +27,52 @@
 
 extern "C"{
 WL_EXPORT const struct wl_interface ivi_screenshot_interface = {
-	"ivi_screenshot", 1,
-	0, NULL,
-	0, NULL,
+    "ivi_screenshot", 1, 0, NULL, 0, NULL,
 };
 
 WL_EXPORT const struct wl_interface ivi_wm_screen_interface = {
-	"ivi_wm_screen", 1,
-	0, NULL,
-	0, NULL,
+    "ivi_wm_screen", 1, 0, NULL, 0, NULL,
 };
 
 WL_EXPORT const struct wl_interface ivi_wm_interface = {
-	"ivi_wm", 1,
-	0, NULL,
-	0, NULL,
+    "ivi_wm", 1, 0, NULL, 0, NULL,
 };
 
 WL_EXPORT const struct wl_interface ivi_input_interface = {
-	"ivi_input", 1,
-	0, NULL,
-	0, NULL,
+    "ivi_input", 1, 0, NULL, 0, NULL,
 };
 
 WL_EXPORT const struct wl_interface wl_registry_interface = {
-	"wl_registry", 1,
-	0, NULL,
-	0, NULL,
+    "wl_registry", 1, 0, NULL, 0, NULL,
 };
 
 WL_EXPORT const struct wl_interface wl_buffer_interface = {
-	"wl_buffer", 1,
-	0, NULL,
-	0, NULL,
+    "wl_buffer", 1, 0, NULL, 0, NULL,
 };
 
 WL_EXPORT const struct wl_interface wl_shm_pool_interface = {
-	"wl_shm_pool", 1,
-	0, NULL,
-	0, NULL,
+    "wl_shm_pool", 1, 0, NULL, 0, NULL,
 };
 
 WL_EXPORT const struct wl_interface wl_shm_interface = {
-	"wl_shm", 1,
-	0, NULL,
-	0, NULL,
+    "wl_shm", 1, 0, NULL, 0, NULL,
 };
 
 WL_EXPORT const struct wl_interface wl_output_interface = {
-	"wl_output", 1,
-	0, NULL,
-	0, NULL,
+    "wl_output", 1, 0, NULL, 0, NULL,
 };
 
 FAKE_VALUE_FUNC(int, save_as_png, const char *, const char *, int32_t , int32_t , uint32_t );
 FAKE_VALUE_FUNC(int, save_as_bitmap, const char *, const char *, int32_t , int32_t , uint32_t );
+
+#include "ilm_control_wayland_platform.c"
+}
 
 struct screenshot_data_t {
     std::atomic<int32_t> fd;
     std::atomic<uint32_t> error;
     ilmErrorTypes result = ILM_SUCCESS;
 };
-
-}
-
-extern "C"{
-#include "ilm_control_wayland_platform.c"
-}
-
-static constexpr uint8_t MAX_NUMBER = 5;
 
 enum ilmControlStatus
 {
@@ -106,30 +83,27 @@ enum ilmControlStatus
     NONE = 4
 };
 
+static constexpr uint8_t MAX_NUMBER = 5;
+
 static ilmControlStatus g_ilmControlStatus = NONE;
 static t_ilm_notification_mask g_ilm_notification_mask;
 
 static void notificationCallback(ilmObjectType object, t_ilm_uint id, t_ilm_bool created, void *user_data)
 {
     if (object == ILM_SURFACE)
-    {
         g_ilmControlStatus = created ? CREATE_SURFACE : DESTROY_SURFACE;
-    } else if (object == ILM_LAYER)
-    {
+    else if (object == ILM_LAYER)
         g_ilmControlStatus = created ? CREATE_LAYER : DESTROY_LAYER;
-    }
 }
 
 static void surfaceCallbackFunction(t_ilm_surface surface, struct ilmSurfaceProperties* surfaceProperties, t_ilm_notification_mask mask)
 {
     g_ilm_notification_mask = mask;
-    std::cout << "Notification: surface " << surface << "\n";
 }
 
 static void layerCallbackFunction(t_ilm_layer layer, struct ilmLayerProperties* layerProperties, t_ilm_notification_mask mask)
 {
     g_ilm_notification_mask = mask;
-    std::cout << "Notification: layer " << layer << "\n";
 }
 
 class IlmControlTest : public ::testing::Test
@@ -150,43 +124,44 @@ public:
 
     void init_ctx_list_content()
     {
+        memset(&ilm_context, 0, sizeof(ilm_context));
+        ilm_context.wl.controller = (struct ivi_wm*)&m_iviWmControllerFakePointer;
+
         custom_wl_list_init(&ilm_context.wl.list_seat);
         custom_wl_list_init(&ilm_context.wl.list_surface);
         custom_wl_list_init(&ilm_context.wl.list_screen);
         custom_wl_list_init(&ilm_context.wl.list_layer);
-        ilm_context.wl.controller = (struct ivi_wm*)&m_iviWmControllerFakePointer;
 
-        for(uint8_t i = 0; i < 3; i++)
-        {
+        for(uint8_t i = 0; i < MAX_NUMBER; i++) {
             // prepare the seats
-            mp_ctxSeat[i] = (struct seat_context*)malloc(sizeof(struct seat_context));
+            mp_ctxSeat[i] = (struct seat_context*)calloc(1, sizeof(struct seat_context));
             mp_ctxSeat[i]->seat_name = strdup(mp_ilmSeatNames[i]);
-            mp_ctxSeat[i]->capabilities = 1;
+            mp_ctxSeat[i]->capabilities = ILM_INPUT_DEVICE_ALL;
             custom_wl_list_insert(&ilm_context.wl.list_seat, &mp_ctxSeat[i]->link);
-        }
-        for(uint8_t i = 0; i < MAX_NUMBER; i++)
-        {
+
             // prepare the surfaces
-            mp_ctxSurface[i] = (struct surface_context*)malloc(sizeof(struct surface_context));
+            mp_ctxSurface[i] = (struct surface_context*)calloc(1, sizeof(struct surface_context));
             mp_ctxSurface[i]->id_surface = mp_ilmSurfaceIds[i];
             mp_ctxSurface[i]->ctx = &ilm_context.wl;
             mp_ctxSurface[i]->prop = mp_surfaceProps[i];
             mp_ctxSurface[i]->notification = NULL;
             custom_wl_list_init(&mp_ctxSurface[i]->list_accepted_seats);
-            mp_accepted_seat[i] = (struct accepted_seat*)malloc(sizeof(struct accepted_seat));
-            mp_accepted_seat[i]->seat_name = strdup("KEYBOARD");
+            mp_accepted_seat[i] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
+            mp_accepted_seat[i]->seat_name = strdup("default");
             custom_wl_list_insert(&mp_ctxSurface[i]->list_accepted_seats, &mp_accepted_seat[i]->link);
             custom_wl_list_insert(&ilm_context.wl.list_surface, &mp_ctxSurface[i]->link);
+
             //prepare the layers
-            mp_ctxLayer[i] = (struct layer_context*)malloc(sizeof(struct layer_context));
+            mp_ctxLayer[i] = (struct layer_context*)calloc(1, sizeof(struct layer_context));
             mp_ctxLayer[i]->id_layer = mp_ilmLayerIds[i];
             mp_ctxLayer[i]->ctx = &ilm_context.wl;
             mp_ctxLayer[i]->prop = mp_layerProps[i];
             mp_ctxLayer[i]->notification = NULL;
             custom_wl_list_insert(&ilm_context.wl.list_layer, &mp_ctxLayer[i]->link);
             custom_wl_array_init(&mp_ctxLayer[i]->render_order);
+
             // prepare the screens
-            mp_ctxScreen[i] = (struct screen_context*)malloc(sizeof(struct screen_context));
+            mp_ctxScreen[i] = (struct screen_context*)calloc(1, sizeof(struct screen_context));
             mp_ctxScreen[i]->id_screen = mp_ilmScreenIds[i];
             mp_ctxScreen[i]->name = i;
             mp_ctxScreen[i]->ctx = &ilm_context.wl;
@@ -201,74 +176,51 @@ public:
         {
             struct surface_context *l, *n;
             wl_list_for_each_safe(l, n, &ilm_context.wl.list_surface, link)
-            {
                 custom_wl_list_remove(&l->link);
-            }
         }
         {
             struct layer_context *l, *n;
             wl_list_for_each_safe(l, n, &ilm_context.wl.list_layer, link)
-            {
                 custom_wl_list_remove(&l->link);
-            }
         }
         {
             struct screen_context *l, *n;
             wl_list_for_each_safe(l, n, &ilm_context.wl.list_screen, link)
-            {
                 custom_wl_list_remove(&l->link);
-            }
         }
         {
             struct seat_context *l, *n;
             wl_list_for_each_safe(l, n, &ilm_context.wl.list_seat, link)
-            {
                 custom_wl_list_remove(&l->link);
-            }
         }
-        for(uint8_t i = 0; i < MAX_NUMBER; i++)
-        {
+
+        for(uint8_t i = 0; i < MAX_NUMBER; i++) {
             if(mp_ctxSurface[i] != nullptr)
-            {
                 free(mp_ctxSurface[i]);
-            }
             if(mp_ctxLayer[i] != nullptr)
-            {
                 free(mp_ctxLayer[i]);
-            }
             if(mp_ctxScreen[i] != nullptr)
-            {
                 free(mp_ctxScreen[i]);
-            }
-            if(mp_accepted_seat[i] != nullptr)
-            {
+            if(mp_accepted_seat[i] != nullptr) {
                 free(mp_accepted_seat[i]->seat_name);
                 free(mp_accepted_seat[i]);
             }
-        }
-        for(uint8_t i = 0; i < 3; i++)
-        {
-            if(mp_ctxSeat[i] != nullptr)
-            {
+            if(mp_ctxSeat[i] != nullptr) {
                 free(mp_ctxSeat[i]->seat_name);
                 free(mp_ctxSeat[i]);
             }
         }
+
         ilm_context.wl.controller = nullptr;
         ilm_context.wl.notification = nullptr;
         ilm_context.initialized = false;
     }
 
-    char *mp_ilmSeatNames[3] = {(char*)"KEYBOARD", (char*)"POINTER", (char*)"TOUCH"};
     t_ilm_surface mp_ilmSurfaceIds[MAX_NUMBER] = {1, 2, 3, 4, 5};
     t_ilm_surface mp_ilmScreenIds[MAX_NUMBER] = {10, 20, 30, 40, 50};
     t_ilm_surface mp_ilmLayerIds[MAX_NUMBER] = {100, 200, 300, 400, 500};
-    struct surface_context *mp_ctxSurface[MAX_NUMBER] = {nullptr};
-    struct accepted_seat *mp_accepted_seat[MAX_NUMBER] = {nullptr};
-    struct layer_context *mp_ctxLayer[MAX_NUMBER] = {nullptr};
-    struct screen_context *mp_ctxScreen[MAX_NUMBER] = {nullptr};
-    struct seat_context *mp_ctxSeat[3] = {nullptr};
-    uint8_t m_iviWmControllerFakePointer = 0;
+    char *mp_ilmSeatNames[MAX_NUMBER] = {(char*)"default", (char*)"seat1",
+            (char*)"seat2", (char*)"seat3", (char*)"seat4"};
     struct ilmSurfaceProperties mp_surfaceProps[MAX_NUMBER] = {
         {0.6, 0, 0, 500, 500, 500, 500, 0, 0, 500, 500, ILM_TRUE, 10, 100, ILM_INPUT_DEVICE_ALL},
         {0.7, 10, 50, 600, 400, 600, 400, 50, 40, 200, 1000, ILM_FALSE, 30, 300, ILM_INPUT_DEVICE_POINTER|ILM_INPUT_DEVICE_KEYBOARD},
@@ -292,6 +244,13 @@ public:
         {0, nullptr, 6000, 7000, "screen_5"},
     };
 
+    struct surface_context *mp_ctxSurface[MAX_NUMBER] = {nullptr};
+    struct accepted_seat *mp_accepted_seat[MAX_NUMBER] = {nullptr};
+    struct layer_context *mp_ctxLayer[MAX_NUMBER] = {nullptr};
+    struct screen_context *mp_ctxScreen[MAX_NUMBER] = {nullptr};
+    struct seat_context *mp_ctxSeat[MAX_NUMBER] = {nullptr};
+
+    uint8_t m_iviWmControllerFakePointer = 0;
     int mp_successResult[1] = {0};
     int mp_failureResult[1] = {-1};
     ilmErrorTypes mp_ilmErrorType[1];
@@ -392,7 +351,7 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_success)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
-    struct ilmSurfaceProperties *l_surfaceProp = (struct ilmSurfaceProperties *)malloc(sizeof(struct ilmSurfaceProperties));
+    struct ilmSurfaceProperties *l_surfaceProp = (struct ilmSurfaceProperties *)calloc(1, sizeof(struct ilmSurfaceProperties));
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(1, l_surfaceProp));
 
     ASSERT_EQ(l_surfaceProp->opacity, mp_surfaceProps[0].opacity);
@@ -495,7 +454,7 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_success)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
-    struct ilmLayerProperties *l_layerProp = (struct ilmLayerProperties *)malloc(sizeof(struct ilmLayerProperties));
+    struct ilmLayerProperties *l_layerProp = (struct ilmLayerProperties *)calloc(1, sizeof(struct ilmLayerProperties));
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfLayer(100, l_layerProp));
 
     ASSERT_EQ(l_layerProp->opacity, mp_layerProps[0].opacity);
@@ -578,7 +537,7 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfScreen_success)
     l_addLayer = (uint32_t*)custom_wl_array_add(&mp_ctxScreen[0]->render_order, sizeof(uint32_t));
     *l_addLayer = 200;
 
-    struct ilmScreenProperties *l_ScreenProp = (struct ilmScreenProperties *)malloc(sizeof(struct ilmScreenProperties));
+    struct ilmScreenProperties *l_ScreenProp = (struct ilmScreenProperties *)calloc(1, sizeof(struct ilmScreenProperties));
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfScreen(10, l_ScreenProp));
 
     EXPECT_EQ(l_ScreenProp->layerCount, 2);
@@ -670,8 +629,7 @@ TEST_F(IlmControlTest, ilm_getScreenIDs_success)
     ASSERT_EQ(ILM_SUCCESS, ilm_getScreenIDs(&l_numberIds, &lp_listIds));
 
     EXPECT_EQ(MAX_NUMBER, l_numberIds);
-    for(uint8_t i = 0; i< l_numberIds; i++)
-    {
+    for(uint8_t i = 0; i< l_numberIds; i++) {
         EXPECT_EQ(lp_listIds[i], mp_ilmScreenIds[i]);
     }
 
@@ -831,8 +789,7 @@ TEST_F(IlmControlTest, ilm_getLayerIDs_success)
     ASSERT_EQ(ILM_SUCCESS, ilm_getLayerIDs(&l_numberLayers, &lp_listLayers));
 
     EXPECT_EQ(MAX_NUMBER, l_numberLayers);
-    for(uint8_t i = 0; i< l_numberLayers; i++)
-    {
+    for(uint8_t i = 0; i< l_numberLayers; i++) {
         EXPECT_EQ(lp_listLayers[i], mp_ilmLayerIds[i]);
     }
 
@@ -990,8 +947,7 @@ TEST_F(IlmControlTest, ilm_getSurfaceIDs_success)
     ASSERT_EQ(ILM_SUCCESS, ilm_getSurfaceIDs(&l_numberSurfaces, &lp_listSurfaces));
 
     EXPECT_EQ(MAX_NUMBER, l_numberSurfaces);
-    for(uint8_t i = 0; i< l_numberSurfaces; i++)
-    {
+    for(uint8_t i = 0; i< l_numberSurfaces; i++) {
         EXPECT_EQ(lp_listSurfaces[i], mp_ilmSurfaceIds[i]);
     }
 
@@ -2919,8 +2875,8 @@ TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithNullNotificati
     ASSERT_EQ(2, wl_list_remove_fake.call_count);
     mp_ctxSurface[0] = nullptr;
 
-    mp_accepted_seat[0] = (struct accepted_seat*)malloc(sizeof(struct accepted_seat));
-    mp_accepted_seat[0]->seat_name = strdup("KEYBOARD");
+    mp_accepted_seat[0] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
+    mp_accepted_seat[0]->seat_name = strdup("default");
 }
 
 /** ================================================================================================
@@ -2951,8 +2907,8 @@ TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithCtxNotificatio
     ASSERT_EQ(ILM_NOTIFICATION_CONTENT_REMOVED, g_ilm_notification_mask);
     mp_ctxSurface[1] = nullptr;
 
-    mp_accepted_seat[1] = (struct accepted_seat*)malloc(sizeof(struct accepted_seat));
-    mp_accepted_seat[1]->seat_name = strdup("KEYBOARD");
+    mp_accepted_seat[1] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
+    mp_accepted_seat[1]->seat_name = strdup("default");
 }
 
 /** ================================================================================================
@@ -2980,8 +2936,8 @@ TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithCallbackNotifi
     ASSERT_EQ(DESTROY_SURFACE, g_ilmControlStatus);
     mp_ctxSurface[2] = nullptr;
 
-    mp_accepted_seat[2] = (struct accepted_seat*)malloc(sizeof(struct accepted_seat));
-    mp_accepted_seat[2]->seat_name = strdup("KEYBOARD");
+    mp_accepted_seat[2] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
+    mp_accepted_seat[2]->seat_name = strdup("default");
 }
 
 /** ================================================================================================
@@ -3731,7 +3687,7 @@ TEST_F(IlmControlTest, wm_screen_listener_error_success)
  */
 TEST_F(IlmControlTest, input_listener_seat_created_validSeat)
 {
-    input_listener_seat_created(&ilm_context.wl, nullptr, "TOUCH", 0, 1);
+    input_listener_seat_created(&ilm_context.wl, nullptr, "seat2", 0, 1);
 
     ASSERT_EQ(0, wl_list_insert_fake.call_count);
 }
@@ -3775,7 +3731,7 @@ TEST_F(IlmControlTest, input_listener_seat_capabilities_invalidSeat)
  */
 TEST_F(IlmControlTest, input_listener_seat_capabilities_success)
 {
-    input_listener_seat_capabilities(&ilm_context.wl, nullptr, "TOUCH", 0);
+    input_listener_seat_capabilities(&ilm_context.wl, nullptr, "seat2", 0);
 }
 
 /** ================================================================================================
@@ -3807,11 +3763,11 @@ TEST_F(IlmControlTest, input_listener_seat_destroyed_success)
 {
     wl_list_remove_fake.custom_fake = custom_wl_list_remove;
 
-    input_listener_seat_destroyed(&ilm_context.wl, nullptr, "KEYBOARD");
+    input_listener_seat_destroyed(&ilm_context.wl, nullptr, "default");
 
     ASSERT_EQ(1, wl_list_remove_fake.call_count);
 
-    mp_ctxSeat[0] = (struct seat_context*)malloc(sizeof(struct seat_context));
+    mp_ctxSeat[0] = (struct seat_context*)calloc(1, sizeof(struct seat_context));
     mp_ctxSeat[0]->seat_name = strdup(mp_ilmSeatNames[0]);
 }
 
@@ -3939,7 +3895,7 @@ TEST_F(IlmControlTest, input_listener_input_acceptance_validSeatAndAccepted)
 
     uint32_t l_surface_id = 1;
     int32_t l_accepted = 1;
-    input_listener_input_acceptance(&ilm_context.wl, nullptr, l_surface_id, "KEYBOARD", l_accepted);
+    input_listener_input_acceptance(&ilm_context.wl, nullptr, l_surface_id, "default", l_accepted);
 
     ASSERT_EQ(0, wl_list_remove_fake.call_count);
     ASSERT_EQ(0, wl_list_insert_fake.call_count);
@@ -3963,13 +3919,13 @@ TEST_F(IlmControlTest, input_listener_input_acceptance_validSeatAndUnaccepted)
 
     uint32_t surface_id = 1;
     int32_t accepted = 0;
-    input_listener_input_acceptance(&ilm_context.wl, nullptr, surface_id, "KEYBOARD", accepted);
+    input_listener_input_acceptance(&ilm_context.wl, nullptr, surface_id, "default", accepted);
 
     ASSERT_EQ(1, wl_list_remove_fake.call_count);
     ASSERT_EQ(0, wl_list_insert_fake.call_count);
 
-    mp_accepted_seat[0] = (struct accepted_seat*)malloc(sizeof(struct accepted_seat));
-    mp_accepted_seat[0]->seat_name = strdup("KEYBOARD");
+    mp_accepted_seat[0] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
+    mp_accepted_seat[0]->seat_name = strdup("default");
 }
 
 /** ================================================================================================
@@ -4077,7 +4033,7 @@ TEST_F(IlmControlTest, registry_handle_control_remove_oneNode)
 
     ASSERT_EQ(1, wl_list_remove_fake.call_count);
 
-    mp_ctxScreen[0] = (struct screen_context*)malloc(sizeof(struct screen_context));
+    mp_ctxScreen[0] = (struct screen_context*)calloc(1, sizeof(struct screen_context));
 
     mp_ctxScreen[1]->controller = nullptr;
     mp_ctxScreen[1]->output = nullptr;
@@ -4085,7 +4041,7 @@ TEST_F(IlmControlTest, registry_handle_control_remove_oneNode)
 
     ASSERT_EQ(2, wl_list_remove_fake.call_count);
 
-    mp_ctxScreen[1] = (struct screen_context*)malloc(sizeof(struct screen_context));
+    mp_ctxScreen[1] = (struct screen_context*)calloc(1, sizeof(struct screen_context));
 }
 
 /** ================================================================================================

@@ -50,8 +50,8 @@ public:
     {
         custom_wl_list_init(&ilm_context.wl.list_surface);
         custom_wl_list_init(&ilm_context.wl.list_seat);
-        for(uint8_t i = 0; i < MAX_NUMBER; i++)
-        {
+
+        for(uint8_t i = 0; i < MAX_NUMBER; i++) {
             //prepare the surfaces
             mp_ctxSurface[i].id_surface = mp_ilmSurfaceIds[i];
             mp_ctxSurface[i].ctx = &ilm_context.wl;
@@ -72,12 +72,9 @@ public:
     {
         struct surface_context *l, *n;
         struct accepted_seat *seat, *seat_next;
-        wl_list_for_each_safe(l, n, &ilm_context.wl.list_surface, link)
-        {
+        wl_list_for_each_safe(l, n, &ilm_context.wl.list_surface, link) {
             wl_list_for_each_safe(seat, seat_next, &l->list_accepted_seats, link)
-            {
                 custom_wl_list_remove(&seat->link);
-            }
             custom_wl_list_remove(&l->link);
         }
     }
@@ -375,14 +372,10 @@ TEST_F(IlmInputTest, ilm_getInputDevices_success)
     EXPECT_EQ(1, release_instance_fake.call_count);
     EXPECT_EQ(5, m_numberSeat);
     for(uint8_t i = 0; i < m_numberSeat; i++)
-    {
         EXPECT_EQ(0, strcmp(mp_getSeats[i], mp_seatName[m_numberSeat - i - 1]));
-    }
 
     for(uint8_t i = 0; i < m_numberSeat; i++)
-    {
         free(mp_getSeats[i]);
-    }
     free(mp_getSeats);
 }
 
@@ -617,8 +610,7 @@ TEST_F(IlmInputTest, ilm_getInputFocus_success)
 
     EXPECT_EQ(1, release_instance_fake.call_count);
     EXPECT_EQ(5, l_numId);
-    for(uint8_t i = 0; i < l_numId; i++)
-    {
+    for(uint8_t i = 0; i < l_numId; i++) {
         EXPECT_EQ(lp_surfaceIds[i], mp_ilmSurfaceIds[l_numId - i -1]);
         EXPECT_EQ(lp_bitmasks[i], ILM_INPUT_DEVICE_KEYBOARD);
     }
