@@ -36,20 +36,15 @@ FAKE_VALUE_FUNC(struct ivi_layout_surface *, get_surface, struct weston_surface 
 
 struct wl_resource * custom_wl_resource_from_link(struct wl_list *link)
 {
-	struct wl_resource *resource;
-
-	return wl_container_of(link, resource, link);
+    struct wl_resource *resource;
+    return wl_container_of(link, resource, link);
 }
 
 struct wl_list * custom_wl_resource_get_link(struct wl_resource *resource)
 {
-	return &resource->link;
+    return &resource->link;
 }
 
-}
-
-extern "C"
-{
 #include "ivi-input-controller.c"
 }
 
@@ -70,165 +65,186 @@ public:
 
     void init_input_controller_content()
     {
+        wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
+        wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
+
         // Prepare sample for ivi shell
         m_iviShell.interface = &g_iviLayoutInterfaceFake;
         m_iviShell.compositor = &m_westonCompositor;
         custom_wl_list_init(&m_iviShell.list_surface);
         custom_wl_list_init(&m_westonCompositor.seat_list);
-        // Prepare the input context
+        custom_wl_list_init(&m_iviShell.ivisurface_created_signal.listener_list);
+        custom_wl_list_init(&m_iviShell.ivisurface_removed_signal.listener_list);
+        custom_wl_list_init(&m_iviShell.compositor->destroy_signal.listener_list);
+        custom_wl_list_init(&m_iviShell.compositor->seat_created_signal.listener_list);
+
+        /* initialize the input_context */
         mp_ctxInput = (struct input_context*)calloc(1, sizeof(struct input_context));
         mp_ctxInput->ivishell = &m_iviShell;
         custom_wl_list_init(&mp_ctxInput->seat_list);
         custom_wl_list_init(&mp_ctxInput->resource_list);
+        mp_ctxInput->successful_init_stage = 0;
+        mp_ctxInput->seat_default_name = (char*)mp_seatName[DEFAULT_SEAT];
+        custom_wl_list_init(&mp_ctxInput->surface_created.link);
+        custom_wl_list_init(&mp_ctxInput->surface_destroyed.link);
+        custom_wl_list_init(&mp_ctxInput->shell_destroy_listener.link);
+        custom_wl_list_init(&mp_ctxInput->seat_create_listener.link);
 
-        for(uint8_t i = 0; i < MAX_NUMBER; i++)
-        {
-            //Prepare for weston seats
-            mp_westonSeat[i].seat_name = (char*)mp_seatName[i];
-            custom_wl_list_init(&mp_westonSeat[i].destroy_signal.listener_list);
-            custom_wl_list_init(&mp_westonSeat[i].updated_caps_signal.listener_list);
-            //Prepare for seat context
+        for(uint8_t i = 0; i < MAX_NUMBER; i++) {
+            /* setup the list of weston seats:
+            * mpp_westonSeat[DEFAULT_SEAT]: {seat_name: "default", ...}
+            * mpp_westonSeat[CUSTOM_SEAT]: {seat_name: "weston_seat", ...} */
+            mpp_westonSeat[i].seat_name = (char*)mp_seatName[i];
+            mpp_westonSeat[i].compositor = &m_westonCompositor;
+            custom_wl_list_init(&mpp_westonSeat[i].destroy_signal.listener_list);
+            custom_wl_list_init(&mpp_westonSeat[i].updated_caps_signal.listener_list);
+            /* setup the list of seat_ctx:
+            * mpp_ctxSeat[DEFAULT_SEAT]: {input_ctx: mp_ctxInput, west_seat: mpp_westonSeat[DEFAULT_SEAT]...}
+            * mpp_ctxSeat[CUSTOM_SEAT]: {input_ctx: mp_ctxInput, west_seat: mpp_westonSeat[CUSTOM_SEAT] ...} */
             mpp_ctxSeat[i] = (struct seat_ctx*)calloc(1, sizeof(struct seat_ctx));
             mpp_ctxSeat[i]->input_ctx = mp_ctxInput;
-            mpp_ctxSeat[i]->west_seat = &mp_westonSeat[i];
-            mpp_ctxSeat[i]->pointer_grab.interface = &g_grabInterfaceFake;
+            mpp_ctxSeat[i]->west_seat = &mpp_westonSeat[i];
+            mpp_ctxSeat[i]->pointer_grab.interface = nullptr;
+            mpp_ctxSeat[i]->pointer_grab.pointer = nullptr;
+            mpp_ctxSeat[i]->keyboard_grab.interface = nullptr;
+            mpp_ctxSeat[i]->keyboard_grab.keyboard = nullptr;
+            mpp_ctxSeat[i]->touch_grab.interface = nullptr;
+            mpp_ctxSeat[i]->touch_grab.touch = nullptr;
+            mpp_ctxSeat[i]->forced_surf_enabled = ILM_FALSE;
+            mpp_ctxSeat[i]->forced_ptr_focus_surf = nullptr;
+            custom_wl_list_init(&mpp_ctxSeat[i]->seat_node);
+            custom_wl_list_init(&mpp_ctxSeat[i]->updated_caps_listener.link);
+            custom_wl_list_init(&mpp_ctxSeat[i]->destroy_listener.link);
             custom_wl_list_insert(&mp_ctxInput->seat_list, &mpp_ctxSeat[i]->seat_node);
-            //Prepare for resource
-            mp_wlResource[i].object.id = i + 1;
+            /* setup the list of input resources:
+            * mp_wlResource[DEFAULT_SEAT]: {object.id: 0, ...}
+            * mp_wlResource[CUSTOM_SEAT]: {object.id: 1, ...} */
+            mp_wlResource[i].object.id = 0;
             custom_wl_list_insert(&mp_ctxInput->resource_list, &mp_wlResource[i].link);
-            //Prepare for surface
+            /* setup the list of ivisurfaces and ivi_layout_surfaces:
+            * mp_layoutSurface[DEFAULT_SEAT]: {id_surface: 11, ...}
+            * mp_layoutSurface[CUSTOM_SEAT]: {id_surface: 12, ...}
+            * mpp_iviSurface[DEFAULT_SEAT]: {shell: m_iviShell, layout_surface: mp_layoutSurface[DEFAULT_SEAT], accepted_seat_list: mpp_ctxSeat[DEFAULT_SEAT]...}
+            * mpp_iviSurface[CUSTOM_SEAT]: {shell: m_iviShell, layout_surface: mp_layoutSurface[CUSTOM_SEAT], accepted_seat_list: mpp_ctxSeat[CUSTOM_SEAT]...}*/
             mp_layoutSurface[i].id_surface = i + 10;
-            mp_iviSurface[i].shell = &m_iviShell;
-            mp_iviSurface[i].layout_surface = &mp_layoutSurface[i];
-            custom_wl_list_init(&mp_iviSurface[i].accepted_seat_list);
-            custom_wl_list_insert(&m_iviShell.list_surface, &mp_iviSurface[i].link);
-            // Prepare for accepted
+            mpp_iviSurface[i].shell = &m_iviShell;
+            mpp_iviSurface[i].layout_surface = &mp_layoutSurface[i];
+            custom_wl_list_init(&mpp_iviSurface[i].accepted_seat_list);
+            custom_wl_list_insert(&m_iviShell.list_surface, &mpp_iviSurface[i].link);
             mpp_seatFocus[i] = (struct seat_focus*)calloc(1, sizeof(struct seat_focus));
             mpp_seatFocus[i]->seat_ctx =  mpp_ctxSeat[i];
-            custom_wl_list_insert(&mp_iviSurface[i].accepted_seat_list, &mpp_seatFocus[i]->link);
+            mpp_seatFocus[i]->focus = ILM_INPUT_DEVICE_ALL;
+            custom_wl_list_insert(&mpp_iviSurface[i].accepted_seat_list, &mpp_seatFocus[i]->link);
         }
-    }
-
-    void enable_utility_funcs_of_array_list()
-    {
-        wl_list_init_fake.custom_fake = custom_wl_list_init;
-        wl_list_insert_fake.custom_fake = custom_wl_list_insert;
-        wl_list_remove_fake.custom_fake = custom_wl_list_remove;
-        wl_list_empty_fake.custom_fake = custom_wl_list_empty;
-        wl_array_init_fake.custom_fake = custom_wl_array_init;
-        wl_array_release_fake.custom_fake = custom_wl_array_release;
-        wl_array_add_fake.custom_fake = custom_wl_array_add;
-        wl_signal_init(&m_iviShell.ivisurface_created_signal);
-        wl_signal_init(&m_iviShell.ivisurface_removed_signal);
-        wl_signal_init(&m_iviShell.compositor->destroy_signal);
-        wl_signal_init(&m_iviShell.compositor->seat_created_signal);
     }
 
     void deinit_input_controller_content()
     {
-        if(mp_ctxInput != nullptr)
-        {
-            free(mp_ctxInput);
+        for(uint8_t i = 0; i < MAX_NUMBER; i++) {
+            if(mpp_ctxSeat[i] != nullptr)
+                free(mpp_ctxSeat[i]);
+            if(mpp_seatFocus[i] != nullptr)
+                free(mpp_seatFocus[i]);
         }
 
-        for(uint8_t i = 0; i< MAX_NUMBER; i++)
-        {
-            if(mpp_ctxSeat[i] != nullptr)
-            {
-                free(mpp_ctxSeat[i]);
-            }
-            if(mpp_seatFocus[i] != nullptr)
-            {
-                free(mpp_seatFocus[i]);
-            }
-        }
+        if(mp_ctxInput != nullptr)
+            free(mp_ctxInput);
     }
 
     struct input_context *mp_ctxInput = nullptr;
-    struct wl_resource mp_wlResource[MAX_NUMBER];
+    struct wl_resource mp_wlResource[MAX_NUMBER] = {};
 
     struct seat_ctx *mpp_ctxSeat[MAX_NUMBER] = {nullptr};
-    struct weston_seat mp_westonSeat[MAX_NUMBER];
-    const char* mp_seatName[MAX_NUMBER] = {"default", "weston_seat_1"};
+    struct weston_seat mpp_westonSeat[MAX_NUMBER];
+    const char* mp_seatName[MAX_NUMBER] = {"default", "weston_seat"};
 
     struct seat_focus *mpp_seatFocus[MAX_NUMBER] = {nullptr};
-    struct ivisurface mp_iviSurface[MAX_NUMBER];
+    struct ivisurface mpp_iviSurface[MAX_NUMBER];
     struct ivi_layout_surface mp_layoutSurface[MAX_NUMBER];
 
     struct weston_compositor m_westonCompositor = {};
     struct ivishell m_iviShell = {};
+    
+    void *mp_fakePointer = (void*)0xFFFFFFFF;
+    void *mp_nullPointer = nullptr;
+    struct ivi_layout_surface *mpp_layoutSurface[CUSTOM_SEAT] = {mp_layoutSurface};
 };
 
 /** ================================================================================================
  * @test_id             handle_seat_create_customSeat
- * @brief               Test case of handle_seat_create() where valid input params with seat name is a custom seat
+ * @brief               Test case of handle_seat_create() where has new custom seat on system
  * @test_procedure Steps:
- *                      -# Calling the handle_seat_create()
+ *                      -# Calling the handle_seat_create() with weston custom seat
  *                      -# Verification point:
- *                         +# wl_list_insert() must be called 5 times
- *                         +# wl_resource_post_event() must be called 6 times
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_list_insert() must be called 3 times
+ *                         +# wl_resource_post_event() must be called 2 times
+ *                         +# member of seat_ctx struct must be initialized
  */
 TEST_F(InputControllerTest, handle_seat_create_customSeat)
 {
-    enable_utility_funcs_of_array_list();
-    wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
-    wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
-    mp_ctxInput->seat_default_name = (char*)mp_seatName[CUSTOM_SEAT];
-    handle_seat_create(&mp_ctxInput->seat_create_listener, &mp_westonSeat[CUSTOM_SEAT]);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 5);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 6);
+    handle_seat_create(&mp_ctxInput->seat_create_listener, &mpp_westonSeat[CUSTOM_SEAT]);
+    struct seat_ctx *lp_ctxSeat = (struct seat_ctx *)
+            ((uintptr_t)wl_list_insert_fake.arg1_history[DEFAULT_SEAT] - offsetof(struct seat_ctx, seat_node));
 
-    struct seat_ctx *lp_ctxSeat = (struct seat_ctx *)((uintptr_t)wl_list_insert_fake.arg1_history[0] - offsetof(struct seat_ctx, seat_node));
-    for(uint8_t i = 0; i < MAX_NUMBER; i++)
-    {
-        struct seat_focus *lp_seatFocus = (struct seat_focus *)((uintptr_t)wl_list_insert_fake.arg1_history[i+3] - offsetof(struct seat_focus, link));
-        free(lp_seatFocus);
-    }
+    EXPECT_EQ(wl_list_insert_fake.call_count, 3);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(lp_ctxSeat->input_ctx, mp_ctxInput);
+    EXPECT_EQ(lp_ctxSeat->west_seat, &mpp_westonSeat[CUSTOM_SEAT]);
+    EXPECT_EQ(lp_ctxSeat->keyboard_grab.interface, &keyboard_grab_interface);
+    EXPECT_EQ(lp_ctxSeat->pointer_grab.interface, &pointer_grab_interface);
+    EXPECT_EQ(lp_ctxSeat->touch_grab.interface, &touch_grab_interface);
+
     free(lp_ctxSeat);
 }
 
 /** ================================================================================================
  * @test_id             handle_seat_create_defaultSeat
- * @brief               Test case of handle_seat_create() where valid input params with seat name is default seat
+ * @brief               Test case of handle_seat_create() where detecting the default seat
  * @test_procedure Steps:
  *                      -# Calling the handle_seat_create()
  *                      -# Verification point:
  *                         +# wl_list_insert() must be called 5 times
- *                         +# wl_resource_post_event() must be called {MAX_NUMBER + MAX_NUMBER*MAX_NUMBER} times
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_resource_post_event() must be called 6 times
+ *                         +# member of seat_ctx struct must be initialized
+ *                         +# member of seat_focus struct must be initialized
  */
 TEST_F(InputControllerTest, handle_seat_create_defaultSeat)
 {
-    enable_utility_funcs_of_array_list();
-    wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
-    wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
-    mp_ctxInput->seat_default_name = (char*)mp_seatName[DEFAULT_SEAT];
-    handle_seat_create(&mp_ctxInput->seat_create_listener, &mp_westonSeat[DEFAULT_SEAT]);
+    handle_seat_create(&mp_ctxInput->seat_create_listener, &mpp_westonSeat[DEFAULT_SEAT]);
+    struct seat_ctx *lp_ctxSeat = (struct seat_ctx *)
+            ((uintptr_t)wl_list_insert_fake.arg1_history[DEFAULT_SEAT] - offsetof(struct seat_ctx, seat_node));
+    struct seat_focus *lp_seatFocus1 = (struct seat_focus *)
+            ((uintptr_t)wl_list_insert_fake.arg1_history[3] - offsetof(struct seat_focus, link));
+    struct seat_focus *lp_seatFocus2 = (struct seat_focus *)
+            ((uintptr_t)wl_list_insert_fake.arg1_history[4] - offsetof(struct seat_focus, link));
 
     ASSERT_EQ(wl_list_insert_fake.call_count, 5);
-    ASSERT_EQ(MAX_NUMBER + MAX_NUMBER*MAX_NUMBER, wl_resource_post_event_fake.call_count);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 6);
+    EXPECT_EQ(lp_ctxSeat->input_ctx, mp_ctxInput);
+    EXPECT_EQ(lp_ctxSeat->west_seat, &mpp_westonSeat[DEFAULT_SEAT]);
+    EXPECT_EQ(lp_ctxSeat->keyboard_grab.interface, &keyboard_grab_interface);
+    EXPECT_EQ(lp_ctxSeat->pointer_grab.interface, &pointer_grab_interface);
+    EXPECT_EQ(lp_ctxSeat->touch_grab.interface, &touch_grab_interface);
+    EXPECT_EQ(lp_seatFocus1->seat_ctx, lp_ctxSeat);
+    EXPECT_EQ(lp_seatFocus2->seat_ctx, lp_ctxSeat);
+    EXPECT_EQ(wl_list_insert_fake.arg0_history[3], &mpp_iviSurface[CUSTOM_SEAT].accepted_seat_list);
+    EXPECT_EQ(wl_list_insert_fake.arg0_history[4], &mpp_iviSurface[DEFAULT_SEAT].accepted_seat_list);
 
-    struct seat_ctx *lp_ctxSeat = (struct seat_ctx *)((uintptr_t)wl_list_insert_fake.arg1_history[0] - offsetof(struct seat_ctx, seat_node));
-    for(uint8_t i = 0; i < MAX_NUMBER; i++)
-    {
-        struct seat_focus *lp_seatFocus = (struct seat_focus *)((uintptr_t)wl_list_insert_fake.arg1_history[i+3] - offsetof(struct seat_focus, link));
-        free(lp_seatFocus);
-    }
+    free(lp_seatFocus1);
+    free(lp_seatFocus2);
     free(lp_ctxSeat);
 }
 
 /** ================================================================================================
- * @test_id             handle_seat_updated_caps_allAvailableWithSameAdrr
- * @brief               Test case of handle_seat_updated_caps() where object address of mocked functions
- *                      is same as input address
+ * @test_id             handle_seat_updated_caps_noUpdate
+ * @brief               Test case of handle_seat_updated_caps() where no change in capabilities
  * @test_procedure Steps:
- *                      -# Mocking the weston_seat_get_keyboard() does return an object with address 0xFFFFFFFF
- *                      -# Mocking the weston_seat_get_pointer() does return an object with address 0xFFFFFFFF
- *                      -# Mocking the weston_seat_get_touch() does return an object with address 0xFFFFFFFF
- *                      -# Set input param keyboard_grab.keyboard to an object with address 0xFFFFFFFF
- *                      -# Set input param pointer_grab.pointer to an object with address 0xFFFFFFFF
- *                      -# Set input param touch_grab.touch to an object with address 0xFFFFFFFF
+ *                      -# Mocking the weston_seat_get_keyboard() does return an object
+ *                      -# Mocking the weston_seat_get_pointer() does return an object
+ *                      -# Mocking the weston_seat_get_touch() does return an object
+ *                      -# Set input param keyboard_grab.keyboard to an object
+ *                      -# Set input param pointer_grab.pointer to an object
+ *                      -# Set input param touch_grab.touch to an object
  *                      -# Calling the handle_seat_updated_caps()
  *                      -# Verification point:
  *                         +# weston_keyboard_start_grab() not be called
@@ -236,20 +252,16 @@ TEST_F(InputControllerTest, handle_seat_create_defaultSeat)
  *                         +# weston_touch_start_grab() not be called
  *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
  */
-TEST_F(InputControllerTest, handle_seat_updated_caps_allAvailableWithSameAdrr)
+TEST_F(InputControllerTest, handle_seat_updated_caps_noUpdate)
 {
-    struct weston_keyboard *lpp_keyboard [] = {(struct weston_keyboard *)0xFFFFFFFF};
-    struct weston_pointer *lpp_pointer [] = {(struct weston_pointer *)0xFFFFFFFF};
-    struct weston_touch *lpp_touch [] = {(struct weston_touch *)0xFFFFFFFF};
-    SET_RETURN_SEQ(weston_seat_get_keyboard, lpp_keyboard, 1);
-    SET_RETURN_SEQ(weston_seat_get_pointer, lpp_pointer, 1);
-    SET_RETURN_SEQ(weston_seat_get_touch, lpp_touch, 1);
+    SET_RETURN_SEQ(weston_seat_get_keyboard, (struct weston_keyboard **)&mp_fakePointer, 1);
+    SET_RETURN_SEQ(weston_seat_get_pointer, (struct weston_pointer **)&mp_fakePointer, 1);
+    SET_RETURN_SEQ(weston_seat_get_touch, (struct weston_touch **)&mp_fakePointer, 1);
+    mpp_ctxSeat[CUSTOM_SEAT]->keyboard_grab.keyboard = {(struct weston_keyboard *)mp_fakePointer};
+    mpp_ctxSeat[CUSTOM_SEAT]->pointer_grab.pointer = {(struct weston_pointer *)mp_fakePointer};
+    mpp_ctxSeat[CUSTOM_SEAT]->touch_grab.touch = {(struct weston_touch *)mp_fakePointer};
 
-    mpp_ctxSeat[CUSTOM_SEAT]->keyboard_grab.keyboard = {(struct weston_keyboard *)0xFFFFFFFF};
-    mpp_ctxSeat[CUSTOM_SEAT]->pointer_grab.pointer = {(struct weston_pointer *)0xFFFFFFFF};
-    mpp_ctxSeat[CUSTOM_SEAT]->touch_grab.touch = {(struct weston_touch *)0xFFFFFFFF};
-
-    handle_seat_updated_caps(&mpp_ctxSeat[CUSTOM_SEAT]->updated_caps_listener, &mp_westonSeat[CUSTOM_SEAT]);
+    handle_seat_updated_caps(&mpp_ctxSeat[CUSTOM_SEAT]->updated_caps_listener, &mpp_westonSeat[CUSTOM_SEAT]);
 
     ASSERT_EQ(0, weston_keyboard_start_grab_fake.call_count);
     ASSERT_EQ(0, weston_pointer_start_grab_fake.call_count);
@@ -258,13 +270,12 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_allAvailableWithSameAdrr)
 }
 
 /** ================================================================================================
- * @test_id             handle_seat_updated_caps_allAvailableWithNotSameAdrr
- * @brief               Test case of handle_seat_updated_caps() where object address of mocked functions
- *                      is different from input address
+ * @test_id             handle_seat_updated_caps_newUpdate
+ * @brief               Test case of handle_seat_updated_caps() where has new capabilities
  * @test_procedure Steps:
- *                      -# Mocking the weston_seat_get_keyboard() does return an object with address 0xFFFFFFFF
- *                      -# Mocking the weston_seat_get_pointer() does return an object with address 0xFFFFFFFF
- *                      -# Mocking the weston_seat_get_touch() does return an object with address 0xFFFFFFFF
+ *                      -# Mocking the weston_seat_get_keyboard() does return an object
+ *                      -# Mocking the weston_seat_get_pointer() does return an object
+ *                      -# Mocking the weston_seat_get_touch() does return an object
  *                      -# Set input param keyboard_grab.keyboard to null pointer
  *                      -# Set input param pointer_grab.pointer to null pointer
  *                      -# Set input param touch_grab.touch to null pointer
@@ -275,20 +286,16 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_allAvailableWithSameAdrr)
  *                         +# weston_touch_start_grab() must be called once time
  *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
  */
-TEST_F(InputControllerTest, handle_seat_updated_caps_allAvailableWithNotSameAdrr)
+TEST_F(InputControllerTest, handle_seat_updated_caps_newUpdate)
 {
-    struct weston_keyboard *lpp_keyboard [] = {(struct weston_keyboard *)0xFFFFFFFF};
-    struct weston_pointer *lpp_pointer [] = {(struct weston_pointer *)0xFFFFFFFF};
-    struct weston_touch *lpp_touch [] = {(struct weston_touch *)0xFFFFFFFF};
-    SET_RETURN_SEQ(weston_seat_get_keyboard, lpp_keyboard, 1);
-    SET_RETURN_SEQ(weston_seat_get_pointer, lpp_pointer, 1);
-    SET_RETURN_SEQ(weston_seat_get_touch, lpp_touch, 1);
-
+    SET_RETURN_SEQ(weston_seat_get_keyboard, (struct weston_keyboard **)&mp_fakePointer, 1);
+    SET_RETURN_SEQ(weston_seat_get_pointer, (struct weston_pointer **)&mp_fakePointer, 1);
+    SET_RETURN_SEQ(weston_seat_get_touch, (struct weston_touch **)&mp_fakePointer, 1);
     mpp_ctxSeat[CUSTOM_SEAT]->keyboard_grab.keyboard = nullptr;
     mpp_ctxSeat[CUSTOM_SEAT]->pointer_grab.pointer = nullptr;
     mpp_ctxSeat[CUSTOM_SEAT]->touch_grab.touch = nullptr;
 
-    handle_seat_updated_caps(&mpp_ctxSeat[CUSTOM_SEAT]->updated_caps_listener, &mp_westonSeat[CUSTOM_SEAT]);
+    handle_seat_updated_caps(&mpp_ctxSeat[CUSTOM_SEAT]->updated_caps_listener, &mpp_westonSeat[CUSTOM_SEAT]);
 
     ASSERT_EQ(1, weston_keyboard_start_grab_fake.call_count);
     ASSERT_EQ(1, weston_pointer_start_grab_fake.call_count);
@@ -297,14 +304,20 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_allAvailableWithNotSameAdrr
 }
 
 /** ================================================================================================
- * @test_id             handle_seat_updated_caps_notAvailable
+ * @test_id             handle_seat_updated_caps_noCapabitilies
  * @brief               Test case of handle_seat_updated_caps() where weston_seat_get_keyboard() and weston_seat_get_pointer()
  *                      and weston_seat_get_touch() are not mocked
  * @test_procedure Steps:
+ *                      -# Mocking the weston_seat_get_keyboard() does return nullptr
+ *                      -# Mocking the weston_seat_get_pointer() does return nullptr
+ *                      -# Mocking the weston_seat_get_touch() does return nullptr
+ *                      -# Set input param keyboard_grab.keyboard to nullptr
+ *                      -# Set input param pointer_grab.pointer to nullptr
+ *                      -# Set input param touch_grab.touch to nullptr
  *                      -# Calling the handle_seat_updated_caps() time 1
- *                      -# Set input param keyboard_grab.keyboard to an object with address 0xFFFFFFFF
- *                      -# Set input param pointer_grab.pointer to an object with address 0xFFFFFFFF
- *                      -# Set input param touch_grab.touch to an object with address 0xFFFFFFFF
+ *                      -# Set input param keyboard_grab.keyboard to an object
+ *                      -# Set input param pointer_grab.pointer to an object
+ *                      -# Set input param touch_grab.touch to an object
  *                      -# Calling the handle_seat_updated_caps() time 2
  *                      -# Verification point:
  *                         +# weston_keyboard_start_grab() not be called
@@ -315,15 +328,22 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_allAvailableWithNotSameAdrr
  *                         +# touch_grab.touch set to null pointer
  *                         +# wl_resource_post_event() must be called {2*MAX_NUMBER} times
  */
-TEST_F(InputControllerTest, handle_seat_updated_caps_notAvailable)
+TEST_F(InputControllerTest, handle_seat_updated_caps_noCapabitilies)
 {
-    handle_seat_updated_caps(&mpp_ctxSeat[CUSTOM_SEAT]->updated_caps_listener, &mp_westonSeat[CUSTOM_SEAT]);
+    SET_RETURN_SEQ(weston_seat_get_keyboard, (struct weston_keyboard **)&mp_nullPointer, 1);
+    SET_RETURN_SEQ(weston_seat_get_pointer, (struct weston_pointer **)&mp_nullPointer, 1);
+    SET_RETURN_SEQ(weston_seat_get_touch, (struct weston_touch **)&mp_nullPointer, 1);
+    mpp_ctxSeat[CUSTOM_SEAT]->keyboard_grab.keyboard = nullptr;
+    mpp_ctxSeat[CUSTOM_SEAT]->pointer_grab.pointer = nullptr;
+    mpp_ctxSeat[CUSTOM_SEAT]->touch_grab.touch = nullptr;
 
-    mpp_ctxSeat[CUSTOM_SEAT]->keyboard_grab.keyboard = (struct weston_keyboard *)0xFFFFFFFF;
-    mpp_ctxSeat[CUSTOM_SEAT]->pointer_grab.pointer = (struct weston_pointer *)0xFFFFFFFF;
-    mpp_ctxSeat[CUSTOM_SEAT]->touch_grab.touch = (struct weston_touch *)0xFFFFFFFF;
+    handle_seat_updated_caps(&mpp_ctxSeat[CUSTOM_SEAT]->updated_caps_listener, &mpp_westonSeat[CUSTOM_SEAT]);
 
-    handle_seat_updated_caps(&mpp_ctxSeat[CUSTOM_SEAT]->updated_caps_listener, &mp_westonSeat[CUSTOM_SEAT]);
+    mpp_ctxSeat[CUSTOM_SEAT]->keyboard_grab.keyboard = (struct weston_keyboard *)mp_fakePointer;
+    mpp_ctxSeat[CUSTOM_SEAT]->pointer_grab.pointer = (struct weston_pointer *)mp_fakePointer;
+    mpp_ctxSeat[CUSTOM_SEAT]->touch_grab.touch = (struct weston_touch *)mp_fakePointer;
+
+    handle_seat_updated_caps(&mpp_ctxSeat[CUSTOM_SEAT]->updated_caps_listener, &mpp_westonSeat[CUSTOM_SEAT]);
 
     ASSERT_EQ(0, weston_keyboard_start_grab_fake.call_count);
     ASSERT_EQ(0, weston_pointer_start_grab_fake.call_count);
@@ -335,8 +355,8 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_notAvailable)
 }
 
 /** ================================================================================================
- * @test_id             handle_seat_destroy_notSurfaceAccepted
- * @brief               Test case of handle_seat_destroy() where seat_list is null list
+ * @test_id             handle_seat_destroy_noSurfaceAcceptance
+ * @brief               Test case of handle_seat_destroy() where no surface acceptance
  * @test_procedure Steps:
  *                      -# Prepare the data input, the seat_ctx object
  *                      -# Calling the handle_seat_destroy()
@@ -344,31 +364,30 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_notAvailable)
  *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
  *                         +# wl_list_remove() must be called 3 times
  */
-TEST_F(InputControllerTest, handle_seat_destroy_notSurfaceAccepted)
+TEST_F(InputControllerTest, handle_seat_destroy_noSurfaceAcceptance)
 {
     struct seat_ctx* lp_ctxSeat = (struct seat_ctx*)calloc(1, sizeof(struct seat_ctx));
     lp_ctxSeat->input_ctx = mp_ctxInput;
-    lp_ctxSeat->west_seat = &mp_westonSeat[CUSTOM_SEAT];
+    lp_ctxSeat->west_seat = &mpp_westonSeat[CUSTOM_SEAT];
 
-    handle_seat_destroy(&lp_ctxSeat->destroy_listener, &mp_westonSeat[CUSTOM_SEAT]);
+    handle_seat_destroy(&lp_ctxSeat->destroy_listener, &mpp_westonSeat[CUSTOM_SEAT]);
 
     ASSERT_EQ(MAX_NUMBER, wl_resource_post_event_fake.call_count);
     ASSERT_EQ(3, wl_list_remove_fake.call_count);
 }
 
 /** ================================================================================================
- * @test_id             handle_seat_destroy_withSurfaceAccepted
- * @brief               Test case of handle_seat_destroy() where exist elements in seat_list
+ * @test_id             handle_seat_destroy_hasSurfaceAcceptance
+ * @brief               Test case of handle_seat_destroy() where has a surface acceptance
  * @test_procedure Steps:
  *                      -# Calling the handle_seat_destroy()
  *                      -# Verification point:
  *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
  *                         +# wl_list_remove() must be called 4 times
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, handle_seat_destroy_withSurfaceAccepted)
+TEST_F(InputControllerTest, handle_seat_destroy_hasSurfaceAcceptance)
 {
-    handle_seat_destroy(&mpp_ctxSeat[CUSTOM_SEAT]->destroy_listener, &mp_westonSeat[CUSTOM_SEAT]);
+    handle_seat_destroy(&mpp_ctxSeat[CUSTOM_SEAT]->destroy_listener, &mpp_westonSeat[CUSTOM_SEAT]);
 
     ASSERT_EQ(MAX_NUMBER, wl_resource_post_event_fake.call_count);
     ASSERT_EQ(4, wl_list_remove_fake.call_count);
@@ -378,70 +397,72 @@ TEST_F(InputControllerTest, handle_seat_destroy_withSurfaceAccepted)
 }
 
 /** ================================================================================================
- * @test_id             input_controller_module_init_WrongInput
- * @brief               Test case of input_controller_module_init() where interface in ivishell object is a null pointer
+ * @test_id             input_controller_module_init_badInput
+ * @brief               Test case of input_controller_module_init() where the interface member of
+ *                      ivishell points to nullptr
  * @test_procedure Steps:
  *                      -# Calling the input_controller_module_init()
  *                      -# Verification point:
  *                         +# input_controller_module_init() must not return 0
+ *                         +#  wl_list_init_fake must not invoked
  */
-TEST_F(InputControllerTest, input_controller_module_init_WrongInput)
+TEST_F(InputControllerTest, input_controller_module_init_badInput)
 {
     m_iviShell.interface = nullptr;
     ASSERT_NE(input_controller_module_init(&m_iviShell), 0);
+    ASSERT_EQ(0, wl_list_init_fake.call_count);
 }
 
 /** ================================================================================================
- * @test_id             input_controller_module_init_cannotCreateIviInput
- * @brief               Test case of input_controller_module_init() where wl_global_create() is not mocked, returns null pointer
+ * @test_id             input_controller_module_init_cannotCreateGlobal
+ * @brief               Test case of input_controller_module_init() where wl_global_create() return a nullptr
  * @test_procedure Steps:
- *                      -# Calling the enable_utility_funcs_of_array_list() to set real function for wl_list, wl_array
+ *                      -# Mocking the wl_global_create() returns a nullptr
  *                      -# Calling the input_controller_module_init()
  *                      -# Verification point:
- *                         +# input_controller_module_init() must return 0
+ *                         +# input_controller_module_init() must not return 0
  *                         +# wl_global_create() must be called once time
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_list_remove() must be called 6 times
  */
-TEST_F(InputControllerTest, input_controller_module_init_cannotCreateIviInput)
+TEST_F(InputControllerTest, input_controller_module_init_cannotCreateGlobal)
 {
-    enable_utility_funcs_of_array_list();
-    wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
-    wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
-    struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF;
-    SET_RETURN_SEQ(wl_global_create, &lp_wlGlobal, 1);
-    ASSERT_EQ(input_controller_module_init(&m_iviShell), 0);
+    wl_list_init_fake.custom_fake = custom_wl_list_init;
+    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
+    SET_RETURN_SEQ(wl_global_create, (struct wl_global**)&mp_nullPointer, 1);
+
+    EXPECT_NE(input_controller_module_init(&m_iviShell), 0);
 
     EXPECT_EQ(wl_global_create_fake.call_count, 1);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 6);
 
-    struct input_context * tmp = wl_global_create_fake.arg3_val;
-    free(tmp->seat_default_name);
-    free(tmp);
+    /*mpp_seatFocus will release, because they are a part of m_ivishell*/
+    mpp_seatFocus[DEFAULT_SEAT] = nullptr;
+    mpp_seatFocus[CUSTOM_SEAT] = nullptr;
 }
 
 /** ================================================================================================
  * @test_id             input_controller_module_init_canInitSuccess
- * @brief               Test case of input_controller_module_init() where wl_global_create() is mocked, returns an object
+ * @brief               Test case of input_controller_module_init() where wl_global_create() returns an object
  * @test_procedure Steps:
- *                      -# Calling the enable_utility_funcs_of_array_list() to set real function for wl_list, wl_array
- *                      -# Mocking the wl_global_create() does return an object
+ *                      -# Mocking the wl_global_create() returns an object
  *                      -# Calling the input_controller_module_init()
  *                      -# Verification point:
  *                         +# input_controller_module_init() must return 0
  *                         +# wl_global_create() must be called once time
  *                         +# Input controller module member must same the prepared data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(InputControllerTest, input_controller_module_init_canInitSuccess)
 {
-    enable_utility_funcs_of_array_list();
-    struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF;
-    SET_RETURN_SEQ(wl_global_create, &lp_wlGlobal, 1);
+    wl_list_init_fake.custom_fake = custom_wl_list_init;
+    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
+    SET_RETURN_SEQ(wl_global_create, (struct wl_global**)&mp_fakePointer, 1);
 
     ASSERT_EQ(input_controller_module_init(&m_iviShell), 0);
 
     ASSERT_EQ(wl_global_create_fake.call_count, 1);
-
-    struct input_context *lp_ctxInput = (struct input_context *)((uintptr_t)wl_list_init_fake.arg0_history[4] - offsetof(struct input_context, resource_list));
+    ASSERT_EQ(wl_list_init_fake.call_count, 2);
+    struct input_context *lp_ctxInput = (struct input_context *)
+            ((uintptr_t)wl_list_init_fake.arg0_history[DEFAULT_SEAT] - offsetof(struct input_context, resource_list));
     EXPECT_EQ(lp_ctxInput->ivishell, &m_iviShell);
     EXPECT_NE(lp_ctxInput->surface_created.notify, nullptr);
     EXPECT_NE(lp_ctxInput->surface_destroyed.notify, nullptr);
@@ -453,293 +474,252 @@ TEST_F(InputControllerTest, input_controller_module_init_canInitSuccess)
 }
 
 /** ================================================================================================
- * @test_id             keyboard_grab_key_success
- * @brief               Test case of keyboard_grab_key() where surface_get_weston_surface() success, return an object
- *                      and valid input params
+ * @test_id             keyboard_grab_key_aSurfaceAvailable
+ * @brief               Test case of keyboard_grab_key() where surface listen keyboard events
  * @test_procedure Steps:
- *                      -# Set seat focus to enable {1}
- *                      -# Set input timespec to TIME_UTC
- *                      -# Set input ctxSeat
- *                      -# Mocking the surface_get_weston_surface() does return an object
+ *                      -# Mocking the surface_get_weston_surface() returns an object
  *                      -# Calling the keyboard_grab_key()
  *                      -# Verification point:
- *                         +# wl_display_next_serial() must be called once time
- *                         +# surface_get_weston_surface() must be called once time
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_resource_post_event() must be called two times
  */
-TEST_F(InputControllerTest, keyboard_grab_key_success)
+TEST_F(InputControllerTest, keyboard_grab_key_aSurfaceAvailable)
 {
-    mpp_seatFocus[0]->focus = 1;
-
+    struct weston_keyboard *lp_keyboard = (struct weston_keyboard*)calloc(1, sizeof(struct weston_keyboard));
+    struct weston_surface *lp_westSurf = (struct weston_surface*)calloc(1, sizeof(struct weston_surface));
     struct timespec l_time;
-    timespec_get(&l_time, TIME_UTC);
+    mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab.keyboard = lp_keyboard;
+    mpp_seatFocus[DEFAULT_SEAT]->focus = ILM_INPUT_DEVICE_KEYBOARD;
+    lp_keyboard->seat = &mpp_westonSeat[DEFAULT_SEAT];
+    custom_wl_list_init(&lp_keyboard->focus_resource_list);
+    custom_wl_list_init(&lp_keyboard->resource_list);
+    custom_wl_list_insert(&lp_keyboard->focus_resource_list, &mp_wlResource[DEFAULT_SEAT].link);
+    custom_wl_list_insert(&lp_keyboard->resource_list, &mp_wlResource[CUSTOM_SEAT].link);
+    SET_RETURN_SEQ(surface_get_weston_surface, &lp_westSurf, 1);
 
-    mpp_ctxSeat[0]->keyboard_grab.keyboard = (struct weston_keyboard *)malloc(sizeof(struct weston_keyboard));
-    mpp_ctxSeat[0]->keyboard_grab.keyboard->seat = (struct weston_seat *)malloc(sizeof(struct weston_seat));
-    mpp_ctxSeat[0]->keyboard_grab.keyboard->seat->compositor = (struct weston_compositor *)malloc(sizeof(struct weston_compositor));
-    mpp_ctxSeat[0]->keyboard_grab.keyboard->seat->compositor->wl_display = (struct wl_display *)0xFFFFFFFF;
-    custom_wl_list_init(&mpp_ctxSeat[0]->keyboard_grab.keyboard->focus_resource_list);
-    custom_wl_list_insert(&mpp_ctxSeat[0]->keyboard_grab.keyboard->focus_resource_list, &mp_wlResource[0].link);
-    custom_wl_list_init(&mpp_ctxSeat[0]->keyboard_grab.keyboard->resource_list);
-    custom_wl_list_insert(&mpp_ctxSeat[0]->keyboard_grab.keyboard->resource_list, &mp_wlResource[1].link);
+    keyboard_grab_key(&mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab, &l_time, 1, 1);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    l_surf[0]->resource = (struct wl_resource *)malloc(sizeof(struct wl_resource));
-    SET_RETURN_SEQ(surface_get_weston_surface, l_surf, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
 
-    keyboard_grab_key(&mpp_ctxSeat[0]->keyboard_grab, &l_time, 1, 1);
-
-    ASSERT_EQ(wl_display_next_serial_fake.call_count, 1);
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-
-    free(l_surf[0]->resource);
-    free(l_surf[0]);
-    free(mpp_ctxSeat[0]->keyboard_grab.keyboard->seat->compositor);
-    free(mpp_ctxSeat[0]->keyboard_grab.keyboard->seat);
-    free(mpp_ctxSeat[0]->keyboard_grab.keyboard);
+    free(lp_westSurf);
+    free(lp_keyboard);
 }
 
 /** ================================================================================================
- * @test_id             keyboard_grab_modifiers_success
- * @brief               Test case of keyboard_grab_modifiers() where surface_get_weston_surface() success, return an object
- *                      and valid input params
+ * @test_id             keyboard_grab_modifiers_aSurfaceAvaiable
+ * @brief               Test case of keyboard_grab_modifiers() where has a surface listening
  * @test_procedure Steps:
- *                      -# Set seat focus to enable {1}
- *                      -# Set input ctxSeat
- *                      -# Mocking the surface_get_weston_surface() does return an object
+ *                      -# Mocking the surface_get_weston_surface() returns an object
  *                      -# Calling the keyboard_grab_modifiers()
  *                      -# Verification point:
- *                         +# wl_resource_get_client() must be called 3 times
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_resource_post_event() must be called two times
  */
-TEST_F(InputControllerTest, keyboard_grab_modifiers_success)
+TEST_F(InputControllerTest, keyboard_grab_modifiers_aSurfaceAvaiable)
 {
-    mpp_seatFocus[0]->focus = 1;
+    struct weston_keyboard *lp_keyboard = (struct weston_keyboard*)calloc(1, sizeof(struct weston_keyboard));
+    struct weston_surface *lp_westSurf = (struct weston_surface*)calloc(1, sizeof(struct weston_surface));
+    struct timespec l_time;
+    mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab.keyboard = lp_keyboard;
+    mpp_seatFocus[DEFAULT_SEAT]->focus = ILM_INPUT_DEVICE_KEYBOARD | ILM_INPUT_DEVICE_POINTER;
+    lp_keyboard->seat = &mpp_westonSeat[DEFAULT_SEAT];
+    custom_wl_list_init(&lp_keyboard->focus_resource_list);
+    custom_wl_list_init(&lp_keyboard->resource_list);
+    custom_wl_list_insert(&lp_keyboard->focus_resource_list, &mp_wlResource[DEFAULT_SEAT].link);
+    custom_wl_list_insert(&lp_keyboard->resource_list, &mp_wlResource[CUSTOM_SEAT].link);
+    SET_RETURN_SEQ(surface_get_weston_surface, &lp_westSurf, 1);
 
-    mpp_ctxSeat[0]->keyboard_grab.keyboard = (struct weston_keyboard *)malloc(sizeof(struct weston_keyboard));
-    custom_wl_list_init(&mpp_ctxSeat[0]->keyboard_grab.keyboard->focus_resource_list);
-    custom_wl_list_insert(&mpp_ctxSeat[0]->keyboard_grab.keyboard->focus_resource_list, &mp_wlResource[0].link);
-    custom_wl_list_init(&mpp_ctxSeat[0]->keyboard_grab.keyboard->resource_list);
-    custom_wl_list_insert(&mpp_ctxSeat[0]->keyboard_grab.keyboard->resource_list, &mp_wlResource[1].link);
+    keyboard_grab_modifiers(&mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab, 1, 1, 1, 1, 1);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    l_surf[0]->resource = (struct wl_resource *)malloc(sizeof(struct wl_resource));
-    SET_RETURN_SEQ(surface_get_weston_surface, l_surf, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
 
-    keyboard_grab_modifiers(&mpp_ctxSeat[0]->keyboard_grab, 1, 1, 1, 1, 1);
-
-    ASSERT_EQ(wl_resource_get_client_fake.call_count, 3);
-
-    free(l_surf[0]->resource);
-    free(l_surf[0]);
-    free(mpp_ctxSeat[0]->keyboard_grab.keyboard);
+    free(lp_westSurf);
+    free(lp_keyboard);
 }
 
 /** ================================================================================================
- * @test_id             keyboard_grab_cancel_success
- * @brief               Test case of keyboard_grab_cancel() where surface_get_weston_surface() success, return an object
- *                      and valid input params
+ * @test_id             keyboard_grab_cancel
+ * @brief               Test case of keyboard_grab_cancel() where has a available surface
  * @test_procedure Steps:
- *                      -# Set seat focus to enable {1}
  *                      -# Mocking the surface_get_weston_surface() does return an object
- *                      -# Set input ctxSeat
  *                      -# Calling the keyboard_grab_cancel()
  *                      -# Verification point:
  *                         +# surface_get_weston_surface() must be called 2 times
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_resource_post_event() must be called 4 times
  */
-TEST_F(InputControllerTest, keyboard_grab_cancel_success)
+TEST_F(InputControllerTest, keyboard_grab_cancel)
 {
-    mpp_seatFocus[0]->focus = 1;
+    struct weston_keyboard *lp_keyboard = (struct weston_keyboard*)calloc(1, sizeof(struct weston_keyboard));
+    struct weston_surface *lp_westSurf = (struct weston_surface*)calloc(1, sizeof(struct weston_surface));
+    struct timespec l_time;
+    struct wl_resource l_wlResource1, l_wlResource2;
+    mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab.keyboard = lp_keyboard;
+    mpp_seatFocus[DEFAULT_SEAT]->focus = ILM_INPUT_DEVICE_KEYBOARD;
+    lp_keyboard->seat = &mpp_westonSeat[DEFAULT_SEAT];
+    custom_wl_list_init(&lp_keyboard->focus_resource_list);
+    custom_wl_list_init(&lp_keyboard->resource_list);
+    custom_wl_list_insert(&lp_keyboard->focus_resource_list, &l_wlResource1.link);
+    custom_wl_list_insert(&lp_keyboard->resource_list, &l_wlResource2.link);
+    SET_RETURN_SEQ(surface_get_weston_surface, &lp_westSurf, 1);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    l_surf[0]->resource = (struct wl_resource *)malloc(sizeof(struct wl_resource));
-    SET_RETURN_SEQ(surface_get_weston_surface, l_surf, 1);
+    keyboard_grab_cancel(&mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab);
 
-    struct wl_resource l_wlResource;
-    mpp_ctxSeat[0]->keyboard_grab.keyboard = (struct weston_keyboard *)malloc(sizeof(struct weston_keyboard));
-    custom_wl_list_init(&mpp_ctxSeat[0]->keyboard_grab.keyboard->focus_resource_list);
-    custom_wl_list_insert(&mpp_ctxSeat[0]->keyboard_grab.keyboard->focus_resource_list, &l_wlResource.link);
-    custom_wl_list_init(&mpp_ctxSeat[0]->keyboard_grab.keyboard->resource_list);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 4);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 2);
 
-    keyboard_grab_cancel(&mpp_ctxSeat[0]->keyboard_grab);
-
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 2);
-
-    free(l_surf[0]->resource);
-    free(l_surf[0]);
-    free(mpp_ctxSeat[0]->keyboard_grab.keyboard);
+    free(lp_westSurf);
+    free(lp_keyboard);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_focus_wrongButtonCount
- * @brief               Test case of pointer_grab_focus() where input ctxSeat button_count is enable {1}
+ * @test_id             pointer_grab_focus_hasButtonCount
+ * @brief               Test case of pointer_grab_focus() where button_count is bigger than 0.
+ *                      This function should not do anything.
  * @test_procedure Steps:
  *                      -# Set input ctxSeat
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
  *                         +# surface_get_weston_surface() not be called
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_focus_wrongButtonCount)
+TEST_F(InputControllerTest, pointer_grab_focus_hasButtonCount)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 1;
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    lp_pointer->button_count = 1;
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
 
-    pointer_grab_focus(&mpp_ctxSeat[0]->pointer_grab);
+    pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 0);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 0);
 
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_focus_nullForcedPtr
- * @brief               Test case of pointer_grab_focus() where input ctxSeat button_count is disable {0}
- *                      and forced_ptr_focus_surf is null pointer
+ * @test_id             pointer_grab_focus_noFocusSurface
+ * @brief               Test case of pointer_grab_focus() where no focus surface.
  * @test_procedure Steps:
- *                      -# Set input ctxSeat (Do not set forced_ptr_focus_surf)
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
- *                         +# surface_get_weston_surface() not be called
- *                         +# Free resources are allocated when running the test
+ *                         +# surface_get_weston_surface() should not call
+ *                         +# weston_compositor_pick_view() should call once time
  */
-TEST_F(InputControllerTest, pointer_grab_focus_nullForcedPtr)
+TEST_F(InputControllerTest, pointer_grab_focus_noFocusSurface)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-    mpp_ctxSeat[0]->pointer_grab.pointer->seat = (struct weston_seat *)malloc(sizeof(struct weston_seat));
-    mpp_ctxSeat[0]->pointer_grab.pointer->seat->compositor = (struct weston_compositor *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus->surface = (struct weston_surface *)0xFFFFFFFF;
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    lp_pointer->button_count = 0;
+    lp_pointer->focus = nullptr;
+    lp_pointer->seat = &mpp_westonSeat[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
+    SET_RETURN_SEQ(weston_compositor_pick_view, (struct weston_view **)&mp_nullPointer, 1);
 
-    pointer_grab_focus(&mpp_ctxSeat[0]->pointer_grab);
+    pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 0);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 0);
+    EXPECT_EQ(weston_compositor_pick_view_fake.call_count, 1);
 
-    free(mpp_ctxSeat[0]->pointer_grab.pointer->seat);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer->focus);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_focus_surfNotEnabledAndNullFocus
- * @brief               Test case of pointer_grab_focus() where input ctxSeat button_count, forced_surf_enabled is disable {0}
- *                      and forced_ptr_focus_surf is an object and pointer focus is null pointer
+ * @test_id             pointer_grab_focus_hasFocusSurfaceNoEnableForce
+ * @brief               Test case of pointer_grab_focus() where has surface focus, but
+ *                      seat don't enable to force to surface.
  * @test_procedure Steps:
- *                      -# Set input ctxSeat
- *                      -# Mocking the surface_get_weston_surface() does return an object
+ *                      -# Mocking the surface_get_weston_surface() return nullptr
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
  *                         +# surface_get_weston_surface() must be called once time
  *                         +# weston_pointer_clear_focus() not be called
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_focus_surfNotEnabledAndNullFocus)
+TEST_F(InputControllerTest, pointer_grab_focus_hasFocusSurfaceNoEnableForce)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->forced_surf_enabled = ILM_FALSE;
-    struct ivisurface l_ivi_surf;
-    l_ivi_surf.layout_surface = (struct ivi_layout_surface *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->forced_ptr_focus_surf = &l_ivi_surf;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = {nullptr};
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    lp_pointer->button_count = 0;
+    lp_pointer->focus = nullptr;
+    lp_pointer->seat = &mpp_westonSeat[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf = &mpp_iviSurface[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_surf_enabled = ILM_FALSE;
+    SET_RETURN_SEQ(surface_get_weston_surface, (struct weston_surface **)&mp_nullPointer, 1);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)0xFFFFFFFF};
-    SET_RETURN_SEQ(surface_get_weston_surface, l_surf, 1);
+    pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    pointer_grab_focus(&mpp_ctxSeat[0]->pointer_grab);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
 
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    ASSERT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
-
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_focus_surfNotEnabled
- * @brief               Test case of pointer_grab_focus() where input ctxSeat button_count, forced_surf_enabled is disable {0}
- *                      and forced_ptr_focus_surf, pointer focus is an object
+ * @test_id             pointer_grab_focus_hasFocusView
+ * @brief               Test case of pointer_grab_focus() where has focus view
  * @test_procedure Steps:
- *                      -# Set input ctxSeat
- *                      -# Mocking the surface_get_weston_surface() does return an object
+ *                      -# Mocking the surface_get_weston_surface() returns an object
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
  *                         +# surface_get_weston_surface() must be called once time
  *                         +# weston_pointer_clear_focus() must be called once time
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_focus_surfNotEnabled)
+TEST_F(InputControllerTest, pointer_grab_focus_hasFocusView)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->forced_surf_enabled = ILM_FALSE;
-    struct ivisurface l_ivi_surf;
-    l_ivi_surf.layout_surface = (struct ivi_layout_surface *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->forced_ptr_focus_surf = &l_ivi_surf;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus->surface = (struct weston_surface *)0xFFFFFFFF;
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    struct weston_view l_focusView;
+    l_focusView.surface = (struct weston_surface*)mp_fakePointer;
+    lp_pointer->button_count = 0;
+    lp_pointer->focus = &l_focusView;
+    lp_pointer->seat = &mpp_westonSeat[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf = &mpp_iviSurface[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_surf_enabled = ILM_FALSE;
+    SET_RETURN_SEQ(surface_get_weston_surface, (struct weston_surface **)&mp_fakePointer, 1);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)0xFFFFFFFF};
-    SET_RETURN_SEQ(surface_get_weston_surface, l_surf, 1);
+    pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    pointer_grab_focus(&mpp_ctxSeat[0]->pointer_grab);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 1);
 
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    ASSERT_EQ(weston_pointer_clear_focus_fake.call_count, 1);
-
-    free(mpp_ctxSeat[0]->pointer_grab.pointer->focus);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_focus_nullSurfCtx
- * @brief               Test case of pointer_grab_focus() where input ctxSeat button_count is disable {0}
- *                      and forced_surf_enabled is enable {1} and forced_ptr_focus_surf, pointer focus is an object
+ * @test_id             pointer_grab_focus_noWestonSurface
+ * @brief               Test case of pointer_grab_focus() where has focus surface and
+ *                      force surface is enable, but no weston_surface return from 
+ *                      surface_get_weston_surface
  * @test_procedure Steps:
  *                      -# Set input ctxSeat
- *                      -# Mocking the surface_get_weston_surface() does return an object
+ *                      -# Mocking the surface_get_weston_surface() returns nullptr
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
  *                         +# surface_get_weston_surface() must be called once time
- *                         +# weston_pointer_set_focus() must be called once time
- *                         +# weston_pointer_clear_focus() not be called
- *                         +# Free resources are allocated when running the test
+ *                         +# weston_pointer_set_focus() must not be called
+ *                         +# weston_pointer_clear_focus() must not be called
  */
-TEST_F(InputControllerTest, pointer_grab_focus_nullSurfCtx)
+TEST_F(InputControllerTest, pointer_grab_focus_noWestonSurface)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->forced_surf_enabled = ILM_TRUE;
-    struct ivisurface l_ivi_surf;
-    l_ivi_surf.layout_surface = (struct ivi_layout_surface *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->forced_ptr_focus_surf = &l_ivi_surf;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus->surface = (struct weston_surface *)0xFFFFFFFF;
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    struct weston_view l_focusView;
+    l_focusView.surface = (struct weston_surface*)mp_fakePointer;
+    lp_pointer->button_count = 0;
+    lp_pointer->focus = &l_focusView;
+    lp_pointer->seat = &mpp_westonSeat[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf = &mpp_iviSurface[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_surf_enabled = ILM_TRUE;
+    SET_RETURN_SEQ(surface_get_weston_surface, (struct weston_surface **)&mp_nullPointer, 1);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    custom_wl_list_init(&l_surf[0]->views);
-    SET_RETURN_SEQ(surface_get_weston_surface, l_surf, 1);
+    pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    pointer_grab_focus(&mpp_ctxSeat[0]->pointer_grab);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(weston_pointer_set_focus_fake.call_count, 0);
+    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
 
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    ASSERT_EQ(weston_pointer_set_focus_fake.call_count, 1);
-    ASSERT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
-
-    free(l_surf[0]);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer->focus);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_focus_success
- * @brief               Test case of pointer_grab_focus() where input ctxSeat button_count is disable {0}
- *                      and forced_surf_enabled is enable {1} and forced_ptr_focus_surf, pointer focus is an object
- *                      and get_surface(), weston_surface_get_main_surface() are mocked to return an object
+ * @test_id             pointer_grab_focus_hasWestonSurface
+ * @brief               Test case of pointer_grab_focus() where has focus surface and
+ *                      force surface is enable, but has weston_surface return from 
+ *                      surface_get_weston_surface
  * @test_procedure Steps:
  *                      -# Set input ctxSeat
  *                      -# Mocking the get_surface() does return an object
@@ -749,251 +729,231 @@ TEST_F(InputControllerTest, pointer_grab_focus_nullSurfCtx)
  *                      -# Verification point:
  *                         +# surface_get_weston_surface() must be called once time
  *                         +# weston_pointer_clear_focus() not be called
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_focus_success)
+TEST_F(InputControllerTest, pointer_grab_focus_hasWestonSurface)
 {
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    struct weston_surface *lp_surf = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
+    struct weston_view l_focusView;
     wl_list_empty_fake.custom_fake = custom_wl_list_empty;
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->forced_surf_enabled = ILM_TRUE;
-    struct ivisurface l_ivi_surf;
-    l_ivi_surf.layout_surface = (struct ivi_layout_surface *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->forced_ptr_focus_surf = &l_ivi_surf;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus->surface = (struct weston_surface *)0xFFFFFFFF;
+    g_iviLayoutInterfaceFake.get_surface = get_surface;
+    l_focusView.surface = (struct weston_surface*)mp_fakePointer;
+    lp_pointer->button_count = 0;
+    lp_pointer->focus = &l_focusView;
+    lp_pointer->seat = &mpp_westonSeat[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf = &mpp_iviSurface[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_surf_enabled = ILM_TRUE;
+    custom_wl_list_init(&lp_surf->views);
+    SET_RETURN_SEQ(surface_get_weston_surface, &lp_surf, 1);
+    SET_RETURN_SEQ(get_surface, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_surface_get_main_surface, &lp_surf, 1);
 
-    struct ivi_layout_surface *l_layout_surf[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface, l_layout_surf, 1);
+    pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    custom_wl_list_init(&l_surf[0]->views);
-    SET_RETURN_SEQ(surface_get_weston_surface, l_surf, 1);
-    SET_RETURN_SEQ(weston_surface_get_main_surface, l_surf, 1);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
 
-    pointer_grab_focus(&mpp_ctxSeat[0]->pointer_grab);
-
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    ASSERT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
-
-    free(l_surf[0]);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer->focus);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_surf);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_motion_success
- * @brief               Test case of pointer_grab_motion() where valid input params
+ * @test_id             pointer_grab_motion
+ * @brief               Test case of pointer_grab_motion() where seat has a focus surface
  * @test_procedure Steps:
- *                      -# Calling the pointer_grab_motion() with valid input params
+ *                      -# Calling the pointer_grab_motion()
  *                      -# Verification point:
  *                         +# weston_pointer_send_motion() must be called once time
+ *                         +# forced_ptr_focus_surf of seat should become nullptr
  */
-TEST_F(InputControllerTest, pointer_grab_motion_success)
+TEST_F(InputControllerTest, pointer_grab_motion)
 {
-    pointer_grab_motion(&mpp_ctxSeat[0]->pointer_grab, nullptr, nullptr);
-    ASSERT_EQ(weston_pointer_send_motion_fake.call_count, 1);
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf = &mpp_iviSurface[DEFAULT_SEAT];
+
+    pointer_grab_motion(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab, nullptr, nullptr);
+
+    EXPECT_EQ(weston_pointer_send_motion_fake.call_count, 1);
+    EXPECT_EQ(mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf, nullptr);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_button_error
- * @brief               Test case of pointer_grab_button() where input ctxSeat button_count and state are enable {1}
+ * @test_id             pointer_grab_button_dontInvokeFocusCallback
+ * @brief               Test case of pointer_grab_button() should not call to pointer focus
+ *                      callback when button_count is bigger than 0 or state is PRESSED.
  * @test_procedure Steps:
- *                      -# Set input ctxSeat with button_count is enable {1}
- *                      -# Calling the pointer_grab_button() time 1 with state is 0
- *                      -# Set input ctxSeat with button_count is disable {0}
- *                      -# Calling the pointer_grab_button() time 2 with state is 1
+ *                      -# Set input ctxSeat with button_count is 1
+ *                      -# Calling the pointer_grab_button() time 1 with state is RELEASED
+ *                      -# Set input ctxSeat with button_count is 0
+ *                      -# Calling the pointer_grab_button() time 2 with state is PRESSED
  *                      -# Verification point:
  *                         +# focus() not be called
  *                         +# weston_pointer_send_button() must be called
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_button_error)
+TEST_F(InputControllerTest, pointer_grab_button_dontInvokeFocusCallback)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 1;
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    lp_pointer->button_count = 1;
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.interface = &g_grabInterfaceFake;
 
-    pointer_grab_button(&mpp_ctxSeat[0]->pointer_grab, nullptr, 0, 0);
+    pointer_grab_button(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab, nullptr, 0, WL_POINTER_BUTTON_STATE_RELEASED);
 
-    ASSERT_EQ(weston_pointer_send_button_fake.call_count, 1);
-    ASSERT_EQ(focus_fake.call_count, 0);
+    lp_pointer->button_count = 0;
 
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
+    pointer_grab_button(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab, nullptr, 0, WL_POINTER_BUTTON_STATE_PRESSED);
 
-    pointer_grab_button(&mpp_ctxSeat[0]->pointer_grab, nullptr, 0, 1);
+    EXPECT_EQ(weston_pointer_send_button_fake.call_count, 2);
+    EXPECT_EQ(focus_fake.call_count, 0);
 
-    ASSERT_EQ(weston_pointer_send_button_fake.call_count, 2);
-    ASSERT_EQ(focus_fake.call_count, 0);
-
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_button_success
- * @brief               Test case of pointer_grab_button() where input ctxSeat button_count and state are disable {0}
+ * @test_id             pointer_grab_button_invokeFocusCallback
+ * @brief               Test case of pointer_grab_button() where focus callback is invoked
  * @test_procedure Steps:
- *                      -# Set input ctxSeat with button_count is disable {0}
- *                      -# Calling the pointer_grab_button() with state is 0
+ *                      -# Set input ctxSeat with button_count is 0
+ *                      -# Calling the pointer_grab_button() with state is RELEASED
  *                      -# Verification point:
  *                         +# weston_pointer_send_button() must be called once time
  *                         +# focus() must be called once time
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_button_success)
+TEST_F(InputControllerTest, pointer_grab_button_invokeFocusCallback)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    lp_pointer->button_count = 0;
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.interface = &g_grabInterfaceFake;
 
-    pointer_grab_button(&mpp_ctxSeat[0]->pointer_grab, nullptr, 0, 0);
+    pointer_grab_button(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab, nullptr, 0, WL_POINTER_BUTTON_STATE_RELEASED);
 
-    ASSERT_EQ(weston_pointer_send_button_fake.call_count, 1);
-    ASSERT_EQ(focus_fake.call_count, 1);
+    EXPECT_EQ(weston_pointer_send_button_fake.call_count, 1);
+    EXPECT_EQ(focus_fake.call_count, 1);
 
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_axis_success
- * @brief               Test case of pointer_grab_axis() where input ctxSeat button_count is disable {0}
+ * @test_id             pointer_grab_axis
+ * @brief               Test case of pointer_grab_axis() to verify its steps
  * @test_procedure Steps:
- *                      -# Set input ctxSeat with button_count is disable {0}
  *                      -# Calling the pointer_grab_axis()
  *                      -# Verification point:
  *                         +# weston_pointer_send_axis() must be called once time
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_axis_success)
+TEST_F(InputControllerTest, pointer_grab_axis)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-
-    pointer_grab_axis(&mpp_ctxSeat[0]->pointer_grab, nullptr, nullptr);
+    pointer_grab_axis(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab, nullptr, nullptr);
 
     ASSERT_EQ(weston_pointer_send_axis_fake.call_count, 1);
-
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_axis_source_success
- * @brief               Test case of pointer_grab_axis_source() where input ctxSeat button_count is disable {0}
+ * @test_id             pointer_grab_axis_source
+ * @brief               Test case of pointer_grab_axis_source() to verify its steps
  * @test_procedure Steps:
- *                      -# Set input ctxSeat with button_count is disable {0}
  *                      -# Calling the pointer_grab_axis_source()
  *                      -# Verification point:
  *                         +# weston_pointer_send_axis_source() must be called once time
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_axis_source_success)
+TEST_F(InputControllerTest, pointer_grab_axis_source)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-
-    pointer_grab_axis_source(&mpp_ctxSeat[0]->pointer_grab, 0);
+    pointer_grab_axis_source(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab, 0);
 
     ASSERT_EQ(weston_pointer_send_axis_source_fake.call_count, 1);
-
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_frame_success
- * @brief               Test case of pointer_grab_frame() where input ctxSeat button_count is disable {0}
+ * @test_id             pointer_grab_frame
+ * @brief               Test case of pointer_grab_frame() to verify its steps
  * @test_procedure Steps:
- *                      -# Set input ctxSeat with button_count is disable {0}
  *                      -# Calling the pointer_grab_frame()
  *                      -# Verification point:
  *                         +# weston_pointer_send_frame() must be called once time
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_frame_success)
+TEST_F(InputControllerTest, pointer_grab_frame)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-
-    pointer_grab_frame(&mpp_ctxSeat[0]->pointer_grab);
+    pointer_grab_frame(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
     ASSERT_EQ(weston_pointer_send_frame_fake.call_count, 1);
-
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
 }
 
 /** ================================================================================================
- * @test_id             pointer_grab_cancel_success
- * @brief               Test case of pointer_grab_cancel() where input ctxSeat button_count is disable {0}
+ * @test_id             pointer_grab_cancel
+ * @brief               Test case of pointer_grab_cancel() to verify its steps
  * @test_procedure Steps:
- *                      -# Set input ctxSeat with button_count is disable {0}
+ *                      -# Prepare the pointer object
  *                      -# Calling the pointer_grab_cancel()
  *                      -# Verification point:
  *                         +# weston_pointer_clear_focus() must be called once time
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, pointer_grab_cancel_success)
+TEST_F(InputControllerTest, pointer_grab_cancel)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->button_count = 0;
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus->surface = (struct weston_surface *)0xFFFFFFFF;
+    struct weston_pointer *lp_pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
+    struct weston_view l_view;
+    l_view.surface = (struct weston_surface *)mp_fakePointer;
+    lp_pointer->focus = &l_view;
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = lp_pointer;
 
-    pointer_grab_cancel(&mpp_ctxSeat[0]->pointer_grab);
+    pointer_grab_cancel(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    ASSERT_EQ(weston_pointer_clear_focus_fake.call_count, 1);
+    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 1);
 
-    free(mpp_ctxSeat[0]->pointer_grab.pointer->focus);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    free(lp_pointer);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_down_nullFocus
- * @brief               Test case of touch_grab_down() where input ctxSeat focus is null pointer
+ * @test_id             touch_grab_down_noFocusView
+ * @brief               Test case of touch_grab_down() where no focus view, it should not
+ *                      do anything.
  * @test_procedure Steps:
  *                      -# Set input ctxSeat with focus is null pointer
  *                      -# Calling the touch_grab_down()
  *                      -# Verification point:
  *                         +# weston_surface_get_main_surface() not be called
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, touch_grab_down_nullFocus)
+TEST_F(InputControllerTest, touch_grab_down_noFocusView)
 {
-    mpp_ctxSeat[0]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
-    mpp_ctxSeat[0]->touch_grab.touch->focus = nullptr;
+    struct weston_touch *lp_touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
+    lp_touch->focus = nullptr;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = lp_touch;
 
-    touch_grab_down(&mpp_ctxSeat[0]->touch_grab, nullptr, 0, 0, 0);
+    touch_grab_down(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0, 0, 0);
 
-    ASSERT_EQ(weston_surface_get_main_surface_fake.call_count, 0);
+    EXPECT_EQ(weston_surface_get_main_surface_fake.call_count, 0);
 
-    free(mpp_ctxSeat[0]->touch_grab.touch);
+    free(lp_touch);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_down_nullSurfCtx
- * @brief               Test case of touch_grab_down() where weston_surface_get_main_surface() fails, return null object
+ * @test_id             touch_grab_down_noSurfCtx
+ * @brief               Test case of touch_grab_down() where is no main surface
  * @test_procedure Steps:
- *                      -# Set input ctxSeat
+ *                      -# Prepare mock for weston_surface_get_main_surface to return nullptr
  *                      -# Calling the touch_grab_down()
  *                      -# Verification point:
  *                         +# weston_surface_get_main_surface() must be called once time
  *                         +# weston_touch_send_down() must be called once time
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, touch_grab_down_nullSurfCtx)
+TEST_F(InputControllerTest, touch_grab_down_noSurfCtx)
 {
-    mpp_ctxSeat[0]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
-    mpp_ctxSeat[0]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->touch_grab.touch->focus->surface = (struct weston_surface *)0xFFFFFFFF;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus->surface = (struct weston_surface *)mp_fakePointer;
+    SET_RETURN_SEQ(weston_surface_get_main_surface, (struct weston_surface**)&mp_nullPointer, 1);
 
-    touch_grab_down(&mpp_ctxSeat[0]->touch_grab, nullptr, 0, 0, 0);
+    touch_grab_down(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0, 0, 0);
 
-    ASSERT_EQ(weston_surface_get_main_surface_fake.call_count, 1);
-    ASSERT_EQ(weston_touch_send_down_fake.call_count, 1);
+    EXPECT_EQ(weston_surface_get_main_surface_fake.call_count, 1);
+    EXPECT_EQ(weston_touch_send_down_fake.call_count, 1);
 
-    free(mpp_ctxSeat[0]->touch_grab.touch->focus);
-    free(mpp_ctxSeat[0]->touch_grab.touch);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_down_wrongNumTp
+ * @test_id             touch_grab_down_noNumTp
  * @brief               Test case of touch_grab_down() where weston_surface_get_main_surface() success, return an object
  *                      and input ctxSeat num_tp is disable {0}
  * @test_procedure Steps:
@@ -1005,31 +965,27 @@ TEST_F(InputControllerTest, touch_grab_down_nullSurfCtx)
  *                         +# weston_surface_get_main_surface() must be called once time
  *                         +# weston_touch_send_down() must be called once time
  *                         +# get_id_of_surface() not be called
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, touch_grab_down_wrongNumTp)
+TEST_F(InputControllerTest, touch_grab_down_noNumTp)
 {
+    struct weston_surface *l_surf = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus->surface = (struct weston_surface *)mp_fakePointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->num_tp = 0;
     g_iviLayoutInterfaceFake.get_surface = get_surface;
-    struct ivi_layout_surface *l_layout_surf[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface, l_layout_surf, 1);
+    SET_RETURN_SEQ(get_surface, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_surface_get_main_surface, &l_surf, 1);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    SET_RETURN_SEQ(weston_surface_get_main_surface, l_surf, 1);
+    touch_grab_down(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0, 0, 0);
 
-    mpp_ctxSeat[0]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
-    mpp_ctxSeat[0]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->touch_grab.touch->focus->surface = (struct weston_surface *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->touch_grab.touch->num_tp = 0;
+    EXPECT_EQ(weston_surface_get_main_surface_fake.call_count, 1);
+    EXPECT_EQ(weston_touch_send_down_fake.call_count, 1);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 0);
 
-    touch_grab_down(&mpp_ctxSeat[0]->touch_grab, nullptr, 0, 0, 0);
-
-    ASSERT_EQ(weston_surface_get_main_surface_fake.call_count, 1);
-    ASSERT_EQ(weston_touch_send_down_fake.call_count, 1);
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 0);
-
-    free(l_surf[0]);
-    free(mpp_ctxSeat[0]->touch_grab.touch->focus);
-    free(mpp_ctxSeat[0]->touch_grab.touch);
+    free(l_surf);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
 
 /** ================================================================================================
@@ -1045,57 +1001,52 @@ TEST_F(InputControllerTest, touch_grab_down_wrongNumTp)
  *                         +# weston_surface_get_main_surface() must be called once time
  *                         +# weston_touch_send_down() must be called once time
  *                         +# get_id_of_surface() not be called
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(InputControllerTest, touch_grab_down_success)
 {
+    struct weston_surface *l_surf = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus->surface = (struct weston_surface *)0xFFFFFFFF;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->num_tp = 1;
     g_iviLayoutInterfaceFake.get_surface = get_surface;
-    struct ivi_layout_surface *l_layout_surf[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface, l_layout_surf, 1);
+    SET_RETURN_SEQ(get_surface, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_surface_get_main_surface, &l_surf, 1);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    SET_RETURN_SEQ(weston_surface_get_main_surface, l_surf, 1);
+    touch_grab_down(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0, 0, 0);
 
-    mpp_ctxSeat[0]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
-    mpp_ctxSeat[0]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->touch_grab.touch->focus->surface = (struct weston_surface *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->touch_grab.touch->num_tp = 1;
+    EXPECT_EQ(weston_surface_get_main_surface_fake.call_count, 1);
+    EXPECT_EQ(weston_touch_send_down_fake.call_count, 1);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
 
-    touch_grab_down(&mpp_ctxSeat[0]->touch_grab, nullptr, 0, 0, 0);
-
-    ASSERT_EQ(weston_surface_get_main_surface_fake.call_count, 1);
-    ASSERT_EQ(weston_touch_send_down_fake.call_count, 1);
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 1);
-
-    free(l_surf[0]);
-    free(mpp_ctxSeat[0]->touch_grab.touch->focus);
-    free(mpp_ctxSeat[0]->touch_grab.touch);
+    free(l_surf);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_up_nullFocus
- * @brief               Test case of touch_grab_up() where input ctxSeat focus is null pointer
+ * @test_id             touch_grab_up_noFocusView
+ * @brief               Test case of touch_grab_up() where no focus view, should not do anything
  * @test_procedure Steps:
  *                      -# Set input ctxSeat with focus is null pointer
  *                      -# Calling the touch_grab_up()
  *                      -# Verification point:
  *                         +# weston_touch_send_up() not be called
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, touch_grab_up_nullFocus)
+TEST_F(InputControllerTest, touch_grab_up_noFocusView)
 {
-    mpp_ctxSeat[0]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
-    mpp_ctxSeat[0]->touch_grab.touch->focus = nullptr;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus = nullptr;
 
-    touch_grab_up(&mpp_ctxSeat[0]->touch_grab, nullptr, 0);
+    touch_grab_up(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0);
 
-    ASSERT_EQ(weston_touch_send_up_fake.call_count, 0);
+    EXPECT_EQ(weston_touch_send_up_fake.call_count, 0);
 
-    free(mpp_ctxSeat[0]->touch_grab.touch);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_up_wrongNumTp
+ * @test_id             touch_grab_up_hasNumTp
  * @brief               Test case of touch_grab_up() where input ctxSeat num_tp is enable {1}
  * @test_procedure Steps:
  *                      -# Set input ctxSeat
@@ -1103,26 +1054,24 @@ TEST_F(InputControllerTest, touch_grab_up_nullFocus)
  *                      -# Verification point:
  *                         +# weston_touch_send_up() must be called once time
  *                         +# get_id_of_surface() not be called
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, touch_grab_up_wrongNumTp)
+TEST_F(InputControllerTest, touch_grab_up_hasNumTp)
 {
-    mpp_ctxSeat[0]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
-    mpp_ctxSeat[0]->touch_grab.touch->focus = (struct weston_view *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->touch_grab.touch->num_tp = 1;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus = (struct weston_view *)mp_fakePointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->num_tp = 1;
 
-    touch_grab_up(&mpp_ctxSeat[0]->touch_grab, nullptr, 0);
+    touch_grab_up(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0);
 
-    ASSERT_EQ(weston_touch_send_up_fake.call_count, 1);
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 0);
+    EXPECT_EQ(weston_touch_send_up_fake.call_count, 1);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 0);
 
-    free(mpp_ctxSeat[0]->touch_grab.touch);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_up_success
- * @brief               Test case of touch_grab_up() where weston_surface_get_main_surface() success, return an object
- *                      and input ctxSeat num_tp is disable {0}
+ * @test_id             touch_grab_up_noNumTp
+ * @brief               Test case of touch_grab_up() where no num tp
  * @test_procedure Steps:
  *                      -# Set input ctxSeat
  *                      -# Mocking the get_surface() does return an object
@@ -1131,345 +1080,330 @@ TEST_F(InputControllerTest, touch_grab_up_wrongNumTp)
  *                      -# Verification point:
  *                         +# weston_touch_send_up() must be called once time
  *                         +# get_id_of_surface() must be called once time
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_resource_post_event() must be called two times
  */
-TEST_F(InputControllerTest, touch_grab_up_success)
+TEST_F(InputControllerTest, touch_grab_up_noNumTp)
 {
-    mpp_ctxSeat[0]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
-    mpp_ctxSeat[0]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->touch_grab.touch->focus->surface = (struct weston_surface *)0xFFFFFFFF;
-    mpp_ctxSeat[0]->touch_grab.touch->num_tp = 0;
+    struct weston_surface *l_surf = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus->surface = (struct weston_surface *)mp_fakePointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->num_tp = 0;
+    g_iviLayoutInterfaceFake.get_surface = get_surface;
+    SET_RETURN_SEQ(get_surface, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_surface_get_main_surface, &l_surf, 1);
 
-    struct ivi_layout_surface *l_layout_surf[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface, l_layout_surf, 1);
+    touch_grab_up(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0);
 
-    struct weston_surface *l_surf[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    SET_RETURN_SEQ(weston_surface_get_main_surface, l_surf, 1);
+    EXPECT_EQ(weston_touch_send_up_fake.call_count, 1);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
 
-    touch_grab_up(&mpp_ctxSeat[0]->touch_grab, nullptr, 0);
-
-    ASSERT_EQ(weston_touch_send_up_fake.call_count, 1);
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 1);
-
-    free(l_surf[0]);
-    free(mpp_ctxSeat[0]->touch_grab.touch->focus);
-    free(mpp_ctxSeat[0]->touch_grab.touch);
+    free(l_surf);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_motion_success
- * @brief               Test case of touch_grab_motion() where valid input params
+ * @test_id             touch_grab_motion
+ * @brief               Test case of touch_grab_motion() to verify its steps
  * @test_procedure Steps:
  *                      -# Calling the touch_grab_motion()
  *                      -# Verification point:
  *                         +# weston_touch_send_motion() must be called once time
  */
-TEST_F(InputControllerTest, touch_grab_motion_success)
+TEST_F(InputControllerTest, touch_grab_motion)
 {
-    touch_grab_motion(&mpp_ctxSeat[0]->touch_grab, nullptr, 0, 0, 0);
+    touch_grab_motion(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0, 0, 0);
     ASSERT_EQ(weston_touch_send_motion_fake.call_count, 1);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_frame_success
- * @brief               Test case of touch_grab_frame() where valid input params
+ * @test_id             touch_grab_frame
+ * @brief               Test case of touch_grab_frame() to verify its steps
  * @test_procedure Steps:
  *                      -# Calling the touch_grab_frame()
  *                      -# Verification point:
  *                         +# weston_touch_send_frame() must be called once time
  */
-TEST_F(InputControllerTest, touch_grab_frame_success)
+TEST_F(InputControllerTest, touch_grab_frame)
 {
-    touch_grab_frame(&mpp_ctxSeat[0]->touch_grab);
+    touch_grab_frame(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab);
     ASSERT_EQ(weston_touch_send_frame_fake.call_count, 1);
 }
 
 /** ================================================================================================
- * @test_id             touch_grab_cancel_success
+ * @test_id             touch_grab_cancel_noSurface
  * @brief               Test case of touch_grab_cancel() where valid input params
  * @test_procedure Steps:
  *                      -# Set input ctxSeat
  *                      -# Calling the touch_grab_cancel()
  *                      -# Verification point:
  *                         +# weston_touch_set_focus() must be called once time
- *                         +# Free resources are allocated when running the test
  */
-TEST_F(InputControllerTest, touch_grab_cancel_success)
+TEST_F(InputControllerTest, touch_grab_cancel_noSurface)
 {
-    mpp_ctxSeat[0]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
-    mpp_ctxSeat[0]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
-    mpp_ctxSeat[0]->touch_grab.touch->focus->surface = (struct weston_surface *)0xFFFFFFFF;
-    custom_wl_list_init(&mpp_ctxSeat[0]->touch_grab.touch->focus_resource_list);
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = (struct weston_touch *)malloc(sizeof(struct weston_touch));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus->surface = (struct weston_surface *)mp_fakePointer;
+    custom_wl_list_init(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus_resource_list);
+    SET_RETURN_SEQ(weston_surface_get_main_surface, (struct weston_surface**)&mp_nullPointer, 1);
 
-    touch_grab_cancel(&mpp_ctxSeat[0]->touch_grab);
+    touch_grab_cancel(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab);
 
-    ASSERT_EQ(weston_touch_set_focus_fake.call_count, 1);
+    EXPECT_EQ(weston_touch_set_focus_fake.call_count, 1);
 
-    free(mpp_ctxSeat[0]->touch_grab.touch->focus);
-    free(mpp_ctxSeat[0]->touch_grab.touch);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus);
+    free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_focus_nullSurface
- * @brief               Test case of setup_input_focus() where get_surface_from_id() fails, return null object
+ * @test_id             input_set_input_focus_noSurface
+ * @brief               Test case of setup_input_focus() where get_surface_from_id() returns wrong surface
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
+ *                      -# Mocking the get_surface_from_id() returns wrong surface
  *                      -# Calling the setup_input_focus()
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
+ *                         +# wl_resource_post_event() must not be called
  */
-TEST_F(InputControllerTest, input_set_input_focus_nullSurface)
+TEST_F(InputControllerTest, input_set_input_focus_noSurface)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface**)&mp_fakePointer, 1);
 
-    setup_input_focus(mp_ctxInput, 10, 1, ILM_TRUE);
+    setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_ALL, ILM_TRUE);
 
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
  * @test_id             input_set_input_focus_wrongDevice
- * @brief               Test case of setup_input_focus() where get_surface_from_id() success, return an object
- *                      and input device not focus anything
+ * @brief               Test case of setup_input_focus() where get_surface_from_id() returns an object,
+ *                      but no devices to focus.
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
+ *                      -# Mocking the get_surface_from_id() returns an object
  *                      -# Calling the setup_input_focus() with input device is 0
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
+ *                         +# wl_resource_post_event() must not be called
  */
 TEST_F(InputControllerTest, input_set_input_focus_wrongDevice)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
-
-    setup_input_focus(mp_ctxInput, 10, 0, 1);
+    setup_input_focus(mp_ctxInput, 10, 0, ILM_TRUE);
 
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_focus_toKeyBoardWithNullKeyBoard
- * @brief               Test case of setup_input_focus() where weston_seat_get_keyboard() fails, return null pointer
- *                      and input device focus to keyboard
+ * @test_id             input_set_input_focus_noKeyboard
+ * @brief               Test case of setup_input_focus() where seat don't have the keyboard
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
+ *                      -# Mocking the get_surface_from_id() returns an object
+ *                      -# Mocking the weston_seat_get_keyboard() return nullptr
  *                      -# Calling the setup_input_focus() with input device is 1
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
  *                         +# weston_seat_get_keyboard() must be called once time
+ *                         +# wl_resource_post_event() must not be called
  */
-TEST_F(InputControllerTest, input_set_input_focus_toKeyBoardWithNullKeyBoard)
+TEST_F(InputControllerTest, input_set_input_focus_noKeyboard)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_seat_get_keyboard, (struct weston_keyboard**)&mp_nullPointer, 1);
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
-
-    setup_input_focus(mp_ctxInput, 10, 1, 1);
+    setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE);
 
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(weston_seat_get_keyboard_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_focus_toKeyBoardWithOneKeyBoardAndNotEnabled
- * @brief               Test case of setup_input_focus() where weston_seat_get_keyboard() success, return an pointer
- *                      and input device focus to keyboard and input enabled is disable {0}
+ * @test_id             input_set_input_focus_disableKeyboard
+ * @brief               Test case of setup_input_focus() where seat has the keyboard device, 
+ *                      and surface try to un-focus it.
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Mocking the weston_seat_get_keyboard() does return an object
- *                      -# Calling the setup_input_focus() with input enabled is 0
- *                      -# Verification point:
- *                         +# get_surface_from_id() must be called once time
- *                         +# weston_seat_get_keyboard() must be called once time
- */
-TEST_F(InputControllerTest, input_set_input_focus_toKeyBoardWithOneKeyBoardAndNotEnabled)
-{
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
-
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
-
-    struct weston_keyboard *l_keyboard[1] = {(struct weston_keyboard *)0xFFFFFFFF};
-    SET_RETURN_SEQ(weston_seat_get_keyboard, l_keyboard, 1);
-
-    setup_input_focus(mp_ctxInput, 10, 1, 0);
-
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(weston_seat_get_keyboard_fake.call_count, 1);
-}
-
-/** ================================================================================================
- * @test_id             input_set_input_focus_toKeyBoardWithOneKeyBoardAndEnabled
- * @brief               Test case of setup_input_focus() where weston_seat_get_keyboard() success, return an pointer
- *                      and input device focus to keyboard and input enabled is enable {1}
- * @test_procedure Steps:
- *                      -# Set input ctxSeat
- *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Mocking the get_surface_from_id() does return an object
  *                      -# Mocking the weston_seat_get_keyboard() does return an object
  *                      -# Mocking the surface_get_weston_surface() does return an object
- *                      -# Mocking the wl_resource_get_version() does return an object
- *                      -# Calling the setup_input_focus() with input enabled is 1
+ *                      -# Calling the setup_input_focus() with input is disable
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
  *                         +# weston_seat_get_keyboard() must be called once time
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_resource_post_event() must called 3 times
+ *                         +# No ILM_INPUT_DEVICE_KEYBOARD device in mpp_seatFocus[DEFAULT_SEAT]->focus
  */
-TEST_F(InputControllerTest, input_set_input_focus_toKeyBoardWithOneKeyBoardAndEnabled)
+TEST_F(InputControllerTest, input_set_input_focus_disableKeyboard)
 {
+    struct weston_surface *lp_westSurf = (struct weston_surface*)calloc(1, sizeof(struct weston_surface));
+    struct weston_keyboard *lp_keyboard = (struct weston_keyboard*)calloc(1, sizeof(struct weston_keyboard));
     struct wl_resource l_wlResource;
-    mpp_ctxSeat[0]->keyboard_grab.keyboard = (struct weston_keyboard *)malloc(sizeof(struct weston_keyboard));
-    mpp_ctxSeat[0]->keyboard_grab.keyboard->seat = (struct weston_seat *)malloc(sizeof(struct weston_seat));
-    mp_westonSeat[0].compositor = (struct weston_compositor *)malloc(sizeof(struct weston_compositor));
-    mp_westonSeat[0].compositor->kb_repeat_rate = 0;
-    mp_westonSeat[0].compositor->kb_repeat_delay = 0;
-    custom_wl_list_init(&mpp_ctxSeat[0]->keyboard_grab.keyboard->focus_resource_list);
-    custom_wl_list_insert(&mpp_ctxSeat[0]->keyboard_grab.keyboard->focus_resource_list, &l_wlResource.link);
-    custom_wl_list_init(&mpp_ctxSeat[0]->keyboard_grab.keyboard->resource_list);
+    lp_westSurf->resource = &l_wlResource;
+    mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab.keyboard = lp_keyboard;
+    mpp_seatFocus[DEFAULT_SEAT]->focus = ILM_INPUT_DEVICE_KEYBOARD;
+    custom_wl_list_init(&lp_keyboard->focus_resource_list);
+    custom_wl_list_init(&lp_keyboard->resource_list);
+    custom_wl_list_insert(&lp_keyboard->focus_resource_list, &l_wlResource.link);
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(surface_get_weston_surface, &lp_westSurf, 1);
+    SET_RETURN_SEQ(weston_seat_get_keyboard, &lp_keyboard, 1);
 
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_KEYBOARD, ILM_FALSE);
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(weston_seat_get_keyboard_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 3);
+    EXPECT_EQ(mpp_seatFocus[DEFAULT_SEAT]->focus & ILM_INPUT_DEVICE_KEYBOARD, 0);
 
-    struct weston_keyboard *l_keyboard[1] = {(struct weston_keyboard *)0xFFFFFFFF};
-    SET_RETURN_SEQ(weston_seat_get_keyboard, l_keyboard, 1);
-
-    struct weston_surface *l_weston_surfaces[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
-    SET_RETURN_SEQ(surface_get_weston_surface, l_weston_surfaces, 1);
-
-    int l_num[1] = {WL_KEYBOARD_REPEAT_INFO_SINCE_VERSION};
-    SET_RETURN_SEQ(wl_resource_get_version, l_num, 1);
-
-    setup_input_focus(mp_ctxInput, 10, 1, 1);
-
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(weston_seat_get_keyboard_fake.call_count, 1);
-
-    free(l_weston_surfaces[0]);
-    free(mp_westonSeat[0].compositor);
-    free(mpp_ctxSeat[0]->keyboard_grab.keyboard->seat);
-    free(mpp_ctxSeat[0]->keyboard_grab.keyboard);
+    free(lp_westSurf);
+    free(lp_keyboard);
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_focus_toPointerWithNullPointer
- * @brief               Test case of setup_input_focus() where weston_seat_get_pointer() fails, return null pointer
- *                      and input device focus to pointer
+ * @test_id             input_set_input_focus_enableKeyboard
+ * @brief               Test case of setup_input_focus() where seat has the keyboard device, 
+ *                      and surface try to focus it
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Mocking the get_surface_from_id() does return an object
+ *                      -# Mocking the weston_seat_get_keyboard() does return an object
+ *                      -# Mocking the surface_get_weston_surface() does return an object
+ *                      -# Calling the setup_input_focus() with input is enable
+ *                      -# Verification point:
+ *                         +# get_surface_from_id() must be called once time
+ *                         +# weston_seat_get_keyboard() must be called once time
+ *                         +# wl_resource_post_event() must called 4 times
+ *                         +# ILM_INPUT_DEVICE_KEYBOARD device in mpp_seatFocus[DEFAULT_SEAT]->focus
+ */
+TEST_F(InputControllerTest, input_set_input_focus_enableKeyboard)
+{
+    struct weston_surface *lp_westSurf = (struct weston_surface*)calloc(1, sizeof(struct weston_surface));
+    struct weston_keyboard *lp_keyboard = (struct weston_keyboard*)calloc(1, sizeof(struct weston_keyboard));
+    struct wl_resource l_wlResource;
+    lp_westSurf->resource = &l_wlResource;
+    mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab.keyboard = lp_keyboard;
+    mpp_seatFocus[DEFAULT_SEAT]->focus = 0;
+    custom_wl_list_init(&lp_keyboard->focus_resource_list);
+    custom_wl_list_init(&lp_keyboard->resource_list);
+    custom_wl_list_insert(&lp_keyboard->focus_resource_list, &l_wlResource.link);
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(surface_get_weston_surface, &lp_westSurf, 1);
+    SET_RETURN_SEQ(weston_seat_get_keyboard, &lp_keyboard, 1);
+
+    setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE);
+
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(weston_seat_get_keyboard_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 4);
+    EXPECT_EQ(mpp_seatFocus[DEFAULT_SEAT]->focus & ILM_INPUT_DEVICE_KEYBOARD, 1);
+
+    free(lp_westSurf);
+    free(lp_keyboard);
+}
+
+/** ================================================================================================
+ * @test_id             input_set_input_focus_noPointer
+ * @brief               Test case of setup_input_focus() where no pointer device in seat
+ * @test_procedure Steps:
+ *                      -# Mocking the get_surface_from_id() returns an object
+ *                      -# Mocking the weston_seat_get_pointer() returns nullptr
  *                      -# Calling the setup_input_focus() with input enabled is 1
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
  *                         +# weston_seat_get_pointer() must be called once time
+ *                         +# wl_resource_post_event() must not be called
  */
-TEST_F(InputControllerTest, input_set_input_focus_toPointerWithNullPointer)
+TEST_F(InputControllerTest, input_set_input_focus_noPointer)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_seat_get_pointer, (struct weston_pointer**)&mp_nullPointer, 1);
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
-
-    setup_input_focus(mp_ctxInput, 10, 2, 1);
+    setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_POINTER, ILM_TRUE);
 
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 1);
+    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_focus_toPointerWithOnePointerAndNotEnabled
- * @brief               Test case of setup_input_focus() where weston_seat_get_pointer() success, return an pointer
- *                      and input device focus to pointer and input enabled is disable {0}
+ * @test_id             input_set_input_focus_disablePointer
+ * @brief               Test case of setup_input_focus() where surface removes the focusion of pointer
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Mocking the weston_seat_get_pointer() does return an object
- *                      -# Calling the setup_input_focus() with input enabled is 0
+ *                      -# Mocking the get_surface_from_id() returns an object
+ *                      -# Mocking the weston_seat_get_pointer() returns an object
+ *                      -# Calling the setup_input_focus() with input disable
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
  *                         +# weston_seat_get_pointer() must be called once time
+ *                         +# forced_surf_enabled of mpp_ctxSeat is false
  */
-TEST_F(InputControllerTest, input_set_input_focus_toPointerWithOnePointerAndNotEnabled)
+TEST_F(InputControllerTest, input_set_input_focus_disablePointer)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    auto pointer_focus = [](struct weston_pointer_grab *grab) {};
+    struct weston_pointer_grab_interface l_pointerInterface = {.focus = pointer_focus};
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_seat_get_pointer, (struct weston_pointer **)&mp_fakePointer, 1);
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.interface = &l_pointerInterface;
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf = &mpp_iviSurface[DEFAULT_SEAT];
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_surf_enabled = ILM_TRUE;
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
-
-    struct weston_pointer *l_ptr[1] = {(struct weston_pointer *)0xFFFFFFFF};
-    SET_RETURN_SEQ(weston_seat_get_pointer, l_ptr, 1);
-
-    setup_input_focus(mp_ctxInput, 10, 2, 0);
+    setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_POINTER, ILM_FALSE);
 
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 1);
+    ASSERT_EQ(mpp_ctxSeat[DEFAULT_SEAT]->forced_surf_enabled, ILM_FALSE);
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_focus_toPointerWithOnePointerAndEnabled
- * @brief               Test case of setup_input_focus() where weston_seat_get_pointer() success, return an pointer
- *                      and input device focus to pointer and input enabled is enable {1}
+ * @test_id             input_set_input_focus_enablePointer
+ * @brief               Test case of setup_input_focus() where surface get the focusion of pointer
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Mocking the weston_seat_get_pointer() does return an object
- *                      -# Calling the setup_input_focus() with input enabled is 1
+ *                      -# Mocking the get_surface_from_id() returns an object
+ *                      -# Mocking the weston_seat_get_pointer() returns an object
+ *                      -# Calling the setup_input_focus() with input enable
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
  *                         +# weston_seat_get_pointer() must be called once time
+ *                         +# forced_surf_enabled of mpp_ctxSeat is true
+*                         +# forced_ptr_focus_surf of mpp_ctxSeat sets to mpp_iviSurface[DEFAULT_SEAT]
  */
-TEST_F(InputControllerTest, input_set_input_focus_toPointerWithOnePointerAndEnabled)
+TEST_F(InputControllerTest, input_set_input_focus_enablePointer)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    auto pointer_focus = [](struct weston_pointer_grab *grab) {};
+    struct weston_pointer_grab_interface l_pointerInterface = {.focus = pointer_focus};
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_seat_get_pointer, (struct weston_pointer **)&mp_fakePointer, 1);
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.interface = &l_pointerInterface;
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf = nullptr;
+    mpp_ctxSeat[DEFAULT_SEAT]->forced_surf_enabled = ILM_FALSE;
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
-
-    struct weston_pointer *l_ptr[1] = {(struct weston_pointer *)0xFFFFFFFF};
-    SET_RETURN_SEQ(weston_seat_get_pointer, l_ptr, 1);
-
-    setup_input_focus(mp_ctxInput, 10, 2, 1);
+    setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_POINTER, ILM_TRUE);
 
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 1);
+    ASSERT_EQ(mpp_ctxSeat[DEFAULT_SEAT]->forced_ptr_focus_surf, &mpp_iviSurface[DEFAULT_SEAT]);
+    ASSERT_EQ(mpp_ctxSeat[DEFAULT_SEAT]->forced_surf_enabled, ILM_TRUE);
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_focus_toTouch
- * @brief               Test case of setup_input_focus() where input device focus to touch
- *                      and input enabled is enable {1}
+ * @test_id             input_set_input_focus_enableTouch
+ * @brief               Test case of setup_input_focus() where to enable the touch device.
+ *                      Cannot assign touch to special surface, may need to remove.
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Calling the setup_input_focus() with input enabled is 1
+ *                      -# Calling the setup_input_focus() with input is enable
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
  *                         +# wl_resource_post_event() must be called 2 times
  */
-TEST_F(InputControllerTest, input_set_input_focus_toTouch)
+TEST_F(InputControllerTest, input_set_input_focus_enableTouch)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
-
-    setup_input_focus(mp_ctxInput, 10, 4, 1);
+    setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_TOUCH, ILM_TRUE);
 
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 2);
@@ -1477,143 +1411,123 @@ TEST_F(InputControllerTest, input_set_input_focus_toTouch)
 
 /** ================================================================================================
  * @test_id             input_set_input_acceptance_wrongSeatName
- * @brief               Test case of setup_input_acceptance() where input seat name is null
+ * @brief               Test case of setup_input_acceptance() where input seat name is "error".
+ *                      that doesn't exist in list.
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Calling the setup_input_acceptance()
+ *                      -# Calling the setup_input_acceptance() with non-exist seat name
  *                      -# Verification point:
  *                         +# get_surface_from_id() not be called
  */
 TEST_F(InputControllerTest, input_set_input_acceptance_wrongSeatName)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
-
-    setup_input_acceptance(mp_ctxInput, 10, "", 1);
-
+    setup_input_acceptance(mp_ctxInput, 10, "error", ILM_TRUE);
     ASSERT_EQ(get_surface_from_id_fake.call_count, 0);
 }
 
 /** ================================================================================================
  * @test_id             input_set_input_acceptance_nullSurface
- * @brief               Test case of setup_input_acceptance() where get_surface_from_id() fails, return null pointer
+ * @brief               Test case of setup_input_acceptance() where get_surface_from_id()
+ *                      returns a wrong surface
  * @test_procedure Steps:
- *                      -# Mocking the wl_resource_get_user_data() does return an object
+ *                      -# Mocking the get_surface_from_id() return wrong surface
  *                      -# Calling the setup_input_acceptance() with valid seat name
  *                      -# Verification point:
- *                         +# wl_resource_get_user_data() must be called once time
  *                         +# get_surface_from_id() must be called once time
- *                         +# weston_seat_get_pointer() not be called
  *                         +# wl_resource_post_event() not be called
  */
 TEST_F(InputControllerTest, input_set_input_acceptance_nullSurface)
 {
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface**)&mp_fakePointer, 1);
 
-    setup_input_acceptance(mp_ctxInput, 10, "default", 1);
+    setup_input_acceptance(mp_ctxInput, 10, mp_seatName[DEFAULT_SEAT], ILM_TRUE);
 
     ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 0);
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_acceptance_withValidPointerAndUnapccepted
- * @brief               Test case of setup_input_acceptance() where valid ctxSeat pointer
- *                      and input accepted is disable {0}
+ * @test_id             input_set_input_acceptance_removeAcceptance
+ * @brief               Test case of setup_input_acceptance() for acceptance removing.
  * @test_procedure Steps:
- *                      -# Set input ctxSeat
- *                      -# Mocking the weston_seat_get_keyboard() does return an object
- *                      -# Mocking the weston_seat_get_pointer() does return an object
- *                      -# Mocking the weston_seat_get_touch() does return an object
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
- *                      -# Calling the setup_input_acceptance() with input accepted is 0
+ *                      -# Mocking the get_surface_from_id() for resturn a valid surface
+ *                      -# Mocking the weston_seat_get_keyboard() returns an object
+ *                      -# Mocking the weston_seat_get_pointer() returns an object
+ *                      -# Mocking the weston_seat_get_touch() returns an object
+ *                      -# Mocking the surface_get_weston_surface() returns a weston_surface
+  *                      -# Calling the setup_input_acceptance() with false input
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
- *                         +# weston_seat_get_pointer() must be called once time
+ *                         +# wl_resource_post_event() must be called 4 times
  *                         +# surface_get_weston_surface() must be called once time
- *                         +# Free resources are allocated when running the test
- *                         +# Allocate memory for resources are freed when running the test
  */
-TEST_F(InputControllerTest, input_set_input_acceptance_withValidPointerAndUnapccepted)
+TEST_F(InputControllerTest, input_set_input_acceptance_removeAcceptance)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
+    struct weston_pointer l_pointer = {.focus = nullptr};
+    struct weston_touch   l_touch = {.focus = nullptr};
+    struct weston_surface *lp_westSurf = (struct weston_surface*)calloc(1, sizeof(struct weston_surface));
+    struct weston_keyboard *lp_keyboard = (struct weston_keyboard*)calloc(1, sizeof(struct weston_keyboard));
+    mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab.keyboard = lp_keyboard;
+    mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab.pointer = &l_pointer;
+    mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch = &l_touch;
+    custom_wl_list_init(&lp_keyboard->focus_resource_list);
+    custom_wl_list_init(&lp_keyboard->resource_list);
 
-    struct weston_keyboard *lpp_keyboard [] = {(struct weston_keyboard *)0xFFFFFFFF};
-    struct weston_pointer *lpp_pointer [] = {(struct weston_pointer *)0xFFFFFFFF};
-    struct weston_touch *lpp_touch [] = {(struct weston_touch *)0xFFFFFFFF};
-    SET_RETURN_SEQ(weston_seat_get_keyboard, lpp_keyboard, 1);
-    SET_RETURN_SEQ(weston_seat_get_pointer, lpp_pointer, 1);
-    SET_RETURN_SEQ(weston_seat_get_touch, lpp_touch, 1);
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(surface_get_weston_surface, &lp_westSurf, 1);
+    SET_RETURN_SEQ(weston_seat_get_keyboard, (struct weston_keyboard **)&mp_fakePointer, 1);
+    SET_RETURN_SEQ(weston_seat_get_pointer, (struct weston_pointer **)&mp_fakePointer, 1);
+    SET_RETURN_SEQ(weston_seat_get_touch, (struct weston_touch **)&mp_fakePointer, 1);
 
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    setup_input_acceptance(mp_ctxInput, 10, mp_seatName[DEFAULT_SEAT], ILM_FALSE);
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 4);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
 
-    setup_input_acceptance(mp_ctxInput, 10, "default", 0);
-
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 1);
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-
-    free(mpp_ctxSeat[0]->pointer_grab.pointer->focus);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
-
-    mpp_seatFocus[0] = (struct seat_focus*)calloc(1, sizeof(struct seat_focus));
+    free(lp_westSurf);
+    free(lp_keyboard);
+    mpp_seatFocus[DEFAULT_SEAT] = nullptr;
 }
 
 /** ================================================================================================
- * @test_id             input_set_input_acceptance_withValidPointerAndApccepted
- * @brief               Test case of setup_input_acceptance() where valid ctxSeat pointer
- *                      and input accepted is enable {1}
+ * @test_id             input_set_input_acceptance_doAcceptance
+ * @brief               Test case of setup_input_acceptance() for doing acceptance
  * @test_procedure Steps:
- *                      -# Set input ctxSeat
- *                      -# Mocking the wl_resource_get_user_data() does return an object
- *                      -# Mocking the get_surface_from_id() does return an object
+ *                      -# Mocking the get_surface_from_id() does return first surface
  *                      -# Mocking the weston_seat_get_pointer() does return an object
- *                      -# Calling the setup_input_acceptance() with input accepted is 1
+ *                      -# Calling the setup_input_acceptance() with input is accepted
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
- *                         +# weston_seat_get_pointer() must be called once time
- *                         +# Free resources are allocated when running the test
+ *                         +# wl_resource_post_event() must be called 2 times
  */
-TEST_F(InputControllerTest, input_set_input_acceptance_withValidPointerAndApccepted)
+TEST_F(InputControllerTest, input_set_input_acceptance_doAcceptance)
 {
-    mpp_ctxSeat[0]->pointer_grab.pointer = (struct weston_pointer *)malloc(sizeof(struct weston_pointer));
-    mpp_ctxSeat[0]->pointer_grab.pointer->focus = (struct weston_view *)malloc(sizeof(struct weston_view));
+    struct weston_pointer l_pointer = {.focus = mp_fakePointer};
+    mpp_ctxSeat[CUSTOM_SEAT]->pointer_grab.pointer = &l_pointer;
 
-    struct input_context *l_input[1] = {mp_ctxInput};
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)l_input, 1);
+    SET_RETURN_SEQ(get_surface_from_id, mpp_layoutSurface, 1);
+    SET_RETURN_SEQ(weston_seat_get_pointer, (struct weston_pointer **)&mp_fakePointer, 1);
 
-    struct ivi_layout_surface *l_surface[1] = {mp_layoutSurface};
-    SET_RETURN_SEQ(get_surface_from_id, l_surface, 1);
+    setup_input_acceptance(mp_ctxInput, 10, mp_seatName[CUSTOM_SEAT], ILM_TRUE);
 
-    struct weston_pointer *l_ptr[1] = {(struct weston_pointer *)0xFFFFFFFF};
-    SET_RETURN_SEQ(weston_seat_get_pointer, l_ptr, 1);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
 
-    setup_input_acceptance(mp_ctxInput, 10, "default", 1);
-
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 1);
-
-    free(mpp_ctxSeat[0]->pointer_grab.pointer->focus);
-    free(mpp_ctxSeat[0]->pointer_grab.pointer);
+    struct seat_focus *lp_seatFocus = (struct seat_focus*)
+            ((uintptr_t)wl_list_insert_fake.arg1_history[DEFAULT_SEAT] - offsetof(struct seat_focus, link));
+    free(lp_seatFocus);
 }
 
 /** ================================================================================================
- * @test_id             handle_surface_destroy_nullSurface
- * @brief               Test case of handle_surface_destroy() where valid input params
+ * @test_id             handle_surface_destroy_wrongSurface
+ * @brief               Test case of handle_surface_destroy() where invalid input params
  * @test_procedure Steps:
  *                      -# Calling the handle_surface_destroy()
  *                      -# Verification point:
  *                         +# wl_list_remove() not be called
  */
-TEST_F(InputControllerTest, handle_surface_destroy_nullSurface)
+TEST_F(InputControllerTest, handle_surface_destroy_wrongSurface)
 {
     handle_surface_destroy(&mp_ctxInput->surface_destroyed, nullptr);
     ASSERT_EQ(wl_list_remove_fake.call_count, 0);
@@ -1626,89 +1540,113 @@ TEST_F(InputControllerTest, handle_surface_destroy_nullSurface)
  *                      -# Calling the handle_surface_destroy()
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called once time
- *                         +# Allocate memory for resources are freed when running the test
  */
 TEST_F(InputControllerTest, handle_surface_destroy_success)
 {
-    handle_surface_destroy(&mp_ctxInput->surface_destroyed, &mp_iviSurface[0]);
+    handle_surface_destroy(&mp_ctxInput->surface_destroyed, &mpp_iviSurface[DEFAULT_SEAT]);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 1);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 1);
 
-    mpp_seatFocus[0] = (struct seat_focus*)calloc(1, sizeof(struct seat_focus));
+    mpp_seatFocus[DEFAULT_SEAT] = nullptr;
 }
 
 /** ================================================================================================
- * @test_id             handle_surface_create_nullSeatCtx
- * @brief               Test case of handle_surface_create() where invalid input params
+ * @test_id             handle_surface_create_noDefaultSeat
+ * @brief               Test case of handle_surface_create() where no default seat
  * @test_procedure Steps:
- *                      -# Create input context and set seat_list for input context
- *                      -# Calling the handle_surface_create() with input surface is null pointer
+ *                      -# Setup default seat is no_seat
+ *                      -# Calling the handle_surface_create()
  *                      -# Verification point:
  *                         +# wl_resource_post_event() not be called
+ *                         +# wl_list_init() must be called once time
  */
-TEST_F(InputControllerTest, handle_surface_create_nullSeatCtx)
+TEST_F(InputControllerTest, handle_surface_create_noDefaultSeat)
 {
-    struct input_context l_input_ctx;
-    custom_wl_list_init(&l_input_ctx.seat_list);
-    l_input_ctx.ivishell = &m_iviShell;
-    l_input_ctx.seat_default_name = (char*)mp_seatName[0];
+    struct ivisurface l_iviSurface;
+    mp_ctxInput->seat_default_name = (char*)"no_seat";
 
-    handle_surface_create(&l_input_ctx.surface_created, &mp_iviSurface[0]);
+    handle_surface_create(&mp_ctxInput->surface_created, &l_iviSurface);
+
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    ASSERT_EQ(wl_list_init_fake.call_count, 1);
 }
 
 /** ================================================================================================
- * @test_id             handle_surface_create_success
- * @brief               Test case of handle_surface_create() where valid input params
+ * @test_id             handle_surface_create_hasDefaultSeat
+ * @brief               Test case of handle_surface_create() where has default seat
  * @test_procedure Steps:
- *                      -# Calling the handle_surface_create() with valid input context and input surface
+ *                      -# Setup default seat
+ *                      -# Calling the handle_surface_create()
  *                      -# Verification point:
  *                         +# wl_resource_post_event() must be called 2 times
+ *                         +# wl_list_insert() must be called 1 time
  */
-TEST_F(InputControllerTest, handle_surface_create_success)
+TEST_F(InputControllerTest, handle_surface_create_hasDefaultSeat)
 {
-    mp_ctxInput->seat_default_name = (char*)mp_seatName[0];
-    handle_surface_create(&mp_ctxInput->surface_created, &mp_iviSurface[0]);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 2);
+    struct ivisurface l_iviSurface;
+    custom_wl_list_init(&l_iviSurface.accepted_seat_list);
+    mp_ctxInput->seat_default_name = (char*)mp_seatName[DEFAULT_SEAT];
+    l_iviSurface.shell = &m_iviShell;
+
+    handle_surface_create(&mp_ctxInput->surface_created, &l_iviSurface);
+
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
+
+    struct seat_focus *lp_seatFocus = (struct seat_focus*)
+            ((uintptr_t)wl_list_insert_fake.arg1_history[DEFAULT_SEAT] - offsetof(struct seat_focus, link));
+    free(lp_seatFocus);
+
 }
 
 /** ================================================================================================
- * @test_id             unbind_resource_controller_success
- * @brief               Test case of unbind_resource_controller() where valid input params
+ * @test_id             unbind_resource_controller
+ * @brief               Test case of unbind_resource_controller() with a real resource
  * @test_procedure Steps:
  *                      -# Calling the unbind_resource_controller()
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called once time
  */
-TEST_F(InputControllerTest, unbind_resource_controller_success)
+TEST_F(InputControllerTest, unbind_resource_controller)
 {
-    enable_utility_funcs_of_array_list();
-    wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
-    wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
-    unbind_resource_controller(&(mp_wlResource[0]));
+    unbind_resource_controller(&(mp_wlResource[DEFAULT_SEAT]));
+
     ASSERT_EQ(wl_list_remove_fake.call_count, 1);
 }
 
 /** ================================================================================================
- * @test_id             input_controller_destroy_nullListener
- * @brief               Test case of input_controller_destroy() where input context is null pointer
+ * @test_id             input_controller_destroy_wrongInput
+ * @brief               Test case of input_controller_destroy() where wrong input
  * @test_procedure Steps:
  *                      -# Calling the input_controller_destroy()
+ *                      -# wl_list_remove should not be called
  */
-TEST_F(InputControllerTest, input_controller_destroy_nullListener)
+TEST_F(InputControllerTest, input_controller_destroy_wrongInput)
 {
     input_controller_destroy(nullptr, nullptr);
+    ASSERT_EQ(wl_list_remove_fake.call_count, 0);
 }
 
 /** ================================================================================================
- * @test_id             input_controller_destroy_success
- * @brief               Test case of input_controller_destroy() where valid input params
+ * @test_id             input_controller_destroy
+ * @brief               Test case of input_controller_destroy() for destroying real object
  * @test_procedure Steps:
- *                      -# Set ctx input successful_init_stage is -1
  *                      -# Calling the input_controller_destroy()
+ *                      -# wl_list_remove should be called 6 times
  */
-TEST_F(InputControllerTest, input_controller_destroy_success)
+TEST_F(InputControllerTest, input_controller_destroy)
 {
-    mp_ctxInput->successful_init_stage = -1;
+    wl_list_remove_fake.custom_fake = custom_wl_list_remove;
+    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
+    mp_ctxInput->seat_default_name = nullptr;
+
     input_controller_destroy(&mp_ctxInput->shell_destroy_listener, nullptr);
+
+    EXPECT_EQ(wl_list_remove_fake.call_count, 12);
+
+    for(uint8_t i = 0; i < MAX_NUMBER; i++) {
+        mpp_ctxSeat[i] = nullptr;
+        mpp_seatFocus[i] = nullptr;
+    }
+    mp_ctxInput = nullptr;
 }
