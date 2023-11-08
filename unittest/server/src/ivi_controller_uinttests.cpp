@@ -33,17 +33,12 @@ enum {
 
 extern "C"
 {
-WL_EXPORT const struct wl_interface wl_buffer_interface = {
-	"wl_buffer", 1,
-	0, NULL,
-	0, NULL,
-};
+#include "ivi-controller.c"
+}
 
-WL_EXPORT const struct wl_interface wl_output_interface = {
-	"wl_output", 4,
-	0, NULL,
-	0, NULL,
-};
+const struct wl_interface wl_buffer_interface, wl_output_interface;
+static constexpr uint8_t OBJECT_NUMBER = 2;
+static uint32_t g_SurfaceCreatedCount = 0;
 
 struct wl_resource * custom_wl_resource_from_link(struct wl_list *link)
 {
@@ -57,11 +52,6 @@ struct wl_list * custom_wl_resource_get_link(struct wl_resource *resource)
 	return &resource->link;
 }
 
-#include "ivi-controller.c"
-}
-
-static constexpr uint8_t MAX_NUMBER = 2;
-static uint32_t g_SurfaceCreatedCount = 0;
 static uint32_t custom_get_id_of_surface(struct ivi_layout_surface *ivisurf)
 {
     return ivisurf->id_surface;
@@ -166,7 +156,7 @@ public:
         custom_wl_list_init(&mp_iviShell->ivisurface_created_signal.listener_list);
         custom_wl_list_init(&mp_iviShell->ivisurface_removed_signal.listener_list);
 
-        for(uint8_t i = 0; i < MAX_NUMBER; i++)
+        for(uint8_t i = 0; i < OBJECT_NUMBER; i++)
         {
             // Prepare layout surfaces prperties
             m_layoutSurface[i].id_surface = i + 10;
@@ -261,7 +251,7 @@ public:
 
     void deinit_controller_content()
     {
-        for(uint8_t i = 0; i < MAX_NUMBER; i++)
+        for(uint8_t i = 0; i < OBJECT_NUMBER; i++)
         {
             free(mp_surfaceNotification[i]);
             free(mp_iviSurface[i]);
@@ -270,8 +260,11 @@ public:
             free(mp_iviScreen[i]);
             free(mp_iviController[i]);
         }
-        custom_wl_array_release(&mp_iviShell->screen_ids);
-        free(mp_iviShell);
+        if(mp_iviShell)
+        {
+            custom_wl_array_release(&mp_iviShell->screen_ids);
+            free(mp_iviShell);
+        }
     }
 
     void enable_utility_funcs_of_array_list()
@@ -292,21 +285,21 @@ public:
     struct wl_resource *mp_wlResourceDefault = (struct wl_resource *)0xFFFFFF00;
     struct weston_buffer *mp_westonBuffer = (struct weston_buffer *)0xFFFFFF00;
 
-    struct wl_listener m_listenSurface[MAX_NUMBER] = {};
-    struct ivisurface *mp_iviSurface[MAX_NUMBER] = {nullptr};
-    struct ivi_layout_surface m_layoutSurface[MAX_NUMBER] = {};
-    struct ivi_layout_surface_properties m_layoutSurfaceProperties[MAX_NUMBER] = {};
-    struct notification *mp_surfaceNotification[MAX_NUMBER] = {nullptr};
+    struct wl_listener m_listenSurface[OBJECT_NUMBER] = {};
+    struct ivisurface *mp_iviSurface[OBJECT_NUMBER] = {nullptr};
+    struct ivi_layout_surface m_layoutSurface[OBJECT_NUMBER] = {};
+    struct ivi_layout_surface_properties m_layoutSurfaceProperties[OBJECT_NUMBER] = {};
+    struct notification *mp_surfaceNotification[OBJECT_NUMBER] = {nullptr};
 
-    struct ivilayer *mp_iviLayer[MAX_NUMBER] = {nullptr};
-    struct ivi_layout_layer m_layoutLayer[MAX_NUMBER] = {};
-    struct ivi_layout_layer_properties m_layoutLayerProperties[MAX_NUMBER] = {};
-    struct notification *mp_LayerNotification[MAX_NUMBER] = {nullptr};
+    struct ivilayer *mp_iviLayer[OBJECT_NUMBER] = {nullptr};
+    struct ivi_layout_layer m_layoutLayer[OBJECT_NUMBER] = {};
+    struct ivi_layout_layer_properties m_layoutLayerProperties[OBJECT_NUMBER] = {};
+    struct notification *mp_LayerNotification[OBJECT_NUMBER] = {nullptr};
 
-    struct iviscreen *mp_iviScreen[MAX_NUMBER] = {nullptr};
-    struct weston_output m_westonOutput[MAX_NUMBER] = {};
+    struct iviscreen *mp_iviScreen[OBJECT_NUMBER] = {nullptr};
+    struct weston_output m_westonOutput[OBJECT_NUMBER] = {};
 
-    struct ivicontroller *mp_iviController[MAX_NUMBER] = {nullptr};
+    struct ivicontroller *mp_iviController[OBJECT_NUMBER] = {nullptr};
 
     struct ivishell *mp_iviShell = nullptr;
     struct weston_compositor m_westonCompositor = {};
@@ -446,9 +439,9 @@ TEST_F(ControllerTests, send_surface_prop_noEvents)
 
     send_surface_prop(&mp_iviSurface[0]->property_changed, nullptr);
 
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -479,9 +472,9 @@ TEST_F(ControllerTests, send_surface_prop_hasEvents)
 
     send_surface_prop(&mp_iviSurface[0]->property_changed, nullptr);
 
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 5);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 5);
 }
 
 /** ================================================================================================
@@ -501,9 +494,9 @@ TEST_F(ControllerTests, send_layer_prop_noEvents)
 
     send_layer_prop(&mp_iviLayer[0]->property_changed, nullptr);
 
-    ASSERT_EQ(get_id_of_layer_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(get_id_of_layer_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -527,9 +520,9 @@ TEST_F(ControllerTests, send_layer_prop_hasEvents)
 
     send_layer_prop(&mp_iviLayer[0]->property_changed, nullptr);
 
-    ASSERT_EQ(get_id_of_layer_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 4);
+    EXPECT_EQ(get_id_of_layer_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 4);
 }
 
 /** ================================================================================================
@@ -546,7 +539,7 @@ TEST_F(ControllerTests, send_layer_prop_hasEvents)
  *                         +# surface_get_weston_surface() must be called once time
  *                         +# wl_list_insert() must be called 2 times
  *                         +# surface_add_listener() must be called once time
- *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
+ *                         +# wl_resource_post_event() must be called {OBJECT_NUMBER} times with opcode IVI_WM_SURFACE_CREATED
  *                         +# The result output should same with prepare data
  *                         +# Free resources are allocated when running the test
  */
@@ -561,18 +554,18 @@ TEST_F(ControllerTests, surface_event_create_idDifferentBkgnSurfaceId)
 
     surface_event_create(&mp_iviShell->surface_created, &l_layoutSurface);
 
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 1);
-    ASSERT_EQ(get_properties_of_surface_fake.call_count, 1);
-    ASSERT_EQ(wl_list_init_fake.call_count, 1);
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 2);
-    ASSERT_EQ(surface_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, MAX_NUMBER);
-    ASSERT_EQ(MAX_NUMBER, g_SurfaceCreatedCount);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
+    EXPECT_EQ(get_properties_of_surface_fake.call_count, 1);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(surface_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, OBJECT_NUMBER);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_CREATED);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[1], IVI_WM_SURFACE_CREATED);
+    EXPECT_EQ(OBJECT_NUMBER, g_SurfaceCreatedCount);
     struct ivisurface *lp_iviSurf = (struct ivisurface*)(uintptr_t(wl_list_init_fake.arg0_history[0]) - offsetof(struct ivisurface, notification_list));
-    ASSERT_EQ(lp_iviSurf->shell, mp_iviShell);
-    ASSERT_EQ(lp_iviSurf->layout_surface, &l_layoutSurface);
-    ASSERT_EQ(mp_iviShell->bkgnd_surface, nullptr);
+    EXPECT_EQ(lp_iviSurf->shell, mp_iviShell);
+    EXPECT_EQ(lp_iviSurf->layout_surface, &l_layoutSurface);
+    EXPECT_EQ(mp_iviShell->bkgnd_surface, nullptr);
 
     free(lp_iviSurf);
     free(lp_westonSurface);
@@ -588,9 +581,7 @@ TEST_F(ControllerTests, surface_event_create_idDifferentBkgnSurfaceId)
  *                      -# Verification point:
  *                         +# get_id_of_surface() must be called once time
  *                         +# get_properties_of_surface() must be called once time
- *                         +# wl_list_init() must be called once time
  *                         +# surface_get_weston_surface() must be called once time
- *                         +# wl_list_insert() must be called once time
  *                         +# surface_add_listener() not be called
  *                         +# wl_resource_post_event() not be called
  *                         +# The result output should same with prepare data
@@ -607,18 +598,15 @@ TEST_F(ControllerTests, surface_event_create_idSameBkgnSurfaceId)
 
     surface_event_create(&mp_iviShell->surface_created, &l_layoutSurface);
 
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 1);
-    ASSERT_EQ(get_properties_of_surface_fake.call_count, 1);
-    ASSERT_EQ(wl_list_init_fake.call_count, 1);
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
-    ASSERT_EQ(surface_add_listener_fake.call_count, 0);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
-    ASSERT_EQ(0, g_SurfaceCreatedCount);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
+    EXPECT_EQ(get_properties_of_surface_fake.call_count, 1);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(surface_add_listener_fake.call_count, 0);
+    EXPECT_EQ(0, g_SurfaceCreatedCount);
     struct ivisurface *lp_iviSurf = (struct ivisurface*)(uintptr_t(wl_list_init_fake.arg0_history[0]) - offsetof(struct ivisurface, notification_list));
-    ASSERT_EQ(lp_iviSurf->shell, mp_iviShell);
-    ASSERT_EQ(lp_iviSurf->layout_surface, &l_layoutSurface);
-    ASSERT_EQ(mp_iviShell->bkgnd_surface, lp_iviSurf);
+    EXPECT_EQ(lp_iviSurf->shell, mp_iviShell);
+    EXPECT_EQ(lp_iviSurf->layout_surface, &l_layoutSurface);
+    EXPECT_EQ(mp_iviShell->bkgnd_surface, lp_iviSurf);
 
     free(lp_iviSurf);
     free(lp_westonSurface);
@@ -632,11 +620,9 @@ TEST_F(ControllerTests, surface_event_create_idSameBkgnSurfaceId)
  *                      -# Calling the layer_event_create()
  *                      -# Verification point:
  *                         +# get_id_of_layer() must be called once time
- *                         +# wl_list_insert() must be called once time
- *                         +# wl_list_init() must be called once time
  *                         +# get_properties_of_layer() must be called once time
  *                         +# layer_add_listener() must be called once time
- *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
+ *                         +# wl_resource_post_event() must be called {OBJECT_NUMBER} times
  *                         +# The result output should same with prepare data
  *                         +# Free resources are allocated when running the test
  */
@@ -647,15 +633,13 @@ TEST_F(ControllerTests, layer_event_create)
 
     layer_event_create(&mp_iviShell->layer_created, &l_layoutLayer);
 
-    ASSERT_EQ(get_id_of_layer_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
-    ASSERT_EQ(wl_list_init_fake.call_count, 1);
-    ASSERT_EQ(get_properties_of_layer_fake.call_count, 1);
-    ASSERT_EQ(layer_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, MAX_NUMBER);
-    struct ivilayer *lp_iviLayer = (struct ivilayer*)(uintptr_t(wl_list_init_fake.arg0_history[0]) - offsetof(struct ivilayer, notification_list));
-    ASSERT_EQ(lp_iviLayer->shell, mp_iviShell);
-    ASSERT_EQ(lp_iviLayer->layout_layer, &l_layoutLayer);
+    EXPECT_EQ(get_id_of_layer_fake.call_count, 1);
+    EXPECT_EQ(get_properties_of_layer_fake.call_count, 1);
+    EXPECT_EQ(layer_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, OBJECT_NUMBER);
+    struct ivilayer *lp_iviLayer = (struct ivilayer*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct ivilayer, link));
+    EXPECT_EQ(lp_iviLayer->shell, mp_iviShell);
+    EXPECT_EQ(lp_iviLayer->layout_layer, &l_layoutLayer);
 
     free(lp_iviLayer);
 }
@@ -682,13 +666,13 @@ TEST_F(ControllerTests, output_created_event_customScreen)
 
     output_created_event(&mp_iviShell->output_created, &l_createdOutput);
 
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
-    ASSERT_EQ(wl_list_init_fake.call_count, 1);
-    ASSERT_EQ(weston_compositor_schedule_repaint_fake.call_count, 1);
-    struct iviscreen *lp_iviScreen = (struct iviscreen*)(uintptr_t(wl_list_init_fake.arg0_history[0]) - offsetof(struct iviscreen, resource_list));
-    ASSERT_EQ(lp_iviScreen->shell, mp_iviShell);
-    ASSERT_EQ(lp_iviScreen->output, &l_createdOutput);
-    ASSERT_EQ(lp_iviScreen->id_screen, mp_iviShell->screen_id_offset + l_createdOutput.id);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
+    EXPECT_EQ(wl_list_init_fake.call_count, 1);
+    EXPECT_EQ(weston_compositor_schedule_repaint_fake.call_count, 1);
+    struct iviscreen *lp_iviScreen = (struct iviscreen*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct iviscreen, link));
+    EXPECT_EQ(lp_iviScreen->shell, mp_iviShell);
+    EXPECT_EQ(lp_iviScreen->output, &l_createdOutput);
+    EXPECT_EQ(lp_iviScreen->id_screen, mp_iviShell->screen_id_offset + l_createdOutput.id);
 
     free(lp_iviScreen);
 }
@@ -715,15 +699,33 @@ TEST_F(ControllerTests, output_created_event_defaultConfigScreen)
 
     output_created_event(&mp_iviShell->output_created, &l_createdOutput);
 
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
-    ASSERT_EQ(wl_list_init_fake.call_count, 1);
-    ASSERT_EQ(weston_compositor_schedule_repaint_fake.call_count, 1);
-    struct iviscreen *lp_iviScreen = (struct iviscreen*)(uintptr_t(wl_list_init_fake.arg0_history[0]) - offsetof(struct iviscreen, resource_list));
-    ASSERT_EQ(lp_iviScreen->shell, mp_iviShell);
-    ASSERT_EQ(lp_iviScreen->output, &l_createdOutput);
-    ASSERT_EQ(lp_iviScreen->id_screen, mp_screenInfo->screen_id);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
+    EXPECT_EQ(wl_list_init_fake.call_count, 1);
+    EXPECT_EQ(weston_compositor_schedule_repaint_fake.call_count, 1);
+    struct iviscreen *lp_iviScreen = (struct iviscreen*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct iviscreen, link));
+    EXPECT_EQ(lp_iviScreen->shell, mp_iviShell);
+    EXPECT_EQ(lp_iviScreen->output, &l_createdOutput);
+    EXPECT_EQ(lp_iviScreen->id_screen, mp_screenInfo->screen_id);
 
     free(lp_iviScreen);
+}
+
+/** ================================================================================================
+ * @test_id             bind_ivi_controller_oldVersion
+ * @brief               Call bind_ivi_controller() with version < 2
+ * @test_procedure Steps:
+ *                      -# Calling the bind_ivi_controller() with version < 2
+ *                      -# Verification point:
+ *                         +# wl_client_post_implementation_error() must be called once time
+ */
+TEST_F(ControllerTests, bind_ivi_controller_oldVersion)
+{
+    std::uint32_t lVersion{1};
+    std::uint32_t lID{1};
+
+    bind_ivi_controller(mp_fakeClient, mp_iviShell, lVersion, lID);
+
+    EXPECT_EQ(wl_client_post_implementation_error_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -733,15 +735,22 @@ TEST_F(ControllerTests, output_created_event_defaultConfigScreen)
  *                      -# Calling the bind_ivi_controller()
  *                      -# Verification point:
  *                         +# wl_resource_create() must be called once time
+ *                         +# wl_client_post_no_memory() must be called once time
  *                         +# wl_resource_set_implementation() not be called
  */
 TEST_F(ControllerTests, bind_ivi_controller_nullResource)
 {
-    // update version >= 2
-    bind_ivi_controller(mp_fakeClient, mp_iviShell, 2, 1);
+    std::uint32_t lVersion{2};
+    std::uint32_t lID{1};
+    struct wl_resource *lResourceRetList[1] = {nullptr};
 
-    ASSERT_EQ(wl_resource_create_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 0);
+    SET_RETURN_SEQ(wl_resource_create, (struct wl_resource **)&lResourceRetList, 1);
+
+    bind_ivi_controller(mp_fakeClient, mp_iviShell, lVersion, lID);
+
+    EXPECT_EQ(wl_resource_create_fake.call_count, 1);
+    EXPECT_EQ(wl_client_post_no_memory_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_set_implementation_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -753,32 +762,33 @@ TEST_F(ControllerTests, bind_ivi_controller_nullResource)
  *                      -# Verification point:
  *                         +# wl_resource_create() must be called once time
  *                         +# wl_resource_set_implementation() must be called once time
- *                         +# wl_list_insert() must be called once time
- *                         +# wl_list_init() must be called 2 times
- *                         +# get_id_of_surface() must be called {MAX_NUMBER} times
- *                         +# get_id_of_layer() must be called {MAX_NUMBER} times
- *                         +# wl_resource_post_event() must be called {MAX_NUMBER*2} times
+ *                         +# get_id_of_surface() must be called {OBJECT_NUMBER} times
+ *                         +# get_id_of_layer() must be called {OBJECT_NUMBER} times
+ *                         +# wl_resource_post_event() must be called {OBJECT_NUMBER*2} times with valid opcode
  *                         +# The result output should same with prepare data
  *                         +# Free resources are allocated when running the test
  */
 TEST_F(ControllerTests, bind_ivi_controller_success)
 {
+    std::uint32_t lVersion{2};
+    std::uint32_t lID{1};
     SET_RETURN_SEQ(wl_resource_create, &mp_wlResourceDefault, 1);
 
-    // update version >= 2
-    bind_ivi_controller(mp_fakeClient, mp_iviShell, 2, 1);
+    bind_ivi_controller(mp_fakeClient, mp_iviShell, lVersion, lID);
 
-    ASSERT_EQ(wl_resource_create_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
-    ASSERT_EQ(wl_list_init_fake.call_count, 2);
-    ASSERT_EQ(get_id_of_surface_fake.call_count, MAX_NUMBER);
-    ASSERT_EQ(get_id_of_layer_fake.call_count, MAX_NUMBER);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, MAX_NUMBER*2);
-    struct ivicontroller *lp_iviController = (struct ivicontroller*)(uintptr_t(wl_list_init_fake.arg0_history[0]) - offsetof(struct ivicontroller, surface_notifications));
-    ASSERT_EQ(lp_iviController->shell, mp_iviShell);
-    ASSERT_EQ(lp_iviController->client, mp_fakeClient);
-    ASSERT_EQ(lp_iviController->id, 1);
+    EXPECT_EQ(wl_resource_create_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_set_implementation_fake.call_count, 1);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, OBJECT_NUMBER);
+    EXPECT_EQ(get_id_of_layer_fake.call_count, OBJECT_NUMBER);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, OBJECT_NUMBER*2);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_CREATED);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[1], IVI_WM_SURFACE_CREATED);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[2], IVI_WM_LAYER_CREATED);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[3], IVI_WM_LAYER_CREATED);
+    struct ivicontroller *lp_iviController = (struct ivicontroller*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct ivicontroller, link));
+    EXPECT_EQ(lp_iviController->shell, mp_iviShell);
+    EXPECT_EQ(lp_iviController->client, mp_fakeClient);
+    EXPECT_EQ(lp_iviController->id, lID);
 
     free(lp_iviController);
 }
@@ -797,18 +807,23 @@ TEST_F(ControllerTests, bind_ivi_controller_success)
  */
 TEST_F(ControllerTests, controller_create_screen_wrongWestonHead)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lOutputResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lID{1};
     struct weston_head l_westonHead;
-    struct weston_output *lp_fakeWestonOutput = (struct weston_output*)0xFFFFFFFF;
+    struct weston_output *lp_fakeWestonOutput = (struct weston_output*)0xFFFFFFFF; // an fake valid address
+
     l_westonHead.output = lp_fakeWestonOutput;
     void *lpp_getUserData [] = {&l_westonHead, mp_iviController[0]};
     SET_RETURN_SEQ(wl_resource_get_user_data, lpp_getUserData, 2);
 
-    controller_create_screen(nullptr, nullptr, nullptr, 1);
+    controller_create_screen(lClient, lResource, lOutputResource, lID);
 
-    ASSERT_EQ(wl_resource_create_fake.call_count, 0);
-    ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 0);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 0);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_create_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_set_implementation_fake.call_count, 0);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -817,6 +832,7 @@ TEST_F(ControllerTests, controller_create_screen_wrongWestonHead)
  *                      but wl_resource_create() fails, return null object
  * @test_procedure Steps:
  *                      -# Mocking the wl_resource_get_user_data() does return valid weston head
+ *                      -# Mocking the wl_resource_create() does return an valid object
  *                      -# Calling the controller_create_screen()
  *                      -# Verification point:
  *                         +# wl_resource_create() must be called once time
@@ -827,18 +843,25 @@ TEST_F(ControllerTests, controller_create_screen_wrongWestonHead)
  */
 TEST_F(ControllerTests, controller_create_screen_nullScreenResource)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lOutputResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lID{1};
     struct weston_head l_westonHead;
+
     l_westonHead.output = &m_westonOutput[0];
     void *lpp_getUserData [] = {&l_westonHead, mp_iviController[0]};
+    struct wl_resource *lResourceRetList[1] = {nullptr};
     SET_RETURN_SEQ(wl_resource_get_user_data, lpp_getUserData, 2);
+    SET_RETURN_SEQ(wl_resource_create, (struct wl_resource **)&lResourceRetList, 1);
 
-    controller_create_screen(nullptr, nullptr, nullptr, 1);
+    controller_create_screen(lClient, lResource, lOutputResource, lID);
 
-    ASSERT_EQ(wl_resource_create_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 0);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 0);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_create_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_no_memory_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_set_implementation_fake.call_count, 0);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -857,18 +880,23 @@ TEST_F(ControllerTests, controller_create_screen_nullScreenResource)
  */
 TEST_F(ControllerTests, controller_create_screen_correctWestonHead)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lOutputResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lID{1};
     struct weston_head l_westonHead;
+
     l_westonHead.output = &m_westonOutput[0];
     void *lpp_getUserData [] = {&l_westonHead, mp_iviController[0]};
     SET_RETURN_SEQ(wl_resource_get_user_data, lpp_getUserData, 2);
     SET_RETURN_SEQ(wl_resource_create, &mp_wlResourceDefault, 1);
 
-    controller_create_screen(nullptr, nullptr, nullptr, 1);
+    controller_create_screen(lClient, lResource, lOutputResource, lID);
 
-    ASSERT_EQ(wl_resource_create_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_set_implementation_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(wl_resource_create_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_set_implementation_fake.call_count, 1);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
 }
 
 /** ================================================================================================
@@ -883,10 +911,12 @@ TEST_F(ControllerTests, controller_create_screen_correctWestonHead)
  */
 TEST_F(ControllerTests, wet_module_init_cannotGetIviLayoutInterface)
 {
-    ASSERT_NE(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
+    struct ivi_layout_interface *lPluginAPIRetList[1] = {nullptr};
+    SET_RETURN_SEQ(weston_plugin_api_get, (struct ivi_layout_interface **)&lPluginAPIRetList, 1);
+    EXPECT_NE(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
 
-    ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
-    ASSERT_EQ(wet_get_config_fake.call_count, 0);
+    EXPECT_EQ(weston_plugin_api_get_fake.call_count, 1);
+    EXPECT_EQ(wet_get_config_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -904,20 +934,22 @@ TEST_F(ControllerTests, wet_module_init_cannotGetIviLayoutInterface)
  */
 TEST_F(ControllerTests, wet_module_init_cannotCreateGlobalWmIviInterface)
 {
+    struct wl_global *lGlobalRetList[1] = {nullptr};
     struct ivi_layout_interface *lp_iviLayoutInterface = &g_iviLayoutInterfaceFake;
     SET_RETURN_SEQ(weston_plugin_api_get, (const void**)&lp_iviLayoutInterface, 1);
+    SET_RETURN_SEQ(wl_global_create, (struct wl_global **)&lGlobalRetList, 1);
 
-    ASSERT_NE(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
+    EXPECT_NE(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
 
-    ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
-    ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    ASSERT_EQ(weston_load_module_fake.call_count, 0);
+    EXPECT_EQ(weston_plugin_api_get_fake.call_count, 1);
+    EXPECT_EQ(wl_global_create_fake.call_count, 1);
+    EXPECT_EQ(weston_load_module_fake.call_count, 0);
 }
 
 /** ================================================================================================
  * @test_id             wet_module_init_cannotInitIviInputModule
  * @brief               Test case of wet_module_init() where weston_plugin_api_get() success, return an object
- *                      and wl_global_create() success, return an object but ms_inputControllerModuleValue is -1
+ *                      and wl_global_create() success, return an object but cannot load input_module
  * @test_procedure Steps:
  *                      -# Set ms_inputControllerModuleValue is -1
  *                      -# Mocking the weston_plugin_api_get() does return an object
@@ -936,17 +968,16 @@ TEST_F(ControllerTests, wet_module_init_cannotInitIviInputModule)
 
     struct ivi_layout_interface *lp_iviLayoutInterface = &g_iviLayoutInterfaceFake;
     SET_RETURN_SEQ(weston_plugin_api_get, (const void**)&lp_iviLayoutInterface, 1);
-    struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF;
+    struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF; // an fake valid address
     SET_RETURN_SEQ(wl_global_create, &lp_wlGlobal, 1);
     void *lp_iviInputInitModule = (void*)custom_input_controller_module_init;
     SET_RETURN_SEQ(weston_load_module, &lp_iviInputInitModule, 1);
 
-    ASSERT_NE(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
+    EXPECT_NE(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
 
-    ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
-    ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    // this API dont have anymore
-    ASSERT_EQ(weston_load_module_fake.call_count, 1);
+    EXPECT_EQ(weston_plugin_api_get_fake.call_count, 1);
+    EXPECT_EQ(wl_global_create_fake.call_count, 1);
+    EXPECT_EQ(weston_load_module_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -956,11 +987,12 @@ TEST_F(ControllerTests, wet_module_init_cannotInitIviInputModule)
  *                      but wet_get_config() return fails, return null pointer
  * @test_procedure Steps:
  *                      -# Calling the enable_utility_funcs_of_array_list() to set real function for wl_list, wl_array
- *                      -# Set ms_inputControllerModuleValue is 0
- *                      -# Set ms_idAgentModuleValue is -1
+ *                      -# make load_input_module() is called successfully
+ *                      -# make load_id_agent_module() is called failure
  *                      -# Mocking the weston_plugin_api_get() does return an object
  *                      -# Mocking the wl_global_create() does return an object
  *                      -# Mocking the weston_load_module() does return an object
+ *                      -# Mocking the wet_get_config() does return an NULL pointer
  *                      -# Calling the wet_module_init()
  *                      -# Verification point:
  *                         +# wet_module_init() must return 0
@@ -979,17 +1011,18 @@ TEST_F(ControllerTests, wet_module_init_cannotGetWestonConfig)
 
     struct ivi_layout_interface *lp_iviLayoutInterface = &g_iviLayoutInterfaceFake;
     SET_RETURN_SEQ(weston_plugin_api_get, (const void**)&lp_iviLayoutInterface, 1);
-    struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF;
+    struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF; // an fake valid address
     SET_RETURN_SEQ(wl_global_create, &lp_wlGlobal, 1);
     void *lp_iviInputInitModule[] ={(void *)custom_input_controller_module_init, (void *)custom_id_agent_module_init};
     SET_RETURN_SEQ(weston_load_module, lp_iviInputInitModule, 2);
+    struct weston_config *lConfigRetList[1] = {nullptr};
+    SET_RETURN_SEQ(wet_get_config, (struct weston_config **)&lConfigRetList, 1);
 
-    // this API dont have anymore
-    ASSERT_EQ(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
+    EXPECT_EQ(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
 
-    ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
-    ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    ASSERT_EQ(weston_load_module_fake.call_count, 2);
+    EXPECT_EQ(weston_plugin_api_get_fake.call_count, 1);
+    EXPECT_EQ(wl_global_create_fake.call_count, 1);
+    EXPECT_EQ(weston_load_module_fake.call_count, 2);
 
     struct ivishell *lp_iviShell = (struct ivishell*)wl_global_create_fake.arg3_history[0];
     EXPECT_EQ(lp_iviShell->interface, lp_iviLayoutInterface);
@@ -1020,14 +1053,14 @@ TEST_F(ControllerTests, wet_module_init_cannotGetWestonConfig)
 }
 
 /** ================================================================================================
- * @test_id             wet_module_init_canGetWestonConfig
+ * @test_id             wet_module_init_loadIdAgentModuleFailed
  * @brief               Test case of wet_module_init() where weston_plugin_api_get() success, return an object
  *                      and wl_global_create() success, return an object and ms_inputControllerModuleValue is 0
- *                      and wet_get_config() return success, return an pointer
+ *                      and wet_get_config() return success, return an pointer but cannot load id_agent_module
  * @test_procedure Steps:
  *                      -# Calling the enable_utility_funcs_of_array_list() to set real function for wl_list, wl_array
- *                      -# Set ms_inputControllerModuleValue is 0
- *                      -# Set ms_idAgentModuleValue is -1
+ *                      -# make load_input_module() is called successfully
+ *                      -# make load_id_agent_module() is called failure
  *                      -# Mocking the weston_plugin_api_get() does return an object
  *                      -# Mocking the wl_global_create() does return an object
  *                      -# Mocking the wet_get_config() does return an object
@@ -1046,7 +1079,7 @@ TEST_F(ControllerTests, wet_module_init_cannotGetWestonConfig)
  *                         +# The result output should same with prepare data
  *                         +# Free resources are allocated when running the test
  */
-TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
+TEST_F(ControllerTests, wet_module_init_loadIdAgentModuleFailed)
 {
     enable_utility_funcs_of_array_list();
 
@@ -1054,9 +1087,9 @@ TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
     ControllerTests::ms_idAgentModuleValue = -1;
 
     struct ivi_layout_interface *lp_iviLayoutInterface = &g_iviLayoutInterfaceFake;
-    struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF;
-    struct weston_config *lp_westonConfig = (struct weston_config*) 0xFFFFFFFF;
-    struct weston_config_section *lp_westonConfigSection = (struct weston_config_section*) 0xFFFFFFFF;
+    struct wl_global *lp_wlGlobal = (struct wl_global*) 0xFFFFFFFF; // an fake valid address
+    struct weston_config *lp_westonConfig = (struct weston_config*) 0xFFFFFFFF; // an fake valid address
+    struct weston_config_section *lp_westonConfigSection = (struct weston_config_section*) 0xFFFFFFFF; // an fake valid address
     int lpp_westonConfigNextSection[] = {1, 0};
     void *lp_iviInputInitModule[] ={(void *)custom_input_controller_module_init, (void *)custom_id_agent_module_init};
     SET_RETURN_SEQ(weston_plugin_api_get, (const void**)&lp_iviLayoutInterface, 1);
@@ -1072,7 +1105,7 @@ TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
     ControllerTests::ms_debugScopes = (char *)"controller";
     ControllerTests::ms_screenName = (char *)"screen_test";
     ControllerTests::ms_bkgndSurfaceId = 100;
-    ControllerTests::ms_bkgndColor = 0xAABBCCDD;
+    ControllerTests::ms_bkgndColor = 0xAABBCCDD; // an fake valid address
     ControllerTests::ms_enableCursor = true;
     ControllerTests::ms_westonConfigNextSection = 0;
     weston_config_section_get_uint_fake.custom_fake = custom_weston_config_section_get_uint;
@@ -1082,15 +1115,13 @@ TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
     weston_config_section_get_bool_fake.custom_fake = custom_weston_config_section_get_bool;
     weston_config_next_section_fake.custom_fake = custom_weston_config_next_section;
 
+    EXPECT_EQ(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
 
-    // this API dont have anymore
-    ASSERT_EQ(wet_module_init(&m_westonCompositor, nullptr, nullptr), 0);
-
-    ASSERT_EQ(weston_plugin_api_get_fake.call_count, 1);
-    ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    ASSERT_EQ(weston_load_module_fake.call_count, 2);
-    ASSERT_EQ(wet_get_config_fake.call_count, 3);
-    ASSERT_EQ(weston_config_get_section_fake.call_count, 3);
+    EXPECT_EQ(weston_plugin_api_get_fake.call_count, 1);
+    EXPECT_EQ(wl_global_create_fake.call_count, 1);
+    EXPECT_EQ(weston_load_module_fake.call_count, 2);
+    EXPECT_EQ(wet_get_config_fake.call_count, 3);
+    EXPECT_EQ(weston_config_get_section_fake.call_count, 3);
 
     struct ivishell *lp_iviShell = (struct ivishell*)wl_global_create_fake.arg3_history[0];
     EXPECT_EQ(lp_iviShell->interface, lp_iviLayoutInterface);
@@ -1137,8 +1168,10 @@ TEST_F(ControllerTests, wet_module_init_canGetWestonConfig)
  */
 TEST_F(ControllerTests, controller_screen_destroy_success)
 {
-    controller_screen_destroy(nullptr, nullptr);
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    controller_screen_destroy(lClient, lResource);
+    EXPECT_EQ(wl_resource_destroy_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1147,12 +1180,15 @@ TEST_F(ControllerTests, controller_screen_destroy_success)
  * @test_procedure Steps:
  *                      -# Calling the controller_screen_clear()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SCREEN_ERROR
  */
 TEST_F(ControllerTests, controller_screen_clear_cannotGetUserData)
 {
-    controller_screen_clear(nullptr, nullptr);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    controller_screen_clear(lClient, lResource);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SCREEN_ERROR);
 }
 
 /** ================================================================================================
@@ -1167,12 +1203,14 @@ TEST_F(ControllerTests, controller_screen_clear_cannotGetUserData)
  */
 TEST_F(ControllerTests, controller_screen_clear_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
 
-    controller_screen_clear(nullptr, nullptr);
+    controller_screen_clear(lClient, lResource);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
-    ASSERT_EQ(screen_set_render_order_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(screen_set_render_order_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1181,14 +1219,22 @@ TEST_F(ControllerTests, controller_screen_clear_success)
  * @test_procedure Steps:
  *                      -# Calling the controller_screen_add_layer()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode is IVI_WM_SCREEN_ERROR
+ *                         +# get_layer_from_id() should not be called
  */
 TEST_F(ControllerTests, controller_screen_add_layer_nullScreen)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct iviscreen *lIviScreenRetList[1] = {nullptr};
     uint32_t l_layer_id = 10;
-    controller_screen_add_layer(nullptr, nullptr, l_layer_id);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    SET_RETURN_SEQ(wl_resource_get_user_data, (struct iviscreen **)&lIviScreenRetList, 1);
+    controller_screen_add_layer(lClient, lResource, l_layer_id);
+
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SCREEN_ERROR);
+    EXPECT_EQ(get_layer_from_id_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1199,16 +1245,25 @@ TEST_F(ControllerTests, controller_screen_add_layer_nullScreen)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_screen_add_layer()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# get_layer_from_id() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode is IVI_WM_SCREEN_ERROR
+ *                         +# screen_add_layer() should not be called
  */
 TEST_F(ControllerTests, controller_screen_add_layer_wrongLayerId)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
     uint32_t l_layer_id = 10;
-    controller_screen_add_layer(nullptr, nullptr, l_layer_id);
+    controller_screen_add_layer(lClient, lResource, l_layer_id);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(get_layer_from_id_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SCREEN_ERROR);
+    EXPECT_EQ(screen_add_layer_fake.call_count, 0);
 
 }
 
@@ -1222,17 +1277,21 @@ TEST_F(ControllerTests, controller_screen_add_layer_wrongLayerId)
  *                      -# Calling the controller_screen_add_layer()
  *                      -# Verification point:
  *                         +# wl_resource_post_event() not be called
+ *                         +# screen_add_layer() must be called once time
  */
 TEST_F(ControllerTests, controller_screen_add_layer_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layoutLayer, 1);
 
     uint32_t l_layer_id = 10;
-    controller_screen_add_layer(nullptr, nullptr, l_layer_id);
+    controller_screen_add_layer(lClient, lResource, l_layer_id);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(screen_add_layer_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1241,14 +1300,22 @@ TEST_F(ControllerTests, controller_screen_add_layer_success)
  * @test_procedure Steps:
  *                      -# Calling the controller_screen_remove_layer()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode is IVI_WM_SCREEN_ERROR
+ *                         +# get_layer_from_id() should not be called
  */
 TEST_F(ControllerTests, controller_screen_remove_layer_nullScreen)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
     uint32_t l_layer_id = 10;
-    controller_screen_remove_layer(nullptr, nullptr, l_layer_id);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    struct iviscreen *lIviScreenRetList[1] = {nullptr};
+    SET_RETURN_SEQ(wl_resource_get_user_data, (struct iviscreen **)&lIviScreenRetList, 1);
+    controller_screen_remove_layer(lClient, lResource, l_layer_id);
+
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SCREEN_ERROR);
+    EXPECT_EQ(get_layer_from_id_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1259,16 +1326,24 @@ TEST_F(ControllerTests, controller_screen_remove_layer_nullScreen)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_screen_remove_layer()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# get_layer_from_id() must be called once time
+ *                         +# wl_resource_post_event() must be called once time and opcode is IVI_WM_SCREEN_ERROR
+ *                         +# screen_remove_layer() should not be called
  */
 TEST_F(ControllerTests, controller_screen_remove_layer_wrongLayerId)
 {
-    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
-
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
     uint32_t l_layer_id = 10;
-    controller_screen_remove_layer(nullptr, nullptr, l_layer_id);
+    SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    controller_screen_remove_layer(lClient, lResource, l_layer_id);
+
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SCREEN_ERROR);
+    EXPECT_EQ(screen_remove_layer_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1281,17 +1356,22 @@ TEST_F(ControllerTests, controller_screen_remove_layer_wrongLayerId)
  *                      -# Calling the controller_screen_remove_layer()
  *                      -# Verification point:
  *                         +# wl_resource_post_event() not be called
+ *                         +# screen_remove_layer() must be called once time
  */
 TEST_F(ControllerTests, controller_screen_remove_layer_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t l_layer_id = 10;
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layoutLayer, 1);
 
-    uint32_t l_layer_id = 10;
-    controller_screen_remove_layer(nullptr, nullptr, l_layer_id);
+    controller_screen_remove_layer(lClient, lResource, l_layer_id);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(screen_remove_layer_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1301,15 +1381,21 @@ TEST_F(ControllerTests, controller_screen_remove_layer_success)
  *                      -# Calling the controller_screen_screenshot()
  *                      -# Verification point:
  *                         +# wl_resource_post_no_memory() must be called once time
+ *                         +# wl_resource_post_event() and weston_buffer_from_resource() should not be called
  */
 TEST_F(ControllerTests, controller_screen_screenshot_nullScreenShot)
 {
-    uint32_t l_id = 10;
-    controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lID = 10;
+    struct wl_resource *lResourceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(wl_resource_create, (struct wl_resource **)&lResourceRetList, 1);
+    controller_screen_screenshot(lClient, lResource, lBufferResource, lID);
 
-    ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_no_memory_fake.arg0_history[0], NULL);
-    ASSERT_EQ(wl_resource_get_user_data_fake.return_val_history[0], NULL);
+    EXPECT_EQ(wl_resource_post_no_memory_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(weston_buffer_from_resource_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1320,21 +1406,31 @@ TEST_F(ControllerTests, controller_screen_screenshot_nullScreenShot)
  *                      -# Mocking the wl_resource_create() does return an object
  *                      -# Calling the controller_screen_screenshot()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_create() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_SCREENSHOT_ERROR
+ *                         +# weston_buffer_from_resource() should not be called
  *                         +# wl_resource_destroy() must be called once time
  */
 TEST_F(ControllerTests, controller_screen_screenshot_nullScreen)
 {
-    struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lID = 10;
+
+    struct iviscreen *lIviScreenRetList[1] = {nullptr};
+    SET_RETURN_SEQ(wl_resource_get_user_data, (struct iviscreen **)&lIviScreenRetList, 1);
+    struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
+    
+    controller_screen_screenshot(lClient, lResource, lBufferResource, lID);
 
-    uint32_t l_id = 10;
-    controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
-
-    ASSERT_EQ(wl_resource_get_user_data_fake.return_val_history[0], NULL);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_SCREENSHOT_ERROR);
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_create_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.return_val_history[0], NULL);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_SCREENSHOT_ERROR);
+    EXPECT_EQ(wl_resource_destroy_fake.call_count, 1);
+    EXPECT_EQ(weston_buffer_from_resource_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1345,24 +1441,31 @@ TEST_F(ControllerTests, controller_screen_screenshot_nullScreen)
  *                      -# Mocking the wl_resource_create() does return an object
  *                      -# Calling the controller_screen_screenshot()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_no_memory() should not be called
+ *                         +# wl_resource_create() and weston_buffer_from_resource() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_SCREENSHOT_ERROR
+ *                         +# wl_resource_set_implementation() must be called once time
  */
 TEST_F(ControllerTests, controller_screen_screenshot_nullWestonBuffer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lID = 10;
     void * buffer[1] = {nullptr};
-    struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
+    struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
     SET_RETURN_SEQ(weston_buffer_from_resource, buffer, 1);
-    uint32_t l_id = 10;
-    controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
 
-    ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 0);
-    ASSERT_EQ(wl_resource_create_fake.call_count, 1);
-    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_SCREENSHOT_ERROR);
-    ASSERT_EQ(wl_shm_buffer_get_data_fake.call_count, 0);
+    controller_screen_screenshot(lClient, lResource, lBufferResource, lID);
+
+    EXPECT_EQ(wl_resource_post_no_memory_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_create_fake.call_count, 1);
+    EXPECT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_SCREENSHOT_ERROR);
+    EXPECT_EQ(wl_resource_set_implementation_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1380,18 +1483,22 @@ TEST_F(ControllerTests, controller_screen_screenshot_nullWestonBuffer)
  */
 TEST_F(ControllerTests, controller_screen_screenshot_success)
 {
-    struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF};
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lID = 10;
+
+    struct wl_resource * screenshot[1] = {(struct wl_resource *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_create, screenshot, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
     SET_RETURN_SEQ(weston_buffer_from_resource, &mp_westonBuffer, 1);
 
-    uint32_t l_id = 10;
-    controller_screen_screenshot(nullptr, nullptr, nullptr, l_id);
+    controller_screen_screenshot(lClient, lResource, lBufferResource, lID);
 
-    ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 0);
-    ASSERT_EQ(wl_resource_create_fake.call_count, 1);
-    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_no_memory_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_create_fake.call_count, 1);
+    EXPECT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_destroy_fake.call_count, 0);
 
     struct screenshot_frame_listener *lp_l = (struct screenshot_frame_listener*)wl_resource_set_implementation_fake.arg2_history[0];
     free(lp_l);
@@ -1401,20 +1508,26 @@ TEST_F(ControllerTests, controller_screen_screenshot_success)
  * @test_id             controller_screen_get_nullScreen
  * @brief               Test case of controller_screen_get() where wl_resource_get_user_data() fails, return null pointer
  * @test_procedure Steps:
+ *                      -# Mocking wl_resource_get_user_data() 0 return nullptr
  *                      -# Calling the controller_screen_get()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SCREEN_ERROR
  */
 TEST_F(ControllerTests, controller_screen_get_nullScreen)
 {
-    uint32_t l_param = 1;
-    controller_screen_get(nullptr, nullptr, l_param);
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lParam = 1;
+    struct iviscreen *lIviScreenRetList[1] = {nullptr};
+    SET_RETURN_SEQ(wl_resource_get_user_data, (struct iviscreen **)&lIviScreenRetList, 1);
+    controller_screen_get(lClient, lResource, lParam);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SCREEN_ERROR);
 }
 
 /** ================================================================================================
- * @test_id             controller_screen_get_wrongParam
+ * @test_id             controller_screen_get_invalidParam
  * @brief               Test case of controller_screen_get() where wl_resource_get_user_data() success, return an object
  *                      but invalid input param
  * @test_procedure Steps:
@@ -1424,15 +1537,17 @@ TEST_F(ControllerTests, controller_screen_get_nullScreen)
  *                         +# get_layers_on_screen() not be called
  *                         +# wl_resource_post_event() not be called
  */
-TEST_F(ControllerTests, controller_screen_get_wrongParam)
+TEST_F(ControllerTests, controller_screen_get_invalidParam)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lParam = 1;
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
 
-    uint32_t l_param = 0;
-    controller_screen_get(nullptr, nullptr, l_param);
+    controller_screen_get(lClient, lResource, lParam);
 
-    ASSERT_EQ(get_layers_on_screen_fake.call_count, 0);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(get_layers_on_screen_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1448,13 +1563,16 @@ TEST_F(ControllerTests, controller_screen_get_wrongParam)
  */
 TEST_F(ControllerTests, controller_screen_get_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lParam = 10;
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviScreen, 1);
 
-    uint32_t l_param = 10;
-    controller_screen_get(nullptr, nullptr, l_param);
+    controller_screen_get(lClient, lResource, lParam);
 
-    ASSERT_EQ(get_layers_on_screen_fake.call_count, 1);
-    ASSERT_NE(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(get_layers_on_screen_fake.call_count, 1);
+    EXPECT_NE(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1470,12 +1588,14 @@ TEST_F(ControllerTests, controller_screen_get_success)
  */
 TEST_F(ControllerTests, controller_commit_changes_failed)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(commit_changes, mp_failureResult, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
 
-    controller_commit_changes(nullptr, nullptr);
+    controller_commit_changes(lClient, lResource);
 
-    ASSERT_EQ(commit_changes_fake.call_count, 1);
+    EXPECT_EQ(commit_changes_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1491,12 +1611,14 @@ TEST_F(ControllerTests, controller_commit_changes_failed)
  */
 TEST_F(ControllerTests, controller_commit_changes_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(commit_changes, mp_successResult, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
 
-    controller_commit_changes(nullptr, nullptr);
+    controller_commit_changes(lClient, lResource);
 
-    ASSERT_EQ(commit_changes_fake.call_count, 1);
+    EXPECT_EQ(commit_changes_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1506,15 +1628,24 @@ TEST_F(ControllerTests, controller_commit_changes_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_surface_visibility()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
+ *                         +# surface_set_visibility() should not be called
  */
 TEST_F(ControllerTests, controller_set_surface_visibility_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceId{1};
+    std::uint32_t lVisibility{1};
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
 
-    controller_set_surface_visibility(nullptr, nullptr, 1, 1);
+    controller_set_surface_visibility(lClient, lResource, lSurfaceId, lVisibility);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_ERROR);
+    EXPECT_EQ(surface_set_visibility_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1529,13 +1660,17 @@ TEST_F(ControllerTests, controller_set_surface_visibility_wrongLayoutSurface)
  */
 TEST_F(ControllerTests, controller_set_surface_visibility_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceId{1};
+    std::uint32_t lVisibility{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_set_surface_visibility(nullptr, nullptr, 1, 1);
+    controller_set_surface_visibility(lClient, lResource, lSurfaceId, lVisibility);
 
-    ASSERT_EQ(surface_set_visibility_fake.call_count, 1);
+    EXPECT_EQ(surface_set_visibility_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1545,15 +1680,24 @@ TEST_F(ControllerTests, controller_set_surface_visibility_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_layer_visibility()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
+ *                         +# surface_set_visibility() should not be called
  */
 TEST_F(ControllerTests, controller_set_layer_visibility_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerId{1};
+    std::uint32_t lVisibility{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_set_layer_visibility(nullptr, nullptr, 1, 1);
+    controller_set_layer_visibility(lClient, lResource, lLayerId, lVisibility);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
+    EXPECT_EQ(layer_set_visibility_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1568,13 +1712,17 @@ TEST_F(ControllerTests, controller_set_layer_visibility_wrongLayoutLayer)
  */
 TEST_F(ControllerTests, controller_set_layer_visibility_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerId{1};
+    std::uint32_t lVisibility{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_set_layer_visibility(nullptr, nullptr, 1, 1);
+    controller_set_layer_visibility(lClient, lResource, lLayerId, lVisibility);
 
-    ASSERT_EQ(layer_set_visibility_fake.call_count, 1);
+    EXPECT_EQ(layer_set_visibility_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1584,15 +1732,25 @@ TEST_F(ControllerTests, controller_set_layer_visibility_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_surface_opacity()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
+ *                         +# surface_set_opacity() should not be called
  */
 TEST_F(ControllerTests, controller_set_surface_opacity_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceId{1};
+    wl_fixed_t lOpacity{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_surface *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutLayerRetList, 1);
 
-    controller_set_surface_opacity(nullptr, nullptr, 1, 1);
+    controller_set_surface_opacity(lClient, lResource, lSurfaceId, lOpacity);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_ERROR);
+    EXPECT_EQ(surface_set_opacity_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1607,13 +1765,18 @@ TEST_F(ControllerTests, controller_set_surface_opacity_wrongLayoutSurface)
  */
 TEST_F(ControllerTests, controller_set_surface_opacity_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceId{1};
+    wl_fixed_t lOpacity{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_set_surface_opacity(nullptr, nullptr, 1, 1);
+    controller_set_surface_opacity(lClient, lResource, lSurfaceId, lOpacity);
 
-    ASSERT_EQ(surface_set_opacity_fake.call_count, 1);
+    EXPECT_EQ(surface_set_opacity_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1623,15 +1786,24 @@ TEST_F(ControllerTests, controller_set_surface_opacity_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_layer_opacity()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
+ *                         +# surface_set_opacity() should not be called
  */
 TEST_F(ControllerTests, controller_set_layer_opacity_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerId{1};
+    wl_fixed_t lOpacity{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_set_layer_opacity(nullptr, nullptr, 1, 1);
+    controller_set_layer_opacity(lClient, lResource, lLayerId, lOpacity);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
+    EXPECT_EQ(layer_set_opacity_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1646,13 +1818,17 @@ TEST_F(ControllerTests, controller_set_layer_opacity_wrongLayoutLayer)
  */
 TEST_F(ControllerTests, controller_set_layer_opacity_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerId{1};
+    wl_fixed_t lOpacity{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_set_layer_opacity(nullptr, nullptr, 1, 1);
+    controller_set_layer_opacity(lClient, lResource, lLayerId, lOpacity);
 
-    ASSERT_EQ(layer_set_opacity_fake.call_count, 1);
+    EXPECT_EQ(layer_set_opacity_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -1662,15 +1838,26 @@ TEST_F(ControllerTests, controller_set_layer_opacity_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_surface_source_rectangle()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
+ *                         +# get_properties_of_surface() should not be called
  */
 TEST_F(ControllerTests, controller_set_surface_source_rectangle_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t x{1};
+    std::int32_t y{1};
+    std::int32_t width{1};
+    std::int32_t height{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
+    controller_set_surface_source_rectangle(lClient, lResource, lSurfaceID, x, y, width, height);
 
-    controller_set_surface_source_rectangle(nullptr, nullptr, 1, 1, 1, 1, 1);
-
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_ERROR);
+    EXPECT_EQ(get_properties_of_surface_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1687,17 +1874,24 @@ TEST_F(ControllerTests, controller_set_surface_source_rectangle_wrongLayoutSurfa
  */
 TEST_F(ControllerTests, controller_set_surface_source_rectangle_successWithPositiveValues)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t x{1};
+    std::int32_t y{1};
+    std::int32_t width{1};
+    std::int32_t height{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_set_surface_source_rectangle(nullptr, nullptr, 1, 1, 1, 1, 1);
+    controller_set_surface_source_rectangle(lClient, lResource, lSurfaceID, x, y, width, height);
 
-    ASSERT_EQ(surface_set_source_rectangle_fake.call_count, 1);
-    ASSERT_EQ(surface_set_source_rectangle_fake.arg1_val, 1);
-    ASSERT_EQ(surface_set_source_rectangle_fake.arg2_val, 1);
-    ASSERT_EQ(surface_set_source_rectangle_fake.arg3_val, 1);
-    ASSERT_EQ(surface_set_source_rectangle_fake.arg4_val, 1);
+    EXPECT_EQ(surface_set_source_rectangle_fake.call_count, 1);
+    EXPECT_EQ(surface_set_source_rectangle_fake.arg1_val, x);
+    EXPECT_EQ(surface_set_source_rectangle_fake.arg2_val, y);
+    EXPECT_EQ(surface_set_source_rectangle_fake.arg3_val, width);
+    EXPECT_EQ(surface_set_source_rectangle_fake.arg4_val, height);
 }
 
 /** ================================================================================================
@@ -1716,6 +1910,13 @@ TEST_F(ControllerTests, controller_set_surface_source_rectangle_successWithPosit
  */
 TEST_F(ControllerTests, controller_set_surface_source_rectangle_successWithNegativeValues)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t x{-1};
+    std::int32_t y{-1};
+    std::int32_t width{-1};
+    std::int32_t height{-1};
     const struct ivi_layout_surface_properties l_prop = {
         .opacity = 0,
         .source_x = 0,
@@ -1740,16 +1941,16 @@ TEST_F(ControllerTests, controller_set_surface_source_rectangle_successWithNegat
 
     SET_RETURN_SEQ(get_properties_of_surface, prop, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_set_surface_source_rectangle(nullptr, nullptr, 1, -1, -1, -1, -1);
+    controller_set_surface_source_rectangle(lClient, lResource, lSurfaceID, x, y, width, height);
 
-    ASSERT_EQ(surface_set_source_rectangle_fake.call_count, 1);
-    ASSERT_EQ(surface_set_source_rectangle_fake.arg1_val, 0);
-    ASSERT_EQ(surface_set_source_rectangle_fake.arg2_val, 0);
-    ASSERT_EQ(surface_set_source_rectangle_fake.arg3_val, 0);
-    ASSERT_EQ(surface_set_source_rectangle_fake.arg4_val, 0);
+    EXPECT_EQ(surface_set_source_rectangle_fake.call_count, 1);
+    EXPECT_EQ(surface_set_source_rectangle_fake.arg1_val, l_prop.source_x);
+    EXPECT_EQ(surface_set_source_rectangle_fake.arg2_val, l_prop.source_y);
+    EXPECT_EQ(surface_set_source_rectangle_fake.arg3_val, l_prop.source_width);
+    EXPECT_EQ(surface_set_source_rectangle_fake.arg4_val, l_prop.source_height);
 }
 
 /** ================================================================================================
@@ -1759,15 +1960,26 @@ TEST_F(ControllerTests, controller_set_surface_source_rectangle_successWithNegat
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_layer_source_rectangle()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
+ *                         +# get_properties_of_layer() should not be called
  */
 TEST_F(ControllerTests, controller_set_layer_source_rectangle_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t x{1};
+    std::int32_t y{1};
+    std::int32_t width{1};
+    std::int32_t height{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
+    controller_set_layer_source_rectangle(lClient, lResource, lLayerID, x, y, width, height);
 
-    controller_set_layer_source_rectangle(nullptr, nullptr, 1, 1, 1, 1, 1);
-
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
+    EXPECT_EQ(get_properties_of_layer_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1784,17 +1996,24 @@ TEST_F(ControllerTests, controller_set_layer_source_rectangle_wrongLayoutLayer)
  */
 TEST_F(ControllerTests, controller_set_layer_source_rectangle_successWithPositiveValues)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t x{1};
+    std::int32_t y{1};
+    std::int32_t width{1};
+    std::int32_t height{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_set_layer_source_rectangle(nullptr, nullptr, 1, 1, 1, 1, 1);
+    controller_set_layer_source_rectangle(lClient, lResource, lLayerID, x, y, width, height);
 
-    ASSERT_EQ(layer_set_source_rectangle_fake.call_count, 1);
-    ASSERT_EQ(layer_set_source_rectangle_fake.arg1_val, 1);
-    ASSERT_EQ(layer_set_source_rectangle_fake.arg2_val, 1);
-    ASSERT_EQ(layer_set_source_rectangle_fake.arg3_val, 1);
-    ASSERT_EQ(layer_set_source_rectangle_fake.arg4_val, 1);
+    EXPECT_EQ(layer_set_source_rectangle_fake.call_count, 1);
+    EXPECT_EQ(layer_set_source_rectangle_fake.arg1_val, x);
+    EXPECT_EQ(layer_set_source_rectangle_fake.arg2_val, y);
+    EXPECT_EQ(layer_set_source_rectangle_fake.arg3_val, width);
+    EXPECT_EQ(layer_set_source_rectangle_fake.arg4_val, height);
 }
 
 /** ================================================================================================
@@ -1813,6 +2032,13 @@ TEST_F(ControllerTests, controller_set_layer_source_rectangle_successWithPositiv
  */
 TEST_F(ControllerTests, controller_set_layer_source_rectangle_successWithNegativeValues)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t x{-1};
+    std::int32_t y{-1};
+    std::int32_t width{-1};
+    std::int32_t height{-1};
     const struct ivi_layout_layer_properties l_prop = {
         .opacity = 0,
         .source_x = 0,
@@ -1836,16 +2062,16 @@ TEST_F(ControllerTests, controller_set_layer_source_rectangle_successWithNegativ
 
     SET_RETURN_SEQ(get_properties_of_layer, prop, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_set_layer_source_rectangle(nullptr, nullptr, 1, -1, -1, -1, -1);
+    controller_set_layer_source_rectangle(lClient, lResource, lLayerID, x, y, width, height);
 
-    ASSERT_EQ(layer_set_source_rectangle_fake.call_count, 1);
-    ASSERT_EQ(layer_set_source_rectangle_fake.arg1_val, 0);
-    ASSERT_EQ(layer_set_source_rectangle_fake.arg2_val, 0);
-    ASSERT_EQ(layer_set_source_rectangle_fake.arg3_val, 0);
-    ASSERT_EQ(layer_set_source_rectangle_fake.arg4_val, 0);
+    EXPECT_EQ(layer_set_source_rectangle_fake.call_count, 1);
+    EXPECT_EQ(layer_set_source_rectangle_fake.arg1_val, l_prop.source_x);
+    EXPECT_EQ(layer_set_source_rectangle_fake.arg2_val, l_prop.source_y);
+    EXPECT_EQ(layer_set_source_rectangle_fake.arg3_val, l_prop.source_width);
+    EXPECT_EQ(layer_set_source_rectangle_fake.arg4_val, l_prop.source_height);
 }
 
 /** ================================================================================================
@@ -1855,15 +2081,27 @@ TEST_F(ControllerTests, controller_set_layer_source_rectangle_successWithNegativ
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_surface_destination_rectangle()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
+ *                         +# get_properties_of_surface() should not be called
  */
 TEST_F(ControllerTests, controller_set_surface_destination_rectangle_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t x{1};
+    std::int32_t y{1};
+    std::int32_t width{1};
+    std::int32_t height{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
 
-    controller_set_surface_destination_rectangle(nullptr, nullptr, 1, 1, 1, 1, 1);
+    controller_set_surface_destination_rectangle(lClient, lResource, lSurfaceID, x, y, width, height);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_ERROR);
+    EXPECT_EQ(get_properties_of_surface_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1880,17 +2118,24 @@ TEST_F(ControllerTests, controller_set_surface_destination_rectangle_wrongLayout
  */
 TEST_F(ControllerTests, controller_set_surface_destination_rectangle_successWithPositiveValues)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t x{1};
+    std::int32_t y{1};
+    std::int32_t width{1};
+    std::int32_t height{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_set_surface_destination_rectangle(nullptr, nullptr, 1, 1, 1, 1, 1);
+    controller_set_surface_destination_rectangle(lClient, lResource, lSurfaceID, x, y, width, height);
 
-    ASSERT_EQ(surface_set_destination_rectangle_fake.call_count, 1);
-    ASSERT_EQ(surface_set_destination_rectangle_fake.arg1_val, 1);
-    ASSERT_EQ(surface_set_destination_rectangle_fake.arg2_val, 1);
-    ASSERT_EQ(surface_set_destination_rectangle_fake.arg3_val, 1);
-    ASSERT_EQ(surface_set_destination_rectangle_fake.arg4_val, 1);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.call_count, 1);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.arg1_val, x);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.arg2_val, y);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.arg3_val, width);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.arg4_val, height);
 }
 
 /** ================================================================================================
@@ -1909,6 +2154,13 @@ TEST_F(ControllerTests, controller_set_surface_destination_rectangle_successWith
  */
 TEST_F(ControllerTests, controller_set_surface_destination_rectangle_successWithNegativeValues)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t x{-1};
+    std::int32_t y{-1};
+    std::int32_t width{-1};
+    std::int32_t height{-1};
     const struct ivi_layout_surface_properties l_prop = {
         .opacity = 0,
         .source_x = 0,
@@ -1933,16 +2185,16 @@ TEST_F(ControllerTests, controller_set_surface_destination_rectangle_successWith
 
     SET_RETURN_SEQ(get_properties_of_surface, prop, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_set_surface_destination_rectangle(nullptr, nullptr, 1, -1, -1, -1, -1);
+    controller_set_surface_destination_rectangle(lClient, lResource, lSurfaceID, x, y, width, height);
 
-    ASSERT_EQ(surface_set_destination_rectangle_fake.call_count, 1);
-    ASSERT_EQ(surface_set_destination_rectangle_fake.arg1_val, 0);
-    ASSERT_EQ(surface_set_destination_rectangle_fake.arg2_val, 0);
-    ASSERT_EQ(surface_set_destination_rectangle_fake.arg3_val, 0);
-    ASSERT_EQ(surface_set_destination_rectangle_fake.arg4_val, 0);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.call_count, 1);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.arg1_val, l_prop.source_x);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.arg2_val, l_prop.source_y);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.arg3_val, l_prop.source_width);
+    EXPECT_EQ(surface_set_destination_rectangle_fake.arg4_val, l_prop.source_height);
 }
 
 /** ================================================================================================
@@ -1952,15 +2204,27 @@ TEST_F(ControllerTests, controller_set_surface_destination_rectangle_successWith
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_layer_destination_rectangle()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
+ *                         +# get_properties_of_layer() should not be called
  */
 TEST_F(ControllerTests, controller_set_layer_destination_rectangle_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t x{1};
+    std::int32_t y{1};
+    std::int32_t width{1};
+    std::int32_t height{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_set_layer_destination_rectangle(nullptr, nullptr, 1, 1, 1, 1, 1);
+    controller_set_layer_destination_rectangle(lClient, lResource, lLayerID, x, y, width, height);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
+    EXPECT_EQ(get_properties_of_layer_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -1977,17 +2241,24 @@ TEST_F(ControllerTests, controller_set_layer_destination_rectangle_wrongLayoutLa
  */
 TEST_F(ControllerTests, controller_set_layer_destination_rectangle_successWithPositiveValues)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t x{1};
+    std::int32_t y{1};
+    std::int32_t width{1};
+    std::int32_t height{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_set_layer_destination_rectangle(nullptr, nullptr, 1, 1, 1, 1, 1);
+    controller_set_layer_destination_rectangle(lClient, lResource, lLayerID, x, y, width, height);
 
-    ASSERT_EQ(layer_set_destination_rectangle_fake.call_count, 1);
-    ASSERT_EQ(layer_set_destination_rectangle_fake.arg1_val, 1);
-    ASSERT_EQ(layer_set_destination_rectangle_fake.arg2_val, 1);
-    ASSERT_EQ(layer_set_destination_rectangle_fake.arg3_val, 1);
-    ASSERT_EQ(layer_set_destination_rectangle_fake.arg4_val, 1);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.call_count, 1);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.arg1_val, x);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.arg2_val, y);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.arg3_val, width);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.arg4_val, height);
 }
 
 /** ================================================================================================
@@ -2006,6 +2277,13 @@ TEST_F(ControllerTests, controller_set_layer_destination_rectangle_successWithPo
  */
 TEST_F(ControllerTests, controller_set_layer_destination_rectangle_successWithNegativeValues)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t x{-1};
+    std::int32_t y{-1};
+    std::int32_t width{-1};
+    std::int32_t height{-1};
     const struct ivi_layout_layer_properties l_prop = {
         .opacity = 0,
         .source_x = 0,
@@ -2029,16 +2307,16 @@ TEST_F(ControllerTests, controller_set_layer_destination_rectangle_successWithNe
 
     SET_RETURN_SEQ(get_properties_of_layer, prop, 1);
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_set_layer_destination_rectangle(nullptr, nullptr, 1, -1, -1, -1, -1);
+    controller_set_layer_destination_rectangle(lClient, lResource, lLayerID, x, y, width, height);
 
-    ASSERT_EQ(layer_set_destination_rectangle_fake.call_count, 1);
-    ASSERT_EQ(layer_set_destination_rectangle_fake.arg1_val, 0);
-    ASSERT_EQ(layer_set_destination_rectangle_fake.arg2_val, 0);
-    ASSERT_EQ(layer_set_destination_rectangle_fake.arg3_val, 0);
-    ASSERT_EQ(layer_set_destination_rectangle_fake.arg4_val, 0);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.call_count, 1);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.arg1_val, l_prop.source_x);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.arg2_val, l_prop.source_y);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.arg3_val, l_prop.source_width);
+    EXPECT_EQ(layer_set_destination_rectangle_fake.arg4_val, l_prop.source_height);
 }
 
 /** ================================================================================================
@@ -2048,15 +2326,22 @@ TEST_F(ControllerTests, controller_set_layer_destination_rectangle_successWithNe
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_surface_sync()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
  */
 TEST_F(ControllerTests, controller_surface_sync_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t lSyncState{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
 
-    controller_surface_sync(nullptr, nullptr, 1, 1);
+    controller_surface_sync(lClient, lResource, lSurfaceID, lSyncState);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_ERROR);
 }
 
 /** ================================================================================================
@@ -2073,13 +2358,16 @@ TEST_F(ControllerTests, controller_surface_sync_wrongLayoutSurface)
  */
 TEST_F(ControllerTests, controller_surface_sync_add)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t lSyncState{0};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
     struct ivi_layout_surface *l_layout_surface[1] = {&m_layoutSurface[0]};
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_surface_sync(nullptr, mp_surfaceNotification[0]->resource, 1, 0);
+    controller_surface_sync(lClient, mp_surfaceNotification[0]->resource, lSurfaceID, lSyncState);
 
-    ASSERT_EQ(wl_list_insert_fake.call_count, 2);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 2);
 
     struct notification *l_not = (struct notification*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct notification, link));
     free(l_not);
@@ -2099,15 +2387,18 @@ TEST_F(ControllerTests, controller_surface_sync_add)
  */
 TEST_F(ControllerTests, controller_surface_sync_remove)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t lSyncState{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
     struct ivi_layout_surface *l_layout_surface[1] = {&m_layoutSurface[0]};
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_surface_sync(nullptr, mp_surfaceNotification[0]->resource, 1, 1);
+    controller_surface_sync(lClient, mp_surfaceNotification[0]->resource, lSurfaceID, lSyncState);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 2);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 2);
 
-    mp_surfaceNotification[0] = (struct notification*)malloc(sizeof(struct notification));
+    mp_surfaceNotification[0] = NULL;
 }
 
 /** ================================================================================================
@@ -2119,17 +2410,22 @@ TEST_F(ControllerTests, controller_surface_sync_remove)
  *                      -# Mocking the get_surface_from_id() does return an object
  *                      -# Calling the controller_surface_sync()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
  */
 TEST_F(ControllerTests, controller_surface_sync_default)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t lSyncState{2};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_surface_sync(nullptr, nullptr, 1, 2);
+    controller_surface_sync(lClient, lResource, lSurfaceID, lSyncState);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_ERROR);
 }
 
 /** ================================================================================================
@@ -2139,15 +2435,22 @@ TEST_F(ControllerTests, controller_surface_sync_default)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_layer_sync()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_layer_sync_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t lSyncState{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_layer_sync(nullptr, nullptr, 1, 1);
+    controller_layer_sync(lClient, lResource, lLayerID, lSyncState);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2164,13 +2467,16 @@ TEST_F(ControllerTests, controller_layer_sync_wrongLayoutLayer)
  */
 TEST_F(ControllerTests, controller_layer_sync_add)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t lSyncState{0};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
     struct ivi_layout_layer *l_layout_layer[1] = {&m_layoutLayer[0]};
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_layer_sync(nullptr, mp_LayerNotification[0]->resource, 1, 0);
+    controller_layer_sync(lClient, mp_LayerNotification[0]->resource, lLayerID, lSyncState);
 
-    ASSERT_EQ(wl_list_insert_fake.call_count, 2);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 2);
 
     struct notification *l_not = (struct notification*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct notification, link));
     free(l_not);
@@ -2190,15 +2496,18 @@ TEST_F(ControllerTests, controller_layer_sync_add)
  */
 TEST_F(ControllerTests, controller_layer_sync_remove)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t lSyncState{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
     struct ivi_layout_layer *l_layout_layer[1] = {&m_layoutLayer[0]};
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_layer_sync(nullptr, mp_LayerNotification[0]->resource, 1, 1);
+    controller_layer_sync(lClient, mp_LayerNotification[0]->resource, lLayerID, lSyncState);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 2);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 2);
 
-    mp_LayerNotification[0] = (struct notification*)malloc(sizeof(struct notification));
+    mp_LayerNotification[0] = NULL;
 }
 
 /** ================================================================================================
@@ -2210,17 +2519,22 @@ TEST_F(ControllerTests, controller_layer_sync_remove)
  *                      -# Mocking the get_layer_from_id() does return an object
  *                      -# Calling the controller_layer_sync()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_layer_sync_default)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t lSyncState{2};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_layer_sync(nullptr, nullptr, 1, 2);
+    controller_layer_sync(lClient, lResource, lLayerID, lSyncState);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2230,15 +2544,22 @@ TEST_F(ControllerTests, controller_layer_sync_default)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_surface_get()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
  */
 TEST_F(ControllerTests, controller_surface_get_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t lParam{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
 
-    controller_surface_get(nullptr, nullptr, 1, 1);
+    controller_surface_get(lClient, lResource, lSurfaceID, lParam);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_ERROR);
 }
 
 /** ================================================================================================
@@ -2255,15 +2576,19 @@ TEST_F(ControllerTests, controller_surface_get_wrongLayoutSurface)
  */
 TEST_F(ControllerTests, controller_surface_get_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lSurfaceID{1};
+    std::int32_t lParam{0};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
     struct ivi_layout_surface *l_layout_surface[1] = {&m_layoutSurface[0]};
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
     struct weston_surface *l_surface[1] = {(struct weston_surface *)malloc(sizeof(struct weston_surface))};
     SET_RETURN_SEQ(surface_get_weston_surface, l_surface, 1);
 
-    controller_surface_get(nullptr, nullptr, 1, 0);
+    controller_surface_get(lClient, lResource, lSurfaceID, lParam);
 
-    ASSERT_EQ(get_properties_of_surface_fake.call_count, 1);
+    EXPECT_EQ(get_properties_of_surface_fake.call_count, 1);
 
     free(l_surface[0]);
 }
@@ -2275,15 +2600,22 @@ TEST_F(ControllerTests, controller_surface_get_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_layer_get()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_layer_get_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t lParam{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_layer_get(nullptr, nullptr, 1, 1);
+    controller_layer_get(lClient, lResource, lLayerID, lParam);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2300,14 +2632,18 @@ TEST_F(ControllerTests, controller_layer_get_wrongLayoutLayer)
  */
 TEST_F(ControllerTests, controller_layer_get_wrongParam)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t lParam{0};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layout_layer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
 
-    controller_layer_get(nullptr, nullptr, 1, 0);
+    controller_layer_get(lClient, lResource, lLayerID, lParam);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
-    ASSERT_EQ(get_surfaces_on_layer_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(get_surfaces_on_layer_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -2320,21 +2656,26 @@ TEST_F(ControllerTests, controller_layer_get_wrongParam)
  *                      -# Mocking the get_properties_of_layer() does return an object
  *                      -# Calling the controller_layer_get()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_SURFACE_ADDED
  *                         +# get_surfaces_on_layer() must be called once time
  */
 TEST_F(ControllerTests, controller_layer_get_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    std::uint32_t lLayerID{1};
+    std::int32_t lParam{8};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
     struct ivi_layout_layer *l_layout_layer[1] = {&m_layoutLayer[0]};
     SET_RETURN_SEQ(get_layer_from_id, l_layout_layer, 1);
     const struct ivi_layout_layer_properties *l_prop[1] = {&m_layoutLayerProperties[0]};
     SET_RETURN_SEQ(get_properties_of_layer, l_prop, 1);
 
-    controller_layer_get(nullptr, nullptr, 1, 8);
+    controller_layer_get(lClient, lResource, lLayerID, lParam);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(get_surfaces_on_layer_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_SURFACE_ADDED);
+    EXPECT_EQ(get_surfaces_on_layer_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2348,9 +2689,9 @@ TEST_F(ControllerTests, controller_layer_get_success)
  */
 TEST_F(ControllerTests, controller_surface_screenshot_nullScreenShot)
 {
-    struct wl_client * lClient;
-    struct wl_resource * lResource;
-    struct wl_resource * lBufferResource;
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
     uint32_t lScreenshotId{1};
     uint32_t lSurfaceId{1};
 
@@ -2360,8 +2701,8 @@ TEST_F(ControllerTests, controller_surface_screenshot_nullScreenShot)
 
     controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(wl_client_post_no_memory_fake.call_count, 1);
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 0);
+    EXPECT_EQ(wl_client_post_no_memory_fake.call_count, 1);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -2379,23 +2720,25 @@ TEST_F(ControllerTests, controller_surface_screenshot_nullScreenShot)
  */
 TEST_F(ControllerTests, controller_surface_screenshot_GetLayoutSurfaceFailed)
 {
-    struct wl_client * lClient;
-    struct wl_resource * lResource;
-    struct wl_resource * lBufferResource;
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
     uint32_t lScreenshotId{1};
     uint32_t lSurfaceId{1};
 
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource * lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    struct wl_resource * lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
 
     controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
-    ASSERT_EQ(surface_get_size_fake.call_count, 0);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_destroy_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    EXPECT_EQ(surface_get_size_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -2415,28 +2758,28 @@ TEST_F(ControllerTests, controller_surface_screenshot_GetLayoutSurfaceFailed)
  */
 TEST_F(ControllerTests, controller_surface_screenshot_ContentOfSurfaceInvalid)
 {
-    struct wl_client * lClient;
-    struct wl_resource * lResource;
-    struct wl_resource * lBufferResource;
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
     uint32_t lScreenshotId{1};
     uint32_t lSurfaceId{1};
 
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
-    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, lLayoutSurfaceRetList, 1);
 
     surface_get_size_fake.custom_fake = nullptr;
 
     controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
-    ASSERT_EQ(surface_get_size_fake.call_count, 1);
-    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 0);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_destroy_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    EXPECT_EQ(surface_get_size_fake.call_count, 1);
+    EXPECT_EQ(weston_buffer_from_resource_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -2458,16 +2801,16 @@ TEST_F(ControllerTests, controller_surface_screenshot_ContentOfSurfaceInvalid)
  */
 TEST_F(ControllerTests, controller_surface_screenshot_WhenGetWestonBuffer)
 {
-    struct wl_client * lClient;
-    struct wl_resource * lResource;
-    struct wl_resource * lBufferResource;
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
     uint32_t lScreenshotId{1};
     uint32_t lSurfaceId{1};
 
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
-    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, lLayoutSurfaceRetList, 1);
     surface_get_size_fake.custom_fake = custom_surface_get_size;
     struct weston_buffer * lWestonBufferRetList[1] = {NULL};
@@ -2475,14 +2818,14 @@ TEST_F(ControllerTests, controller_surface_screenshot_WhenGetWestonBuffer)
 
     controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(surface_get_size_fake.call_count, 1);
-    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
-    ASSERT_EQ(weston_buffer_from_resource_fake.return_val, NULL);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
-    ASSERT_EQ(wl_shm_buffer_get_data_fake.call_count, 0);
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(surface_get_size_fake.call_count, 1);
+    EXPECT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    EXPECT_EQ(weston_buffer_from_resource_fake.return_val, NULL);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    EXPECT_EQ(wl_shm_buffer_get_data_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_destroy_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2509,16 +2852,16 @@ TEST_F(ControllerTests, controller_surface_screenshot_WhenGetWestonBuffer)
  */
 TEST_F(ControllerTests, controller_surface_screenshot_SurfaceDumpDataFailed)
 {
-    struct wl_client * lClient;
-    struct wl_resource * lResource;
-    struct wl_resource * lBufferResource;
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
     uint32_t lScreenshotId{1};
     uint32_t lSurfaceId{1};
 
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
-    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, lLayoutSurfaceRetList, 1);
     surface_get_size_fake.custom_fake = custom_surface_get_size;
     struct weston_buffer * westonBuffer = (struct weston_buffer*)malloc(sizeof(weston_buffer));
@@ -2535,14 +2878,14 @@ TEST_F(ControllerTests, controller_surface_screenshot_SurfaceDumpDataFailed)
 
     controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(surface_get_size_fake.call_count, 1);
-    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
-    ASSERT_EQ(wl_shm_buffer_get_data_fake.call_count, 1);
-    ASSERT_EQ(surface_dump_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_destroy_fake.call_count, 1);
+    EXPECT_EQ(surface_get_size_fake.call_count, 1);
+    EXPECT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    EXPECT_EQ(wl_shm_buffer_get_data_fake.call_count, 1);
+    EXPECT_EQ(surface_dump_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
     free(westonBuffer);
 }
 
@@ -2570,16 +2913,16 @@ TEST_F(ControllerTests, controller_surface_screenshot_SurfaceDumpDataFailed)
  */
 TEST_F(ControllerTests, controller_surface_screenshot_success)
 {
-    struct wl_client * lClient;
-    struct wl_resource * lResource;
-    struct wl_resource * lBufferResource;
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lBufferResource{0xFFFFFFFF}; // an fake valid address
     uint32_t lScreenshotId{1};
     uint32_t lSurfaceId{1};
 
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF};
+    struct wl_resource *lScreenshotRetList[1] = {(struct wl_resource *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(wl_resource_create, lScreenshotRetList, 1);
-    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *lLayoutSurfaceRetList[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, lLayoutSurfaceRetList, 1);
     surface_get_size_fake.custom_fake = custom_surface_get_size;
     struct weston_buffer * westonBuffer = (struct weston_buffer*)malloc(sizeof(weston_buffer));
@@ -2595,14 +2938,14 @@ TEST_F(ControllerTests, controller_surface_screenshot_success)
 
     controller_surface_screenshot(lClient, lResource, lBufferResource, lScreenshotId, lSurfaceId);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_destroy_fake.call_count, 1);
-    ASSERT_EQ(surface_get_size_fake.call_count, 1);
-    ASSERT_EQ(weston_buffer_from_resource_fake.call_count, 1);
-    ASSERT_EQ(wl_shm_buffer_get_data_fake.call_count, 1);
-    ASSERT_EQ(surface_dump_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_DONE);
+    EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_destroy_fake.call_count, 1);
+    EXPECT_EQ(surface_get_size_fake.call_count, 1);
+    EXPECT_EQ(weston_buffer_from_resource_fake.call_count, 1);
+    EXPECT_EQ(wl_shm_buffer_get_data_fake.call_count, 1);
+    EXPECT_EQ(surface_dump_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_DONE);
     free(westonBuffer);
 }
 
@@ -2620,8 +2963,8 @@ TEST_F(ControllerTests, controller_screenshooter_done_WESTON_SCREENSHOOTER_SUCCE
     screenshooter->output = &m_westonOutput[0];
     weston_screenshooter_outcome outcome = WESTON_SCREENSHOOTER_SUCCESS;
     controller_screenshooter_done(screenshooter, outcome);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_DONE);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_DONE);
     free(screenshooter);
 }
 
@@ -2639,8 +2982,8 @@ TEST_F(ControllerTests, controller_screenshooter_done_WESTON_SCREENSHOOTER_NO_ME
     screenshooter->output = &m_westonOutput[0];
     weston_screenshooter_outcome outcome = WESTON_SCREENSHOOTER_NO_MEMORY;
     controller_screenshooter_done(screenshooter, outcome);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
     free(screenshooter);
 }
 
@@ -2658,8 +3001,8 @@ TEST_F(ControllerTests, controller_screenshooter_done_WESTON_SCREENSHOOTER_BAD_B
     screenshooter->output = &m_westonOutput[0];
     weston_screenshooter_outcome outcome = WESTON_SCREENSHOOTER_BAD_BUFFER;
     controller_screenshooter_done(screenshooter, outcome);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_val, IVI_SCREENSHOT_ERROR);
     free(screenshooter);
 }
 
@@ -2677,7 +3020,7 @@ TEST_F(ControllerTests, controller_screenshooter_done_InvalidArg)
     screenshooter->output = &m_westonOutput[0];
     weston_screenshooter_outcome outcome = (weston_screenshooter_outcome)10;
     controller_screenshooter_done(screenshooter, outcome);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
     free(screenshooter);
 }
 
@@ -2692,13 +3035,13 @@ TEST_F(ControllerTests, controller_screenshooter_done_InvalidArg)
  */
 TEST_F(ControllerTests, controller_screenshoot_destroy_call)
 {
-    struct wl_resource *lResource;
+    struct wl_resource *lResource{0xFFFFFFFF};
     struct ivi_screenshooter * screenshooter = (struct ivi_screenshooter *)malloc(sizeof(struct ivi_screenshooter));
     screenshooter->output = &m_westonOutput[0];
     struct ivi_screenshooter * screenshooterRet[1] = {screenshooter};
     SET_RETURN_SEQ(wl_resource_get_user_data, (struct ivi_screenshooter **)screenshooterRet, 1);
     controller_screenshoot_destroy(lResource);
-    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2708,15 +3051,23 @@ TEST_F(ControllerTests, controller_screenshoot_destroy_call)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_set_surface_type()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_SURFACE_ERROR
  */
 TEST_F(ControllerTests, controller_set_surface_type_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lSurfaceId{1};
+    int32_t lType{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
 
-    controller_set_surface_type(nullptr, nullptr, 1, 1);
+    controller_set_surface_type(lClient, lResource, lSurfaceId, lType);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_ERROR);
 }
 
 /** ================================================================================================
@@ -2731,13 +3082,18 @@ TEST_F(ControllerTests, controller_set_surface_type_wrongLayoutSurface)
  */
 TEST_F(ControllerTests, controller_set_surface_type_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lSurfaceId{1};
+    int32_t lType{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
     struct ivi_layout_surface *l_layout_surface[1] = {&m_layoutSurface[0]};
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_set_surface_type(nullptr, nullptr, 1, 1);
+    controller_set_surface_type(lClient, lResource, lSurfaceId, lType);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -2747,15 +3103,22 @@ TEST_F(ControllerTests, controller_set_surface_type_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_layer_clear()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_layer_clear_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_layer_clear(nullptr, nullptr, 1);
+    controller_layer_clear(lClient, lResource, lLayerId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2770,13 +3133,16 @@ TEST_F(ControllerTests, controller_layer_clear_wrongLayoutLayer)
  */
 TEST_F(ControllerTests, controller_layer_clear_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layoutLayer, 1);
 
-    controller_layer_clear(nullptr, nullptr, 1);
+    controller_layer_clear(lClient, lResource, lLayerId);
 
-    ASSERT_EQ(layer_set_render_order_fake.call_count, 1);
+    EXPECT_EQ(layer_set_render_order_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2786,15 +3152,23 @@ TEST_F(ControllerTests, controller_layer_clear_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_layer_add_surface()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_layer_add_surface_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_layer_add_surface(nullptr, nullptr, 1, 1);
+    controller_layer_add_surface(lClient, lResource, lLayerId, lSurfaceId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2806,17 +3180,25 @@ TEST_F(ControllerTests, controller_layer_add_surface_wrongLayoutLayer)
  *                      -# Mocking the get_layer_from_id() does return an object
  *                      -# Calling the controller_layer_add_surface()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_layer_add_surface_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layoutLayer, 1);
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
 
-    controller_layer_add_surface(nullptr, nullptr, 1, 1);
+    controller_layer_add_surface(lClient, lResource, lLayerId, lSurfaceId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2833,15 +3215,20 @@ TEST_F(ControllerTests, controller_layer_add_surface_wrongLayoutSurface)
  */
 TEST_F(ControllerTests, controller_layer_add_surface_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layoutLayer, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_layer_add_surface(nullptr, nullptr, 1, 1);
+    controller_layer_add_surface(lClient, lResource, lLayerId, lSurfaceId);
 
-    ASSERT_EQ(layer_add_surface_fake.call_count, 1);
+    EXPECT_EQ(layer_add_surface_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2851,15 +3238,23 @@ TEST_F(ControllerTests, controller_layer_add_surface_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_layer_remove_surface()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_layer_remove_surface_wrongLayoutLayer)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_layer_remove_surface(nullptr, nullptr, 1, 1);
+    controller_layer_remove_surface(lClient, lResource, lLayerId, lSurfaceId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2871,17 +3266,25 @@ TEST_F(ControllerTests, controller_layer_remove_surface_wrongLayoutLayer)
  *                      -# Mocking the get_layer_from_id() does return an object
  *                      -# Calling the controller_layer_remove_surface()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_layer_remove_surface_wrongLayoutSurface)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layoutLayer, 1);
+    struct ivi_layout_surface *lIviLayoutSurfaceRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_surface_from_id, (struct ivi_layout_surface **)&lIviLayoutSurfaceRetList, 1);
 
-    controller_layer_remove_surface(nullptr, nullptr, 1, 1);
+    controller_layer_remove_surface(lClient, lResource, lLayerId, lSurfaceId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2898,15 +3301,20 @@ TEST_F(ControllerTests, controller_layer_remove_surface_wrongLayoutSurface)
  */
 TEST_F(ControllerTests, controller_layer_remove_surface_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+    uint32_t lSurfaceId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layoutLayer, 1);
-    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF};
+    struct ivi_layout_surface *l_layout_surface[1] = {(struct ivi_layout_surface *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_surface_from_id, l_layout_surface, 1);
 
-    controller_layer_remove_surface(nullptr, nullptr, 1, 1);
+    controller_layer_remove_surface(lClient, lResource, lLayerId, lSurfaceId);
 
-    ASSERT_EQ(layer_remove_surface_fake.call_count, 1);
+    EXPECT_EQ(layer_remove_surface_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2920,11 +3328,19 @@ TEST_F(ControllerTests, controller_layer_remove_surface_success)
  */
 TEST_F(ControllerTests, controller_create_layout_layer_error)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+    int32_t lWidth{1};
+    int32_t lHeight{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(layer_create_with_dimension, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_create_layout_layer(nullptr, nullptr, 1, 1, 1);
+    controller_create_layout_layer(lClient, lResource, lLayerId, lWidth, lHeight);
 
-    ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_no_memory_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2939,13 +3355,18 @@ TEST_F(ControllerTests, controller_create_layout_layer_error)
  */
 TEST_F(ControllerTests, controller_create_layout_layer_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+    int32_t lWidth{1};
+    int32_t lHeight{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(layer_create_with_dimension, l_layoutLayer, 1);
 
-    controller_create_layout_layer(nullptr, nullptr, 1, 1, 1);
+    controller_create_layout_layer(lClient, lResource, lLayerId, lWidth, lHeight);
 
-    ASSERT_EQ(wl_resource_post_no_memory_fake.call_count, 0);
+    EXPECT_EQ(wl_resource_post_no_memory_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -2955,15 +3376,21 @@ TEST_F(ControllerTests, controller_create_layout_layer_success)
  *                      -# Mocking the wl_resource_get_user_data() does return an object
  *                      -# Calling the controller_destroy_layout_layer()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called once time
+ *                         +# wl_resource_post_event() must be called once time with opcode IVI_WM_LAYER_ERROR
  */
 TEST_F(ControllerTests, controller_destroy_layout_layer_error)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
+    struct ivi_layout_layer *lIviLayoutLayerRetList[1] = {nullptr};
+    SET_RETURN_SEQ(get_layer_from_id, (struct ivi_layout_layer **)&lIviLayoutLayerRetList, 1);
 
-    controller_destroy_layout_layer(nullptr, nullptr, 1);
+    controller_destroy_layout_layer(lClient, lResource, lLayerId);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_LAYER_ERROR);
 }
 
 /** ================================================================================================
@@ -2978,13 +3405,17 @@ TEST_F(ControllerTests, controller_destroy_layout_layer_error)
  */
 TEST_F(ControllerTests, controller_destroy_layout_layer_success)
 {
+    struct wl_client * lClient{0xFFFFFFFF}; // an fake valid address
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    uint32_t lLayerId{1};
+
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
-    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF};
+    struct ivi_layout_layer *l_layoutLayer[1] = {(struct ivi_layout_layer *)0xFFFFFFFF}; // an fake valid address
     SET_RETURN_SEQ(get_layer_from_id, l_layoutLayer, 1);
 
-    controller_destroy_layout_layer(nullptr, nullptr, 1);
+    controller_destroy_layout_layer(lClient, lResource, lLayerId);
 
-    ASSERT_EQ(layer_destroy_fake.call_count, 1);
+    EXPECT_EQ(layer_destroy_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -2997,8 +3428,9 @@ TEST_F(ControllerTests, controller_destroy_layout_layer_success)
  */
 TEST_F(ControllerTests, destroy_ivicontroller_screen_success)
 {
-    destroy_ivicontroller_screen(nullptr);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 1);
+    struct wl_resource * lResource{0xFFFFFFFF}; // an fake valid address
+    destroy_ivicontroller_screen(lResource);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -3012,10 +3444,11 @@ TEST_F(ControllerTests, destroy_ivicontroller_screen_success)
  */
 TEST_F(ControllerTests, output_destroyed_event_invalidOutput)
 {
-    output_destroyed_event(&mp_iviShell->output_destroyed, nullptr);
+    void * lData{0xFFFFFFFF}; // an fake valid address
+    output_destroyed_event(&mp_iviShell->output_destroyed, lData);
 
-    ASSERT_EQ(weston_compositor_schedule_repaint_fake.call_count, 1);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 0);
+    EXPECT_EQ(weston_compositor_schedule_repaint_fake.call_count, 1);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -3061,16 +3494,15 @@ TEST_F(ControllerTests, output_destroyed_event_success)
 
     output_destroyed_event(&mp_iviShell->output_destroyed, mp_iviScreen[0]->output);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 2);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 2);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
 
     free(l_output);
     free(l_output2);
     free(mp_iviShell->bkgnd_view->surface->compositor);
     free(mp_iviShell->bkgnd_view->surface);
     free(mp_iviShell->bkgnd_view);
-
-    mp_iviScreen[0] = (struct iviscreen*)malloc(sizeof(struct iviscreen));
+    mp_iviScreen[0] = NULL;
 }
 
 /** ================================================================================================
@@ -3084,12 +3516,13 @@ TEST_F(ControllerTests, output_destroyed_event_success)
  */
 TEST_F(ControllerTests, output_resized_event_nullBkgndView)
 {
+    void * lData{0xFFFFFFFF}; // an fake valid address
     mp_iviShell->bkgnd_view = nullptr;
     mp_iviShell->client = (struct wl_client*)&mp_fakeClient;
 
-    output_resized_event(&mp_iviShell->output_resized, nullptr);
+    output_resized_event(&mp_iviShell->output_resized, lData);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 0);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -3104,12 +3537,13 @@ TEST_F(ControllerTests, output_resized_event_nullBkgndView)
  */
 TEST_F(ControllerTests, output_resized_event_nullClient)
 {
+    void * lData{0xFFFFFFFF}; // an fake valid address
     mp_iviShell->bkgnd_view = (struct weston_view*)malloc(sizeof(struct weston_view));
     mp_iviShell->client = nullptr;
 
-    output_resized_event(&mp_iviShell->output_resized, nullptr);
+    output_resized_event(&mp_iviShell->output_resized, lData);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 0);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 0);
 
     free(mp_iviShell->bkgnd_view);
 }
@@ -3127,6 +3561,7 @@ TEST_F(ControllerTests, output_resized_event_nullClient)
  */
 TEST_F(ControllerTests, output_resized_event_success)
 {
+    void * lData{0xFFFFFFFF}; // an fake valid address
     mp_iviShell->bkgnd_view = (struct weston_view*)malloc(sizeof(struct weston_view));
     mp_iviShell->bkgnd_view->surface = (struct weston_surface*)malloc(sizeof(struct weston_surface));
     mp_iviShell->bkgnd_view->surface->width = 1;
@@ -3143,10 +3578,10 @@ TEST_F(ControllerTests, output_resized_event_success)
     custom_wl_list_insert(&mp_iviShell->compositor->output_list, &l_output->link);
     mp_iviShell->client = (struct wl_client*)&mp_fakeClient;
 
-    output_resized_event(&mp_iviShell->output_resized, nullptr);
+    output_resized_event(&mp_iviShell->output_resized, lData);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 1);
-    ASSERT_EQ(wl_list_insert_fake.call_count, 1);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 1);
+    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
 
     free(l_output);
     free(mp_iviShell->bkgnd_view->surface->compositor);
@@ -3165,10 +3600,11 @@ TEST_F(ControllerTests, output_resized_event_success)
  */
 TEST_F(ControllerTests, surface_committed_success)
 {
+    void * lData{0xFFFFFFFF}; // an fake valid address
     mp_iviSurface[0]->frame_count = 0;
-    surface_committed(&mp_iviSurface[0]->committed, nullptr);
+    surface_committed(&mp_iviSurface[0]->committed, lData);
 
-    ASSERT_EQ(mp_iviSurface[0]->frame_count, 1);
+    EXPECT_EQ(mp_iviSurface[0]->frame_count, 1);
 }
 
 /** ================================================================================================
@@ -3181,8 +3617,9 @@ TEST_F(ControllerTests, surface_committed_success)
  */
 TEST_F(ControllerTests, layer_event_remove_wrongIviLayer)
 {
-    layer_event_remove(&mp_iviShell->layer_removed, nullptr);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 0);
+    void * lData{0xFFFFFFFF}; // an fake valid address
+    layer_event_remove(&mp_iviShell->layer_removed, lData);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 0);
 }
 
 /** ================================================================================================
@@ -3198,10 +3635,10 @@ TEST_F(ControllerTests, layer_event_remove_success)
 {
     layer_event_remove(&mp_iviShell->layer_removed, m_layoutLayer);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 4);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 4);
 
-    mp_LayerNotification[0] = (struct notification *)malloc(sizeof(struct notification));
-    mp_iviLayer[0] = (struct ivilayer *)malloc(sizeof(struct ivilayer));
+    mp_LayerNotification[0] = NULL;
+    mp_iviLayer[0] = NULL;
 }
 
 /** ================================================================================================
@@ -3218,10 +3655,10 @@ TEST_F(ControllerTests, surface_event_remove_wrongIdSurface)
 {
     surface_event_remove(&mp_iviShell->surface_removed, m_layoutSurface);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 5);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 5);
 
-    mp_surfaceNotification[0] = (struct notification *)malloc(sizeof(struct notification));
-    mp_iviSurface[0] = (struct ivisurface*)malloc(sizeof(struct ivisurface));
+    mp_surfaceNotification[0] = NULL;
+    mp_iviSurface[0] = NULL;
 }
 
 /** ================================================================================================
@@ -3246,14 +3683,13 @@ TEST_F(ControllerTests, surface_event_remove_success)
 
     surface_event_remove(&mp_iviShell->surface_removed, m_layoutSurface);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 5);
-    ASSERT_EQ(weston_layer_entry_remove_fake.call_count, 0);
-    ASSERT_EQ(weston_view_destroy_fake.call_count, 0);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 5);
+    EXPECT_EQ(weston_layer_entry_remove_fake.call_count, 0);
+    EXPECT_EQ(weston_view_destroy_fake.call_count, 0);
 
     free(mp_iviShell->bkgnd_view);
-
-    mp_surfaceNotification[0] = (struct notification*)malloc(sizeof(struct notification));
-    mp_iviSurface[0] = (struct ivisurface*)malloc(sizeof(struct ivisurface));
+    mp_surfaceNotification[0] = NULL;
+    mp_iviSurface[0] = NULL;
 }
 
 /** ================================================================================================
@@ -3276,7 +3712,7 @@ TEST_F(ControllerTests, surface_event_configure_wrongSurfaceId)
 
     mp_iviShell->bkgnd_surface_id = 0;
     surface_event_configure(&mp_iviShell->surface_configured, &m_layoutSurface[0]);
-    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.call_count, 1);
     free(m_layoutSurface[0].surface);
 }
 
@@ -3308,11 +3744,11 @@ TEST_F(ControllerTests, surface_event_configure_validBkgndView)
 
     surface_event_configure(&mp_iviShell->surface_configured, m_layoutSurface);
 
-    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 0);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 1);
-    ASSERT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    ASSERT_EQ(get_id_of_surface_fake.call_count, 1);
-    ASSERT_EQ(weston_matrix_init_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.call_count, 0);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 1);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
+    EXPECT_EQ(weston_matrix_init_fake.call_count, 1);
 
     free(mp_iviShell->bkgnd_view->surface->compositor);
     free(mp_iviShell->bkgnd_view->surface);
@@ -3351,12 +3787,12 @@ TEST_F(ControllerTests, surface_event_configure_nullBkgndView)
 
     surface_event_configure(&mp_iviShell->surface_configured, m_layoutSurface);
 
-    ASSERT_EQ(wl_resource_get_user_data_fake.call_count, 0);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 1);
-    ASSERT_EQ(wl_list_init_fake.call_count, 1);
-    ASSERT_EQ(weston_view_create_fake.call_count, 1);
-    ASSERT_EQ(weston_layer_entry_insert_fake.call_count, 1);
-    ASSERT_EQ(weston_surface_map_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_get_user_data_fake.call_count, 0);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 1);
+    EXPECT_EQ(wl_list_init_fake.call_count, 1);
+    EXPECT_EQ(weston_view_create_fake.call_count, 1);
+    EXPECT_EQ(weston_layer_entry_insert_fake.call_count, 1);
+    EXPECT_EQ(weston_surface_map_fake.call_count, 1);
 
     free(l_bkgnd_view[0]->surface->compositor);
     free(l_bkgnd_view[0]->surface);
@@ -3376,25 +3812,24 @@ TEST_F(ControllerTests, surface_event_configure_nullBkgndView)
  */
 TEST_F(ControllerTests, ivi_shell_destroy_nullClient)
 {
+    void * lData{0xFFFFFFFF}; // an fake valid address
     wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
     wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
     mp_iviShell->client = nullptr;
     mp_screenInfo->screen_name = (char *)malloc(30);
 
-    ivi_shell_destroy(&mp_iviShell->destroy_listener, nullptr);
+    ivi_shell_destroy(&mp_iviShell->destroy_listener, lData);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 16);
-    ASSERT_EQ(wl_client_destroy_fake.call_count, 0);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 16);
+    EXPECT_EQ(wl_client_destroy_fake.call_count, 0);
 
-    for(uint8_t i = 0; i < MAX_NUMBER; i++)
+    for(uint8_t i = 0; i < OBJECT_NUMBER; i++)
     {
-        mp_iviSurface[i] = (struct ivisurface*)malloc(sizeof(struct ivisurface));
-        mp_iviLayer[i] = (struct ivilayer *)malloc(sizeof(struct ivilayer));
-        mp_iviScreen[i] = (struct iviscreen*)malloc(sizeof(struct iviscreen));
+        mp_iviSurface[i] = NULL;
+        mp_iviLayer[i] = NULL;
+        mp_iviScreen[i] = NULL;
     }
-    mp_iviShell = (struct ivishell *)malloc(sizeof(struct ivishell));
-    custom_wl_array_init(&mp_iviShell->screen_ids);
-
+    mp_iviShell = NULL;
     free(mp_screenInfo);
 }
 
@@ -3411,22 +3846,23 @@ TEST_F(ControllerTests, ivi_shell_destroy_nullClient)
  */
 TEST_F(ControllerTests, ivi_shell_destroy_success)
 {
-    mp_iviShell->client = (struct wl_client *)0xFFFFFFFF;
+    void * lData{0xFFFFFFFF}; // an fake valid address
+    wl_resource_from_link_fake.custom_fake = custom_wl_resource_from_link;
+    wl_resource_get_link_fake.custom_fake = custom_wl_resource_get_link;
+    mp_iviShell->client = (struct wl_client *)0xFFFFFFFF; // an fake valid address
     mp_screenInfo->screen_name = (char *)malloc(30);
 
-    ivi_shell_destroy(&mp_iviShell->destroy_listener, nullptr);
+    ivi_shell_destroy(&mp_iviShell->destroy_listener, lData);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 17);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 17);
 
-    for(uint8_t i = 0; i < MAX_NUMBER; i++)
+    for(uint8_t i = 0; i < OBJECT_NUMBER; i++)
     {
-        mp_iviSurface[i] = (struct ivisurface*)malloc(sizeof(struct ivisurface));
-        mp_iviLayer[i] = (struct ivilayer *)malloc(sizeof(struct ivilayer));
-        mp_iviScreen[i] = (struct iviscreen*)malloc(sizeof(struct iviscreen));
+        mp_iviSurface[i] = NULL;
+        mp_iviLayer[i] = NULL;
+        mp_iviScreen[i] = NULL;
     }
-    mp_iviShell = (struct ivishell *)malloc(sizeof(struct ivishell));
-    custom_wl_array_init(&mp_iviShell->screen_ids);
-
+    mp_iviShell = NULL;
     free(mp_screenInfo);
 }
 
@@ -3443,8 +3879,8 @@ TEST_F(ControllerTests, launch_client_process_success)
 {
     launch_client_process(&mp_iviShell);
 
-    ASSERT_EQ(weston_client_start_fake.call_count, 1);
-    ASSERT_EQ(wl_client_add_destroy_listener_fake.call_count, 1);
+    EXPECT_EQ(weston_client_start_fake.call_count, 1);
+    EXPECT_EQ(wl_client_add_destroy_listener_fake.call_count, 1);
 }
 
 /** ================================================================================================
@@ -3460,6 +3896,8 @@ TEST_F(ControllerTests, launch_client_process_success)
  */
 TEST_F(ControllerTests, unbind_resource_controller_success)
 {
+    struct wl_resource *lResource{0xFFFFFFFF};
+
     struct notification *l_not = (struct notification *)malloc(sizeof(struct notification));
     custom_wl_list_init(&mp_iviController[0]->layer_notifications);
     custom_wl_list_insert(&mp_iviController[0]->layer_notifications, &l_not->link);
@@ -3467,9 +3905,9 @@ TEST_F(ControllerTests, unbind_resource_controller_success)
 
     SET_RETURN_SEQ(wl_resource_get_user_data, (void**)mp_iviController, 1);
 
-    unbind_resource_controller(nullptr);
+    unbind_resource_controller(lResource);
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 3);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 3);
 
-    mp_iviController[0] = (struct ivicontroller*)malloc(sizeof(struct ivicontroller));
+    mp_iviController[0] = NULL;
 }

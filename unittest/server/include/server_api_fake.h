@@ -155,7 +155,9 @@ DECLARE_FAKE_VALUE_FUNC(bool, weston_surface_is_mapped, struct weston_surface *)
     FAKE(wl_event_loop_add_idle) \
     FAKE(wl_global_create) \
     FAKE(wl_resource_create) \
+    FAKE(wl_resource_from_link) \
     FAKE(wl_resource_get_client) \
+    FAKE(wl_resource_get_link) \
     FAKE(wl_resource_get_user_data) \
     FAKE(wl_resource_get_version) \
     FAKE(weston_layer_entry_remove) \
