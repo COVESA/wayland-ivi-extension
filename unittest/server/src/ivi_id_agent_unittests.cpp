@@ -37,6 +37,8 @@ public:
     {
         IVI_LAYOUT_FAKE_LIST(RESET_FAKE);
         SERVER_API_FAKE_LIST(RESET_FAKE);
+        wl_list_init_fake.custom_fake = custom_wl_list_init;
+        wl_list_empty_fake.custom_fake = custom_wl_list_empty;
         init_controller_content();
     }
 
@@ -52,9 +54,9 @@ public:
         custom_wl_list_init(&m_westonCompositor.seat_list);
         custom_wl_list_init(&m_iviShell.list_surface);
         custom_wl_list_init(&m_westonCompositor.seat_list);
-        wl_signal_init(&m_iviShell.id_allocation_request_signal);
-        wl_signal_init(&m_iviShell.ivisurface_created_signal);
-        wl_signal_init(&m_iviShell.ivisurface_removed_signal);
+        custom_wl_list_init(&m_iviShell.id_allocation_request_signal.listener_list);
+        custom_wl_list_init(&m_iviShell.ivisurface_created_signal.listener_list);
+        custom_wl_list_init(&m_iviShell.ivisurface_removed_signal.listener_list);
 
         /* Initialize the ivi_id_agent */
         mp_iviIdAgent = (struct ivi_id_agent*)malloc(sizeof(struct ivi_id_agent));
@@ -146,7 +148,7 @@ static int custom_weston_config_section_get_string(struct weston_config_section 
     if(strcmp(key, "app-id") == 0)
         *value = (IdAgentTest::ms_appId != nullptr) ? strdup(IdAgentTest::ms_appId) : nullptr;
     else if(strcmp(key, "app-title") == 0)
-        *value = (IdAgentTest::ms_appTitle != nullptr) ? strdup(IdAgentTest::ms_appId) : nullptr;
+        *value = (IdAgentTest::ms_appTitle != nullptr) ? strdup(IdAgentTest::ms_appTitle) : nullptr;
     return 0;
 }
 
@@ -183,82 +185,77 @@ TEST_F(IdAgentTest, surface_event_remove)
 TEST_F(IdAgentTest, id_agent_module_deinit)
 {
     id_agent_module_deinit(&mp_iviIdAgent->destroy_listener, nullptr);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 5);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 5); //2 apps + 3 signals
 
     /* Prevent double free in TearDown*/
     for(uint8_t i = 0; i < MAX_NUMBER; i++)
-    {
         mpp_dbElem[i] = nullptr;
-    }
     mp_iviIdAgent = nullptr;
 }
 
 /** ================================================================================================
  * @test_id             id_agent_module_init_cannotGetwestonConfig
- * @brief               Test case of id_agent_module_init() where wet_get_config() returns nullptr object
+ * @brief               Test case of id_agent_module_init() where wet_get_config() returns nullptr
  * @test_procedure Steps:
  *                      -# Prepare mock for wet_get_config(), to return a nullptr
  *                      -# Calling the id_agent_module_init()
  *                      -# Verification point:
  *                         +# id_agent_module_init() must return IVI_FAILED
- *                         +# wet_get_config() must be called once time
- *                         +# wl_list_remove() must be called three times
- *                         +# weston_config_get_section() not be called
+ *                         +# A sequence with list of extenal functions is called
  */
 TEST_F(IdAgentTest, id_agent_module_init_cannotGetwestonConfig)
 {
-    wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
     SET_RETURN_SEQ(wet_get_config, (struct weston_config **)&mp_nullPointer, 1);
 
     ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
-    ASSERT_EQ(wet_get_config_fake.call_count, 1);
+    ASSERT_EQ(fff.call_history[0], (void*)shell_add_destroy_listener_once);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_list_insert);
+    ASSERT_EQ(fff.call_history[2], (void*)add_listener_remove_surface);
+    ASSERT_EQ(fff.call_history[3], (void*)wl_list_init);
+    ASSERT_EQ(fff.call_history[4], (void*)wet_get_config);
+    ASSERT_EQ(fff.call_history[5], (void*)weston_log);
+    ASSERT_EQ(fff.call_history[9], nullptr);
     ASSERT_EQ(wl_list_remove_fake.call_count, 3);
-    ASSERT_EQ(weston_config_get_section_fake.call_count, 0);
 }
 
 /** ================================================================================================
- * @test_id             id_agent_module_init_noDefaultBehavior
- * @brief               Test case of id_agent_module_init() where no section of "desktop-app-default"
+ * @test_id             id_agent_module_init_noDefaultBehaviornoApp
+ * @brief               Test case of id_agent_module_init() where no section of
+ *                      "desktop-app-default" and "desktop-app"
  * @test_procedure Steps:
  *                      -# Mocking the wet_get_config() to return an object
  *                      -# Mocking the weston_config_get_section() to return a nullptr
  *                      -# Calling the id_agent_module_init()
  *                      -# Verification point:
  *                         +# id_agent_module_init() must return IVI_FAILED
- *                         +# wet_get_config() must be called once time
- *                         +# weston_config_get_section() must be called once time
- *                         +# weston_config_next_section() must be called once time
- *                         +# weston_config_section_get_uint() not be called
- *                         +# weston_config_section_get_string() not be called
- *                         +# wl_list_remove() must be called three times
- *                         +# wl_list_empty() must return 0
+ *                         +# A sequence with list of extenal functions is called
  */
-TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehavior)
+TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviornoApp)
 {
-    wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
     SET_RETURN_SEQ(wet_get_config, (struct weston_config **)&mp_fakePointer, 1);
     SET_RETURN_SEQ(weston_config_get_section, (struct weston_config_section **)&mp_nullPointer, 1);
 
     ASSERT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
-    ASSERT_EQ(wet_get_config_fake.call_count, 1);
-    ASSERT_EQ(weston_config_get_section_fake.call_count, 1);
-    ASSERT_EQ(strncmp(weston_config_get_section_fake.arg1_val, "desktop-app-default", 19), 0);
-    ASSERT_EQ(weston_config_next_section_fake.call_count, 1);
-    ASSERT_EQ(weston_config_section_get_uint_fake.call_count, 0);
-    ASSERT_EQ(weston_config_section_get_string_fake.call_count, 0);
-    ASSERT_NE(wl_list_empty_fake.return_val_history[0], 0);
+    ASSERT_EQ(fff.call_history[0], (void*)shell_add_destroy_listener_once);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_list_insert);
+    ASSERT_EQ(fff.call_history[2], (void*)add_listener_remove_surface);
+    ASSERT_EQ(fff.call_history[3], (void*)wl_list_init);
+    ASSERT_EQ(fff.call_history[4], (void*)wet_get_config);
+    ASSERT_EQ(fff.call_history[5], (void*)weston_config_get_section);
+    ASSERT_EQ(fff.call_history[6], (void*)weston_config_next_section);
+    ASSERT_EQ(fff.call_history[7], (void*)wl_list_empty);
+    ASSERT_EQ(fff.call_history[13], nullptr);
     ASSERT_EQ(wl_list_remove_fake.call_count, 3);
+    /* ASSERT_EQ(weston_log_fake.call_count, 2); not check,
+     * history of this is should not clear. server_api_fake.h:226 */
 }
 
 /** ================================================================================================
- * @test_id             id_agent_module_init_noDesktopApp
+ * @test_id             id_agent_module_init_invalidDefaultId
  * @brief               Test case of id_agent_module_init() where has "desktop-app-default" section with
  *                      "default-surface-id" and "default-surface-id-max" are INVALID_ID.
- *                      these is no "desktop-app" section.
  * @test_procedure Steps:
  *                      -# Mocking the wet_get_config() to return an object
  *                      -# Mocking the weston_config_get_section() to return a nullptr
@@ -275,11 +272,8 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehavior)
  *                         +# weston_config_section_get_string() not be called
  *                         +# wl_list_remove_fake() must be called 6 times
  */
-TEST_F(IdAgentTest, id_agent_module_init_noDesktopApp)
+TEST_F(IdAgentTest, id_agent_module_init_invalidDefaultId)
 {
-    wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
-
     SET_RETURN_SEQ(wet_get_config, (struct weston_config **)&mp_fakePointer, 1);
     SET_RETURN_SEQ(weston_config_get_section, (struct weston_config_section **)&mp_fakePointer, 1);
     IdAgentTest::ms_defaultSurfaceId = INVALID_ID;
@@ -300,9 +294,9 @@ TEST_F(IdAgentTest, id_agent_module_init_noDesktopApp)
 }
 
 /** ================================================================================================
- * @test_id             id_agent_module_init_hasDesktopAppInvalidSurfaceId
- * @brief               Test case of id_agent_module_init() where has "desktop-app-default" and
- *                      "desktop-app" sections. But the "surface-id" has setup with invalid.
+ * @test_id             id_agent_module_init_invalidAppSurfaceId
+ * @brief               Test case of id_agent_module_init() where surface id of app
+ *                      is INVALID_ID.
  * @test_procedure Steps:
  *                      -# Mocking the wet_get_config() to return an object
  *                      -# Mocking the weston_config_get_section() to return an object
@@ -312,17 +306,10 @@ TEST_F(IdAgentTest, id_agent_module_init_noDesktopApp)
  *                      -# Calling the id_agent_module_init()
  *                      -# Verification point:
  *                         +# id_agent_module_init() must return IVI_FAILED
- *                         +# wet_get_config() must be called once time
- *                         +# weston_config_next_section() must be called once time
- *                         +# weston_config_section_get_uint() must be called three times
- *                         +# weston_config_section_get_string() not be called
- *                         +# wl_list_remove_fake() must be called 3 times
+ *                         +# db_elem output should same with preparation
  */
-TEST_F(IdAgentTest, id_agent_module_init_hasDesktopAppInvalidSurfaceId)
+TEST_F(IdAgentTest, id_agent_module_init_invalidAppSurfaceId)
 {
-    wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
-
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
         custom_weston_config_next_section_1, // mock for "desktop-app" section
         custom_weston_config_next_section_2  // mock to notify end section
@@ -337,23 +324,19 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDesktopAppInvalidSurfaceId)
 
     EXPECT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
-    EXPECT_EQ(wet_get_config_fake.call_count, 1);
-    EXPECT_EQ(weston_config_next_section_fake.call_count, 1);
-    EXPECT_EQ(weston_config_section_get_uint_fake.call_count, 3);
-    EXPECT_EQ(strncmp("surface-id", weston_config_section_get_uint_fake.arg1_history[2], 11), 0);
-    EXPECT_EQ(weston_config_section_get_string_fake.call_count, 0);
-    EXPECT_EQ(wl_list_remove_fake.call_count, 3);
-
     struct db_elem *db_elem = (struct db_elem *)
             ((uintptr_t)weston_config_section_get_uint_fake.arg2_history[2] - offsetof(struct db_elem, surface_id));
+    EXPECT_EQ(db_elem->cfg_app_id, nullptr);
+    EXPECT_EQ(db_elem->cfg_title, nullptr);
+    EXPECT_EQ(db_elem->surface_id, IdAgentTest::ms_surfaceId);
+
     free(db_elem);
 }
 
 /** ================================================================================================
- * @test_id             id_agent_module_init_hasDesktopAppInvalidOfAppIdAndAppTitle
- * @brief               Test case of id_agent_module_init() where has "desktop-app-default" and
- *                      "desktop-app" sections. The app has valid "surface-id", and invalid
- *                      for "app-id" and "app-title".
+ * @test_id             id_agent_module_init_invalidOfAppIdAndAppTitle
+ * @brief               Test case of id_agent_module_init() where a app with valid "surface-id",
+ *                      but invalid value for "app-id" and "app-title".
  * @test_procedure Steps:
  *                      -# Mocking the wet_get_config() to return an object
  *                      -# Mocking the weston_config_get_section() to return an object
@@ -365,17 +348,10 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDesktopAppInvalidSurfaceId)
  *                      -# Calling the id_agent_module_init()
  *                      -# Verification point:
  *                         +# id_agent_module_init() must return IVI_FAILED
- *                         +# wet_get_config() must be called once time
- *                         +# weston_config_next_section() must be called once time
- *                         +# weston_config_section_get_uint() must be called three times
- *                         +# weston_config_section_get_string() must be called 2 times
- *                         +# wl_list_remove_fake() must be called 3 times
+ *                         +# db_elem output should same with preparation
  */
-TEST_F(IdAgentTest, id_agent_module_init_hasDesktopAppInvalidOfAppIdAndAppTitle)
+TEST_F(IdAgentTest, id_agent_module_init_invalidOfAppIdAndAppTitle)
 {
-    wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
-
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
         custom_weston_config_next_section_1, // mock for "desktop-app" section
         custom_weston_config_next_section_2  // mock to notify end section
@@ -393,21 +369,19 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDesktopAppInvalidOfAppIdAndAppTitle)
 
     EXPECT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
-    EXPECT_EQ(wet_get_config_fake.call_count, 1);
-    EXPECT_EQ(weston_config_next_section_fake.call_count, 1);
-    EXPECT_EQ(weston_config_section_get_uint_fake.call_count, 3);
-    EXPECT_EQ(weston_config_section_get_string_fake.call_count, 2);
-    EXPECT_EQ(wl_list_remove_fake.call_count, 3);
-
     struct db_elem *db_elem = (struct db_elem *)
             ((uintptr_t)weston_config_section_get_uint_fake.arg2_history[2] - offsetof(struct db_elem, surface_id));
+    EXPECT_EQ(db_elem->cfg_app_id, nullptr);
+    EXPECT_EQ(db_elem->cfg_title, nullptr);
+    EXPECT_EQ(db_elem->surface_id, IdAgentTest::ms_surfaceId);
+
     free(db_elem);
 }
 
 /** ================================================================================================
  * @test_id             id_agent_module_init_noDefaultBehaviorHasDesktopApp
  * @brief               Test case of id_agent_module_init() where has no "desktop-app-default" section.
- *                      The "desktop-app" section has valid "surface-id", "app-id" and "app-title".
+ *                      but has a desktop app.
  * @test_procedure Steps:
  *                      -# Mocking the wet_get_config() to return an object
  *                      -# Mocking the weston_config_get_section() to return nullptr
@@ -418,17 +392,10 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDesktopAppInvalidOfAppIdAndAppTitle)
  *                      -# Calling the id_agent_module_init()
  *                      -# Verification point:
  *                         +# id_agent_module_init() should return IVI_FAILED
- *                         +# wet_get_config() must be called once time
- *                         +# weston_config_next_section() must be called once time
- *                         +# weston_config_section_get_uint() must be called once time
- *                         +# weston_config_section_get_string() must be called 2 times
- *                         +# wl_list_remove_fake() must be called 3 times
+ *                         +# db_elem output should same with preparation data
  */
 TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopApp)
 {
-    wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
-
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
         custom_weston_config_next_section_1, // mock for "desktop-app" section
         custom_weston_config_next_section_2  // mock to notify end section
@@ -444,24 +411,21 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopApp)
 
     EXPECT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
-    EXPECT_EQ(wet_get_config_fake.call_count, 1);
-    EXPECT_EQ(weston_config_next_section_fake.call_count, 2);
-    EXPECT_EQ(weston_config_section_get_uint_fake.call_count, 1);
-    EXPECT_EQ(weston_config_section_get_string_fake.call_count, 2);
-    EXPECT_EQ(wl_list_remove_fake.call_count, 3);
-
     struct db_elem *db_elem = (struct db_elem *)
             ((uintptr_t)weston_config_section_get_uint_fake.arg2_history[0] - offsetof(struct db_elem, surface_id));
+    EXPECT_EQ(strcmp(db_elem->cfg_app_id, IdAgentTest::ms_appId), 0);
+    EXPECT_EQ(strcmp(db_elem->cfg_title, IdAgentTest::ms_appTitle), 0);
+    EXPECT_EQ(db_elem->surface_id, IdAgentTest::ms_surfaceId);
+
     free(db_elem->cfg_app_id);
     free(db_elem->cfg_title);
     free(db_elem);
 }
 
 /** ================================================================================================
- * @test_id             id_agent_module_init_hasDefaultBehaviorHasDesktopAppUnexpectedSurfaceId
- * @brief               Test case of id_agent_module_init() where has "desktop-app-default" section.
- *                      The "desktop-app" section has valid "surface-id", "app-id" and "app-title".
- *                      but the "surface-id" is in range of "default-surface-id" and "default-surface-id-max".
+ * @test_id             id_agent_module_init_unexpectedAppSurfaceId
+ * @brief               Test case of id_agent_module_init() where "surface-id" of app
+ *                      is in range of "default-surface-id" and "default-surface-id-max".
  * @test_procedure Steps:
  *                      -# Mocking the wet_get_config() to return an object
  *                      -# Mocking the weston_config_get_section() to return an object
@@ -474,18 +438,10 @@ TEST_F(IdAgentTest, id_agent_module_init_noDefaultBehaviorHasDesktopApp)
  *                      -# Calling the id_agent_module_init()
  *                      -# Verification point:
  *                         +# id_agent_module_init() must return IVI_FAILED
- *                         +# wet_get_config() must be called once time
- *                         +# weston_config_get_section() must be called once time
- *                         +# weston_config_next_section() must be called once time
- *                         +# weston_config_section_get_uint() must be called 3 times
- *                         +# weston_config_section_get_string() must be called 2 times
- *                         +# wl_list_remove_fake() must be called 3 times
+ *                         +# db_elem output should same with preparation data
  */
-TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorHasDesktopAppUnexpectedSurfaceId)
+TEST_F(IdAgentTest, id_agent_module_init_unexpectedAppSurfaceId)
 {
-    wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
-
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
         custom_weston_config_next_section_1, // mock for "desktop-app" section
         custom_weston_config_next_section_2  // mock to notify end section
@@ -503,15 +459,12 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorHasDesktopAppUnexpect
 
     EXPECT_EQ(id_agent_module_init(&m_iviShell), IVI_FAILED);
 
-    EXPECT_EQ(wet_get_config_fake.call_count, 1);
-    EXPECT_EQ(weston_config_get_section_fake.call_count, 1);
-    EXPECT_EQ(weston_config_next_section_fake.call_count, 1);
-    EXPECT_EQ(weston_config_section_get_uint_fake.call_count, 3);
-    EXPECT_EQ(weston_config_section_get_string_fake.call_count, 2);
-    EXPECT_EQ(wl_list_remove_fake.call_count, 3);
-
     struct db_elem *db_elem = (struct db_elem *)
             ((uintptr_t)weston_config_section_get_uint_fake.arg2_history[2] - offsetof(struct db_elem, surface_id));
+    EXPECT_EQ(strcmp(db_elem->cfg_app_id, IdAgentTest::ms_appId), 0);
+    EXPECT_EQ(strcmp(db_elem->cfg_title, IdAgentTest::ms_appTitle), 0);
+    EXPECT_EQ(db_elem->surface_id, IdAgentTest::ms_surfaceId);
+
     free(db_elem->cfg_app_id);
     free(db_elem->cfg_title);
     free(db_elem);
@@ -533,18 +486,10 @@ TEST_F(IdAgentTest, id_agent_module_init_hasDefaultBehaviorHasDesktopAppUnexpect
  *                      -# Calling the id_agent_module_init()
  *                      -# Verification point:
  *                         +# id_agent_module_init() must return IVI_SUCCEEDED
- *                         +# wet_get_config() must be called once time
- *                         +# weston_config_get_section() must be called once time
- *                         +# weston_config_next_section() must be called 2 times
- *                         +# weston_config_section_get_uint() must be called 3 times
- *                         +# weston_config_section_get_string() must be called 2 times
- *                         +# wl_list_remove_fake() must be called 0 time
+ *                         +# Created pointers has same content of preparation data
  */
 TEST_F(IdAgentTest, id_agent_module_init_success)
 {
-    wl_list_init_fake.custom_fake = custom_wl_list_init;
-    wl_list_empty_fake.custom_fake = custom_wl_list_empty;
-
     int (*weston_config_next_section_fakes[])(struct weston_config *, struct weston_config_section **, const char **) = {
         custom_weston_config_next_section_1, // mock for "desktop-app" section
         custom_weston_config_next_section_2  // mock to notify end section
@@ -562,20 +507,20 @@ TEST_F(IdAgentTest, id_agent_module_init_success)
 
     EXPECT_EQ(id_agent_module_init(&m_iviShell), IVI_SUCCEEDED);
 
-    EXPECT_EQ(wet_get_config_fake.call_count, 1);
-    EXPECT_EQ(weston_config_get_section_fake.call_count, 1);
-    EXPECT_EQ(weston_config_next_section_fake.call_count, 2);
-    EXPECT_EQ(weston_config_section_get_uint_fake.call_count, 3);
-    EXPECT_EQ(weston_config_section_get_string_fake.call_count, 2);
-    EXPECT_EQ(wl_list_remove_fake.call_count, 0);
-
     struct db_elem *db_elem = (struct db_elem *)
             ((uintptr_t)weston_config_section_get_uint_fake.arg2_history[2] - offsetof(struct db_elem, surface_id));
+    struct ivi_id_agent *ida = (struct ivi_id_agent *)
+            ((uintptr_t)add_listener_remove_surface_fake.arg0_history[0] - offsetof(struct ivi_id_agent, surface_removed));
+
+    EXPECT_EQ(strcmp(db_elem->cfg_app_id, IdAgentTest::ms_appId), 0);
+    EXPECT_EQ(strcmp(db_elem->cfg_title, IdAgentTest::ms_appTitle), 0);
+    EXPECT_EQ(db_elem->surface_id, IdAgentTest::ms_surfaceId);
+    EXPECT_EQ(ida->default_behavior_set, 1);
+    EXPECT_EQ(ida->default_surface_id, 100);
+    EXPECT_EQ(ida->default_surface_id_max, 200);
+
     free(db_elem->cfg_app_id);
     free(db_elem->cfg_title);
     free(db_elem);
-
-    struct ivi_id_agent *ida = (struct ivi_id_agent *)
-            ((uintptr_t)add_listener_remove_surface_fake.arg0_history[0] - offsetof(struct ivi_id_agent, surface_removed));
     free(ida);
 }

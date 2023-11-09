@@ -176,9 +176,9 @@ public:
  * @test_procedure Steps:
  *                      -# Calling the handle_seat_create() with weston custom seat
  *                      -# Verification point:
- *                         +# wl_list_insert() must be called 3 times
- *                         +# wl_resource_post_event() must be called 2 times
  *                         +# member of seat_ctx struct must be initialized
+ *                         +# wl_resource_post_event() must be called 2 times and
+ *                           second input arg is IVI_INPUT_SEAT_CREATED
  */
 TEST_F(InputControllerTest, handle_seat_create_customSeat)
 {
@@ -186,13 +186,15 @@ TEST_F(InputControllerTest, handle_seat_create_customSeat)
     struct seat_ctx *lp_ctxSeat = (struct seat_ctx *)
             ((uintptr_t)wl_list_insert_fake.arg1_history[DEFAULT_SEAT] - offsetof(struct seat_ctx, seat_node));
 
-    EXPECT_EQ(wl_list_insert_fake.call_count, 3);
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(IVI_INPUT_SEAT_CREATED, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_SEAT_CREATED, wl_resource_post_event_fake.arg1_history[1]);
     EXPECT_EQ(lp_ctxSeat->input_ctx, mp_ctxInput);
     EXPECT_EQ(lp_ctxSeat->west_seat, &mpp_westonSeat[CUSTOM_SEAT]);
     EXPECT_EQ(lp_ctxSeat->keyboard_grab.interface, &keyboard_grab_interface);
     EXPECT_EQ(lp_ctxSeat->pointer_grab.interface, &pointer_grab_interface);
     EXPECT_EQ(lp_ctxSeat->touch_grab.interface, &touch_grab_interface);
+
 
     free(lp_ctxSeat);
 }
@@ -203,8 +205,8 @@ TEST_F(InputControllerTest, handle_seat_create_customSeat)
  * @test_procedure Steps:
  *                      -# Calling the handle_seat_create()
  *                      -# Verification point:
- *                         +# wl_list_insert() must be called 5 times
- *                         +# wl_resource_post_event() must be called 6 times
+ *                         +# wl_resource_post_event() must be called 2 times and
+ *                           second input arg is IVI_INPUT_SEAT_CREATED and IVI_INPUT_INPUT_ACCEPTANCE
  *                         +# member of seat_ctx struct must be initialized
  *                         +# member of seat_focus struct must be initialized
  */
@@ -218,8 +220,13 @@ TEST_F(InputControllerTest, handle_seat_create_defaultSeat)
     struct seat_focus *lp_seatFocus2 = (struct seat_focus *)
             ((uintptr_t)wl_list_insert_fake.arg1_history[4] - offsetof(struct seat_focus, link));
 
-    ASSERT_EQ(wl_list_insert_fake.call_count, 5);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 6);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 6);
+    EXPECT_EQ(IVI_INPUT_SEAT_CREATED, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_SEAT_CREATED, wl_resource_post_event_fake.arg1_history[1]);
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[2]);
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[3]);
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[4]);
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[5]);
     EXPECT_EQ(lp_ctxSeat->input_ctx, mp_ctxInput);
     EXPECT_EQ(lp_ctxSeat->west_seat, &mpp_westonSeat[DEFAULT_SEAT]);
     EXPECT_EQ(lp_ctxSeat->keyboard_grab.interface, &keyboard_grab_interface);
@@ -250,7 +257,8 @@ TEST_F(InputControllerTest, handle_seat_create_defaultSeat)
  *                         +# weston_keyboard_start_grab() not be called
  *                         +# weston_pointer_start_grab() not be called
  *                         +# weston_touch_start_grab() not be called
- *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
+ *                         +# wl_resource_post_event() must be called 2 times and
+ *                           second input arg is IVI_INPUT_SEAT_CREATED
  */
 TEST_F(InputControllerTest, handle_seat_updated_caps_noUpdate)
 {
@@ -267,6 +275,8 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_noUpdate)
     ASSERT_EQ(0, weston_pointer_start_grab_fake.call_count);
     ASSERT_EQ(0, weston_touch_start_grab_fake.call_count);
     ASSERT_EQ(MAX_NUMBER, wl_resource_post_event_fake.call_count);
+    ASSERT_EQ(IVI_INPUT_SEAT_CAPABILITIES, wl_resource_post_event_fake.arg1_history[0]);
+    ASSERT_EQ(IVI_INPUT_SEAT_CAPABILITIES, wl_resource_post_event_fake.arg1_history[1]);
 }
 
 /** ================================================================================================
@@ -284,7 +294,8 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_noUpdate)
  *                         +# weston_keyboard_start_grab() must be called once time
  *                         +# weston_pointer_start_grab() must be called once time
  *                         +# weston_touch_start_grab() must be called once time
- *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
+ *                         +# wl_resource_post_event() must be called 2 times and
+ *                           second input arg is IVI_INPUT_SEAT_CREATED
  */
 TEST_F(InputControllerTest, handle_seat_updated_caps_newUpdate)
 {
@@ -301,6 +312,8 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_newUpdate)
     ASSERT_EQ(1, weston_pointer_start_grab_fake.call_count);
     ASSERT_EQ(1, weston_touch_start_grab_fake.call_count);
     ASSERT_EQ(MAX_NUMBER, wl_resource_post_event_fake.call_count);
+    ASSERT_EQ(IVI_INPUT_SEAT_CAPABILITIES, wl_resource_post_event_fake.arg1_history[0]);
+    ASSERT_EQ(IVI_INPUT_SEAT_CAPABILITIES, wl_resource_post_event_fake.arg1_history[1]);
 }
 
 /** ================================================================================================
@@ -326,7 +339,8 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_newUpdate)
  *                         +# keyboard_grab.keyboard set to null pointer
  *                         +# pointer_grab.pointer set to null pointer
  *                         +# touch_grab.touch set to null pointer
- *                         +# wl_resource_post_event() must be called {2*MAX_NUMBER} times
+ *                         +# wl_resource_post_event() must be called 4 times and
+ *                           second input arg is IVI_INPUT_SEAT_CREATED
  */
 TEST_F(InputControllerTest, handle_seat_updated_caps_noCapabitilies)
 {
@@ -352,6 +366,10 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_noCapabitilies)
     ASSERT_EQ(nullptr, mpp_ctxSeat[CUSTOM_SEAT]->pointer_grab.pointer);
     ASSERT_EQ(nullptr, mpp_ctxSeat[CUSTOM_SEAT]->touch_grab.touch);
     ASSERT_EQ(2*MAX_NUMBER, wl_resource_post_event_fake.call_count);
+    ASSERT_EQ(IVI_INPUT_SEAT_CAPABILITIES, wl_resource_post_event_fake.arg1_history[0]);
+    ASSERT_EQ(IVI_INPUT_SEAT_CAPABILITIES, wl_resource_post_event_fake.arg1_history[1]);
+    ASSERT_EQ(IVI_INPUT_SEAT_CAPABILITIES, wl_resource_post_event_fake.arg1_history[2]);
+    ASSERT_EQ(IVI_INPUT_SEAT_CAPABILITIES, wl_resource_post_event_fake.arg1_history[3]);
 }
 
 /** ================================================================================================
@@ -361,8 +379,9 @@ TEST_F(InputControllerTest, handle_seat_updated_caps_noCapabitilies)
  *                      -# Prepare the data input, the seat_ctx object
  *                      -# Calling the handle_seat_destroy()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
- *                         +# wl_list_remove() must be called 3 times
+ *                         +# wl_resource_post_event() must be called 2 times and
+ *                           second input arg is IVI_INPUT_SEAT_DESTROYED
+ *                         +# wl_list_remove() must be called 3 times 
  */
 TEST_F(InputControllerTest, handle_seat_destroy_noSurfaceAcceptance)
 {
@@ -373,6 +392,8 @@ TEST_F(InputControllerTest, handle_seat_destroy_noSurfaceAcceptance)
     handle_seat_destroy(&lp_ctxSeat->destroy_listener, &mpp_westonSeat[CUSTOM_SEAT]);
 
     ASSERT_EQ(MAX_NUMBER, wl_resource_post_event_fake.call_count);
+    ASSERT_EQ(IVI_INPUT_SEAT_DESTROYED, wl_resource_post_event_fake.arg1_history[0]);
+    ASSERT_EQ(IVI_INPUT_SEAT_DESTROYED, wl_resource_post_event_fake.arg1_history[1]);
     ASSERT_EQ(3, wl_list_remove_fake.call_count);
 }
 
@@ -383,6 +404,7 @@ TEST_F(InputControllerTest, handle_seat_destroy_noSurfaceAcceptance)
  *                      -# Calling the handle_seat_destroy()
  *                      -# Verification point:
  *                         +# wl_resource_post_event() must be called {MAX_NUMBER} times
+ *                           and second input arg is IVI_INPUT_SEAT_DESTROYED
  *                         +# wl_list_remove() must be called 4 times
  */
 TEST_F(InputControllerTest, handle_seat_destroy_hasSurfaceAcceptance)
@@ -390,6 +412,8 @@ TEST_F(InputControllerTest, handle_seat_destroy_hasSurfaceAcceptance)
     handle_seat_destroy(&mpp_ctxSeat[CUSTOM_SEAT]->destroy_listener, &mpp_westonSeat[CUSTOM_SEAT]);
 
     ASSERT_EQ(MAX_NUMBER, wl_resource_post_event_fake.call_count);
+    ASSERT_EQ(IVI_INPUT_SEAT_DESTROYED, wl_resource_post_event_fake.arg1_history[0]);
+    ASSERT_EQ(IVI_INPUT_SEAT_DESTROYED, wl_resource_post_event_fake.arg1_history[1]);
     ASSERT_EQ(4, wl_list_remove_fake.call_count);
 
     mpp_ctxSeat[CUSTOM_SEAT] = nullptr;
@@ -404,13 +428,13 @@ TEST_F(InputControllerTest, handle_seat_destroy_hasSurfaceAcceptance)
  *                      -# Calling the input_controller_module_init()
  *                      -# Verification point:
  *                         +# input_controller_module_init() must not return 0
- *                         +#  wl_list_init_fake must not invoked
+ *                         +# No external function is called
  */
 TEST_F(InputControllerTest, input_controller_module_init_badInput)
 {
     m_iviShell.interface = nullptr;
     ASSERT_NE(input_controller_module_init(&m_iviShell), 0);
-    ASSERT_EQ(0, wl_list_init_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -421,6 +445,8 @@ TEST_F(InputControllerTest, input_controller_module_init_badInput)
  *                      -# Calling the input_controller_module_init()
  *                      -# Verification point:
  *                         +# input_controller_module_init() must not return 0
+ *                         +# wet_get_config() must be called once time
+ *                         +# shell_add_destroy_listener_once() must be called once time
  *                         +# wl_global_create() must be called once time
  *                         +# wl_list_remove() must be called 6 times
  */
@@ -432,6 +458,8 @@ TEST_F(InputControllerTest, input_controller_module_init_cannotCreateGlobal)
 
     EXPECT_NE(input_controller_module_init(&m_iviShell), 0);
 
+    EXPECT_EQ(wet_get_config_fake.call_count, 1);
+    EXPECT_EQ(shell_add_destroy_listener_once_fake.call_count, 1);
     EXPECT_EQ(wl_global_create_fake.call_count, 1);
     EXPECT_EQ(wl_list_remove_fake.call_count, 6);
 
@@ -448,7 +476,6 @@ TEST_F(InputControllerTest, input_controller_module_init_cannotCreateGlobal)
  *                      -# Calling the input_controller_module_init()
  *                      -# Verification point:
  *                         +# input_controller_module_init() must return 0
- *                         +# wl_global_create() must be called once time
  *                         +# Input controller module member must same the prepared data
  */
 TEST_F(InputControllerTest, input_controller_module_init_canInitSuccess)
@@ -459,8 +486,6 @@ TEST_F(InputControllerTest, input_controller_module_init_canInitSuccess)
 
     ASSERT_EQ(input_controller_module_init(&m_iviShell), 0);
 
-    ASSERT_EQ(wl_global_create_fake.call_count, 1);
-    ASSERT_EQ(wl_list_init_fake.call_count, 2);
     struct input_context *lp_ctxInput = (struct input_context *)
             ((uintptr_t)wl_list_init_fake.arg0_history[DEFAULT_SEAT] - offsetof(struct input_context, resource_list));
     EXPECT_EQ(lp_ctxInput->ivishell, &m_iviShell);
@@ -481,6 +506,7 @@ TEST_F(InputControllerTest, input_controller_module_init_canInitSuccess)
  *                      -# Calling the keyboard_grab_key()
  *                      -# Verification point:
  *                         +# wl_resource_post_event() must be called two times
+ *                           and second input arg is WL_KEYBOARD_KEY
  */
 TEST_F(InputControllerTest, keyboard_grab_key_aSurfaceAvailable)
 {
@@ -499,6 +525,8 @@ TEST_F(InputControllerTest, keyboard_grab_key_aSurfaceAvailable)
     keyboard_grab_key(&mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab, &l_time, 1, 1);
 
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(WL_KEYBOARD_KEY, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(WL_KEYBOARD_KEY, wl_resource_post_event_fake.arg1_history[1]);
 
     free(lp_westSurf);
     free(lp_keyboard);
@@ -512,6 +540,7 @@ TEST_F(InputControllerTest, keyboard_grab_key_aSurfaceAvailable)
  *                      -# Calling the keyboard_grab_modifiers()
  *                      -# Verification point:
  *                         +# wl_resource_post_event() must be called two times
+ *                           and second input arg is WL_KEYBOARD_MODIFIERS
  */
 TEST_F(InputControllerTest, keyboard_grab_modifiers_aSurfaceAvaiable)
 {
@@ -530,6 +559,8 @@ TEST_F(InputControllerTest, keyboard_grab_modifiers_aSurfaceAvaiable)
     keyboard_grab_modifiers(&mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab, 1, 1, 1, 1, 1);
 
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(WL_KEYBOARD_MODIFIERS, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(WL_KEYBOARD_MODIFIERS, wl_resource_post_event_fake.arg1_history[1]);
 
     free(lp_westSurf);
     free(lp_keyboard);
@@ -542,8 +573,8 @@ TEST_F(InputControllerTest, keyboard_grab_modifiers_aSurfaceAvaiable)
  *                      -# Mocking the surface_get_weston_surface() does return an object
  *                      -# Calling the keyboard_grab_cancel()
  *                      -# Verification point:
- *                         +# surface_get_weston_surface() must be called 2 times
  *                         +# wl_resource_post_event() must be called 4 times
+ *                           and second input arg is WL_KEYBOARD_LEAVE and IVI_INPUT_INPUT_FOCUS
  */
 TEST_F(InputControllerTest, keyboard_grab_cancel)
 {
@@ -563,7 +594,10 @@ TEST_F(InputControllerTest, keyboard_grab_cancel)
     keyboard_grab_cancel(&mpp_ctxSeat[DEFAULT_SEAT]->keyboard_grab);
 
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 4);
-    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 2);
+    EXPECT_EQ(WL_KEYBOARD_LEAVE, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(WL_KEYBOARD_LEAVE, wl_resource_post_event_fake.arg1_history[1]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[2]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[3]);
 
     free(lp_westSurf);
     free(lp_keyboard);
@@ -577,7 +611,7 @@ TEST_F(InputControllerTest, keyboard_grab_cancel)
  *                      -# Set input ctxSeat
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
- *                         +# surface_get_weston_surface() not be called
+ *                         +# No external function is called
  */
 TEST_F(InputControllerTest, pointer_grab_focus_hasButtonCount)
 {
@@ -587,7 +621,7 @@ TEST_F(InputControllerTest, pointer_grab_focus_hasButtonCount)
 
     pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 0);
+    EXPECT_EQ(fff.call_history[0], nullptr);
 
     free(lp_pointer);
 }
@@ -598,8 +632,7 @@ TEST_F(InputControllerTest, pointer_grab_focus_hasButtonCount)
  * @test_procedure Steps:
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
- *                         +# surface_get_weston_surface() should not call
- *                         +# weston_compositor_pick_view() should call once time
+ *                         +# Only weston_compositor_pick_view() is called
  */
 TEST_F(InputControllerTest, pointer_grab_focus_noFocusSurface)
 {
@@ -612,8 +645,8 @@ TEST_F(InputControllerTest, pointer_grab_focus_noFocusSurface)
 
     pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 0);
-    EXPECT_EQ(weston_compositor_pick_view_fake.call_count, 1);
+    EXPECT_EQ(fff.call_history[0], (void*)weston_compositor_pick_view);
+    EXPECT_EQ(fff.call_history[1], nullptr);
 
     free(lp_pointer);
 }
@@ -626,8 +659,7 @@ TEST_F(InputControllerTest, pointer_grab_focus_noFocusSurface)
  *                      -# Mocking the surface_get_weston_surface() return nullptr
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
- *                         +# surface_get_weston_surface() must be called once time
- *                         +# weston_pointer_clear_focus() not be called
+ *                         +# Only surface_get_weston_surface() is called
  */
 TEST_F(InputControllerTest, pointer_grab_focus_hasFocusSurfaceNoEnableForce)
 {
@@ -642,8 +674,8 @@ TEST_F(InputControllerTest, pointer_grab_focus_hasFocusSurfaceNoEnableForce)
 
     pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
+    EXPECT_EQ(fff.call_history[0], (void*)surface_get_weston_surface);
+    EXPECT_EQ(fff.call_history[1], nullptr);
 
     free(lp_pointer);
 }
@@ -655,8 +687,7 @@ TEST_F(InputControllerTest, pointer_grab_focus_hasFocusSurfaceNoEnableForce)
  *                      -# Mocking the surface_get_weston_surface() returns an object
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
- *                         +# surface_get_weston_surface() must be called once time
- *                         +# weston_pointer_clear_focus() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
  */
 TEST_F(InputControllerTest, pointer_grab_focus_hasFocusView)
 {
@@ -673,8 +704,10 @@ TEST_F(InputControllerTest, pointer_grab_focus_hasFocusView)
 
     pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 1);
+    EXPECT_EQ(fff.call_history[0], (void*)surface_get_weston_surface);
+    EXPECT_EQ(fff.call_history[1], (void*)weston_surface_get_main_surface);
+    EXPECT_EQ(fff.call_history[2], (void*)weston_pointer_clear_focus);
+    EXPECT_EQ(fff.call_history[3], nullptr);
 
     free(lp_pointer);
 }
@@ -689,9 +722,7 @@ TEST_F(InputControllerTest, pointer_grab_focus_hasFocusView)
  *                      -# Mocking the surface_get_weston_surface() returns nullptr
  *                      -# Calling the pointer_grab_focus()
  *                      -# Verification point:
- *                         +# surface_get_weston_surface() must be called once time
- *                         +# weston_pointer_set_focus() must not be called
- *                         +# weston_pointer_clear_focus() must not be called
+ *                         +# Only surface_get_weston_surface() is called
  */
 TEST_F(InputControllerTest, pointer_grab_focus_noWestonSurface)
 {
@@ -708,9 +739,8 @@ TEST_F(InputControllerTest, pointer_grab_focus_noWestonSurface)
 
     pointer_grab_focus(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
-    EXPECT_EQ(weston_pointer_set_focus_fake.call_count, 0);
-    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], (void*)surface_get_weston_surface);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 
     free(lp_pointer);
 }
@@ -840,13 +870,14 @@ TEST_F(InputControllerTest, pointer_grab_button_invokeFocusCallback)
  * @test_procedure Steps:
  *                      -# Calling the pointer_grab_axis()
  *                      -# Verification point:
- *                         +# weston_pointer_send_axis() must be called once time
+ *                         +# Only weston_pointer_send_axis() is called
  */
 TEST_F(InputControllerTest, pointer_grab_axis)
 {
     pointer_grab_axis(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab, nullptr, nullptr);
 
-    ASSERT_EQ(weston_pointer_send_axis_fake.call_count, 1);
+    ASSERT_EQ(fff.call_history[0], (void*)weston_pointer_send_axis);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -855,13 +886,14 @@ TEST_F(InputControllerTest, pointer_grab_axis)
  * @test_procedure Steps:
  *                      -# Calling the pointer_grab_axis_source()
  *                      -# Verification point:
- *                         +# weston_pointer_send_axis_source() must be called once time
+ *                         +# Only weston_pointer_send_axis_source() is called
  */
 TEST_F(InputControllerTest, pointer_grab_axis_source)
 {
     pointer_grab_axis_source(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab, 0);
 
-    ASSERT_EQ(weston_pointer_send_axis_source_fake.call_count, 1);
+    ASSERT_EQ(fff.call_history[0], (void*)weston_pointer_send_axis_source);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -870,13 +902,14 @@ TEST_F(InputControllerTest, pointer_grab_axis_source)
  * @test_procedure Steps:
  *                      -# Calling the pointer_grab_frame()
  *                      -# Verification point:
- *                         +# weston_pointer_send_frame() must be called once time
+ *                         +# Only weston_pointer_send_frame() is called
  */
 TEST_F(InputControllerTest, pointer_grab_frame)
 {
     pointer_grab_frame(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    ASSERT_EQ(weston_pointer_send_frame_fake.call_count, 1);
+    ASSERT_EQ(fff.call_history[0], (void*)weston_pointer_send_frame);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -886,7 +919,7 @@ TEST_F(InputControllerTest, pointer_grab_frame)
  *                      -# Prepare the pointer object
  *                      -# Calling the pointer_grab_cancel()
  *                      -# Verification point:
- *                         +# weston_pointer_clear_focus() must be called once time
+ *                         +# A sequence with 2 external functions is called
  */
 TEST_F(InputControllerTest, pointer_grab_cancel)
 {
@@ -898,7 +931,9 @@ TEST_F(InputControllerTest, pointer_grab_cancel)
 
     pointer_grab_cancel(&mpp_ctxSeat[DEFAULT_SEAT]->pointer_grab);
 
-    EXPECT_EQ(weston_pointer_clear_focus_fake.call_count, 1);
+    ASSERT_EQ(fff.call_history[0], (void*)weston_surface_get_main_surface);
+    ASSERT_EQ(fff.call_history[1], (void*)weston_pointer_clear_focus);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 
     free(lp_pointer);
 }
@@ -911,7 +946,7 @@ TEST_F(InputControllerTest, pointer_grab_cancel)
  *                      -# Set input ctxSeat with focus is null pointer
  *                      -# Calling the touch_grab_down()
  *                      -# Verification point:
- *                         +# weston_surface_get_main_surface() not be called
+ *                         +# No external function is called
  */
 TEST_F(InputControllerTest, touch_grab_down_noFocusView)
 {
@@ -921,7 +956,7 @@ TEST_F(InputControllerTest, touch_grab_down_noFocusView)
 
     touch_grab_down(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0, 0, 0);
 
-    EXPECT_EQ(weston_surface_get_main_surface_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 
     free(lp_touch);
 }
@@ -1000,6 +1035,7 @@ TEST_F(InputControllerTest, touch_grab_down_noNumTp)
  *                      -# Verification point:
  *                         +# weston_surface_get_main_surface() must be called once time
  *                         +# weston_touch_send_down() must be called once time
+ *                         +# wl_resource_post_event() must be called 2 times
  *                         +# get_id_of_surface() not be called
  */
 TEST_F(InputControllerTest, touch_grab_down_success)
@@ -1018,6 +1054,9 @@ TEST_F(InputControllerTest, touch_grab_down_success)
     EXPECT_EQ(weston_surface_get_main_surface_fake.call_count, 1);
     EXPECT_EQ(weston_touch_send_down_fake.call_count, 1);
     EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[1]);
 
     free(l_surf);
     free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus);
@@ -1031,7 +1070,7 @@ TEST_F(InputControllerTest, touch_grab_down_success)
  *                      -# Set input ctxSeat with focus is null pointer
  *                      -# Calling the touch_grab_up()
  *                      -# Verification point:
- *                         +# weston_touch_send_up() not be called
+ *                         +# No external function is called
  */
 TEST_F(InputControllerTest, touch_grab_up_noFocusView)
 {
@@ -1040,7 +1079,7 @@ TEST_F(InputControllerTest, touch_grab_up_noFocusView)
 
     touch_grab_up(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0);
 
-    EXPECT_EQ(weston_touch_send_up_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 
     free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
@@ -1052,8 +1091,7 @@ TEST_F(InputControllerTest, touch_grab_up_noFocusView)
  *                      -# Set input ctxSeat
  *                      -# Calling the touch_grab_up()
  *                      -# Verification point:
- *                         +# weston_touch_send_up() must be called once time
- *                         +# get_id_of_surface() not be called
+ *                         +# Only weston_touch_send_up() is called
  */
 TEST_F(InputControllerTest, touch_grab_up_hasNumTp)
 {
@@ -1063,8 +1101,8 @@ TEST_F(InputControllerTest, touch_grab_up_hasNumTp)
 
     touch_grab_up(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0);
 
-    EXPECT_EQ(weston_touch_send_up_fake.call_count, 1);
-    EXPECT_EQ(get_id_of_surface_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], (void*)weston_touch_send_up);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 
     free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch);
 }
@@ -1098,6 +1136,8 @@ TEST_F(InputControllerTest, touch_grab_up_noNumTp)
     EXPECT_EQ(weston_touch_send_up_fake.call_count, 1);
     EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[1]);
 
     free(l_surf);
     free(mpp_ctxSeat[DEFAULT_SEAT]->touch_grab.touch->focus);
@@ -1110,12 +1150,14 @@ TEST_F(InputControllerTest, touch_grab_up_noNumTp)
  * @test_procedure Steps:
  *                      -# Calling the touch_grab_motion()
  *                      -# Verification point:
- *                         +# weston_touch_send_motion() must be called once time
+ *                         +# Only weston_touch_send_motion() is called
  */
 TEST_F(InputControllerTest, touch_grab_motion)
 {
     touch_grab_motion(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab, nullptr, 0, 0, 0);
-    ASSERT_EQ(weston_touch_send_motion_fake.call_count, 1);
+
+    ASSERT_EQ(fff.call_history[0], (void*)weston_touch_send_motion);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -1124,12 +1166,14 @@ TEST_F(InputControllerTest, touch_grab_motion)
  * @test_procedure Steps:
  *                      -# Calling the touch_grab_frame()
  *                      -# Verification point:
- *                         +# weston_touch_send_frame() must be called once time
+ *                         +# Only weston_touch_send_frame() is called
  */
 TEST_F(InputControllerTest, touch_grab_frame)
 {
     touch_grab_frame(&mpp_ctxSeat[DEFAULT_SEAT]->touch_grab);
-    ASSERT_EQ(weston_touch_send_frame_fake.call_count, 1);
+
+    ASSERT_EQ(fff.call_history[0], (void*)weston_touch_send_frame);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -1164,8 +1208,7 @@ TEST_F(InputControllerTest, touch_grab_cancel_noSurface)
  *                      -# Mocking the get_surface_from_id() returns wrong surface
  *                      -# Calling the setup_input_focus()
  *                      -# Verification point:
- *                         +# get_surface_from_id() must be called once time
- *                         +# wl_resource_post_event() must not be called
+ *                         +# Only get_surface_from_id() is called
  */
 TEST_F(InputControllerTest, input_set_input_focus_noSurface)
 {
@@ -1173,8 +1216,8 @@ TEST_F(InputControllerTest, input_set_input_focus_noSurface)
 
     setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_ALL, ILM_TRUE);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], (void*)get_surface_from_id);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -1185,8 +1228,7 @@ TEST_F(InputControllerTest, input_set_input_focus_noSurface)
  *                      -# Mocking the get_surface_from_id() returns an object
  *                      -# Calling the setup_input_focus() with input device is 0
  *                      -# Verification point:
- *                         +# get_surface_from_id() must be called once time
- *                         +# wl_resource_post_event() must not be called
+ *                         +# Only get_surface_from_id() is called
  */
 TEST_F(InputControllerTest, input_set_input_focus_wrongDevice)
 {
@@ -1194,8 +1236,8 @@ TEST_F(InputControllerTest, input_set_input_focus_wrongDevice)
 
     setup_input_focus(mp_ctxInput, 10, 0, ILM_TRUE);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], (void*)get_surface_from_id);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -1206,9 +1248,7 @@ TEST_F(InputControllerTest, input_set_input_focus_wrongDevice)
  *                      -# Mocking the weston_seat_get_keyboard() return nullptr
  *                      -# Calling the setup_input_focus() with input device is 1
  *                      -# Verification point:
- *                         +# get_surface_from_id() must be called once time
- *                         +# weston_seat_get_keyboard() must be called once time
- *                         +# wl_resource_post_event() must not be called
+ *                         +# A sequence of 2 external functions is called
  */
 TEST_F(InputControllerTest, input_set_input_focus_noKeyboard)
 {
@@ -1217,9 +1257,9 @@ TEST_F(InputControllerTest, input_set_input_focus_noKeyboard)
 
     setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(weston_seat_get_keyboard_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], (void*)get_surface_from_id);
+    ASSERT_EQ(fff.call_history[1], (void*)weston_seat_get_keyboard);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -1257,6 +1297,9 @@ TEST_F(InputControllerTest, input_set_input_focus_disableKeyboard)
     EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
     EXPECT_EQ(weston_seat_get_keyboard_fake.call_count, 1);
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 3);
+    EXPECT_EQ(WL_KEYBOARD_LEAVE, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[1]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[2]);
     EXPECT_EQ(mpp_seatFocus[DEFAULT_SEAT]->focus & ILM_INPUT_DEVICE_KEYBOARD, 0);
 
     free(lp_westSurf);
@@ -1298,6 +1341,10 @@ TEST_F(InputControllerTest, input_set_input_focus_enableKeyboard)
     EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
     EXPECT_EQ(weston_seat_get_keyboard_fake.call_count, 1);
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 4);
+    EXPECT_EQ(WL_KEYBOARD_MODIFIERS, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(WL_KEYBOARD_ENTER, wl_resource_post_event_fake.arg1_history[1]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[2]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[3]);
     EXPECT_EQ(mpp_seatFocus[DEFAULT_SEAT]->focus & ILM_INPUT_DEVICE_KEYBOARD, 1);
 
     free(lp_westSurf);
@@ -1312,9 +1359,7 @@ TEST_F(InputControllerTest, input_set_input_focus_enableKeyboard)
  *                      -# Mocking the weston_seat_get_pointer() returns nullptr
  *                      -# Calling the setup_input_focus() with input enabled is 1
  *                      -# Verification point:
- *                         +# get_surface_from_id() must be called once time
- *                         +# weston_seat_get_pointer() must be called once time
- *                         +# wl_resource_post_event() must not be called
+ *                         +# A sequence of 2 external functions is called
  */
 TEST_F(InputControllerTest, input_set_input_focus_noPointer)
 {
@@ -1323,9 +1368,9 @@ TEST_F(InputControllerTest, input_set_input_focus_noPointer)
 
     setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_POINTER, ILM_TRUE);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(weston_seat_get_pointer_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], (void*)get_surface_from_id);
+    ASSERT_EQ(fff.call_history[1], (void*)weston_seat_get_pointer);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -1396,8 +1441,8 @@ TEST_F(InputControllerTest, input_set_input_focus_enablePointer)
  *                      -# Mocking the get_surface_from_id() does return an object
  *                      -# Calling the setup_input_focus() with input is enable
  *                      -# Verification point:
- *                         +# get_surface_from_id() must be called once time
  *                         +# wl_resource_post_event() must be called 2 times
+ *                           and second input arg is IVI_INPUT_INPUT_FOCUS
  */
 TEST_F(InputControllerTest, input_set_input_focus_enableTouch)
 {
@@ -1405,8 +1450,9 @@ TEST_F(InputControllerTest, input_set_input_focus_enableTouch)
 
     setup_input_focus(mp_ctxInput, 10, ILM_INPUT_DEVICE_TOUCH, ILM_TRUE);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
     ASSERT_EQ(wl_resource_post_event_fake.call_count, 2);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[1]);
 }
 
 /** ================================================================================================
@@ -1416,12 +1462,13 @@ TEST_F(InputControllerTest, input_set_input_focus_enableTouch)
  * @test_procedure Steps:
  *                      -# Calling the setup_input_acceptance() with non-exist seat name
  *                      -# Verification point:
- *                         +# get_surface_from_id() not be called
+ *                         +# only weston_log is called
  */
 TEST_F(InputControllerTest, input_set_input_acceptance_wrongSeatName)
 {
     setup_input_acceptance(mp_ctxInput, 10, "error", ILM_TRUE);
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], (void*)weston_log);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -1432,8 +1479,7 @@ TEST_F(InputControllerTest, input_set_input_acceptance_wrongSeatName)
  *                      -# Mocking the get_surface_from_id() return wrong surface
  *                      -# Calling the setup_input_acceptance() with valid seat name
  *                      -# Verification point:
- *                         +# get_surface_from_id() must be called once time
- *                         +# wl_resource_post_event() not be called
+ *                         +# Only get_surface_from_id is called
  */
 TEST_F(InputControllerTest, input_set_input_acceptance_nullSurface)
 {
@@ -1441,8 +1487,8 @@ TEST_F(InputControllerTest, input_set_input_acceptance_nullSurface)
 
     setup_input_acceptance(mp_ctxInput, 10, mp_seatName[DEFAULT_SEAT], ILM_TRUE);
 
-    ASSERT_EQ(get_surface_from_id_fake.call_count, 1);
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], (void*)get_surface_from_id);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -1458,6 +1504,7 @@ TEST_F(InputControllerTest, input_set_input_acceptance_nullSurface)
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
  *                         +# wl_resource_post_event() must be called 4 times
+ *                          and second input args are IVI_INPUT_INPUT_FOCUS and IVI_INPUT_INPUT_ACCEPTANCE
  *                         +# surface_get_weston_surface() must be called once time
  */
 TEST_F(InputControllerTest, input_set_input_acceptance_removeAcceptance)
@@ -1483,6 +1530,10 @@ TEST_F(InputControllerTest, input_set_input_acceptance_removeAcceptance)
     EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 4);
     EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_INPUT_FOCUS, wl_resource_post_event_fake.arg1_history[1]);
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[2]);
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[3]);
 
     free(lp_westSurf);
     free(lp_keyboard);
@@ -1499,6 +1550,7 @@ TEST_F(InputControllerTest, input_set_input_acceptance_removeAcceptance)
  *                      -# Verification point:
  *                         +# get_surface_from_id() must be called once time
  *                         +# wl_resource_post_event() must be called 2 times
+ *                           and second input arg is IVI_INPUT_INPUT_ACCEPTANCE
  */
 TEST_F(InputControllerTest, input_set_input_acceptance_doAcceptance)
 {
@@ -1512,10 +1564,12 @@ TEST_F(InputControllerTest, input_set_input_acceptance_doAcceptance)
 
     EXPECT_EQ(get_surface_from_id_fake.call_count, 1);
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
-    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
-
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[1]);
     struct seat_focus *lp_seatFocus = (struct seat_focus*)
             ((uintptr_t)wl_list_insert_fake.arg1_history[DEFAULT_SEAT] - offsetof(struct seat_focus, link));
+    EXPECT_EQ(lp_seatFocus->seat_ctx, mpp_ctxSeat[CUSTOM_SEAT]);
+
     free(lp_seatFocus);
 }
 
@@ -1525,12 +1579,12 @@ TEST_F(InputControllerTest, input_set_input_acceptance_doAcceptance)
  * @test_procedure Steps:
  *                      -# Calling the handle_surface_destroy()
  *                      -# Verification point:
- *                         +# wl_list_remove() not be called
+ *                         +# No external function is called
  */
 TEST_F(InputControllerTest, handle_surface_destroy_wrongSurface)
 {
     handle_surface_destroy(&mp_ctxInput->surface_destroyed, nullptr);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1539,13 +1593,14 @@ TEST_F(InputControllerTest, handle_surface_destroy_wrongSurface)
  * @test_procedure Steps:
  *                      -# Calling the handle_surface_destroy()
  *                      -# Verification point:
- *                         +# wl_list_remove() must be called once time
+ *                         +# Only wl_list_remove() is called
  */
 TEST_F(InputControllerTest, handle_surface_destroy_success)
 {
     handle_surface_destroy(&mp_ctxInput->surface_destroyed, &mpp_iviSurface[DEFAULT_SEAT]);
 
-    EXPECT_EQ(wl_list_remove_fake.call_count, 1);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_list_remove);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 
     mpp_seatFocus[DEFAULT_SEAT] = nullptr;
 }
@@ -1557,8 +1612,7 @@ TEST_F(InputControllerTest, handle_surface_destroy_success)
  *                      -# Setup default seat is no_seat
  *                      -# Calling the handle_surface_create()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() not be called
- *                         +# wl_list_init() must be called once time
+ *                         +# Only wl_list_init() is called
  */
 TEST_F(InputControllerTest, handle_surface_create_noDefaultSeat)
 {
@@ -1567,8 +1621,8 @@ TEST_F(InputControllerTest, handle_surface_create_noDefaultSeat)
 
     handle_surface_create(&mp_ctxInput->surface_created, &l_iviSurface);
 
-    ASSERT_EQ(wl_resource_post_event_fake.call_count, 0);
-    ASSERT_EQ(wl_list_init_fake.call_count, 1);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_list_init);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -1578,8 +1632,9 @@ TEST_F(InputControllerTest, handle_surface_create_noDefaultSeat)
  *                      -# Setup default seat
  *                      -# Calling the handle_surface_create()
  *                      -# Verification point:
- *                         +# wl_resource_post_event() must be called 2 times
- *                         +# wl_list_insert() must be called 1 time
+ *                         +# wl_resource_post_event() must be called 2 times and
+ *                           second input arg is IVI_INPUT_INPUT_ACCEPTANCE
+ *                         +# Created pointer has same content with preparation
  */
 TEST_F(InputControllerTest, handle_surface_create_hasDefaultSeat)
 {
@@ -1591,10 +1646,12 @@ TEST_F(InputControllerTest, handle_surface_create_hasDefaultSeat)
     handle_surface_create(&mp_ctxInput->surface_created, &l_iviSurface);
 
     EXPECT_EQ(wl_resource_post_event_fake.call_count, 2);
-    EXPECT_EQ(wl_list_insert_fake.call_count, 1);
-
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[0]);
+    EXPECT_EQ(IVI_INPUT_INPUT_ACCEPTANCE, wl_resource_post_event_fake.arg1_history[1]);
     struct seat_focus *lp_seatFocus = (struct seat_focus*)
             ((uintptr_t)wl_list_insert_fake.arg1_history[DEFAULT_SEAT] - offsetof(struct seat_focus, link));
+    EXPECT_EQ(lp_seatFocus->seat_ctx, mpp_ctxSeat[DEFAULT_SEAT]);
+
     free(lp_seatFocus);
 
 }
@@ -1605,13 +1662,15 @@ TEST_F(InputControllerTest, handle_surface_create_hasDefaultSeat)
  * @test_procedure Steps:
  *                      -# Calling the unbind_resource_controller()
  *                      -# Verification point:
- *                         +# wl_list_remove() must be called once time
+ *                         +# A sequence of external functions is called
  */
 TEST_F(InputControllerTest, unbind_resource_controller)
 {
     unbind_resource_controller(&(mp_wlResource[DEFAULT_SEAT]));
 
-    ASSERT_EQ(wl_list_remove_fake.call_count, 1);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_resource_get_link);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_list_remove);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -1619,12 +1678,12 @@ TEST_F(InputControllerTest, unbind_resource_controller)
  * @brief               Test case of input_controller_destroy() where wrong input
  * @test_procedure Steps:
  *                      -# Calling the input_controller_destroy()
- *                      -# wl_list_remove should not be called
+ *                      -# No external function is called
  */
 TEST_F(InputControllerTest, input_controller_destroy_wrongInput)
 {
     input_controller_destroy(nullptr, nullptr);
-    ASSERT_EQ(wl_list_remove_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1632,7 +1691,7 @@ TEST_F(InputControllerTest, input_controller_destroy_wrongInput)
  * @brief               Test case of input_controller_destroy() for destroying real object
  * @test_procedure Steps:
  *                      -# Calling the input_controller_destroy()
- *                      -# wl_list_remove should be called 6 times
+ *                      -# wl_list_remove should be called 12 times
  */
 TEST_F(InputControllerTest, input_controller_destroy)
 {
