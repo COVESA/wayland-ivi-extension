@@ -50,15 +50,14 @@ public:
 
     void mock_ilmInitSuccess()
     {
-        mpp_wlDisplays[0] = (struct wl_display*)&m_wlDisplayFakePointer;
-        SET_RETURN_SEQ(wl_display_connect, mpp_wlDisplays, MAX_NUMBER);
+        SET_RETURN_SEQ(wl_display_connect, (struct wl_display**)&mp_fakePointer, MAX_NUMBER);
 
         mp_ilmErrorType[0] = ILM_SUCCESS;
         SET_RETURN_SEQ(ilmControl_init, mp_ilmErrorType, MAX_NUMBER);
     }
 
     static constexpr uint8_t MAX_NUMBER = 1;
-    uint8_t m_wlDisplayFakePointer = 0;
+    void *mp_fakePointer = (void*)0xFFFFFFFF;
     struct wl_display* mpp_wlDisplays [MAX_NUMBER] = {nullptr};
     ilmErrorTypes mp_ilmErrorType[MAX_NUMBER] = {ILM_FAILED};
 };
@@ -71,7 +70,7 @@ public:
  *                      -# Calling the ilm_init()
  *                      -# Verification point:
  *                         +# ilm_init() must return ILM_FAILED
- *                         +# wl_display_connect() must be called once time and return nullptr
+ *                         +# Only wl_display_connect is called
  */
 TEST_F(IlmCommonTest, ilm_init_cannotGetDisplay)
 {
@@ -80,8 +79,8 @@ TEST_F(IlmCommonTest, ilm_init_cannotGetDisplay)
 
     ASSERT_EQ(ILM_FAILED, ilm_init());
 
-    ASSERT_EQ(wl_display_connect_fake.call_count, 1);
-    ASSERT_EQ(wl_display_connect_fake.return_val_history[0], nullptr);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_connect);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -93,19 +92,23 @@ TEST_F(IlmCommonTest, ilm_init_cannotGetDisplay)
  *                      -# Calling the ilm_init()
  *                      -# Verification point:
  *                         +# ilm_init() must return ILM_FAILED
- *                         +# ilmControl_init() must be called once time and return ILM_FAILED
+ *                         +# A sequence with 4 extenal functions is called
+ *                         +# Input of ilmControl_init should is same with preparation
  */
 TEST_F(IlmCommonTest, ilm_init_getFailedOnilmControl_init)
 {
-    mpp_wlDisplays[0] = (struct wl_display*)&m_wlDisplayFakePointer;
-    SET_RETURN_SEQ(wl_display_connect, mpp_wlDisplays, MAX_NUMBER);
+    SET_RETURN_SEQ(wl_display_connect, (struct wl_display**)&mp_fakePointer, MAX_NUMBER);
     mp_ilmErrorType[0] = ILM_FAILED;
     SET_RETURN_SEQ(ilmControl_init, mp_ilmErrorType, MAX_NUMBER);
 
     ASSERT_EQ(ILM_FAILED, ilm_init());
 
-    ASSERT_EQ(ilmControl_init_fake.call_count, 1);
-    ASSERT_EQ(mp_ilmErrorType[0], ilmControl_init_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_connect);
+    ASSERT_EQ(fff.call_history[1], (void*)ilmControl_init);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip);
+    ASSERT_EQ(fff.call_history[3], (void*)wl_display_disconnect);
+    ASSERT_EQ(fff.call_history[4], nullptr);
+    ASSERT_EQ(mp_fakePointer, ilmControl_init_fake.arg0_history[0]);
 }
 
 /** ================================================================================================
@@ -118,8 +121,8 @@ TEST_F(IlmCommonTest, ilm_init_getFailedOnilmControl_init)
  *                      -# Calling the ilm_init()
  *                      -# Verification point:
  *                         +# ilm_init() must return ILM_SUCCESS
- *                         +# wl_display_connect() must be called once time
- *                         +# ilmControl_init() must be called once time and retrun ILM_SUCCESS
+ *                         +# A sequence with 2 extenal functions is called
+ *                         +# Input of ilmControl_init should is same with preparation
  */
 TEST_F(IlmCommonTest, ilm_init_getSuccess)
 {
@@ -127,9 +130,10 @@ TEST_F(IlmCommonTest, ilm_init_getSuccess)
 
     ASSERT_EQ(ILM_SUCCESS, ilm_init());
 
-    ASSERT_EQ(wl_display_connect_fake.call_count, 1);
-    ASSERT_EQ(ilmControl_init_fake.call_count, 1);
-    ASSERT_EQ(ILM_SUCCESS, ilmControl_init_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_connect);
+    ASSERT_EQ(fff.call_history[1], (void*)ilmControl_init);
+    ASSERT_EQ(fff.call_history[2], nullptr);
+    ASSERT_EQ(mp_fakePointer, ilmControl_init_fake.arg0_history[0]);
 }
 
 /** ================================================================================================
@@ -166,18 +170,18 @@ TEST_F(IlmCommonTest, ilm_init_manyTimes)
  *                      -# Calling the ilm_initWithNativedisplay() with input nativedisplay is 1 (exist)
  *                      -# Verification point:
  *                         +# ilm_initWithNativedisplay() must return ILM_SUCCESS
- *                         +# wl_display_connect() not be called because exist a display
- *                         +# ilmControl_init() must be called once time and retrun ILM_SUCCESS
+ *                         +# Only ilmControl_init is called
+ *                         +# Input of ilmControl_init should is same with preparation
  */
 TEST_F(IlmCommonTest, ilm_initWithNativedisplay_existDisplay)
 {
     mock_ilmInitSuccess();
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay(1));
+    ASSERT_EQ(ILM_SUCCESS, ilm_initWithNativedisplay(0xFEFEFEFE));
 
-    ASSERT_EQ(wl_display_connect_fake.call_count, 0);
-    ASSERT_EQ(ilmControl_init_fake.call_count, 1);
-    ASSERT_EQ(ILM_SUCCESS, ilmControl_init_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)ilmControl_init);
+    ASSERT_EQ(fff.call_history[1], nullptr);
+    ASSERT_EQ((void*)0xFEFEFEFE, ilmControl_init_fake.arg0_history[0]);
 }
 
 /** ================================================================================================
@@ -222,7 +226,7 @@ TEST_F(IlmCommonTest, ilm_isInitialized_getTrue)
  *                      -# Calling the ilm_registerShutdownNotification()
  *                      -# Verification point:
  *                         +# ilm_registerShutdownNotification() must return ILM_FAILED
- *                         +# ilmControl_registerShutdownNotification() must be called once time and retrun ILM_FAILED
+ *                         +# Only ilmControl_registerShutdownNotification() is called
  */
 TEST_F(IlmCommonTest, ilm_registerShutdownNotification_getFailure)
 {
@@ -231,8 +235,8 @@ TEST_F(IlmCommonTest, ilm_registerShutdownNotification_getFailure)
 
     ASSERT_EQ(ILM_FAILED, ilm_registerShutdownNotification(nullptr, nullptr));
 
-    ASSERT_EQ(1, ilmControl_registerShutdownNotification_fake.call_count);
-    ASSERT_EQ(mp_ilmErrorType[0], ilmControl_registerShutdownNotification_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)ilmControl_registerShutdownNotification);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -244,7 +248,7 @@ TEST_F(IlmCommonTest, ilm_registerShutdownNotification_getFailure)
  *                      -# Calling the ilm_registerShutdownNotification()
  *                      -# Verification point:
  *                         +# ilm_registerShutdownNotification() must return ILM_SUCCESS
- *                         +# ilmControl_registerShutdownNotification() must be called once time and retrun ILM_SUCCESS
+ *                         +# Only ilmControl_registerShutdownNotification() is called
  */
 TEST_F(IlmCommonTest, ilm_registerShutdownNotification_getSuccess)
 {
@@ -253,6 +257,6 @@ TEST_F(IlmCommonTest, ilm_registerShutdownNotification_getSuccess)
 
     ASSERT_EQ(ILM_SUCCESS, ilm_registerShutdownNotification(nullptr, nullptr));
 
-    ASSERT_EQ(1, ilmControl_registerShutdownNotification_fake.call_count);
-    ASSERT_EQ(mp_ilmErrorType[0], ilmControl_registerShutdownNotification_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)ilmControl_registerShutdownNotification);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }

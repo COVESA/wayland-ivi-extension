@@ -133,13 +133,13 @@ public:
         custom_wl_list_init(&ilm_context.wl.list_layer);
 
         for(uint8_t i = 0; i < MAX_NUMBER; i++) {
-            // prepare the seats
+            /*prepare the list_seat*/
             mp_ctxSeat[i] = (struct seat_context*)calloc(1, sizeof(struct seat_context));
             mp_ctxSeat[i]->seat_name = strdup(mp_ilmSeatNames[i]);
             mp_ctxSeat[i]->capabilities = ILM_INPUT_DEVICE_ALL;
             custom_wl_list_insert(&ilm_context.wl.list_seat, &mp_ctxSeat[i]->link);
 
-            // prepare the surfaces
+            /*prepare the list_surface, all surface accept to "default" seat */
             mp_ctxSurface[i] = (struct surface_context*)calloc(1, sizeof(struct surface_context));
             mp_ctxSurface[i]->id_surface = mp_ilmSurfaceIds[i];
             mp_ctxSurface[i]->ctx = &ilm_context.wl;
@@ -151,7 +151,7 @@ public:
             custom_wl_list_insert(&mp_ctxSurface[i]->list_accepted_seats, &mp_accepted_seat[i]->link);
             custom_wl_list_insert(&ilm_context.wl.list_surface, &mp_ctxSurface[i]->link);
 
-            //prepare the layers
+            /*prepare the list_layer, they don't contain any surface */
             mp_ctxLayer[i] = (struct layer_context*)calloc(1, sizeof(struct layer_context));
             mp_ctxLayer[i]->id_layer = mp_ilmLayerIds[i];
             mp_ctxLayer[i]->ctx = &ilm_context.wl;
@@ -160,7 +160,7 @@ public:
             custom_wl_list_insert(&ilm_context.wl.list_layer, &mp_ctxLayer[i]->link);
             custom_wl_array_init(&mp_ctxLayer[i]->render_order);
 
-            // prepare the screens
+            /*prepare the list_screen, they don't contain any layer */
             mp_ctxScreen[i] = (struct screen_context*)calloc(1, sizeof(struct screen_context));
             mp_ctxScreen[i]->id_screen = mp_ilmScreenIds[i];
             mp_ctxScreen[i]->name = i;
@@ -219,8 +219,10 @@ public:
     t_ilm_surface mp_ilmSurfaceIds[MAX_NUMBER] = {1, 2, 3, 4, 5};
     t_ilm_surface mp_ilmScreenIds[MAX_NUMBER] = {10, 20, 30, 40, 50};
     t_ilm_surface mp_ilmLayerIds[MAX_NUMBER] = {100, 200, 300, 400, 500};
+
     char *mp_ilmSeatNames[MAX_NUMBER] = {(char*)"default", (char*)"seat1",
             (char*)"seat2", (char*)"seat3", (char*)"seat4"};
+
     struct ilmSurfaceProperties mp_surfaceProps[MAX_NUMBER] = {
         {0.6, 0, 0, 500, 500, 500, 500, 0, 0, 500, 500, ILM_TRUE, 10, 100, ILM_INPUT_DEVICE_ALL},
         {0.7, 10, 50, 600, 400, 600, 400, 50, 40, 200, 1000, ILM_FALSE, 30, 300, ILM_INPUT_DEVICE_POINTER|ILM_INPUT_DEVICE_KEYBOARD},
@@ -228,6 +230,7 @@ public:
         {0.9, 30, 70, 800, 200, 800, 200, 70, 20, 400, 800, ILM_TRUE, 90, 4561, ILM_INPUT_DEVICE_KEYBOARD|ILM_INPUT_DEVICE_TOUCH},
         {1.0, 40, 80, 900, 100, 900, 100, 80, 10, 600, 700, ILM_TRUE, 100, 5646, ILM_INPUT_DEVICE_TOUCH},
     };
+
     struct ilmLayerProperties mp_layerProps[MAX_NUMBER] = {
         {0.1, 0, 0, 1280, 720, 0, 0, 1920, 1080, ILM_TRUE},
         {0.2, 10, 80, 1380, 520, 80, 10, 2920, 9080, ILM_FALSE},
@@ -254,6 +257,7 @@ public:
     int mp_successResult[1] = {0};
     int mp_failureResult[1] = {-1};
     ilmErrorTypes mp_ilmErrorType[1];
+    void *mp_fakePointer = (void*)0xFFFFFFFF;
 
     static ilmErrorTypes ScreenshotDoneCallbackFunc(void *user_data, t_ilm_int fd, t_ilm_uint width, t_ilm_uint height, t_ilm_uint stride, t_ilm_uint format, t_ilm_uint timestamp)
     {
@@ -277,15 +281,13 @@ public:
  *                      -# Calling the ilm_getPropertiesOfSurface() with input pSurfaceProperties is null object
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfSurface() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_invalidInput)
 {
     ASSERT_EQ(ILM_FAILED, ilm_getPropertiesOfSurface(MAX_NUMBER + 1, nullptr));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -296,19 +298,21 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_invalidInput)
  *                      -# Calling the ilm_getPropertiesOfSurface()
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfSurface() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 3 external functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SURFACE_GET
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_cannotGetRoundTripQueue)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
 
-    struct ilmSurfaceProperties *l_surfaceProp = (struct ilmSurfaceProperties *)0xFFFFFFFF;
+    struct ilmSurfaceProperties *l_surfaceProp = (struct ilmSurfaceProperties *)mp_fakePointer;
     ASSERT_EQ(ILM_FAILED, ilm_getPropertiesOfSurface(1, l_surfaceProp));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SURFACE_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -320,19 +324,21 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_cannotGetRoundTripQueue)
  *                      -# Calling the ilm_getPropertiesOfSurface()
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfSurface() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time and return 0
+ *                         +# A sequence with 3 external functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SURFACE_GET
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_cannotGetSurface)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
-    struct ilmSurfaceProperties *l_surfaceProp = (struct ilmSurfaceProperties *)0xFFFFFFFF;
+    struct ilmSurfaceProperties *l_surfaceProp = (struct ilmSurfaceProperties *)mp_fakePointer;
     ASSERT_EQ(ILM_FAILED, ilm_getPropertiesOfSurface(MAX_NUMBER + 1, l_surfaceProp));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_successResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SURFACE_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -345,7 +351,6 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_cannotGetSurface)
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfSurface() must return ILM_SUCCESS
  *                         +# Surface properties output should same with prepare data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_success)
 {
@@ -354,21 +359,21 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_success)
     struct ilmSurfaceProperties *l_surfaceProp = (struct ilmSurfaceProperties *)calloc(1, sizeof(struct ilmSurfaceProperties));
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfSurface(1, l_surfaceProp));
 
-    ASSERT_EQ(l_surfaceProp->opacity, mp_surfaceProps[0].opacity);
-    ASSERT_EQ(l_surfaceProp->sourceX, mp_surfaceProps[0].sourceX);
-    ASSERT_EQ(l_surfaceProp->sourceY, mp_surfaceProps[0].sourceY);
-    ASSERT_EQ(l_surfaceProp->sourceWidth, mp_surfaceProps[0].sourceWidth);
-    ASSERT_EQ(l_surfaceProp->sourceHeight, mp_surfaceProps[0].sourceHeight);
-    ASSERT_EQ(l_surfaceProp->origSourceWidth, mp_surfaceProps[0].origSourceWidth);
-    ASSERT_EQ(l_surfaceProp->origSourceHeight, mp_surfaceProps[0].origSourceHeight);
-    ASSERT_EQ(l_surfaceProp->destX, mp_surfaceProps[0].destX);
-    ASSERT_EQ(l_surfaceProp->destY, mp_surfaceProps[0].destY);
-    ASSERT_EQ(l_surfaceProp->destWidth, mp_surfaceProps[0].destWidth);
-    ASSERT_EQ(l_surfaceProp->destHeight, mp_surfaceProps[0].destHeight);
-    ASSERT_EQ(l_surfaceProp->visibility, mp_surfaceProps[0].visibility);
-    ASSERT_EQ(l_surfaceProp->frameCounter, mp_surfaceProps[0].frameCounter);
-    ASSERT_EQ(l_surfaceProp->creatorPid, mp_surfaceProps[0].creatorPid);
-    ASSERT_EQ(l_surfaceProp->focus, mp_surfaceProps[0].focus);
+    EXPECT_EQ(l_surfaceProp->opacity, mp_surfaceProps[0].opacity);
+    EXPECT_EQ(l_surfaceProp->sourceX, mp_surfaceProps[0].sourceX);
+    EXPECT_EQ(l_surfaceProp->sourceY, mp_surfaceProps[0].sourceY);
+    EXPECT_EQ(l_surfaceProp->sourceWidth, mp_surfaceProps[0].sourceWidth);
+    EXPECT_EQ(l_surfaceProp->sourceHeight, mp_surfaceProps[0].sourceHeight);
+    EXPECT_EQ(l_surfaceProp->origSourceWidth, mp_surfaceProps[0].origSourceWidth);
+    EXPECT_EQ(l_surfaceProp->origSourceHeight, mp_surfaceProps[0].origSourceHeight);
+    EXPECT_EQ(l_surfaceProp->destX, mp_surfaceProps[0].destX);
+    EXPECT_EQ(l_surfaceProp->destY, mp_surfaceProps[0].destY);
+    EXPECT_EQ(l_surfaceProp->destWidth, mp_surfaceProps[0].destWidth);
+    EXPECT_EQ(l_surfaceProp->destHeight, mp_surfaceProps[0].destHeight);
+    EXPECT_EQ(l_surfaceProp->visibility, mp_surfaceProps[0].visibility);
+    EXPECT_EQ(l_surfaceProp->frameCounter, mp_surfaceProps[0].frameCounter);
+    EXPECT_EQ(l_surfaceProp->creatorPid, mp_surfaceProps[0].creatorPid);
+    EXPECT_EQ(l_surfaceProp->focus, mp_surfaceProps[0].focus);
 
     free(l_surfaceProp);
 }
@@ -381,14 +386,13 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfSurface_success)
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfLayer() must return ILM_FAILED
  *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_invalidInput)
 {
     ASSERT_EQ(ILM_FAILED, ilm_getPropertiesOfLayer((MAX_NUMBER + 1) *100, nullptr));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -399,19 +403,21 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_invalidInput)
  *                      -# Calling the ilm_getPropertiesOfLayer()
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfLayer() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_GET
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_cannotGetRoundTripQueue)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
 
-    struct ilmLayerProperties *l_layerProp = (struct ilmLayerProperties *)0xFFFFFFFF;
+    struct ilmLayerProperties *l_layerProp = (struct ilmLayerProperties *)mp_fakePointer;
     ASSERT_EQ(ILM_FAILED, ilm_getPropertiesOfLayer(100, l_layerProp));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -423,19 +429,21 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_cannotGetRoundTripQueue)
  *                      -# Calling the ilm_getPropertiesOfLayer()
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfLayer() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time and return 0
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_GET
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_cannotGetLayer)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
-    struct ilmLayerProperties *l_layerProp = (struct ilmLayerProperties *)0xFFFFFFFF;
+    struct ilmLayerProperties *l_layerProp = (struct ilmLayerProperties *)mp_fakePointer;
     ASSERT_EQ(ILM_FAILED, ilm_getPropertiesOfLayer((MAX_NUMBER + 1) *100, l_layerProp));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_successResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -448,7 +456,6 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_cannotGetLayer)
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfLayer() must return ILM_SUCCESS
  *                         +# Surface properties output should same with prepare data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_success)
 {
@@ -457,16 +464,16 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_success)
     struct ilmLayerProperties *l_layerProp = (struct ilmLayerProperties *)calloc(1, sizeof(struct ilmLayerProperties));
     ASSERT_EQ(ILM_SUCCESS, ilm_getPropertiesOfLayer(100, l_layerProp));
 
-    ASSERT_EQ(l_layerProp->opacity, mp_layerProps[0].opacity);
-    ASSERT_EQ(l_layerProp->sourceX, mp_layerProps[0].sourceX);
-    ASSERT_EQ(l_layerProp->sourceY, mp_layerProps[0].sourceY);
-    ASSERT_EQ(l_layerProp->sourceWidth, mp_layerProps[0].sourceWidth);
-    ASSERT_EQ(l_layerProp->sourceHeight, mp_layerProps[0].sourceHeight);
-    ASSERT_EQ(l_layerProp->destX, mp_layerProps[0].destX);
-    ASSERT_EQ(l_layerProp->destY, mp_layerProps[0].destY);
-    ASSERT_EQ(l_layerProp->destWidth, mp_layerProps[0].destWidth);
-    ASSERT_EQ(l_layerProp->destHeight, mp_layerProps[0].destHeight);
-    ASSERT_EQ(l_layerProp->visibility, mp_layerProps[0].visibility);
+    EXPECT_EQ(l_layerProp->opacity, mp_layerProps[0].opacity);
+    EXPECT_EQ(l_layerProp->sourceX, mp_layerProps[0].sourceX);
+    EXPECT_EQ(l_layerProp->sourceY, mp_layerProps[0].sourceY);
+    EXPECT_EQ(l_layerProp->sourceWidth, mp_layerProps[0].sourceWidth);
+    EXPECT_EQ(l_layerProp->sourceHeight, mp_layerProps[0].sourceHeight);
+    EXPECT_EQ(l_layerProp->destX, mp_layerProps[0].destX);
+    EXPECT_EQ(l_layerProp->destY, mp_layerProps[0].destY);
+    EXPECT_EQ(l_layerProp->destWidth, mp_layerProps[0].destWidth);
+    EXPECT_EQ(l_layerProp->destHeight, mp_layerProps[0].destHeight);
+    EXPECT_EQ(l_layerProp->visibility, mp_layerProps[0].visibility);
 
     free(l_layerProp);
 }
@@ -480,17 +487,15 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfLayer_success)
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfScreen() time 1 must return ILM_ERROR_INVALID_ARGUMENTS
  *                         +# ilm_getPropertiesOfScreen() time 2 must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfScreen_invalidInput)
 {
-    struct ilmScreenProperties *l_ScreenProp = (struct ilmScreenProperties *)0xFFFFFFFF;
+    struct ilmScreenProperties *l_ScreenProp = (struct ilmScreenProperties *)mp_fakePointer;
     ASSERT_EQ(ILM_ERROR_INVALID_ARGUMENTS, ilm_getPropertiesOfScreen(MAX_NUMBER, nullptr));
     ASSERT_EQ(ILM_FAILED, ilm_getPropertiesOfScreen((MAX_NUMBER + 1) *10, l_ScreenProp));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -501,19 +506,21 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfScreen_invalidInput)
  *                      -# Calling the ilm_getPropertiesOfScreen()
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfScreen() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SCREEN_GET
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfScreen_cannotGetRoundTripQueue)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
 
-    struct ilmScreenProperties *l_ScreenProp = (struct ilmScreenProperties *)0xFFFFFFFF;
+    struct ilmScreenProperties *l_ScreenProp = (struct ilmScreenProperties *)mp_fakePointer;
     ASSERT_EQ(ILM_FAILED, ilm_getPropertiesOfScreen(10, l_ScreenProp));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SCREEN_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -526,7 +533,6 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfScreen_cannotGetRoundTripQueue)
  *                      -# Verification point:
  *                         +# ilm_getPropertiesOfScreen() must return ILM_SUCCESS
  *                         +# Properties screen output should same with preapre data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, ilm_getPropertiesOfScreen_success)
 {
@@ -564,7 +570,7 @@ TEST_F(IlmControlTest, ilm_getPropertiesOfScreen_success)
  *                      -# Calling the ilm_getScreenIDs() time 2
  *                      -# Verification point:
  *                         +# Both of ilm_getScreenIDs() time 1 and time 2 must return ILM_FAILED
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_getScreenIDs_cannotSyncAcquireInstance)
 {
@@ -579,8 +585,9 @@ TEST_F(IlmControlTest, ilm_getScreenIDs_cannotSyncAcquireInstance)
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
     ASSERT_EQ(ILM_FAILED, ilm_getScreenIDs(&l_numberIds, &lp_listIds));
 
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -593,6 +600,7 @@ TEST_F(IlmControlTest, ilm_getScreenIDs_cannotSyncAcquireInstance)
  *                      -# Calling the ilm_getScreenIDs() time 2 with ppIDs is null pointer
  *                      -# Verification point:
  *                         +# Both of ilm_getScreenIDs() time 1 and time 2 must return ILM_FAILED
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_getScreenIDs_invaildInput)
 {
@@ -603,6 +611,10 @@ TEST_F(IlmControlTest, ilm_getScreenIDs_invaildInput)
     t_ilm_uint *lp_listIds = nullptr;
     ASSERT_EQ(ILM_FAILED, ilm_getScreenIDs(nullptr, &lp_listIds));
     ASSERT_EQ(ILM_FAILED, ilm_getScreenIDs(&l_numberIds, nullptr));
+
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -616,7 +628,6 @@ TEST_F(IlmControlTest, ilm_getScreenIDs_invaildInput)
  *                      -# Verification point:
  *                         +# ilm_getScreenIDs() must return ILM_SUCCESS
  *                         +# The result output should same with the prepare input
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, ilm_getScreenIDs_success)
 {
@@ -648,7 +659,7 @@ TEST_F(IlmControlTest, ilm_getScreenIDs_success)
  *                      -# Calling the ilm_getScreenResolution() time 2
  *                      -# Verification point:
  *                         +# Both of ilm_getScreenResolution() time 1 and time 2 must return ILM_FAILED
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_getScreenResolution_cannotSyncAcquireInstance)
 {
@@ -661,8 +672,9 @@ TEST_F(IlmControlTest, ilm_getScreenResolution_cannotSyncAcquireInstance)
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
     ASSERT_EQ(ILM_FAILED, ilm_getScreenResolution(10, &l_screenWidth, &l_screenHeight));
 
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -724,7 +736,7 @@ TEST_F(IlmControlTest, ilm_getScreenResolution_success)
  *                      -# Calling the ilm_getLayerIDs() time 2
  *                      -# Verification point:
  *                         +# Both of ilm_getLayerIDs() time 1 and time 2 must return ILM_FAILED
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_getLayerIDs_cannotSyncAcquireInstance)
 {
@@ -739,8 +751,9 @@ TEST_F(IlmControlTest, ilm_getLayerIDs_cannotSyncAcquireInstance)
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
     ASSERT_EQ(ILM_FAILED, ilm_getLayerIDs(&l_numberLayers, &lp_listLayers));
 
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -823,8 +836,8 @@ TEST_F(IlmControlTest, ilm_getLayerIDsOnScreen_invalidInput)
  *                      -# Calling the ilm_getLayerIDsOnScreen()
  *                      -# Verification point:
  *                         +# ilm_getLayerIDsOnScreen() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SCREEN_GET
  */
 TEST_F(IlmControlTest, ilm_getLayerIDsOnScreen_cannotGetRoundTripQueue)
 {
@@ -834,9 +847,11 @@ TEST_F(IlmControlTest, ilm_getLayerIDsOnScreen_cannotGetRoundTripQueue)
     t_ilm_layer *lp_listLayers = nullptr;
     ASSERT_EQ(ILM_FAILED, ilm_getLayerIDsOnScreen(10, &l_numberLayers, &lp_listLayers));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SCREEN_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -849,7 +864,6 @@ TEST_F(IlmControlTest, ilm_getLayerIDsOnScreen_cannotGetRoundTripQueue)
  *                      -# Verification point:
  *                         +# ilm_getLayerIDsOnScreen() must return ILM_SUCCESS
  *                         +# The result output should same with prepare data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, ilm_getLayerIDsOnScreen_success)
 {
@@ -884,7 +898,7 @@ TEST_F(IlmControlTest, ilm_getLayerIDsOnScreen_success)
  *                      -# Calling the ilm_getSurfaceIDs() time 2
  *                      -# Verification point:
  *                         +# Both of ilm_getSurfaceIDs() time 1 and time 2 must return ILM_FAILED
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_getSurfaceIDs_cannotSyncAcquireInstance)
 {
@@ -899,8 +913,9 @@ TEST_F(IlmControlTest, ilm_getSurfaceIDs_cannotSyncAcquireInstance)
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
     ASSERT_EQ(ILM_FAILED, ilm_getSurfaceIDs(&l_numberSurfaces, &lp_listSurfaces));
 
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -934,7 +949,6 @@ TEST_F(IlmControlTest, ilm_getSurfaceIDs_invaildInput)
  *                      -# Verification point:
  *                         +# ilm_getSurfaceIDs() must return ILM_SUCCESS
  *                         +# The result output should same with prepare data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, ilm_getSurfaceIDs_success)
 {
@@ -981,8 +995,8 @@ TEST_F(IlmControlTest, ilm_getSurfaceIDsOnLayer_invalidInput)
  *                      -# Calling the ilm_getSurfaceIDsOnLayer()
  *                      -# Verification point:
  *                         +# ilm_getSurfaceIDsOnLayer() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 5 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_GET
  */
 TEST_F(IlmControlTest, ilm_getSurfaceIDsOnLayer_cannotGetRoundTripQueue)
 {
@@ -992,9 +1006,13 @@ TEST_F(IlmControlTest, ilm_getSurfaceIDsOnLayer_cannotGetRoundTripQueue)
     t_ilm_layer *lp_listSurfaces = nullptr;
     ASSERT_EQ(ILM_FAILED, ilm_getSurfaceIDsOnLayer(100, &l_numberSurfaces, &lp_listSurfaces));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], (void*)wl_array_release);
+    ASSERT_EQ(fff.call_history[4], (void*)wl_array_init);
+    ASSERT_EQ(fff.call_history[5], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1008,7 +1026,6 @@ TEST_F(IlmControlTest, ilm_getSurfaceIDsOnLayer_cannotGetRoundTripQueue)
  *                      -# Verification point:
  *                         +# ilm_getSurfaceIDsOnLayer() must return ILM_SUCCESS
  *                         +# The result output should same with prepare data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, ilm_getSurfaceIDsOnLayer_success)
 {
@@ -1043,7 +1060,7 @@ TEST_F(IlmControlTest, ilm_getSurfaceIDsOnLayer_success)
  *                      -# Calling the ilm_layerCreateWithDimension() time 2
  *                      -# Verification point:
  *                         +# Both of ilm_layerCreateWithDimension() time 1 and time 2 must return ILM_FAILED
- *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_layerCreateWithDimension_cannotSyncAcquireInstance)
 {
@@ -1056,8 +1073,9 @@ TEST_F(IlmControlTest, ilm_layerCreateWithDimension_cannotSyncAcquireInstance)
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
     ASSERT_EQ(ILM_FAILED, ilm_layerCreateWithDimension(&l_layerId, 640, 480));
 
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-    ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -1112,8 +1130,7 @@ TEST_F(IlmControlTest, ilm_layerCreateWithDimension_success)
  *                      -# Calling the ilm_layerRemove()
  *                      -# Verification point:
  *                         +# ilm_layerRemove() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() not be called
+ *                         +# No external functions is called
  */
 TEST_F(IlmControlTest, ilm_layerRemove_wrongCtx)
 {
@@ -1122,8 +1139,7 @@ TEST_F(IlmControlTest, ilm_layerRemove_wrongCtx)
     t_ilm_layer l_layerId = 100;
     ASSERT_EQ(ILM_FAILED, ilm_layerRemove(l_layerId));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1133,16 +1149,19 @@ TEST_F(IlmControlTest, ilm_layerRemove_wrongCtx)
  *                      -# Calling the ilm_layerRemove()
  *                      -# Verification point:
  *                         +# ilm_layerRemove() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_DESTROY_LAYOUT_LAYER
  */
 TEST_F(IlmControlTest, ilm_layerRemove_removeOne)
 {
     t_ilm_layer l_layerId = 100;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemove(l_layerId));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_DESTROY_LAYOUT_LAYER, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1153,8 +1172,7 @@ TEST_F(IlmControlTest, ilm_layerRemove_removeOne)
  *                      -# Calling the ilm_layerAddSurface()
  *                      -# Verification point:
  *                         +# ilm_layerAddSurface() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external functions is called
  */
 TEST_F(IlmControlTest, ilm_layerAddSurface_wrongCtx)
 {
@@ -1164,8 +1182,7 @@ TEST_F(IlmControlTest, ilm_layerAddSurface_wrongCtx)
     t_ilm_surface l_surfaceId = 1;
     ASSERT_EQ(ILM_FAILED, ilm_layerAddSurface(l_layerId, l_surfaceId));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1175,8 +1192,8 @@ TEST_F(IlmControlTest, ilm_layerAddSurface_wrongCtx)
  *                      -# Calling the ilm_layerAddSurface()
  *                      -# Verification point:
  *                         +# ilm_layerAddSurface() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_ADD_SURFACE
  */
 TEST_F(IlmControlTest, ilm_layerAddSurface_addOne)
 {
@@ -1184,8 +1201,11 @@ TEST_F(IlmControlTest, ilm_layerAddSurface_addOne)
     t_ilm_surface l_surfaceId = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerAddSurface(l_layerId, l_surfaceId));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_ADD_SURFACE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1196,8 +1216,7 @@ TEST_F(IlmControlTest, ilm_layerAddSurface_addOne)
  *                      -# Calling the ilm_layerRemoveSurface()
  *                      -# Verification point:
  *                         +# ilm_layerRemoveSurface() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external functions is called
  */
 TEST_F(IlmControlTest, ilm_layerRemoveSurface_wrongCtx)
 {
@@ -1207,8 +1226,7 @@ TEST_F(IlmControlTest, ilm_layerRemoveSurface_wrongCtx)
     t_ilm_surface l_surfaceId = 1;
     ASSERT_EQ(ILM_FAILED, ilm_layerRemoveSurface(l_layerId, l_surfaceId));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1218,8 +1236,8 @@ TEST_F(IlmControlTest, ilm_layerRemoveSurface_wrongCtx)
  *                      -# Calling the ilm_layerRemoveSurface()
  *                      -# Verification point:
  *                         +# ilm_layerRemoveSurface() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_REMOVE_SURFACE
  */
 TEST_F(IlmControlTest, ilm_layerRemoveSurface_removeOne)
 {
@@ -1227,8 +1245,11 @@ TEST_F(IlmControlTest, ilm_layerRemoveSurface_removeOne)
     t_ilm_surface l_surfaceId = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemoveSurface(l_layerId, l_surfaceId));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_REMOVE_SURFACE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1239,8 +1260,7 @@ TEST_F(IlmControlTest, ilm_layerRemoveSurface_removeOne)
  *                      -# Calling the ilm_layerSetVisibility()
  *                      -# Verification point:
  *                         +# ilm_layerSetVisibility() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external functions is called
  */
 TEST_F(IlmControlTest, ilm_layerSetVisibility_wrongCtx)
 {
@@ -1250,8 +1270,7 @@ TEST_F(IlmControlTest, ilm_layerSetVisibility_wrongCtx)
     t_ilm_bool l_newVisibility = ILM_FALSE;
     ASSERT_EQ(ILM_FAILED, ilm_layerSetVisibility(l_layerId, l_newVisibility));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1261,8 +1280,8 @@ TEST_F(IlmControlTest, ilm_layerSetVisibility_wrongCtx)
  *                      -# Calling the ilm_layerSetVisibility()
  *                      -# Verification point:
  *                         +# ilm_layerSetVisibility() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SET_LAYER_VISIBILITY
  */
 TEST_F(IlmControlTest, ilm_layerSetVisibility_success)
 {
@@ -1270,8 +1289,11 @@ TEST_F(IlmControlTest, ilm_layerSetVisibility_success)
     t_ilm_bool l_newVisibility = ILM_TRUE;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetVisibility(l_layerId, l_newVisibility));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SET_LAYER_VISIBILITY, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1282,8 +1304,7 @@ TEST_F(IlmControlTest, ilm_layerSetVisibility_success)
  *                      -# Calling the ilm_layerGetVisibility()
  *                      -# Verification point:
  *                         +# ilm_layerGetVisibility() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() not be called
+ *                         +# No external functions is called
  */
 TEST_F(IlmControlTest, ilm_layerGetVisibility_wrongVisibility)
 {
@@ -1291,8 +1312,7 @@ TEST_F(IlmControlTest, ilm_layerGetVisibility_wrongVisibility)
     t_ilm_bool* p_Visibility = nullptr;
     ASSERT_EQ(ILM_FAILED, ilm_layerGetVisibility(l_layerId, p_Visibility));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1303,8 +1323,8 @@ TEST_F(IlmControlTest, ilm_layerGetVisibility_wrongVisibility)
  *                      -# Calling the ilm_layerGetVisibility()
  *                      -# Verification point:
  *                         +# ilm_layerGetVisibility() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_GET
  */
 TEST_F(IlmControlTest, ilm_layerGetVisibility_cannotGetRoundTripQueue)
 {
@@ -1314,8 +1334,11 @@ TEST_F(IlmControlTest, ilm_layerGetVisibility_cannotGetRoundTripQueue)
     t_ilm_bool l_visibility = 1;
     ASSERT_EQ(ILM_FAILED, ilm_layerGetVisibility(l_layerId, &l_visibility));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1326,8 +1349,8 @@ TEST_F(IlmControlTest, ilm_layerGetVisibility_cannotGetRoundTripQueue)
  *                      -# Calling the ilm_layerGetVisibility() with invalid layer id
  *                      -# Verification point:
  *                         +# ilm_layerGetVisibility() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_GET
  */
 TEST_F(IlmControlTest, ilm_layerGetVisibility_invalidLayerId)
 {
@@ -1337,8 +1360,11 @@ TEST_F(IlmControlTest, ilm_layerGetVisibility_invalidLayerId)
     t_ilm_bool l_visibility = 1;
     ASSERT_EQ(ILM_FAILED, ilm_layerGetVisibility(l_layerId, &l_visibility));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1350,19 +1376,17 @@ TEST_F(IlmControlTest, ilm_layerGetVisibility_invalidLayerId)
  *                      -# Calling the ilm_layerGetVisibility()
  *                      -# Verification point:
  *                         +# ilm_layerGetVisibility() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# The result data must same with prepration
  */
 TEST_F(IlmControlTest, ilm_layerGetVisibility_success)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
     t_ilm_layer l_layerId = 100;
-    t_ilm_bool l_visibility = 1;
+    t_ilm_bool l_visibility = 0;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetVisibility(l_layerId, &l_visibility));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(mp_layerProps[0].visibility, l_visibility);
 }
 
 /** ================================================================================================
@@ -1373,8 +1397,7 @@ TEST_F(IlmControlTest, ilm_layerGetVisibility_success)
  *                      -# Calling the ilm_layerSetOpacity()
  *                      -# Verification point:
  *                         +# ilm_layerSetOpacity() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external functions is called
  */
 TEST_F(IlmControlTest, ilm_layerSetOpacity_wrongCtx)
 {
@@ -1384,8 +1407,7 @@ TEST_F(IlmControlTest, ilm_layerSetOpacity_wrongCtx)
     t_ilm_float l_opacity = 1;
     ASSERT_EQ(ILM_FAILED, ilm_layerSetOpacity(l_layerId, l_opacity));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1395,8 +1417,8 @@ TEST_F(IlmControlTest, ilm_layerSetOpacity_wrongCtx)
  *                      -# Calling the ilm_layerSetOpacity()
  *                      -# Verification point:
  *                         +# ilm_layerSetOpacity() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SET_LAYER_OPACITY
  */
 TEST_F(IlmControlTest, ilm_layerSetOpacity_success)
 {
@@ -1404,29 +1426,30 @@ TEST_F(IlmControlTest, ilm_layerSetOpacity_success)
     t_ilm_float l_opacity = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetOpacity(l_layerId, l_opacity));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SET_LAYER_OPACITY, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
- * @test_id             ilm_layerGetOpacity_wrongVisibility
+ * @test_id             ilm_layerGetOpacity_invalidArg
  * @brief               Test case of ilm_layerGetOpacity() where input pOpacity is null pointer
  * @test_procedure Steps:
  *                      -# Set pOpacity is null pointer
  *                      -# Calling the ilm_layerGetOpacity()
  *                      -# Verification point:
  *                         +# ilm_layerGetOpacity() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() not be called
+ *                         +# No external functions is called
  */
-TEST_F(IlmControlTest, ilm_layerGetOpacity_wrongVisibility)
+TEST_F(IlmControlTest, ilm_layerGetOpacity_invalidArg)
 {
     t_ilm_layer l_layerId = 100;
     t_ilm_float *p_opacity = nullptr;
     ASSERT_EQ(ILM_FAILED, ilm_layerGetOpacity(l_layerId, p_opacity));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1437,8 +1460,8 @@ TEST_F(IlmControlTest, ilm_layerGetOpacity_wrongVisibility)
  *                      -# Calling the ilm_layerGetOpacity()
  *                      -# Verification point:
  *                         +# ilm_layerGetOpacity() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_GET
  */
 TEST_F(IlmControlTest, ilm_layerGetOpacity_cannotGetRoundTripQueue)
 {
@@ -1448,22 +1471,25 @@ TEST_F(IlmControlTest, ilm_layerGetOpacity_cannotGetRoundTripQueue)
     t_ilm_float l_opacity = 0.5;
     ASSERT_EQ(ILM_FAILED, ilm_layerGetOpacity(l_layerId, &l_opacity));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
- * @test_id             iilm_layerGetOpacity_invalidLayerId
+ * @test_id             ilm_layerGetOpacity_invalidLayerId
  * @brief               Test case of ilm_layerGetOpacity() where invalid layer id
  * @test_procedure Steps:
  *                      -# Mocking the wl_display_roundtrip_queue() does return 0 (success)
  *                      -# Calling the ilm_layerGetOpacity() with invalid layer id
  *                      -# Verification point:
  *                         +# ilm_layerGetOpacity() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_GET
  */
-TEST_F(IlmControlTest, iilm_layerGetOpacity_invalidLayerId)
+TEST_F(IlmControlTest, ilm_layerGetOpacity_invalidLayerId)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
@@ -1471,8 +1497,11 @@ TEST_F(IlmControlTest, iilm_layerGetOpacity_invalidLayerId)
     t_ilm_float l_opacity = 0.5;
     ASSERT_EQ(ILM_FAILED, ilm_layerGetOpacity(l_layerId, &l_opacity));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1484,19 +1513,17 @@ TEST_F(IlmControlTest, iilm_layerGetOpacity_invalidLayerId)
  *                      -# Calling the ilm_layerGetOpacity()
  *                      -# Verification point:
  *                         +# ilm_layerGetOpacity() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# The result data must same with prepration
  */
 TEST_F(IlmControlTest, ilm_layerGetOpacity_success)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
     t_ilm_layer l_layerId = 100;
-    t_ilm_float l_opacity = 0.5;
+    t_ilm_float l_opacity = 0.0;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerGetOpacity(l_layerId, &l_opacity));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(mp_layerProps[0].opacity, l_opacity);
 }
 
 /** ================================================================================================
@@ -1507,8 +1534,7 @@ TEST_F(IlmControlTest, ilm_layerGetOpacity_success)
  *                      -# Calling the ilm_layerSetSourceRectangle()
  *                      -# Verification point:
  *                         +# ilm_layerSetSourceRectangle() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_layerSetSourceRectangle_wrongCtx)
 {
@@ -1517,8 +1543,7 @@ TEST_F(IlmControlTest, ilm_layerSetSourceRectangle_wrongCtx)
     t_ilm_layer l_layerId = 100;
     ASSERT_EQ(ILM_FAILED, ilm_layerSetSourceRectangle(l_layerId, 0, 0, 640, 480));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1528,16 +1553,19 @@ TEST_F(IlmControlTest, ilm_layerSetSourceRectangle_wrongCtx)
  *                      -# Calling the ilm_layerSetSourceRectangle()
  *                      -# Verification point:
  *                         +# ilm_layerSetSourceRectangle() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SET_LAYER_SOURCE_RECTANGLE
  */
 TEST_F(IlmControlTest, ilm_layerSetSourceRectangle_success)
 {
     t_ilm_layer l_layerId = 100;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetSourceRectangle(l_layerId, 0, 0, 640, 480));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SET_LAYER_SOURCE_RECTANGLE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1548,8 +1576,7 @@ TEST_F(IlmControlTest, ilm_layerSetSourceRectangle_success)
  *                      -# Calling the ilm_layerSetDestinationRectangle()
  *                      -# Verification point:
  *                         +# ilm_layerSetDestinationRectangle() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_layerSetDestinationRectangle_wrongCtx)
 {
@@ -1558,8 +1585,7 @@ TEST_F(IlmControlTest, ilm_layerSetDestinationRectangle_wrongCtx)
     t_ilm_layer l_layerId = 100;
     ASSERT_EQ(ILM_FAILED, ilm_layerSetDestinationRectangle(l_layerId, 0, 0, 640, 480));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1569,16 +1595,19 @@ TEST_F(IlmControlTest, ilm_layerSetDestinationRectangle_wrongCtx)
  *                      -# Calling the ilm_layerSetDestinationRectangle()
  *                      -# Verification point:
  *                         +# ilm_layerSetDestinationRectangle() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SET_LAYER_DESTINATION_RECTANGLE
  */
 TEST_F(IlmControlTest, ilm_layerSetDestinationRectangle_success)
 {
     t_ilm_layer l_layerId = 100;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetDestinationRectangle(l_layerId, 0, 0, 640, 480));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SET_LAYER_DESTINATION_RECTANGLE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1589,8 +1618,7 @@ TEST_F(IlmControlTest, ilm_layerSetDestinationRectangle_success)
  *                      -# Calling the ilm_layerSetRenderOrder()
  *                      -# Verification point:
  *                         +# ilm_layerSetRenderOrder() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_layerSetRenderOrder_wrongCtx)
 {
@@ -1600,8 +1628,7 @@ TEST_F(IlmControlTest, ilm_layerSetRenderOrder_wrongCtx)
     t_ilm_int l_number = 1;
     ASSERT_EQ(ILM_FAILED, ilm_layerSetRenderOrder(l_layerId, mp_ilmSurfaceIds, l_number));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1611,7 +1638,8 @@ TEST_F(IlmControlTest, ilm_layerSetRenderOrder_wrongCtx)
  *                      -# Calling the ilm_layerSetRenderOrder()
  *                      -# Verification point:
  *                         +# ilm_layerSetRenderOrder() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called {1+l_number} time
+ *                         +# wl_proxy_get_version() must be called {1+l_number} times
+ *                         +# wl_proxy_marshal_flags() must be called {1+l_number} times
  *                         +# wl_display_flush() must be called once time
  */
 TEST_F(IlmControlTest, ilm_layerSetRenderOrder_success)
@@ -1620,6 +1648,7 @@ TEST_F(IlmControlTest, ilm_layerSetRenderOrder_success)
     t_ilm_int l_number = MAX_NUMBER;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerSetRenderOrder(l_layerId, mp_ilmSurfaceIds, l_number));
 
+    ASSERT_EQ(1 + l_number, wl_proxy_get_version_fake.call_count);
     ASSERT_EQ(1 + l_number, wl_proxy_marshal_flags_fake.call_count);
     ASSERT_EQ(1, wl_display_flush_fake.call_count);
 }
@@ -1632,8 +1661,7 @@ TEST_F(IlmControlTest, ilm_layerSetRenderOrder_success)
  *                      -# Calling the ilm_surfaceSetVisibility()
  *                      -# Verification point:
  *                         +# ilm_surfaceSetVisibility() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_surfaceSetVisibility_wrongCtx)
 {
@@ -1643,8 +1671,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetVisibility_wrongCtx)
     t_ilm_bool l_newVisibility = ILM_FALSE;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceSetVisibility(l_surfaceId, l_newVisibility));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1654,8 +1681,8 @@ TEST_F(IlmControlTest, ilm_surfaceSetVisibility_wrongCtx)
  *                      -# Calling the ilm_surfaceSetVisibility()
  *                      -# Verification point:
  *                         +# ilm_surfaceSetVisibility() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SET_SURFACE_VISIBILITY
  */
 TEST_F(IlmControlTest, ilm_surfaceSetVisibility_success)
 {
@@ -1663,8 +1690,11 @@ TEST_F(IlmControlTest, ilm_surfaceSetVisibility_success)
     t_ilm_bool l_newVisibility = ILM_TRUE;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetVisibility(l_surfaceId, l_newVisibility));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SET_SURFACE_VISIBILITY, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1675,8 +1705,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetVisibility_success)
  *                      -# Calling the ilm_surfaceGetVisibility()
  *                      -# Verification point:
  *                         +# ilm_surfaceGetVisibility() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_surfaceGetVisibility_wrongVisibility)
 {
@@ -1684,8 +1713,7 @@ TEST_F(IlmControlTest, ilm_surfaceGetVisibility_wrongVisibility)
     t_ilm_bool* p_visibility = nullptr;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceGetVisibility(l_surfaceId, p_visibility));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1696,19 +1724,22 @@ TEST_F(IlmControlTest, ilm_surfaceGetVisibility_wrongVisibility)
  *                      -# Calling the ilm_surfaceGetVisibility()
  *                      -# Verification point:
  *                         +# ilm_surfaceGetVisibility() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SURFACE_GET
  */
 TEST_F(IlmControlTest, ilm_surfaceGetVisibility_cannotGetRoundTripQueue)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
 
     t_ilm_surface l_surfaceId = 1;
-    t_ilm_bool l_visibility = 1;
+    t_ilm_bool l_visibility = ILM_FALSE;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceGetVisibility(l_surfaceId, &l_visibility));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SURFACE_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1719,8 +1750,8 @@ TEST_F(IlmControlTest, ilm_surfaceGetVisibility_cannotGetRoundTripQueue)
  *                      -# Calling the ilm_surfaceGetVisibility() with invalid surface id
  *                      -# Verification point:
  *                         +# ilm_surfaceGetVisibility() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SURFACE_GET
  */
 TEST_F(IlmControlTest, ilm_surfaceGetVisibility_invalidSurfaceId)
 {
@@ -1730,8 +1761,11 @@ TEST_F(IlmControlTest, ilm_surfaceGetVisibility_invalidSurfaceId)
     t_ilm_bool l_visibility = 1;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceGetVisibility(l_surfaceId, &l_visibility));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SURFACE_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1743,19 +1777,17 @@ TEST_F(IlmControlTest, ilm_surfaceGetVisibility_invalidSurfaceId)
  *                      -# Calling the ilm_surfaceGetVisibility()
  *                      -# Verification point:
  *                         +# ilm_surfaceGetVisibility() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# The result should same with prepare data
  */
 TEST_F(IlmControlTest, ilm_surfaceGetVisibility_success)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
     t_ilm_surface l_surfaceId = 1;
-    t_ilm_bool l_visibility = 1;
+    t_ilm_bool l_visibility = ILM_FALSE;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetVisibility(l_surfaceId, &l_visibility));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(l_visibility, mp_surfaceProps[0].visibility);
 }
 
 /** ================================================================================================
@@ -1766,8 +1798,7 @@ TEST_F(IlmControlTest, ilm_surfaceGetVisibility_success)
  *                      -# Calling the ilm_surfaceSetOpacity()
  *                      -# Verification point:
  *                         +# ilm_surfaceSetOpacity() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_surfaceSetOpacity_wrongCtx)
 {
@@ -1777,8 +1808,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetOpacity_wrongCtx)
     t_ilm_float opacity = 0.5;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceSetOpacity(l_surfaceId, opacity));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1788,8 +1818,8 @@ TEST_F(IlmControlTest, ilm_surfaceSetOpacity_wrongCtx)
  *                      -# Calling the ilm_surfaceSetOpacity()
  *                      -# Verification point:
  *                         +# ilm_surfaceSetOpacity() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SET_SURFACE_OPACITY
  */
 TEST_F(IlmControlTest, ilm_surfaceSetOpacity_success)
 {
@@ -1797,43 +1827,42 @@ TEST_F(IlmControlTest, ilm_surfaceSetOpacity_success)
     t_ilm_float opacity = 0.5;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetOpacity(l_surfaceId, opacity));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SET_SURFACE_OPACITY, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
- * @test_id             ilm_surfaceGetOpacity_wrongVisibility
+ * @test_id             ilm_surfaceGetOpacity_invalidInput
  * @brief               Test case of ilm_surfaceGetOpacity() where input pOpacity is null pointer
  * @test_procedure Steps:
  *                      -# Set pOpacity is null pointer
  *                      -# Calling the ilm_surfaceGetOpacity()
  *                      -# Verification point:
  *                         +# ilm_surfaceGetOpacity() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() not be called
+ *                         +# No external function is called
  */
-TEST_F(IlmControlTest, ilm_surfaceGetOpacity_wrongVisibility)
+TEST_F(IlmControlTest, ilm_surfaceGetOpacity_invalidInput)
 {
     t_ilm_surface l_surfaceId = 1;
     t_ilm_float *p_opacity = nullptr;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceGetOpacity(l_surfaceId, p_opacity));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
  * @test_id             ilm_surfaceGetOpacity_cannotGetRoundTripQueue
  * @brief               Test case of ilm_surfaceGetOpacity() where wl_display_roundtrip_queue() fails, return -1
- *                      and ilm_context wl.controller does return null object
  * @test_procedure Steps:
  *                      -# Mocking the wl_display_roundtrip_queue() does return -1
- *                      -# Calling the ilm_surfaceGetOpacity() time 1 with ilm_context wl.controller doesn't return null object
- *                      -# Calling the ilm_surfaceGetOpacity() time 2 with ilm_context wl.controller does return null object
+ *                      -# Calling the ilm_surfaceGetOpacity()
  *                      -# Verification point:
- *                         +# Both of ilm_surfaceGetOpacity() time 1 and time 2 must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called
- *                         +# wl_display_roundtrip_queue() must be called
+ *                         +# ilm_surfaceGetOpacity() must return ILM_FAILED
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SURFACE_GET
  */
 TEST_F(IlmControlTest, ilm_surfaceGetOpacity_cannotGetRoundTripQueue)
 {
@@ -1843,28 +1872,25 @@ TEST_F(IlmControlTest, ilm_surfaceGetOpacity_cannotGetRoundTripQueue)
     t_ilm_float l_opacity = 1;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceGetOpacity(l_surfaceId, &l_opacity));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
-
-    ilm_context.wl.controller = nullptr;
-    ASSERT_EQ(ILM_FAILED, ilm_surfaceGetOpacity(l_surfaceId, &l_opacity));
-
-    ASSERT_EQ(2, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(2, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SURFACE_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
- * @test_id             ilm_surfaceGetOpacity_invalidLayerId
- * @brief               Test case of ilm_surfaceGetOpacity() where invalid layer id
+ * @test_id             ilm_surfaceGetOpacity_invalidSurfaceId
+ * @brief               Test case of ilm_surfaceGetOpacity() where invalid surface id
  * @test_procedure Steps:
  *                      -# Mocking the wl_display_roundtrip_queue() does return 0 (success)
  *                      -# Calling the ilm_surfaceGetOpacity() with invalid layer id
  *                      -# Verification point:
  *                         +# ilm_surfaceGetOpacity() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SURFACE_GET
  */
-TEST_F(IlmControlTest, ilm_surfaceGetOpacity_invalidLayerId)
+TEST_F(IlmControlTest, ilm_surfaceGetOpacity_invalidSurfaceId)
 {
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_successResult, 1);
 
@@ -1872,8 +1898,11 @@ TEST_F(IlmControlTest, ilm_surfaceGetOpacity_invalidLayerId)
     t_ilm_float l_opacity = 1;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceGetOpacity(l_surfaceId, &l_opacity));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SURFACE_GET, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1885,8 +1914,7 @@ TEST_F(IlmControlTest, ilm_surfaceGetOpacity_invalidLayerId)
  *                      -# Calling the ilm_surfaceGetOpacity()
  *                      -# Verification point:
  *                         +# ilm_surfaceGetOpacity() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# The result must same with data preparation
  */
 TEST_F(IlmControlTest, ilm_surfaceGetOpacity_success)
 {
@@ -1896,8 +1924,7 @@ TEST_F(IlmControlTest, ilm_surfaceGetOpacity_success)
     t_ilm_float l_opacity = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceGetOpacity(l_surfaceId, &l_opacity));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(l_opacity, mp_surfaceProps[0].opacity);
 }
 
 /** ================================================================================================
@@ -1908,8 +1935,7 @@ TEST_F(IlmControlTest, ilm_surfaceGetOpacity_success)
  *                      -# Calling the ilm_surfaceSetSourceRectangle()
  *                      -# Verification point:
  *                         +# ilm_surfaceSetSourceRectangle() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_surfaceSetSourceRectangle_wrongCtx)
 {
@@ -1918,8 +1944,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetSourceRectangle_wrongCtx)
     t_ilm_surface l_surfaceId = 1;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceSetSourceRectangle(l_surfaceId, 0, 0, 640, 480));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1930,16 +1955,19 @@ TEST_F(IlmControlTest, ilm_surfaceSetSourceRectangle_wrongCtx)
  *                      -# Calling the ilm_surfaceSetSourceRectangle()
  *                      -# Verification point:
  *                         +# ilm_surfaceSetSourceRectangle() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SET_SURFACE_SOURCE_RECTANGLE
  */
 TEST_F(IlmControlTest, ilm_surfaceSetSourceRectangle_success)
 {
     t_ilm_surface l_surfaceId = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetSourceRectangle(l_surfaceId, 0, 0, 640, 480));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SET_SURFACE_SOURCE_RECTANGLE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1950,8 +1978,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetSourceRectangle_success)
  *                      -# Calling the ilm_surfaceSetDestinationRectangle()
  *                      -# Verification point:
  *                         +# ilm_surfaceSetDestinationRectangle() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_surfaceSetDestinationRectangle_wrongCtx)
 {
@@ -1960,8 +1987,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetDestinationRectangle_wrongCtx)
     t_ilm_surface l_surfaceId = 1;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceSetDestinationRectangle(l_surfaceId, 0, 0, 640, 480));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -1972,16 +1998,19 @@ TEST_F(IlmControlTest, ilm_surfaceSetDestinationRectangle_wrongCtx)
  *                      -# Calling the ilm_surfaceSetDestinationRectangle()
  *                      -# Verification point:
  *                         +# ilm_surfaceSetDestinationRectangle() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_flush() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SET_SURFACE_DESTINATION_RECTANGLE
  */
 TEST_F(IlmControlTest, ilm_surfaceSetDestinationRectangle_success)
 {
     t_ilm_surface l_surfaceId = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetDestinationRectangle(l_surfaceId, 0, 0, 640, 480));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_display_flush);
+    ASSERT_EQ(fff.call_history[3], nullptr);
+    ASSERT_EQ(IVI_WM_SET_SURFACE_DESTINATION_RECTANGLE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -1991,8 +2020,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetDestinationRectangle_success)
  *                      -# Calling the ilm_surfaceSetType() with invalid input ilmSurfaceType
  *                      -# Verification point:
  *                         +# ilm_surfaceSetType() must return ILM_ERROR_INVALID_ARGUMENTS
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_surfaceSetType_wrongType)
 {
@@ -2000,8 +2028,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetType_wrongType)
     ilmSurfaceType l_type = (ilmSurfaceType)3;
     ASSERT_EQ(ILM_ERROR_INVALID_ARGUMENTS, ilm_surfaceSetType(l_surfaceId, l_type));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -2013,8 +2040,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetType_wrongType)
  *                      -# Calling the ilm_surfaceSetType() time 2 with input ilmSurfaceType is ILM_SURFACETYPE_DESKTOP
  *                      -# Verification point:
  *                         +# Both of ilm_surfaceSetType() time 1 and time 2 must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_surfaceSetType_wrongCtx)
 {
@@ -2024,8 +2050,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetType_wrongCtx)
     ASSERT_EQ(ILM_FAILED, ilm_surfaceSetType(l_surfaceId, ILM_SURFACETYPE_RESTRICTED));
     ASSERT_EQ(ILM_FAILED, ilm_surfaceSetType(l_surfaceId, ILM_SURFACETYPE_DESKTOP));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -2037,22 +2062,20 @@ TEST_F(IlmControlTest, ilm_surfaceSetType_wrongCtx)
  *                      -# Calling the ilm_surfaceSetType() time 2 with input ilmSurfaceType is ILM_SURFACETYPE_DESKTOP
  *                      -# Verification point:
  *                         +# Both of ilm_surfaceSetType() time 1 and time 2 must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called
- *                         +# wl_display_flush() must be called
+ *                         +# wl_proxy_marshal_flags() must be called 2 times
+ *                         +# wl_display_flush() must be called 2 times
+ *                         +# Second arg input of wl_proxy_marshal_flags should is IVI_WM_SET_SURFACE_TYPE
  */
 TEST_F(IlmControlTest, ilm_surfaceSetType_success)
 {
     t_ilm_surface l_surfaceId = 1;
 
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetType(l_surfaceId, ILM_SURFACETYPE_RESTRICTED));
-
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_flush_fake.call_count);
-
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceSetType(l_surfaceId, ILM_SURFACETYPE_DESKTOP));
 
     ASSERT_EQ(2, wl_proxy_marshal_flags_fake.call_count);
     ASSERT_EQ(2, wl_display_flush_fake.call_count);
+    ASSERT_EQ(IVI_WM_SET_SURFACE_TYPE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -2063,8 +2086,7 @@ TEST_F(IlmControlTest, ilm_surfaceSetType_success)
  *                      -# Calling the ilm_displaySetRenderOrder()
  *                      -# Verification point:
  *                         +# ilm_displaySetRenderOrder() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_displaySetRenderOrder_wrongCtx)
 {
@@ -2074,8 +2096,7 @@ TEST_F(IlmControlTest, ilm_displaySetRenderOrder_wrongCtx)
     t_ilm_int l_number = 1;
     ASSERT_EQ(ILM_FAILED, ilm_displaySetRenderOrder(l_displayId, mp_ilmLayerIds, l_number));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -2085,8 +2106,7 @@ TEST_F(IlmControlTest, ilm_displaySetRenderOrder_wrongCtx)
  *                      -# Calling the ilm_displaySetRenderOrder() with input display invalid
  *                      -# Verification point:
  *                         +# ilm_displaySetRenderOrder() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_flush() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmControlTest, ilm_displaySetRenderOrder_invalidDisplayId)
 {
@@ -2094,8 +2114,7 @@ TEST_F(IlmControlTest, ilm_displaySetRenderOrder_invalidDisplayId)
     t_ilm_int l_number = 1;
     ASSERT_EQ(ILM_FAILED, ilm_displaySetRenderOrder(l_displayId, mp_ilmLayerIds, l_number));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_display_flush_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -2128,8 +2147,7 @@ TEST_F(IlmControlTest, ilm_displaySetRenderOrder_success)
  *                      -# Calling the ilm_layerAddNotification()
  *                      -# Verification point:
  *                         +# ilm_layerAddNotification() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_layerAddNotification_cannotGetRoundTripQueue)
 {
@@ -2139,8 +2157,9 @@ TEST_F(IlmControlTest, ilm_layerAddNotification_cannotGetRoundTripQueue)
     t_ilm_layer l_layerId = 10;
     ASSERT_EQ(ILM_FAILED, ilm_layerAddNotification(l_layerId, nullptr));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -2174,18 +2193,24 @@ TEST_F(IlmControlTest, ilm_layerAddNotification_invalidLayerId)
  *                      -# Calling the ilm_layerAddNotification()
  *                      -# Verification point:
  *                         +# ilm_layerAddNotification() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called 2 times
+ *                         +# A sequence with 4 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_SYNC
+ *                         +# Notification callback of layer 0 should be change
  */
 TEST_F(IlmControlTest, ilm_layerAddNotification_success)
 {
     ilm_context.initialized = true;
 
     t_ilm_layer l_layerId = 100;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerAddNotification(l_layerId, nullptr));
+    ASSERT_EQ(ILM_SUCCESS, ilm_layerAddNotification(l_layerId, mp_fakePointer));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(2, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[3], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[4], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_SYNC, wl_proxy_marshal_flags_fake.arg1_history[0]);
+    ASSERT_EQ(mp_ctxLayer[0]->notification, mp_fakePointer);
 }
 
 /** ================================================================================================
@@ -2196,8 +2221,7 @@ TEST_F(IlmControlTest, ilm_layerAddNotification_success)
  *                      -# Calling the ilm_layerRemoveNotification() with input layer invalid
  *                      -# Verification point:
  *                         +# ilm_layerRemoveNotification() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# Only wl_display_roundtrip_queue() is called
  */
 TEST_F(IlmControlTest, ilm_layerRemoveNotification_invalidLayer)
 {
@@ -2206,8 +2230,8 @@ TEST_F(IlmControlTest, ilm_layerRemoveNotification_invalidLayer)
     t_ilm_layer l_layerId = 10;
     ASSERT_EQ(ILM_FAILED, ilm_layerRemoveNotification(l_layerId));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -2219,8 +2243,7 @@ TEST_F(IlmControlTest, ilm_layerRemoveNotification_invalidLayer)
  *                      -# Calling the ilm_layerRemoveNotification()
  *                      -# Verification point:
  *                         +# ilm_layerRemoveNotification() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_layerRemoveNotification_cannotGetRoundTripQueue)
 {
@@ -2230,33 +2253,32 @@ TEST_F(IlmControlTest, ilm_layerRemoveNotification_cannotGetRoundTripQueue)
     SET_RETURN_SEQ(wl_display_roundtrip_queue, mp_failureResult, 1);
     ASSERT_EQ(ILM_FAILED, ilm_layerRemoveNotification(l_layerId));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
- * @test_id             ilm_layerRemoveNotification_invalidNotification
+ * @test_id             ilm_layerRemoveNotification_noNotification
  * @brief               Test case of ilm_layerRemoveNotification() where input callback is null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
- *                      -# Calling the ilm_layerAddNotification() to add notification
+ *                      -# Set notification of layer 0 to nullptr
  *                      -# Calling the ilm_layerRemoveNotification()
  *                      -# Verification point:
- *                         +# ilm_layerAddNotification() must return ILM_SUCCESS
  *                         +# ilm_layerRemoveNotification() must return ILM_ERROR_INVALID_ARGUMENTS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called 3 times
+ *                         +# Only wl_display_roundtrip_queue() is called
  */
-TEST_F(IlmControlTest, ilm_layerRemoveNotification_invalidNotification)
+TEST_F(IlmControlTest, ilm_layerRemoveNotification_noNotification)
 {
     ilm_context.initialized = true;
 
     t_ilm_layer l_layerId = 100;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerAddNotification(l_layerId, nullptr));
+    mp_ctxLayer[0]->notification = nullptr;
     ASSERT_EQ(ILM_ERROR_INVALID_ARGUMENTS, ilm_layerRemoveNotification(l_layerId));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(3, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -2265,24 +2287,29 @@ TEST_F(IlmControlTest, ilm_layerRemoveNotification_invalidNotification)
  *                      input callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
- *                      -# Calling the ilm_layerAddNotification() to add notification
+ *                      -# Set notification of layer 0 is valid pointer
  *                      -# Calling the ilm_layerRemoveNotification()
  *                      -# Verification point:
- *                         +# ilm_layerAddNotification() must return ILM_SUCCESS
  *                         +# ilm_layerRemoveNotification() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called 2 times
- *                         +# wl_display_roundtrip_queue() must be called 4 times
+ *                         +# A sequence with 4 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_LAYER_SYNC
+ *                         +# Notification of layer 0 should be nullptr
  */
 TEST_F(IlmControlTest, ilm_layerRemoveNotification_success)
 {
     ilm_context.initialized = true;
 
     t_ilm_layer l_layerId = 100;
-    ASSERT_EQ(ILM_SUCCESS, ilm_layerAddNotification(l_layerId, &layerCallbackFunction));
+    mp_ctxLayer[0]->notification = mp_fakePointer;
     ASSERT_EQ(ILM_SUCCESS, ilm_layerRemoveNotification(l_layerId));
 
-    ASSERT_EQ(2, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(4, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[3], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[4], nullptr);
+    ASSERT_EQ(IVI_WM_LAYER_SYNC, wl_proxy_marshal_flags_fake.arg1_history[0]);
+    ASSERT_EQ(mp_ctxLayer[0]->notification, nullptr);
 }
 
 /** ================================================================================================
@@ -2294,9 +2321,8 @@ TEST_F(IlmControlTest, ilm_layerRemoveNotification_success)
  *                      -# Calling the ilm_surfaceAddNotification()
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
- *                         +# Free resources are allocated when running the test
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Id of new surface must be same with preparation
  */
 TEST_F(IlmControlTest, ilm_surfaceAddNotification_addNewSurface)
 {
@@ -2305,10 +2331,14 @@ TEST_F(IlmControlTest, ilm_surfaceAddNotification_addNewSurface)
     t_ilm_surface l_surface = 6;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface, &surfaceCallbackFunction));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    EXPECT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    EXPECT_EQ(fff.call_history[1], (void*)wl_list_insert);
+    EXPECT_EQ(fff.call_history[2], (void*)wl_list_init);
+    EXPECT_EQ(fff.call_history[3], nullptr);
 
-    struct surface_context *lp_createSurface = (struct surface_context*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct surface_context, link));
+    struct surface_context *lp_createSurface = 
+            (struct surface_context*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct surface_context, link));
+    ASSERT_EQ(lp_createSurface->id_surface, l_surface);
     free(lp_createSurface);
 }
 
@@ -2321,8 +2351,7 @@ TEST_F(IlmControlTest, ilm_surfaceAddNotification_addNewSurface)
  *                      -# Calling the ilm_surfaceAddNotification()
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_ERROR_INVALID_ARGUMENTS
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# Only wl_display_roundtrip_queue() is called
  */
 TEST_F(IlmControlTest, ilm_surfaceAddNotification_noAddNewSurface)
 {
@@ -2331,8 +2360,8 @@ TEST_F(IlmControlTest, ilm_surfaceAddNotification_noAddNewSurface)
     t_ilm_surface l_surface = 6;
     ASSERT_EQ(ILM_ERROR_INVALID_ARGUMENTS, ilm_surfaceAddNotification(l_surface, nullptr));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -2344,8 +2373,7 @@ TEST_F(IlmControlTest, ilm_surfaceAddNotification_noAddNewSurface)
  *                      -# Calling the ilm_surfaceAddNotification()
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_surfaceAddNotification_cannotGetRoundTripQueue)
 {
@@ -2355,8 +2383,9 @@ TEST_F(IlmControlTest, ilm_surfaceAddNotification_cannotGetRoundTripQueue)
     t_ilm_surface l_surface = 1;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceAddNotification(l_surface, nullptr));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -2367,18 +2396,20 @@ TEST_F(IlmControlTest, ilm_surfaceAddNotification_cannotGetRoundTripQueue)
  *                      -# Calling the ilm_surfaceAddNotification()
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# Only wl_display_roundtrip_queue() is called
+ *                         +# Notification of surface 0 should be nullptr
  */
 TEST_F(IlmControlTest, ilm_surfaceAddNotification_nullNotification)
 {
     ilm_context.initialized = true;
 
     t_ilm_surface l_surface = 1;
+    mp_ctxSurface[0]->notification = mp_fakePointer;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface, nullptr));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], nullptr);
+    ASSERT_EQ(mp_ctxSurface[0]->notification, nullptr);
 }
 
 /** ================================================================================================
@@ -2389,18 +2420,25 @@ TEST_F(IlmControlTest, ilm_surfaceAddNotification_nullNotification)
  *                      -# Calling the ilm_surfaceAddNotification()
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# wl_display_roundtrip_queue() must be called 2 times
+ *                         +# A sequence with 4 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SURFACE_SYNC
+ *                         +# Notification of layer 0 should be same with preparation
  */
 TEST_F(IlmControlTest, ilm_surfaceAddNotification_success)
 {
     ilm_context.initialized = true;
 
     t_ilm_surface l_surface = 1;
+    mp_ctxSurface[0]->notification = nullptr;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface, &surfaceCallbackFunction));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(2, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[3], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[4], nullptr);
+    ASSERT_EQ(IVI_WM_SURFACE_SYNC, wl_proxy_marshal_flags_fake.arg1_history[0]);
+    ASSERT_EQ(mp_ctxSurface[0]->notification, &surfaceCallbackFunction);
 }
 
 /** ================================================================================================
@@ -2412,8 +2450,7 @@ TEST_F(IlmControlTest, ilm_surfaceAddNotification_success)
  *                      -# Calling the ilm_surfaceRemoveNotification()
  *                      -# Verification point:
  *                         +# ilm_surfaceRemoveNotification() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_cannotGetRoundTripQueue)
 {
@@ -2423,8 +2460,9 @@ TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_cannotGetRoundTripQueue)
     t_ilm_surface l_surface = 1;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceRemoveNotification(l_surface));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_display_get_error);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -2435,8 +2473,7 @@ TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_cannotGetRoundTripQueue)
  *                      -# Calling the ilm_surfaceRemoveNotification()
  *                      -# Verification point:
  *                         +# ilm_surfaceRemoveNotification() must return ILM_ERROR_INVALID_ARGUMENTS
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# Only wl_display_roundtrip_queue is called
  */
 TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_nullNotification)
 {
@@ -2445,8 +2482,8 @@ TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_nullNotification)
     t_ilm_surface l_surface = 1;
     ASSERT_EQ(ILM_ERROR_INVALID_ARGUMENTS, ilm_surfaceRemoveNotification(l_surface));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -2457,8 +2494,7 @@ TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_nullNotification)
  *                      -# Calling the ilm_surfaceRemoveNotification() with invalid surface id
  *                      -# Verification point:
  *                         +# ilm_surfaceRemoveNotification() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() not be called
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# Only wl_display_roundtrip_queue is called
  */
 TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_invalidSurface)
 {
@@ -2467,8 +2503,8 @@ TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_invalidSurface)
     t_ilm_surface l_surface = 6;
     ASSERT_EQ(ILM_FAILED, ilm_surfaceRemoveNotification(l_surface));
 
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -2476,23 +2512,29 @@ TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_invalidSurface)
  * @brief               Test case of ilm_surfaceRemoveNotification() where callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
- *                      -# Calling the ilm_surfaceAddNotification() to add callback notification
+ *                      -# Set notification of surface 0 is valid pointer
  *                      -# Calling the ilm_surfaceRemoveNotification()
  *                      -# Verification point:
  *                         +# ilm_surfaceRemoveNotification() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called 2 times
- *                         +# wl_display_roundtrip_queue() must be called 4 times
+ *                         +# A sequence with 4 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should be IVI_WM_SURFACE_SYNC
+ *                         +# Notification of surface 0 should be nullptr
  */
 TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_success)
 {
     ilm_context.initialized = true;
 
     t_ilm_surface l_surface = 1;
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface, &surfaceCallbackFunction));
+    mp_ctxSurface[0]->notification = mp_fakePointer;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceRemoveNotification(l_surface));
 
-    ASSERT_EQ(2, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(4, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[3], (void*)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[4], nullptr);
+    ASSERT_EQ(IVI_WM_SURFACE_SYNC, wl_proxy_marshal_flags_fake.arg1_history[0]);
+    ASSERT_EQ(mp_ctxSurface[0]->notification, nullptr);
 }
 
 /** ================================================================================================

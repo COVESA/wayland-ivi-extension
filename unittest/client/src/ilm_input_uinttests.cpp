@@ -22,6 +22,7 @@
 #include "ilm_input.h"
 #include "ilm_control_platform.h"
 #include "client_api_fake.h"
+#include "ivi-input-client-protocol.h"
 
 extern "C"{
     struct ilm_control_context ilm_context;
@@ -101,13 +102,13 @@ public:
  *                      -# Calling the ilm_setInputAcceptanceOn() with input seats is a null pointer
  *                      -# Verification point:
  *                         +# ilm_setInputAcceptanceOn() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_invalidAgrument)
 {
     ASSERT_EQ(ILM_FAILED, ilm_setInputAcceptanceOn(mp_ilmSurfaceIds[0], 1, nullptr));
 
-    ASSERT_EQ(0, impl_sync_and_acquire_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -119,7 +120,7 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_invalidAgrument)
  *                      -# Calling the ilm_setInputAcceptanceOn() with input seats is SEAT_DEFAULT
  *                      -# Verification point:
  *                         +# ilm_setInputAcceptanceOn() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time
+ *                         +# Only impl_sync_and_acquire_instance() is called
  */
 TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotSyncAcquireInstance)
 {
@@ -128,7 +129,8 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotSyncAcquireInstance)
 
     ASSERT_EQ(ILM_FAILED, ilm_setInputAcceptanceOn(mp_ilmSurfaceIds[0], 1, (t_ilm_string*)&SEAT_DEFAULT));
 
-    ASSERT_EQ(1, impl_sync_and_acquire_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -140,7 +142,7 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotSyncAcquireInstance)
  *                      -# Calling the ilm_setInputAcceptanceOn() with input seats is SEAT_DEFAULT
  *                      -# Verification point:
  *                         +# ilm_setInputAcceptanceOn() must return ILM_FAILED
- *                         +# release_instance() must be called once time
+ *                         +# A sequence with 2 external functions is called
  */
 TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotFindSurfaceId)
 {
@@ -149,7 +151,9 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotFindSurfaceId)
 
     ASSERT_EQ(ILM_FAILED, ilm_setInputAcceptanceOn(MAX_NUMBER + 1, 1, (t_ilm_string*)&SEAT_DEFAULT));
 
-    ASSERT_EQ(1, release_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], (void*)release_instance);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -170,7 +174,9 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotFindSeat)
 
     ASSERT_EQ(ILM_FAILED, ilm_setInputAcceptanceOn(mp_ilmSurfaceIds[0], 1, (t_ilm_string*)&SEAT_DEFAULT));
 
-    ASSERT_EQ(1, release_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], (void*)release_instance);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -182,8 +188,8 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_cannotFindSeat)
  *                      -# Calling the ilm_setInputAcceptanceOn() with input seats is mp_seatName
  *                      -# Verification point:
  *                         +# ilm_setInputAcceptanceOn() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called once time
- *                         +# release_instance() must be called once time
+ *                         +# A sequence with 4 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should is IVI_INPUT_SET_INPUT_ACCEPTANCE
  */
 TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_addNewOne)
 {
@@ -192,8 +198,12 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_addNewOne)
 
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(mp_ilmSurfaceIds[0], 2, (t_ilm_string*)&mp_seatName));
 
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, release_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[3], (void*)release_instance);
+    ASSERT_EQ(fff.call_history[4], nullptr);
+    ASSERT_EQ(IVI_INPUT_SET_INPUT_ACCEPTANCE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -205,8 +215,8 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_addNewOne)
  *                      -# Calling the ilm_setInputAcceptanceOn() with input seats is mp_seatName[1]
  *                      -# Verification point:
  *                         +# ilm_setInputAcceptanceOn() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags() must be called 2 times
- *                         +# release_instance() must be called once time
+ *                         +# A sequence with 6 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should is IVI_INPUT_SET_INPUT_ACCEPTANCE
  */
 TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_removeOne)
 {
@@ -215,8 +225,14 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_removeOne)
 
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputAcceptanceOn(mp_ilmSurfaceIds[0], 1, (t_ilm_string*)&mp_seatName[1]));
 
-    ASSERT_EQ(2, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, release_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_proxy_marshal_flags); // detect a new seat -> send add
+    ASSERT_EQ(fff.call_history[3], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[4], (void*)wl_proxy_marshal_flags); // acceptance seat not in new list -> remove
+    ASSERT_EQ(fff.call_history[5], (void*)release_instance);
+    ASSERT_EQ(fff.call_history[6], nullptr);
+    ASSERT_EQ(IVI_INPUT_SET_INPUT_ACCEPTANCE, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -227,14 +243,14 @@ TEST_F(IlmInputTest, ilm_setInputAcceptanceOn_removeOne)
  *                      -# Calling the ilm_getInputAcceptanceOn() time 2 with seats is null pointer
  *                      -# Verification point:
  *                         +# ilm_getInputAcceptanceOn() time 1 and time 2 must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_invalidAgrument)
 {
     ASSERT_EQ(ILM_FAILED, ilm_getInputAcceptanceOn(mp_ilmSurfaceIds[0], nullptr, nullptr));
     ASSERT_EQ(ILM_FAILED, ilm_getInputAcceptanceOn(mp_ilmSurfaceIds[0], &m_numberSeat, nullptr));
 
-    ASSERT_EQ(0, impl_sync_and_acquire_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -245,7 +261,7 @@ TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_invalidAgrument)
  *                      -# Calling the ilm_getInputAcceptanceOn()
  *                      -# Verification point:
  *                         +# ilm_getInputAcceptanceOn() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time and return ILM_FAILED
+ *                         +# Only impl_sync_and_acquire_instance_fake is called
  */
 TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_cannotSyncAcquireInstance)
 {
@@ -254,8 +270,8 @@ TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_cannotSyncAcquireInstance)
 
     ASSERT_EQ(ILM_FAILED, ilm_getInputAcceptanceOn(mp_ilmSurfaceIds[0], &m_numberSeat, &mp_getSeats));
 
-    ASSERT_EQ(1, impl_sync_and_acquire_instance_fake.call_count);
-    ASSERT_EQ(mp_ilmErrorType[0], impl_sync_and_acquire_instance_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -267,8 +283,7 @@ TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_cannotSyncAcquireInstance)
  *                      -# Calling the ilm_getInputAcceptanceOn() with invalid surface id
  *                      -# Verification point:
  *                         +# ilm_getInputAcceptanceOn() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time
- *                         +# release_instance() must be called once time
+ *                         +# A sequence with 2 external functions is called
  */
 TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_cannotFindSurfaceId)
 {
@@ -277,8 +292,9 @@ TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_cannotFindSurfaceId)
 
     ASSERT_EQ(ILM_FAILED, ilm_getInputAcceptanceOn(MAX_NUMBER + 1, &m_numberSeat, &mp_getSeats));
 
-    ASSERT_EQ(1, impl_sync_and_acquire_instance_fake.call_count);
-    ASSERT_EQ(1, release_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], (void*)release_instance);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -291,7 +307,6 @@ TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_cannotFindSurfaceId)
  *                      -# Verification point:
  *                         +# ilm_getInputAcceptanceOn() must return ILM_SUCCESS
  *                         +# Output should same with prepare data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_success)
 {
@@ -303,7 +318,6 @@ TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_success)
 
     EXPECT_EQ(1, m_numberSeat);
     EXPECT_EQ(0, strcmp(mp_getSeats[0], "seat_1"));
-    EXPECT_EQ(1, release_instance_fake.call_count);
 
     free(mp_getSeats[0]);
     free(mp_getSeats);
@@ -317,14 +331,14 @@ TEST_F(IlmInputTest, ilm_getInputAcceptanceOn_success)
  *                      -# Calling the ilm_getInputDevices() time 2 with seats is null pointer
  *                      -# Verification point:
  *                         +# ilm_getInputDevices() time 1 and time 2 must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmInputTest, ilm_getInputDevices_invalidAgrument)
 {
     ASSERT_EQ(ILM_FAILED, ilm_getInputDevices(ILM_INPUT_DEVICE_KEYBOARD, nullptr, nullptr));
     ASSERT_EQ(ILM_FAILED, ilm_getInputDevices(ILM_INPUT_DEVICE_KEYBOARD, &m_numberSeat, nullptr));
 
-    ASSERT_EQ(impl_sync_and_acquire_instance_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -335,7 +349,7 @@ TEST_F(IlmInputTest, ilm_getInputDevices_invalidAgrument)
  *                      -# Calling the ilm_getInputDevices()
  *                      -# Verification point:
  *                         +# ilm_getInputDevices() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time and return ILM_FAILED
+ *                         +# Only impl_sync_and_acquire_instance() is called
  */
 TEST_F(IlmInputTest, ilm_getInputDevices_cannotSyncAcquireInstance)
 {
@@ -344,8 +358,8 @@ TEST_F(IlmInputTest, ilm_getInputDevices_cannotSyncAcquireInstance)
 
     ASSERT_EQ(ILM_FAILED, ilm_getInputDevices(ILM_INPUT_DEVICE_KEYBOARD, &m_numberSeat, &mp_getSeats));
 
-    ASSERT_EQ(1, impl_sync_and_acquire_instance_fake.call_count);
-    ASSERT_EQ(mp_ilmErrorType[0], impl_sync_and_acquire_instance_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -357,9 +371,7 @@ TEST_F(IlmInputTest, ilm_getInputDevices_cannotSyncAcquireInstance)
  *                      -# Calling the ilm_getInputDevices()
  *                      -# Verification point:
  *                         +# ilm_getInputDevices() must return ILM_SUCCESS
- *                         +# release_instance() must be called once time
  *                         +# Output should same with prepare data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmInputTest, ilm_getInputDevices_success)
 {
@@ -369,7 +381,6 @@ TEST_F(IlmInputTest, ilm_getInputDevices_success)
 
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputDevices(ILM_INPUT_DEVICE_KEYBOARD, &m_numberSeat, &mp_getSeats));
 
-    EXPECT_EQ(1, release_instance_fake.call_count);
     EXPECT_EQ(5, m_numberSeat);
     for(uint8_t i = 0; i < m_numberSeat; i++)
         EXPECT_EQ(0, strcmp(mp_getSeats[i], mp_seatName[m_numberSeat - i - 1]));
@@ -387,7 +398,7 @@ TEST_F(IlmInputTest, ilm_getInputDevices_success)
  *                      -# Calling the ilm_getInputDeviceCapabilities() time 2 with bitmask is null pointer
  *                      -# Verification point:
  *                         +# ilm_getInputDeviceCapabilities() time 1 and time 2 must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_invalidAgrument)
 {
@@ -396,8 +407,7 @@ TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_invalidAgrument)
     ASSERT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities(nullptr, &bitmask));
     ASSERT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities(l_stringSeat, nullptr));
 
-    ASSERT_EQ(impl_sync_and_acquire_instance_fake.call_count, 0);
-
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -408,7 +418,7 @@ TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_invalidAgrument)
  *                      -# Calling the ilm_getInputDeviceCapabilities()
  *                      -# Verification point:
  *                         +# ilm_getInputDeviceCapabilities() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time and return ILM_FAILED
+ *                         +# Only impl_sync_and_acquire_instance() is called
  */
 TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_cannotSyncAcquireInstance)
 {
@@ -419,8 +429,8 @@ TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_cannotSyncAcquireInstance)
 
     ASSERT_EQ(ILM_FAILED, ilm_getInputDeviceCapabilities(l_stringSeat, &bitmask));
 
-    ASSERT_EQ(1, impl_sync_and_acquire_instance_fake.call_count);
-    ASSERT_EQ(mp_ilmErrorType[0], impl_sync_and_acquire_instance_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -433,7 +443,6 @@ TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_cannotSyncAcquireInstance)
  *                      -# Verification point:
  *                         +# ilm_getInputDeviceCapabilities() must return ILM_SUCCESS
  *                         +# Output should same with prepare data
- *                         +# release_instance() must be called once time
  */
 TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_success)
 {
@@ -445,7 +454,6 @@ TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_success)
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputDeviceCapabilities(l_stringSeat, &bitmask));
 
     ASSERT_EQ(ILM_INPUT_DEVICE_ALL, bitmask);
-    ASSERT_EQ(1, release_instance_fake.call_count);
 }
 
 /** ================================================================================================
@@ -456,7 +464,7 @@ TEST_F(IlmInputTest, ilm_getInputDeviceCapabilities_success)
  *                      -# Calling the ilm_setInputFocus() time 2 with surface id is not in the list of surface id
  *                      -# Verification point:
  *                         +# ilm_setInputFocus() time 1 and time 2 must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmInputTest, ilm_setInputFocus_invalidAgrument)
 {
@@ -464,7 +472,7 @@ TEST_F(IlmInputTest, ilm_setInputFocus_invalidAgrument)
     ASSERT_EQ(ILM_FAILED, ilm_setInputFocus(nullptr, 2, ILM_INPUT_DEVICE_POINTER | ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE));
     ASSERT_EQ(ILM_FAILED, ilm_setInputFocus(l_surfaceIDs, 2, ILM_INPUT_DEVICE_POINTER | ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE));
 
-    ASSERT_EQ(impl_sync_and_acquire_instance_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -475,7 +483,7 @@ TEST_F(IlmInputTest, ilm_setInputFocus_invalidAgrument)
  *                      -# Calling the ilm_setInputFocus()
  *                      -# Verification point:
  *                         +# ilm_setInputFocus() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time and return ILM_FAILED
+ *                         +# Only impl_sync_and_acquire_instance() is called
  */
 TEST_F(IlmInputTest, ilm_setInputFocus_cannotSyncAcquireInstance)
 {
@@ -485,8 +493,8 @@ TEST_F(IlmInputTest, ilm_setInputFocus_cannotSyncAcquireInstance)
     t_ilm_surface l_surfaceIDs[] = {1, 2};
     ASSERT_EQ(ILM_FAILED, ilm_setInputFocus(l_surfaceIDs, 2, ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE));
 
-    ASSERT_EQ(1, impl_sync_and_acquire_instance_fake.call_count);
-    ASSERT_EQ(mp_ilmErrorType[0], impl_sync_and_acquire_instance_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -498,8 +506,7 @@ TEST_F(IlmInputTest, ilm_setInputFocus_cannotSyncAcquireInstance)
  *                      -# Calling the ilm_setInputFocus()
  *                      -# Verification point:
  *                         +# ilm_setInputFocus() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time
- *                         +# release_instance() must be called once time
+*                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmInputTest, ilm_setInputFocus_surfaceNotFound)
 {
@@ -509,8 +516,9 @@ TEST_F(IlmInputTest, ilm_setInputFocus_surfaceNotFound)
     t_ilm_surface l_surfaceIDs[] = {MAX_NUMBER + 1, MAX_NUMBER + 2};
     ASSERT_EQ(ILM_FAILED, ilm_setInputFocus(l_surfaceIDs, 2, ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE));
 
-    ASSERT_EQ(1, impl_sync_and_acquire_instance_fake.call_count);
-    ASSERT_EQ(1, release_instance_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], (void*)release_instance);
+    ASSERT_EQ(fff.call_history[2], nullptr);
 }
 
 /** ================================================================================================
@@ -522,8 +530,8 @@ TEST_F(IlmInputTest, ilm_setInputFocus_surfaceNotFound)
  *                      -# Calling the ilm_setInputFocus()
  *                      -# Verification point:
  *                         +# ilm_setInputFocus() must return ILM_SUCCESS
- *                         +# release_instance() must be called once time
- *                         +# impl_sync_and_acquire_instance() must be called once time
+ *                         +# A sequence with 3 extenal functions is called
+ *                         +# Second arg input of wl_proxy_marshal_flags should is IVI_INPUT_SET_INPUT_FOCUS
  */
 TEST_F(IlmInputTest, ilm_setInputFocus_success)
 {
@@ -533,8 +541,12 @@ TEST_F(IlmInputTest, ilm_setInputFocus_success)
     t_ilm_surface l_surfaceIDs[] = {1};
     ASSERT_EQ(ILM_SUCCESS, ilm_setInputFocus(l_surfaceIDs, 1, ILM_INPUT_DEVICE_POINTER|ILM_INPUT_DEVICE_KEYBOARD, ILM_TRUE));
 
-    ASSERT_EQ(1, release_instance_fake.call_count);
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], (void*)wl_proxy_get_version);
+    ASSERT_EQ(fff.call_history[2], (void*)wl_proxy_marshal_flags);
+    ASSERT_EQ(fff.call_history[3], (void*)release_instance);
+    ASSERT_EQ(fff.call_history[4], nullptr);
+    ASSERT_EQ(IVI_INPUT_SET_INPUT_FOCUS, wl_proxy_marshal_flags_fake.arg1_history[0]);
 }
 
 /** ================================================================================================
@@ -546,7 +558,7 @@ TEST_F(IlmInputTest, ilm_setInputFocus_success)
  *                      -# Calling the ilm_getInputFocus() time 3 with num_ids is null pointer
  *                      -# Verification point:
  *                         +# ilm_getInputFocus() time 1 and time 2 and time 3 must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() not be called
+ *                         +# No external function is called
  */
 TEST_F(IlmInputTest, ilm_getInputFocus_invalidAgrument)
 {
@@ -557,7 +569,7 @@ TEST_F(IlmInputTest, ilm_getInputFocus_invalidAgrument)
     ASSERT_EQ(ILM_FAILED, ilm_getInputFocus(&lp_surfaceIds, nullptr, &l_numId));
     ASSERT_EQ(ILM_FAILED, ilm_getInputFocus(&lp_surfaceIds, &lp_bitmasks, nullptr));
 
-    ASSERT_EQ(impl_sync_and_acquire_instance_fake.call_count, 0);
+    ASSERT_EQ(fff.call_history[0], nullptr);
 }
 
 /** ================================================================================================
@@ -568,7 +580,7 @@ TEST_F(IlmInputTest, ilm_getInputFocus_invalidAgrument)
  *                      -# Calling the ilm_getInputFocus()
  *                      -# Verification point:
  *                         +# ilm_getInputFocus() must return ILM_FAILED
- *                         +# impl_sync_and_acquire_instance() must be called once time and return ILM_FAILED
+ *                         +# Only impl_sync_and_acquire_instance() is called
  */
 TEST_F(IlmInputTest, ilm_getInputFocus_cannotSyncAcquireInstance)
 {
@@ -580,8 +592,8 @@ TEST_F(IlmInputTest, ilm_getInputFocus_cannotSyncAcquireInstance)
     t_ilm_uint l_numId = 0;
     ASSERT_EQ(ILM_FAILED, ilm_getInputFocus(&lp_surfaceIds, &lp_bitmasks, &l_numId));
 
-    ASSERT_EQ(1, impl_sync_and_acquire_instance_fake.call_count);
-    ASSERT_EQ(mp_ilmErrorType[0], impl_sync_and_acquire_instance_fake.return_val_history[0]);
+    ASSERT_EQ(fff.call_history[0], (void*)impl_sync_and_acquire_instance);
+    ASSERT_EQ(fff.call_history[1], nullptr);
 }
 
 /** ================================================================================================
@@ -593,9 +605,7 @@ TEST_F(IlmInputTest, ilm_getInputFocus_cannotSyncAcquireInstance)
  *                      -# Calling the ilm_getInputFocus()
  *                      -# Verification point:
  *                         +# ilm_getInputFocus() must return ILM_SUCCESS
- *                         +# release_instance() must be called once time
  *                         +# Output should same with prepare data
- *                         +# Free resources are allocated when running the test
  */
 TEST_F(IlmInputTest, ilm_getInputFocus_success)
 {
@@ -608,7 +618,6 @@ TEST_F(IlmInputTest, ilm_getInputFocus_success)
     t_ilm_uint l_numId = 0;
     ASSERT_EQ(ILM_SUCCESS, ilm_getInputFocus(&lp_surfaceIds, &lp_bitmasks, &l_numId));
 
-    EXPECT_EQ(1, release_instance_fake.call_count);
     EXPECT_EQ(5, l_numId);
     for(uint8_t i = 0; i < l_numId; i++) {
         EXPECT_EQ(lp_surfaceIds[i], mp_ilmSurfaceIds[l_numId - i -1]);
