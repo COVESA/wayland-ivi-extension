@@ -17,7 +17,7 @@
 #
 ############################################################################
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6...3.22)
 cmake_policy(SET CMP0046 OLD)
 
 PROJECT(ilm_server_unittest)
@@ -57,10 +57,6 @@ INCLUDE_DIRECTORIES(
     ${WAYLAND_SERVER_INCLUDE_DIRS}
     ${WESTON_INCLUDE_DIRS}
     ${gtest_INCLUDE_DIRS}
-)
-
-LINK_DIRECTORIES(
-    ${WAYLAND_SERVER_LIBRARY_DIRS}
 )
 
 SET(LIBS

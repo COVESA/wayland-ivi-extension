@@ -26,41 +26,15 @@
 #include "ivi-input-client-protocol.h"
 
 extern "C"{
-WL_EXPORT const struct wl_interface ivi_screenshot_interface = {
-    "ivi_screenshot", 1, 0, NULL, 0, NULL,
-};
-
-WL_EXPORT const struct wl_interface ivi_wm_screen_interface = {
-    "ivi_wm_screen", 1, 0, NULL, 0, NULL,
-};
-
-WL_EXPORT const struct wl_interface ivi_wm_interface = {
-    "ivi_wm", 1, 0, NULL, 0, NULL,
-};
-
-WL_EXPORT const struct wl_interface ivi_input_interface = {
-    "ivi_input", 1, 0, NULL, 0, NULL,
-};
-
-WL_EXPORT const struct wl_interface wl_registry_interface = {
-    "wl_registry", 1, 0, NULL, 0, NULL,
-};
-
-WL_EXPORT const struct wl_interface wl_buffer_interface = {
-    "wl_buffer", 1, 0, NULL, 0, NULL,
-};
-
-WL_EXPORT const struct wl_interface wl_shm_pool_interface = {
-    "wl_shm_pool", 1, 0, NULL, 0, NULL,
-};
-
-WL_EXPORT const struct wl_interface wl_shm_interface = {
-    "wl_shm", 1, 0, NULL, 0, NULL,
-};
-
-WL_EXPORT const struct wl_interface wl_output_interface = {
-    "wl_output", 1, 0, NULL, 0, NULL,
-};
+const struct wl_interface ivi_screenshot_interface, \
+                          ivi_wm_screen_interface, \
+                          ivi_wm_interface, \
+                          ivi_input_interface, \
+                          wl_registry_interface, \
+                          wl_buffer_interface, \
+                          wl_shm_pool_interface, \
+                          wl_shm_interface, \
+                          wl_output_interface;
 
 FAKE_VALUE_FUNC(int, save_as_png, const char *, const char *, int32_t , int32_t , uint32_t );
 FAKE_VALUE_FUNC(int, save_as_bitmap, const char *, const char *, int32_t , int32_t , uint32_t );
@@ -126,6 +100,7 @@ public:
     {
         memset(&ilm_context, 0, sizeof(ilm_context));
         ilm_context.wl.controller = (struct ivi_wm*)&m_iviWmControllerFakePointer;
+        ilm_context.wl.error_flag = ILM_SUCCESS;
 
         custom_wl_list_init(&ilm_context.wl.list_seat);
         custom_wl_list_init(&ilm_context.wl.list_surface);
@@ -2546,7 +2521,8 @@ TEST_F(IlmControlTest, ilm_surfaceRemoveNotification_success)
  *                      -# Calling the ilm_registerNotification()
  *                      -# Verification point:
  *                         +# ilm_registerNotification() must return ILM_FAILED
- *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# wl_display_roundtrip_queue() and wl_display_get_error() must be called once time
+ *                         +# A sequence with 2 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_registerNotification_cannotGetRoundTripQueue)
 {
@@ -2556,6 +2532,9 @@ TEST_F(IlmControlTest, ilm_registerNotification_cannotGetRoundTripQueue)
     ASSERT_EQ(ILM_FAILED, ilm_registerNotification(&notificationCallback, nullptr));
 
     ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(1, wl_display_get_error_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void *)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void *)wl_display_get_error);
 }
 
 /** ================================================================================================
@@ -2567,6 +2546,8 @@ TEST_F(IlmControlTest, ilm_registerNotification_cannotGetRoundTripQueue)
  *                      -# Verification point:
  *                         +# ilm_registerNotification() must return ILM_SUCCESS
  *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# wl_display_get_error() should not be called
+ *                         +# A sequence with 1 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_registerNotification_success)
 {
@@ -2575,6 +2556,9 @@ TEST_F(IlmControlTest, ilm_registerNotification_success)
     ASSERT_EQ(ILM_SUCCESS, ilm_registerNotification(&notificationCallback, nullptr));
 
     ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(0, wl_display_get_error_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void *)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void *)nullptr);
 }
 
 /** ================================================================================================
@@ -2585,11 +2569,18 @@ TEST_F(IlmControlTest, ilm_registerNotification_success)
  *                      -# Calling the ilm_unregisterNotification()
  *                      -# Verification point:
  *                         +# ilm_unregisterNotification() must return ILM_SUCCESS
+ *                         +# wl_display_roundtrip_queue() must be called once time
+ *                         +# wl_display_get_error() should not be called
+ *                         +# A sequence with 1 extenal functions is called
  */
 TEST_F(IlmControlTest, ilm_unregisterNotification_success)
 {
     ilm_context.initialized = true;
     ASSERT_EQ(ILM_SUCCESS, ilm_unregisterNotification());
+    ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
+    ASSERT_EQ(0, wl_display_get_error_fake.call_count);
+    ASSERT_EQ(fff.call_history[0], (void *)wl_display_roundtrip_queue);
+    ASSERT_EQ(fff.call_history[1], (void *)nullptr);
 }
 
 /** ================================================================================================
@@ -2620,6 +2611,8 @@ TEST_F(IlmControlTest, ilm_commitChanges_wrongCtx)
  *                      -# Verification point:
  *                         +# ilm_commitChanges() must return ILM_FAILED
  *                         +# wl_display_roundtrip_queue() must be called once time and return -1
+ *                         +# wl_display_get_error() must be called once time
+ *                         +# wl_proxy_marshal_flags() must be called once time with opcode IVI_WM_COMMIT_CHANGES
  */
 TEST_F(IlmControlTest, ilm_commitChanges_cannotGetRoundTripQueue)
 {
@@ -2629,6 +2622,8 @@ TEST_F(IlmControlTest, ilm_commitChanges_cannotGetRoundTripQueue)
 
     ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
     ASSERT_EQ(mp_failureResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_COMMIT_CHANGES);
 }
 
 /** ================================================================================================
@@ -2640,6 +2635,7 @@ TEST_F(IlmControlTest, ilm_commitChanges_cannotGetRoundTripQueue)
  *                      -# Verification point:
  *                         +# ilm_commitChanges() must return ILM_SUCCESS
  *                         +# wl_display_roundtrip_queue() must be called once time and return 0
+ *                         +# wl_proxy_marshal_flags() must be called once time with opcode IVI_WM_COMMIT_CHANGES
  */
 TEST_F(IlmControlTest, ilm_commitChanges_success)
 {
@@ -2649,6 +2645,8 @@ TEST_F(IlmControlTest, ilm_commitChanges_success)
 
     ASSERT_EQ(1, wl_display_roundtrip_queue_fake.call_count);
     ASSERT_EQ(mp_successResult[0], wl_display_roundtrip_queue_fake.return_val_history[0]);
+    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_COMMIT_CHANGES);
 }
 
 /** ================================================================================================
@@ -2736,13 +2734,13 @@ TEST_F(IlmControlTest, wm_listener_layer_created_sameLayerId)
  *                      -# Verification point:
  *                         +# wl_list_insert() must be called
  *                         +# when invoke callback function, g_ilmControlStatus must be seted to CREATE_LAYER
- *                         +# Free resources are allocated when running the test time 1 and time 2
+ *                      -# Free resources are allocated when running the test time 1 and time 2
  */
 TEST_F(IlmControlTest, wm_listener_layer_created_addNewOne)
 {
     wm_listener_layer_created(&ilm_context.wl, nullptr, 600);
 
-    ASSERT_EQ(1, wl_list_insert_fake.call_count);
+    EXPECT_EQ(1, wl_list_insert_fake.call_count);
 
     struct layer_context *lp_createLayer = (struct layer_context*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct layer_context, link));
     free(lp_createLayer);
@@ -2750,8 +2748,8 @@ TEST_F(IlmControlTest, wm_listener_layer_created_addNewOne)
     ilm_context.wl.notification = notificationCallback;
     wm_listener_layer_created(&ilm_context.wl, nullptr, 600);
 
-    ASSERT_EQ(2, wl_list_insert_fake.call_count);
-    ASSERT_EQ(CREATE_LAYER, g_ilmControlStatus);
+    EXPECT_EQ(2, wl_list_insert_fake.call_count);
+    EXPECT_EQ(CREATE_LAYER, g_ilmControlStatus);
 
     lp_createLayer = (struct layer_context*)(uintptr_t(wl_list_insert_fake.arg1_history[1]) - offsetof(struct layer_context, link));
     free(lp_createLayer);
@@ -2782,7 +2780,7 @@ TEST_F(IlmControlTest, wm_listener_layer_destroyed_wrongLayerId)
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called
  *                         +# When invoke callback function, g_ilmControlStatus must be seted to DESTROY_LAYER
- *                         +# set ctx_layer to nullptr
+ *                      -# set ctx_layer to nullptr
  */
 TEST_F(IlmControlTest, wm_listener_layer_destroyed_removeOne)
 {
@@ -2861,13 +2859,13 @@ TEST_F(IlmControlTest, wm_listener_surface_created_sameSurfaceId)
  *                      -# Verification point:
  *                         +# wl_list_insert() must be called
  *                         +# When invoke callback function, g_ilmControlStatus must be seted to CREATE_SURFACE
- *                         +# Free resources are allocated when running the test time 1 and time 2
+ *                      -# Free resources are allocated when running the test time 1 and time 2
  */
 TEST_F(IlmControlTest, wm_listener_surface_created_addNewOne)
 {
     wm_listener_surface_created(&ilm_context.wl, nullptr, MAX_NUMBER + 1);
 
-    ASSERT_EQ(1, wl_list_insert_fake.call_count);
+    EXPECT_EQ(1, wl_list_insert_fake.call_count);
 
     struct surface_context *lp_createSurface = (struct surface_context*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct surface_context, link));
     free(lp_createSurface);
@@ -2875,8 +2873,8 @@ TEST_F(IlmControlTest, wm_listener_surface_created_addNewOne)
     ilm_context.wl.notification = notificationCallback;
     wm_listener_surface_created(&ilm_context.wl, nullptr, MAX_NUMBER + 1);
 
-    ASSERT_EQ(2, wl_list_insert_fake.call_count);
-    ASSERT_EQ(CREATE_SURFACE, g_ilmControlStatus);
+    EXPECT_EQ(2, wl_list_insert_fake.call_count);
+    EXPECT_EQ(CREATE_SURFACE, g_ilmControlStatus);
 
     lp_createSurface = (struct surface_context*)(uintptr_t(wl_list_insert_fake.arg1_history[1]) - offsetof(struct surface_context, link));
     free(lp_createSurface);
@@ -2905,8 +2903,7 @@ TEST_F(IlmControlTest, wm_listener_surface_destroyed_wrongSurfaceId)
  *                      -# Calling the wm_listener_surface_destroyed() with valid surface id and null callback
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called 2 times
- *                         +# set ctx_layer to nullptr
- *                         +# Allocate memory for resources are freed when running the test
+ *                      -# set ctx_layer to nullptr
  */
 TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithNullNotification)
 {
@@ -2916,9 +2913,7 @@ TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithNullNotificati
 
     ASSERT_EQ(2, wl_list_remove_fake.call_count);
     mp_ctxSurface[0] = nullptr;
-
-    mp_accepted_seat[0] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
-    mp_accepted_seat[0]->seat_name = strdup("default");
+    mp_accepted_seat[0] = nullptr;
 }
 
 /** ================================================================================================
@@ -2934,23 +2929,20 @@ TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithNullNotificati
  *                         +# ilm_surfaceAddNotification() must return ILM_SUCCESS
  *                         +# wl_list_remove() must be called 2 times
  *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_CONTENT_REMOVED
- *                         +# set ctx_layer to nullptr
- *                         +# Allocate memory for resources are freed when running the test
+ *                      -# set ctx_layer to nullptr
  */
 TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithCtxNotification)
 {
     wl_list_remove_fake.custom_fake = custom_wl_list_remove;
     ilm_context.initialized = true;
 
-    ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(2, &surfaceCallbackFunction));
+    EXPECT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(2, &surfaceCallbackFunction));
     wm_listener_surface_destroyed(&ilm_context.wl, nullptr, 2);
 
-    ASSERT_EQ(2, wl_list_remove_fake.call_count);
-    ASSERT_EQ(ILM_NOTIFICATION_CONTENT_REMOVED, g_ilm_notification_mask);
+    EXPECT_EQ(2, wl_list_remove_fake.call_count);
+    EXPECT_EQ(ILM_NOTIFICATION_CONTENT_REMOVED, g_ilm_notification_mask);
     mp_ctxSurface[1] = nullptr;
-
-    mp_accepted_seat[1] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
-    mp_accepted_seat[1]->seat_name = strdup("default");
+    mp_accepted_seat[1] = nullptr;
 }
 
 /** ================================================================================================
@@ -2964,8 +2956,7 @@ TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithCtxNotificatio
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called 2 times
  *                         +# When invoke callback function, g_ilmControlStatus must be seted to DESTROY_SURFACE
- *                         +# set ctx_layer to nullptr
- *                         +# Allocate memory for resources are freed when running the test
+ *                      -# set ctx_layer to nullptr
  */
 TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithCallbackNotification)
 {
@@ -2974,12 +2965,11 @@ TEST_F(IlmControlTest, wm_listener_surface_destroyed_removeOnewithCallbackNotifi
 
     wm_listener_surface_destroyed(&ilm_context.wl, nullptr, 3);
 
-    ASSERT_EQ(2, wl_list_remove_fake.call_count);
-    ASSERT_EQ(DESTROY_SURFACE, g_ilmControlStatus);
+    EXPECT_EQ(2, wl_list_remove_fake.call_count);
+    EXPECT_EQ(DESTROY_SURFACE, g_ilmControlStatus);
     mp_ctxSurface[2] = nullptr;
 
-    mp_accepted_seat[2] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
-    mp_accepted_seat[2]->seat_name = strdup("default");
+    mp_accepted_seat[2] = nullptr;
 }
 
 /** ================================================================================================
@@ -3022,23 +3012,29 @@ TEST_F(IlmControlTest, wm_listener_surface_visibility_nullNotification)
  *                      and notication callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
+ *                      -# Set property 'visibility' to default value
  *                      -# Calling the ilm_surfaceAddNotification() to add a callback
- *                      -# Calling the wm_listener_surface_visibility() time 1 with visibility is 1
- *                      -# Calling the wm_listener_surface_visibility() time 2 with visibility is 0.5
+ *                      -# Calling the wm_listener_surface_visibility() time 1 with visibility is ILM_TRUE
+ *                      -# Calling the wm_listener_surface_visibility() time 2 with visibility is ILM_FALSE
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_SUCCESS
- *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_VISIBILITY
+ *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_VISIBILITY and property visibility of surface has ID 1 should be changed
  */
 TEST_F(IlmControlTest, wm_listener_surface_visibility_success)
 {
     ilm_context.initialized = true;
-
     uint32_t l_surface_id = 1;
+    // set to default value
+    mp_ctxSurface[0]->prop.visibility = ILM_TRUE;
+    // add a callback
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface_id, &surfaceCallbackFunction));
-    wm_listener_surface_visibility(&ilm_context.wl, nullptr, l_surface_id, 1);
-    wm_listener_surface_visibility(&ilm_context.wl, nullptr, l_surface_id, 0.5);
-
+    wm_listener_surface_visibility(&ilm_context.wl, nullptr, l_surface_id, ILM_TRUE);
+    ASSERT_EQ(ILM_NOTIFICATION_CONTENT_AVAILABLE, g_ilm_notification_mask);
+    // set to default value
+    mp_ctxSurface[0]->prop.visibility = ILM_TRUE;
+    wm_listener_surface_visibility(&ilm_context.wl, nullptr, l_surface_id, ILM_FALSE);
     ASSERT_EQ(ILM_NOTIFICATION_VISIBILITY, g_ilm_notification_mask);
+    ASSERT_EQ(mp_ctxSurface[0]->prop.visibility, ILM_FALSE);
 }
 
 /** ================================================================================================
@@ -3083,23 +3079,29 @@ TEST_F(IlmControlTest, wm_listener_layer_visibility_nullNotification)
  *                      and notication callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
+ *                      -# Set property 'visibility' to default value
  *                      -# Calling the ilm_layerAddNotification() to add a callback
- *                      -# Calling the wm_listener_layer_visibility() time 1 with visibility is 1
- *                      -# Calling the wm_listener_layer_visibility() time 2 with visibility is 0.5
+ *                      -# Calling the wm_listener_layer_visibility() time 1 with visibility is ILM_TRUE
+ *                      -# Calling the wm_listener_layer_visibility() time 2 with visibility is ILM_FALSE
  *                      -# Verification point:
  *                         +# ilm_layerAddNotification() must return ILM_SUCCESS
- *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_VISIBILITY
+ *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_VISIBILITY and property visibility of layer has ID 100 should be changed
  */
 TEST_F(IlmControlTest, wm_listener_layer_visibility_success)
 {
     ilm_context.initialized = true;
-
+    // set to default value
+    mp_ctxLayer[0]->prop.visibility = ILM_TRUE;
     uint32_t l_layer_id = 100;
+    // add callback
     ASSERT_EQ(ILM_SUCCESS, ilm_layerAddNotification(l_layer_id, &layerCallbackFunction));
-    wm_listener_layer_visibility(&ilm_context.wl, nullptr, l_layer_id, 1);
-    wm_listener_layer_visibility(&ilm_context.wl, nullptr, l_layer_id, 0.5);
-
+    wm_listener_layer_visibility(&ilm_context.wl, nullptr, l_layer_id, ILM_TRUE);
+    ASSERT_EQ(ILM_NOTIFICATION_ALL, g_ilm_notification_mask);
+    // set to default value
+    mp_ctxLayer[0]->prop.visibility = ILM_TRUE;
+    wm_listener_layer_visibility(&ilm_context.wl, nullptr, l_layer_id, ILM_FALSE);
     ASSERT_EQ(ILM_NOTIFICATION_VISIBILITY, g_ilm_notification_mask);
+    ASSERT_EQ(mp_ctxLayer[0]->prop.visibility, ILM_FALSE);
 }
 
 /** ================================================================================================
@@ -3142,23 +3144,30 @@ TEST_F(IlmControlTest, wm_listener_surface_opacity_nullNotification)
  *                      and notication callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
+ *                      -# Set property 'opacity' to default value
  *                      -# Calling the ilm_surfaceAddNotification() to add a callback
- *                      -# Calling the wm_listener_surface_opacity() time 1 with opacity is 0
- *                      -# Calling the wm_listener_surface_opacity() time 2 with opacity is 0.5
+ *                      -# Calling the wm_listener_surface_opacity() time 1 with opacity is 0.6
+ *                      -# Calling the wm_listener_surface_opacity() time 2 with opacity is 6.0
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_SUCCESS
- *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_OPACITY
+ *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_OPACITY, otherwise should be setted to ILM_NOTIFICATION_CONTENT_AVAILABLE
  */
 TEST_F(IlmControlTest, wm_listener_surface_opacity_success)
 {
     ilm_context.initialized = true;
-
+    // set to default value
+    mp_ctxSurface[0]->prop.opacity = (wl_fixed_t)0.6;
     uint32_t l_surface_id = 1;
+    //add callback
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface_id, &surfaceCallbackFunction));
-    wm_listener_surface_opacity(&ilm_context.wl, nullptr, l_surface_id, 0);
-    wm_listener_surface_opacity(&ilm_context.wl, nullptr, l_surface_id, 0.5);
-
+    wm_listener_surface_opacity(&ilm_context.wl, nullptr, l_surface_id, (wl_fixed_t)0.6);
+    ASSERT_EQ(ILM_NOTIFICATION_CONTENT_AVAILABLE, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.opacity = (wl_fixed_t)0.6;
+    wm_listener_surface_opacity(&ilm_context.wl, nullptr, l_surface_id, (wl_fixed_t)6.0);
     ASSERT_EQ(ILM_NOTIFICATION_OPACITY, g_ilm_notification_mask);
+    ASSERT_NE(mp_ctxSurface[0]->prop.opacity, (wl_fixed_t)0.6);
 }
 
 /** ================================================================================================
@@ -3201,23 +3210,30 @@ TEST_F(IlmControlTest, wm_listener_layer_opacity_nullNotification)
  *                      and notication callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
+ *                      -# Set property 'opacity' to default value
  *                      -# Calling the ilm_layerAddNotification() to add a callback
- *                      -# Calling the wm_listener_layer_opacity() time 1 with opacity is 0
- *                      -# Calling the wm_listener_layer_opacity() time 2 with opacity is 0.5
+ *                      -# Calling the wm_listener_layer_opacity() time 1 with opacity is 0.1
+ *                      -# Calling the wm_listener_layer_opacity() time 2 with opacity is 6.0
  *                      -# Verification point:
  *                         +# ilm_layerAddNotification() must return ILM_SUCCESS
- *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_OPACITY
+ *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_OPACITY, otherwise should be setted to ILM_NOTIFICATION_ALL
  */
 TEST_F(IlmControlTest, wm_listener_layer_opacity_success)
 {
     ilm_context.initialized = true;
-
+    // set to default value
+    mp_ctxLayer[0]->prop.opacity = (wl_fixed_t)0.1;
     uint32_t l_layer_id = 100;
+    //add callback
     ASSERT_EQ(ILM_SUCCESS, ilm_layerAddNotification(l_layer_id, &layerCallbackFunction));
-    wm_listener_layer_opacity(&ilm_context.wl, nullptr, l_layer_id, 0);
-    wm_listener_layer_opacity(&ilm_context.wl, nullptr, l_layer_id, 0.5);
-
+    wm_listener_layer_opacity(&ilm_context.wl, nullptr, l_layer_id, (wl_fixed_t)0.1);
+    ASSERT_EQ(ILM_NOTIFICATION_ALL, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.opacity = (wl_fixed_t)0.1;
+    wm_listener_layer_opacity(&ilm_context.wl, nullptr, l_layer_id, (wl_fixed_t)6.0);
     ASSERT_EQ(ILM_NOTIFICATION_OPACITY, g_ilm_notification_mask);
+    ASSERT_NE(mp_ctxLayer[0]->prop.opacity, (wl_fixed_t)0.1);
 }
 
 /** ================================================================================================
@@ -3260,8 +3276,9 @@ TEST_F(IlmControlTest, wm_listener_surface_source_rectangle_nullNotification)
  *                      and notication callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
+ *                      -# Set property 'sourceX', 'sourceY', 'sourceWidth', 'sourceHeight' to default value
  *                      -# Calling the ilm_surfaceAddNotification() to add a callback
- *                      -# Calling the wm_listener_surface_source_rectangle() multiple times with different input param x, y, width, height
+ *                      -# Calling the wm_listener_surface_source_rectangle() with input param x, y, width, height same with property of surface has ID 1
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_SUCCESS
  *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_SOURCE_RECT
@@ -3269,17 +3286,48 @@ TEST_F(IlmControlTest, wm_listener_surface_source_rectangle_nullNotification)
 TEST_F(IlmControlTest, wm_listener_surface_source_rectangle_success)
 {
     ilm_context.initialized = true;
-
     uint32_t l_surface_id = 1;
+    // set to default value
+    mp_ctxSurface[0]->prop.sourceX = 0;
+    mp_ctxSurface[0]->prop.sourceY = 0;
+    mp_ctxSurface[0]->prop.sourceWidth = 500;
+    mp_ctxSurface[0]->prop.sourceHeight = 500;
+
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface_id, &surfaceCallbackFunction));
     wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 1, 0, 500, 500);
-    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 1, 500, 500);
-    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 1,   500);
-    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 1);
-    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 500);
-    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 500);
-
     ASSERT_EQ(ILM_NOTIFICATION_SOURCE_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.sourceX = 0;
+    mp_ctxSurface[0]->prop.sourceY = 0;
+    mp_ctxSurface[0]->prop.sourceWidth = 500;
+    mp_ctxSurface[0]->prop.sourceHeight = 500;
+    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 1, 500, 500);
+    ASSERT_EQ(ILM_NOTIFICATION_SOURCE_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.sourceX = 0;
+    mp_ctxSurface[0]->prop.sourceY = 0;
+    mp_ctxSurface[0]->prop.sourceWidth = 500;
+    mp_ctxSurface[0]->prop.sourceHeight = 500;
+    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 1,   500);
+    ASSERT_EQ(ILM_NOTIFICATION_SOURCE_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.sourceX = 0;
+    mp_ctxSurface[0]->prop.sourceY = 0;
+    mp_ctxSurface[0]->prop.sourceWidth = 500;
+    mp_ctxSurface[0]->prop.sourceHeight = 500;
+    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 1);
+    ASSERT_EQ(ILM_NOTIFICATION_SOURCE_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.sourceX = 0;
+    mp_ctxSurface[0]->prop.sourceY = 0;
+    mp_ctxSurface[0]->prop.sourceWidth = 500;
+    mp_ctxSurface[0]->prop.sourceHeight = 500;
+    wm_listener_surface_source_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 500);
+    ASSERT_EQ(ILM_NOTIFICATION_ALL, g_ilm_notification_mask);
 }
 
 /** ================================================================================================
@@ -3322,8 +3370,9 @@ TEST_F(IlmControlTest, wm_listener_layer_source_rectangle_nullNotification)
  *                      and notication callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
+ *                      -# Set property 'sourceX', 'sourceY', 'sourceWidth', 'sourceHeight' to default value
  *                      -# Calling the ilm_layerAddNotification() to add a callback
- *                      -# Calling the wm_listener_layer_source_rectangle() multiple times with different input param x, y, width, height
+ *                      -# Calling the wm_listener_layer_source_rectangle() with input param x, y, width, height same with property of layer has ID 100
  *                      -# Verification point:
  *                         +# ilm_layerAddNotification() must return ILM_SUCCESS
  *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_SOURCE_RECT
@@ -3331,17 +3380,48 @@ TEST_F(IlmControlTest, wm_listener_layer_source_rectangle_nullNotification)
 TEST_F(IlmControlTest, wm_listener_layer_source_rectangle_success)
 {
     ilm_context.initialized = true;
-
     uint32_t l_layer_id = 100;
+    // set to default value
+    mp_ctxLayer[0]->prop.sourceX = 0;
+    mp_ctxLayer[0]->prop.sourceY = 0;
+    mp_ctxLayer[0]->prop.sourceWidth = 1280;
+    mp_ctxLayer[0]->prop.sourceHeight = 720;
+
     ASSERT_EQ(ILM_SUCCESS, ilm_layerAddNotification(l_layer_id, &layerCallbackFunction));
     wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 1, 0, 1280, 720);
-    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 1, 1280, 720);
-    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1,    720);
-    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1280, 1);
-    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1280, 720);
-    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1280, 720);
-
     ASSERT_EQ(ILM_NOTIFICATION_SOURCE_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.sourceX = 0;
+    mp_ctxLayer[0]->prop.sourceY = 0;
+    mp_ctxLayer[0]->prop.sourceWidth = 1280;
+    mp_ctxLayer[0]->prop.sourceHeight = 720;
+    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 1, 1280, 720);
+    ASSERT_EQ(ILM_NOTIFICATION_SOURCE_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.sourceX = 0;
+    mp_ctxLayer[0]->prop.sourceY = 0;
+    mp_ctxLayer[0]->prop.sourceWidth = 1280;
+    mp_ctxLayer[0]->prop.sourceHeight = 720;
+    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1,    720);
+    ASSERT_EQ(ILM_NOTIFICATION_SOURCE_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.sourceX = 0;
+    mp_ctxLayer[0]->prop.sourceY = 0;
+    mp_ctxLayer[0]->prop.sourceWidth = 1280;
+    mp_ctxLayer[0]->prop.sourceHeight = 720;
+    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1280, 1);
+    ASSERT_EQ(ILM_NOTIFICATION_SOURCE_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.sourceX = 0;
+    mp_ctxLayer[0]->prop.sourceY = 0;
+    mp_ctxLayer[0]->prop.sourceWidth = 1280;
+    mp_ctxLayer[0]->prop.sourceHeight = 720;
+    wm_listener_layer_source_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1280, 720);
+    ASSERT_EQ(ILM_NOTIFICATION_ALL, g_ilm_notification_mask);
 }
 
 /** ================================================================================================
@@ -3384,8 +3464,10 @@ TEST_F(IlmControlTest, wm_listener_surface_destination_rectangle_nullNotificatio
  *                      and notication callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
+ *                      -# Set property 'destX', 'destY', 'destWidth', 'destHeight' to default value
  *                      -# Calling the ilm_surfaceAddNotification() to add a callback
- *                      -# Calling the wm_listener_surface_destination_rectangle() multiple times with different input param x, y, width, height
+ *                      -# Calling the wm_listener_surface_destination_rectangle() with input param x, y, width, height 
+ *                          same with property of surface has ID 1
  *                      -# Verification point:
  *                         +# ilm_surfaceAddNotification() must return ILM_SUCCESS
  *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_DEST_RECT
@@ -3393,17 +3475,48 @@ TEST_F(IlmControlTest, wm_listener_surface_destination_rectangle_nullNotificatio
 TEST_F(IlmControlTest, wm_listener_surface_destination_rectangle_success)
 {
     ilm_context.initialized = true;
-
     uint32_t l_surface_id = 1;
+    // set to default value
+    mp_ctxSurface[0]->prop.destX = 0;
+    mp_ctxSurface[0]->prop.destY = 0;
+    mp_ctxSurface[0]->prop.destWidth = 500;
+    mp_ctxSurface[0]->prop.destHeight = 500;
+
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface_id, &surfaceCallbackFunction));
     wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 1, 0, 500, 500);
-    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 1, 500, 500);
-    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 1,   500);
-    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 1);
-    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 500);
-    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 500);
-
     ASSERT_EQ(ILM_NOTIFICATION_DEST_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.destX = 0;
+    mp_ctxSurface[0]->prop.destY = 0;
+    mp_ctxSurface[0]->prop.destWidth = 500;
+    mp_ctxSurface[0]->prop.destHeight = 500;
+    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 1, 500, 500);
+    ASSERT_EQ(ILM_NOTIFICATION_DEST_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.destX = 0;
+    mp_ctxSurface[0]->prop.destY = 0;
+    mp_ctxSurface[0]->prop.destWidth = 500;
+    mp_ctxSurface[0]->prop.destHeight = 500;
+    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 1,   500);
+    ASSERT_EQ(ILM_NOTIFICATION_DEST_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.destX = 0;
+    mp_ctxSurface[0]->prop.destY = 0;
+    mp_ctxSurface[0]->prop.destWidth = 500;
+    mp_ctxSurface[0]->prop.destHeight = 500;
+    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 1);
+    ASSERT_EQ(ILM_NOTIFICATION_DEST_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxSurface[0]->prop.destX = 0;
+    mp_ctxSurface[0]->prop.destY = 0;
+    mp_ctxSurface[0]->prop.destWidth = 500;
+    mp_ctxSurface[0]->prop.destHeight = 500;
+    wm_listener_surface_destination_rectangle(&ilm_context.wl, nullptr, l_surface_id, 0, 0, 500, 500);
+    ASSERT_EQ(ILM_NOTIFICATION_ALL, g_ilm_notification_mask);
 }
 
 /** ================================================================================================
@@ -3446,8 +3559,10 @@ TEST_F(IlmControlTest, wm_listener_layer_destination_rectangle_nullNotification)
  *                      and notication callback is not null pointer
  * @test_procedure Steps:
  *                      -# Set the ilm context initialized is true, ready init
+ *                      -# Set property 'destX', 'destY', 'destWidth', 'destHeight' to default value
  *                      -# Calling the ilm_layerAddNotification() to add a callback
- *                      -# Calling the wm_listener_layer_destination_rectangle() multiple times with different input param x, y, width, height
+ *                      -# Calling the wm_listener_layer_destination_rectangle() with input param x, y, width, height same with property 
+ *                          of layer has ID 100
  *                      -# Verification point:
  *                         +# ilm_layerAddNotification() must return ILM_SUCCESS
  *                         +# When invoke callback function, g_ilm_notification_mask must be seted to ILM_NOTIFICATION_DEST_RECT
@@ -3455,17 +3570,48 @@ TEST_F(IlmControlTest, wm_listener_layer_destination_rectangle_nullNotification)
 TEST_F(IlmControlTest, wm_listener_layer_destination_rectangle_success)
 {
     ilm_context.initialized = true;
-
     uint32_t l_layer_id = 100;
+    // set to default value
+    mp_ctxLayer[0]->prop.destX = 0;
+    mp_ctxLayer[0]->prop.destY = 0;
+    mp_ctxLayer[0]->prop.destWidth = 1920;
+    mp_ctxLayer[0]->prop.destHeight = 1080;
+
     ASSERT_EQ(ILM_SUCCESS, ilm_layerAddNotification(l_layer_id, &layerCallbackFunction));
     wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 1, 0, 1920, 1080);
-    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 1, 1920, 1080);
-    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1,    1080);
-    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1920, 1);
-    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1920, 1080);
-    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1920, 1080);
-
     ASSERT_EQ(ILM_NOTIFICATION_DEST_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.destX = 0;
+    mp_ctxLayer[0]->prop.destY = 0;
+    mp_ctxLayer[0]->prop.destWidth = 1920;
+    mp_ctxLayer[0]->prop.destHeight = 1080;
+    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 1, 1920, 1080);
+    ASSERT_EQ(ILM_NOTIFICATION_DEST_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.destX = 0;
+    mp_ctxLayer[0]->prop.destY = 0;
+    mp_ctxLayer[0]->prop.destWidth = 1920;
+    mp_ctxLayer[0]->prop.destHeight = 1080;
+    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1,    1080);
+    ASSERT_EQ(ILM_NOTIFICATION_DEST_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.destX = 0;
+    mp_ctxLayer[0]->prop.destY = 0;
+    mp_ctxLayer[0]->prop.destWidth = 1920;
+    mp_ctxLayer[0]->prop.destHeight = 1080;
+    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1920, 1);
+    ASSERT_EQ(ILM_NOTIFICATION_DEST_RECT, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    // set to default value
+    mp_ctxLayer[0]->prop.destX = 0;
+    mp_ctxLayer[0]->prop.destY = 0;
+    mp_ctxLayer[0]->prop.destWidth = 1920;
+    mp_ctxLayer[0]->prop.destHeight = 1080;
+    wm_listener_layer_destination_rectangle(&ilm_context.wl, nullptr, l_layer_id, 0, 0, 1920, 1080);
+    ASSERT_EQ(ILM_NOTIFICATION_ALL, g_ilm_notification_mask);
 }
 
 /** ================================================================================================
@@ -3474,15 +3620,22 @@ TEST_F(IlmControlTest, wm_listener_layer_destination_rectangle_success)
  * @test_procedure Steps:
  *                      -# Set the ilm context wl.error_flag is ILM_SUCCESS
  *                      -# Calling the wm_listener_surface_error() multiple times with different input param error type
+ *                      -# Verification point:
+ *                          +# ilm_context.wl.error_flag is setted with correspond error code
  */
 TEST_F(IlmControlTest, wm_listener_surface_error_success)
 {
-    ilm_context.wl.error_flag = ILM_SUCCESS;
-
     wm_listener_surface_error(&ilm_context.wl, nullptr, 0, IVI_WM_SURFACE_ERROR_NO_SURFACE, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_RESOURCE_NOT_FOUND);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_listener_surface_error(&ilm_context.wl, nullptr, 0, IVI_WM_SURFACE_ERROR_BAD_PARAM, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_INVALID_ARGUMENTS);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_listener_surface_error(&ilm_context.wl, nullptr, 0, IVI_WM_SURFACE_ERROR_NOT_SUPPORTED, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_NOT_IMPLEMENTED);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_listener_surface_error(&ilm_context.wl, nullptr, 0, 3, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_ON_CONNECTION);
 }
 
 /** ================================================================================================
@@ -3494,12 +3647,17 @@ TEST_F(IlmControlTest, wm_listener_surface_error_success)
  */
 TEST_F(IlmControlTest, wm_listener_layer_error_success)
 {
-    ilm_context.wl.error_flag = ILM_SUCCESS;
-
     wm_listener_layer_error(&ilm_context.wl, nullptr, 0, IVI_WM_LAYER_ERROR_NO_SURFACE, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_RESOURCE_NOT_FOUND);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_listener_layer_error(&ilm_context.wl, nullptr, 0, IVI_WM_LAYER_ERROR_NO_LAYER, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_RESOURCE_NOT_FOUND);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_listener_layer_error(&ilm_context.wl, nullptr, 0, IVI_WM_LAYER_ERROR_BAD_PARAM, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_INVALID_ARGUMENTS);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_listener_layer_error(&ilm_context.wl, nullptr, 0, 3, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_ON_CONNECTION);
 }
 
 /** ================================================================================================
@@ -3555,11 +3713,17 @@ TEST_F(IlmControlTest, wm_listener_surface_size_success)
     uint32_t l_surface_id = 1;
     ASSERT_EQ(ILM_SUCCESS, ilm_surfaceAddNotification(l_surface_id, &surfaceCallbackFunction));
     wm_listener_surface_size(&ilm_context.wl, nullptr, l_surface_id, 0, 500);
-    wm_listener_surface_size(&ilm_context.wl, nullptr, l_surface_id, 500, 0);
-    wm_listener_surface_size(&ilm_context.wl, nullptr, l_surface_id, 500, 500);
-    wm_listener_surface_size(&ilm_context.wl, nullptr, l_surface_id, 500, 500);
-
     ASSERT_EQ(ILM_NOTIFICATION_CONFIGURED, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    mp_ctxSurface[0]->prop.origSourceWidth = 500;
+    mp_ctxSurface[0]->prop.origSourceWidth = 500;
+    wm_listener_surface_size(&ilm_context.wl, nullptr, l_surface_id, 500, 0);
+    ASSERT_EQ(ILM_NOTIFICATION_CONFIGURED, g_ilm_notification_mask);
+    g_ilm_notification_mask = ILM_NOTIFICATION_ALL;
+    mp_ctxSurface[0]->prop.origSourceWidth = 500;
+    mp_ctxSurface[0]->prop.origSourceHeight = 500;
+    wm_listener_surface_size(&ilm_context.wl, nullptr, l_surface_id, 500, 500);
+    ASSERT_EQ(ILM_NOTIFICATION_ALL, g_ilm_notification_mask);
 }
 
 /** ================================================================================================
@@ -3567,11 +3731,17 @@ TEST_F(IlmControlTest, wm_listener_surface_size_success)
  * @brief               Test case of wm_listener_surface_stats() where invalid surface id
  * @test_procedure Steps:
  *                      -# Calling the wm_listener_surface_stats()
+ *                      -# Verification point:
+ *                          +# property frameCounter and creatorPid of surface have ID 1 are not changed
  */
 TEST_F(IlmControlTest, wm_listener_surface_stats_invalidSurface)
 {
-    uint32_t l_surface_id = 6;
-    wm_listener_surface_stats(&ilm_context.wl, nullptr, l_surface_id, 0, 0);
+    uint32_t lSurfaceId{6};
+    uint32_t lFrameCount{100};
+    uint32_t lPid{3110};
+    wm_listener_surface_stats(&ilm_context.wl, nullptr, lSurfaceId, lFrameCount, lPid);
+    ASSERT_NE(mp_ctxSurface[0]->prop.frameCounter, lFrameCount);
+    ASSERT_NE(mp_ctxSurface[0]->prop.creatorPid, lPid);
 }
 
 /** ================================================================================================
@@ -3579,11 +3749,17 @@ TEST_F(IlmControlTest, wm_listener_surface_stats_invalidSurface)
  * @brief               Test case of wm_listener_surface_stats() where valid surface id
  * @test_procedure Steps:
  *                      -# Calling the wm_listener_surface_stats()
+ *                      -# Verification point:
+ *                          +# property frameCounter and creatorPid of surface have ID 1 are changed
  */
 TEST_F(IlmControlTest, wm_listener_surface_stats_success)
 {
-    uint32_t l_surface_id = 1;
-    wm_listener_surface_stats(&ilm_context.wl, nullptr, l_surface_id, 0, 0);
+    uint32_t lSurfaceId{1};
+    uint32_t lFrameCount{100};
+    uint32_t lPid{3110};
+    wm_listener_surface_stats(&ilm_context.wl, nullptr, lSurfaceId, lFrameCount, lPid);
+    ASSERT_EQ(mp_ctxSurface[0]->prop.frameCounter, lFrameCount);
+    ASSERT_EQ(mp_ctxSurface[0]->prop.creatorPid, lPid);
 }
 
 /** ================================================================================================
@@ -3591,10 +3767,14 @@ TEST_F(IlmControlTest, wm_listener_surface_stats_success)
  * @brief               Test case of output_listener_geometry() where passing valid input params
  * @test_procedure Steps:
  *                      -# Calling the output_listener_geometry()
+ *                      -# Verification point:
+ *                          +# element transform is not changed
  */
 TEST_F(IlmControlTest, output_listener_geometry_success)
 {
-    output_listener_geometry(mp_ctxScreen[0], nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, 0);
+    int32_t lTransform{3110};
+    output_listener_geometry(mp_ctxScreen[0], nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, lTransform);
+    ASSERT_EQ(mp_ctxScreen[0]->transform, lTransform);
 }
 
 /** ================================================================================================
@@ -3603,10 +3783,20 @@ TEST_F(IlmControlTest, output_listener_geometry_success)
  *                      and input flag is false {0}
  * @test_procedure Steps:
  *                      -# Calling the output_listener_mode()
+ *                      -# Verification point:
+ *                          +# property screenWidth and screenHeight are not changed
  */
 TEST_F(IlmControlTest, output_listener_mode_failure)
 {
-    output_listener_mode(mp_ctxScreen[0], nullptr, 0, 0, 0, 0);
+    uint32_t lFlags{0};
+    int32_t lWidth{1920};
+    int32_t lHeight{1080};
+
+    mp_ctxScreen[0]->prop.screenWidth = 0;
+    mp_ctxScreen[0]->prop.screenHeight = 0;
+    output_listener_mode(mp_ctxScreen[0], nullptr, lFlags, lWidth, lHeight, 0);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenWidth, 0);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenHeight, 0);
 }
 
 /** ================================================================================================
@@ -3615,44 +3805,48 @@ TEST_F(IlmControlTest, output_listener_mode_failure)
  *                      and input flag is true {1}
  * @test_procedure Steps:
  *                      -# Calling the output_listener_mode() multiples times with different input transform types
+ *                      -# Verification point:
+ *                          +# property screenWidth and screenHeight are changed
  */
 TEST_F(IlmControlTest, output_listener_mode_success)
 {
-    output_listener_mode(mp_ctxScreen[0], nullptr, 1, 0, 0, 0);
+    uint32_t lFlags{1};
+    int32_t lWidth{1920};
+    int32_t lHeight{1080};
 
+    mp_ctxScreen[0]->prop.screenWidth = 0;
+    mp_ctxScreen[0]->prop.screenHeight = 0;
+    output_listener_mode(mp_ctxScreen[0], nullptr, lFlags, lWidth, lHeight, 0);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenWidth, lWidth);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenHeight, lHeight);
+    // case WL_OUTPUT_TRANSFORM_90
+    mp_ctxScreen[0]->prop.screenWidth = 0;
+    mp_ctxScreen[0]->prop.screenHeight = 0;
     mp_ctxScreen[0]->transform = WL_OUTPUT_TRANSFORM_90;
-    output_listener_mode(mp_ctxScreen[0], nullptr, 1, 0, 0, 0);
-
+    output_listener_mode(mp_ctxScreen[0], nullptr, lFlags, lWidth, lHeight, 0);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenWidth, lHeight);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenHeight, lWidth);
+    // case WL_OUTPUT_TRANSFORM_270
+    mp_ctxScreen[0]->prop.screenWidth = 0;
+    mp_ctxScreen[0]->prop.screenHeight = 0;
     mp_ctxScreen[0]->transform = WL_OUTPUT_TRANSFORM_270;
-    output_listener_mode(mp_ctxScreen[0], nullptr, 1, 0, 0, 0);
-
+    output_listener_mode(mp_ctxScreen[0], nullptr, lFlags, lWidth, lHeight, 0);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenWidth, lHeight);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenHeight, lWidth);
+    // case WL_OUTPUT_TRANSFORM_FLIPPED_90
+    mp_ctxScreen[0]->prop.screenWidth = 0;
+    mp_ctxScreen[0]->prop.screenHeight = 0;
     mp_ctxScreen[0]->transform = WL_OUTPUT_TRANSFORM_FLIPPED_90;
-    output_listener_mode(mp_ctxScreen[0], nullptr, 1, 0, 0, 0);
-
+    output_listener_mode(mp_ctxScreen[0], nullptr, lFlags, lWidth, lHeight, 0);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenWidth, lHeight);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenHeight, lWidth);
+    // case WL_OUTPUT_TRANSFORM_FLIPPED_90
+    mp_ctxScreen[0]->prop.screenWidth = 0;
+    mp_ctxScreen[0]->prop.screenHeight = 0;
     mp_ctxScreen[0]->transform = WL_OUTPUT_TRANSFORM_FLIPPED_270;
-    output_listener_mode(mp_ctxScreen[0], nullptr, 1, 0, 0, 0);
-}
-
-/** ================================================================================================
- * @test_id             output_listener_done_success
- * @brief               Test case of output_listener_done() where passing valid input params
- * @test_procedure Steps:
- *                      -# Calling the output_listener_done()
- */
-TEST_F(IlmControlTest, output_listener_done_success)
-{
-    output_listener_done(nullptr, nullptr);
-}
-
-/** ================================================================================================
- * @test_id             output_listener_scale_success
- * @brief               Test case of output_listener_scale() where passing valid input params
- * @test_procedure Steps:
- *                      -# Calling the output_listener_scale()
- */
-TEST_F(IlmControlTest, output_listener_scale_success)
-{
-    output_listener_scale(nullptr, nullptr, 0);
+    output_listener_mode(mp_ctxScreen[0], nullptr, lFlags, lWidth, lHeight, 0);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenWidth, lHeight);
+    ASSERT_EQ(mp_ctxScreen[0]->prop.screenHeight, lWidth);
 }
 
 /** ================================================================================================
@@ -3660,10 +3854,14 @@ TEST_F(IlmControlTest, output_listener_scale_success)
  * @brief               Test case of wm_screen_listener_screen_id() where passing valid input params
  * @test_procedure Steps:
  *                      -# Calling the wm_screen_listener_screen_id()
+ *                      -# Verification point:
+ *                         +# id_screen should be changed
  */
 TEST_F(IlmControlTest, wm_screen_listener_screen_id_success)
 {
-    wm_screen_listener_screen_id(mp_ctxScreen[0], nullptr, 0);
+    uint32_t screen_id{3110};
+    wm_screen_listener_screen_id(mp_ctxScreen[0], nullptr, screen_id);
+    ASSERT_EQ(mp_ctxScreen[0]->id_screen, screen_id);
 }
 
 /** ================================================================================================
@@ -3675,7 +3873,7 @@ TEST_F(IlmControlTest, wm_screen_listener_screen_id_success)
  *                      -# Verification point:
  *                         +# wl_array_add() must be called once time
  *                         +# The variable must same input layer id
- *                         +# Free resources are allocated when running the test
+ *                      -# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, wm_screen_listener_layer_added_success)
 {
@@ -3685,8 +3883,8 @@ TEST_F(IlmControlTest, wm_screen_listener_layer_added_success)
 
     wm_screen_listener_layer_added(&mp_ctxScreen[0], nullptr, 100);
 
-    ASSERT_EQ(1, wl_array_add_fake.call_count);
-    ASSERT_EQ(100, l_dataScreen);
+    EXPECT_EQ(1, wl_array_add_fake.call_count);
+    EXPECT_EQ(100, l_dataScreen);
 
     custom_wl_array_release(&mp_ctxScreen[0]->render_order);
 }
@@ -3699,7 +3897,9 @@ TEST_F(IlmControlTest, wm_screen_listener_layer_added_success)
  */
 TEST_F(IlmControlTest, wm_screen_listener_connector_name_success)
 {
-    wm_screen_listener_connector_name(mp_ctxScreen[0], nullptr, "TEST");
+    char connector_name[] = "name_of_connector";
+    wm_screen_listener_connector_name(mp_ctxScreen[0], nullptr, connector_name);
+    ASSERT_EQ(strcmp(mp_ctxScreen[0]->prop.connectorName, connector_name), 0);
 }
 
 /** ================================================================================================
@@ -3712,11 +3912,17 @@ TEST_F(IlmControlTest, wm_screen_listener_connector_name_success)
 TEST_F(IlmControlTest, wm_screen_listener_error_success)
 {
     mp_ctxScreen[0]->id_screen = 1;
-    mp_ctxScreen[0]->ctx->error_flag = ILM_SUCCESS;
     wm_screen_listener_error(mp_ctxScreen[0], nullptr, IVI_WM_SCREEN_ERROR_NO_LAYER, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_RESOURCE_NOT_FOUND);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_screen_listener_error(mp_ctxScreen[0], nullptr, IVI_WM_SCREEN_ERROR_NO_SCREEN, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_RESOURCE_NOT_FOUND);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_screen_listener_error(mp_ctxScreen[0], nullptr, IVI_WM_SCREEN_ERROR_BAD_PARAM, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_INVALID_ARGUMENTS);
+    ilm_context.wl.error_flag = ILM_SUCCESS;
     wm_screen_listener_error(mp_ctxScreen[0], nullptr, 3, "");
+    ASSERT_EQ(ilm_context.wl.error_flag, ILM_ERROR_ON_CONNECTION);
 }
 
 /** ================================================================================================
@@ -3741,13 +3947,13 @@ TEST_F(IlmControlTest, input_listener_seat_created_validSeat)
  *                      -# Calling the input_listener_seat_created()
  *                      -# Verification point:
  *                         +# wl_list_insert() must be called once time
- *                         +# Free resources are allocated when running the test
+ *                      -# Free resources are allocated when running the test
  */
 TEST_F(IlmControlTest, input_listener_seat_created_newOne)
 {
     input_listener_seat_created(&ilm_context.wl, nullptr, "", 0, 1);
 
-    ASSERT_EQ(1, wl_list_insert_fake.call_count);
+    EXPECT_EQ(1, wl_list_insert_fake.call_count);
 
     struct seat_context *lp_createSeat = (struct seat_context*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct seat_context, link));
     free(lp_createSeat->seat_name);
@@ -3759,10 +3965,16 @@ TEST_F(IlmControlTest, input_listener_seat_created_newOne)
  * @brief               Test case of input_listener_seat_capabilities() where invalid input seat
  * @test_procedure Steps:
  *                      -# Calling the input_listener_seat_capabilities()
+ *                      -# Verification point:
+ *                         +# element capabilities should be not changed
  */
 TEST_F(IlmControlTest, input_listener_seat_capabilities_invalidSeat)
 {
-    input_listener_seat_capabilities(&ilm_context.wl, nullptr, "", 0);
+    char lSeatName[] = "invalid_name";
+    uint32_t lCapabilities{10};
+    mp_ctxSeat[0]->capabilities = 31;
+    input_listener_seat_capabilities(&ilm_context.wl, nullptr, lSeatName, lCapabilities);
+    ASSERT_EQ(mp_ctxSeat[0]->capabilities, 31);
 }
 
 /** ================================================================================================
@@ -3770,10 +3982,16 @@ TEST_F(IlmControlTest, input_listener_seat_capabilities_invalidSeat)
  * @brief               Test case of input_listener_seat_capabilities() where valid input seat
  * @test_procedure Steps:
  *                      -# Calling the input_listener_seat_capabilities()
+ *                      -# Verification point:
+ *                         +# element capabilities should be changed
  */
 TEST_F(IlmControlTest, input_listener_seat_capabilities_success)
 {
-    input_listener_seat_capabilities(&ilm_context.wl, nullptr, "seat2", 0);
+    char lSeatName[] = "default";
+    uint32_t lCapabilities{10};
+    mp_ctxSeat[0]->capabilities = 31;
+    input_listener_seat_capabilities(&ilm_context.wl, nullptr, lSeatName, lCapabilities);
+    ASSERT_EQ(mp_ctxSeat[0]->capabilities, lCapabilities);
 }
 
 /** ================================================================================================
@@ -3799,7 +4017,7 @@ TEST_F(IlmControlTest, input_listener_seat_destroyed_invalidSeat)
  *                      -# Calling the input_listener_seat_destroyed()
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called once time
- *                         +# Allocate memory for resources are freed when running the test
+ *                      -# Set NULL for resources are freed when running the test
  */
 TEST_F(IlmControlTest, input_listener_seat_destroyed_success)
 {
@@ -3807,10 +4025,9 @@ TEST_F(IlmControlTest, input_listener_seat_destroyed_success)
 
     input_listener_seat_destroyed(&ilm_context.wl, nullptr, "default");
 
-    ASSERT_EQ(1, wl_list_remove_fake.call_count);
+    EXPECT_EQ(1, wl_list_remove_fake.call_count);
 
-    mp_ctxSeat[0] = (struct seat_context*)calloc(1, sizeof(struct seat_context));
-    mp_ctxSeat[0]->seat_name = strdup(mp_ilmSeatNames[0]);
+    mp_ctxSeat[0] = nullptr;
 }
 
 /** ================================================================================================
@@ -3818,13 +4035,19 @@ TEST_F(IlmControlTest, input_listener_seat_destroyed_success)
  * @brief               Test case of input_listener_input_focus() where invalid input surface id
  *                      and input enabled is false {0}
  * @test_procedure Steps:
+ *                      -# Set mp_ctxSurface[0]->prop.focus to default value
  *                      -# Calling the input_listener_input_focus()
+ *                      -# Verification point:
+ *                         +# mp_ctxSurface[0]->prop.focus should be not changed
  */
 TEST_F(IlmControlTest, input_listener_input_focus_invalidSurface)
 {
     uint32_t l_surface_id = 6;
     int32_t l_enabled = 0;
-    input_listener_input_focus(&ilm_context.wl, nullptr, l_surface_id, 0, l_enabled);
+    uint32_t l_device = 0xFFFFFFFF;
+    mp_ctxSurface[0]->prop.focus = 0xFFFF;
+    input_listener_input_focus(&ilm_context.wl, nullptr, l_surface_id, l_device, l_enabled);
+    ASSERT_EQ(mp_ctxSurface[0]->prop.focus, 0xFFFF);
 }
 
 /** ================================================================================================
@@ -3832,13 +4055,19 @@ TEST_F(IlmControlTest, input_listener_input_focus_invalidSurface)
  * @brief               Test case of input_listener_input_focus() where valid input surface id
  *                      and input enabled is false {0}
  * @test_procedure Steps:
+ *                      -# Set mp_ctxSurface[0]->prop.focus to default value
  *                      -# Calling the input_listener_input_focus()
+ *                      -# Verification point:
+ *                         +# mp_ctxSurface[0]->prop.focus should be changed
  */
 TEST_F(IlmControlTest, input_listener_input_focus_unenabled)
 {
     uint32_t l_surface_id = 1;
     int32_t l_enabled = 0;
-    input_listener_input_focus(&ilm_context.wl, nullptr, l_surface_id, 0, l_enabled);
+    uint32_t l_device = 0xFFFFFFFF;
+    mp_ctxSurface[0]->prop.focus = 0xFFFF;
+    input_listener_input_focus(&ilm_context.wl, nullptr, l_surface_id, l_device, l_enabled);
+    ASSERT_NE(mp_ctxSurface[0]->prop.focus, 0xFFFF);
 }
 
 /** ================================================================================================
@@ -3846,13 +4075,19 @@ TEST_F(IlmControlTest, input_listener_input_focus_unenabled)
  * @brief               Test case of input_listener_input_focus() where valid input surface id
  *                      and input enabled is true {1}
  * @test_procedure Steps:
+ *                      -# Set mp_ctxSurface[0]->prop.focus to default value
  *                      -# Calling the input_listener_input_focus()
+ *                      -# Verification point:
+ *                         +# mp_ctxSurface[0]->prop.focus should be changed
  */
 TEST_F(IlmControlTest, input_listener_input_focus_enabled)
 {
     uint32_t l_surface_id = 1;
     int32_t l_enabled = 1;
-    input_listener_input_focus(&ilm_context.wl, nullptr, l_surface_id, 0, l_enabled);
+    uint32_t l_device = 0xFFFFFFFF;
+    mp_ctxSurface[0]->prop.focus = 0xFFFF;
+    input_listener_input_focus(&ilm_context.wl, nullptr, l_surface_id, l_device, l_enabled);
+    ASSERT_NE(mp_ctxSurface[0]->prop.focus, 0xFFFF);
 }
 
 /** ================================================================================================
@@ -3892,8 +4127,8 @@ TEST_F(IlmControlTest, input_listener_input_acceptance_invalidSeatAndAccepted)
     int32_t l_accepted = 1;
     input_listener_input_acceptance(&ilm_context.wl, nullptr, l_surface_id, "", l_accepted);
 
-    ASSERT_EQ(0, wl_list_remove_fake.call_count);
-    ASSERT_EQ(1, wl_list_insert_fake.call_count);
+    EXPECT_EQ(0, wl_list_remove_fake.call_count);
+    EXPECT_EQ(1, wl_list_insert_fake.call_count);
 
     struct seat_context *lp_accepted_seat = (struct seat_context*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct seat_context, link));
     free(lp_accepted_seat->seat_name);
@@ -3953,7 +4188,7 @@ TEST_F(IlmControlTest, input_listener_input_acceptance_validSeatAndAccepted)
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called once time
  *                         +# wl_list_insert() not be called
- *                         +# Allocate memory for resources are freed when running the test
+ *                      -# Set NULL for resources are freed when running the test
  */
 TEST_F(IlmControlTest, input_listener_input_acceptance_validSeatAndUnaccepted)
 {
@@ -3963,11 +4198,10 @@ TEST_F(IlmControlTest, input_listener_input_acceptance_validSeatAndUnaccepted)
     int32_t accepted = 0;
     input_listener_input_acceptance(&ilm_context.wl, nullptr, surface_id, "default", accepted);
 
-    ASSERT_EQ(1, wl_list_remove_fake.call_count);
-    ASSERT_EQ(0, wl_list_insert_fake.call_count);
+    EXPECT_EQ(1, wl_list_remove_fake.call_count);
+    EXPECT_EQ(0, wl_list_insert_fake.call_count);
 
-    mp_accepted_seat[0] = (struct accepted_seat*)calloc(1, sizeof(struct accepted_seat));
-    mp_accepted_seat[0]->seat_name = strdup("default");
+    mp_accepted_seat[0] = nullptr;
 }
 
 /** ================================================================================================
@@ -3986,53 +4220,55 @@ TEST_F(IlmControlTest, input_listener_input_acceptance_validSeatAndUnaccepted)
  *                      -# Calling the registry_handle_control() time 6 with interface is wl_output
  *                      -# Verification point:
  *                         +# wl_proxy_marshal_flags() not be called when calling time 1
- *                         +# wl_proxy_marshal_flags() must be called when calling time 2, time 3, time 4, time 5, time 6
+ *                         +# wl_proxy_marshal_flags() must be called when calling time 2, time 3, time 4, time 5, time 6 with opcode WL_REGISTRY_BIND
  *                         +# wl_proxy_add_listener() not be called when calling time 1, time 2, time 3, time 4
  *                         +# wl_proxy_add_listener() must be called when calling time 5, time 6
  *                         +# wl_list_insert() must be called when calling time 6
- *                         +# Free resources are allocated when running the test
+ *                      -# Free resources are allocated when running the test
  * 
  */
 TEST_F(IlmControlTest, registry_handle_control_success)
 {
     registry_handle_control(&ilm_context.wl, nullptr, 0 ,"", 0);
-
-    ASSERT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_proxy_add_listener_fake.call_count);
+    EXPECT_EQ(0, wl_proxy_marshal_flags_fake.call_count);
+    EXPECT_EQ(0, wl_proxy_add_listener_fake.call_count);
+    RESET_FAKE(wl_proxy_marshal_flags);
 
     registry_handle_control(&ilm_context.wl, nullptr, 0 ,"ivi_wm", 0);
-
-    ASSERT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_proxy_add_listener_fake.call_count);
+    EXPECT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_REGISTRY_BIND);
+    EXPECT_EQ(0, wl_proxy_add_listener_fake.call_count);
+    RESET_FAKE(wl_proxy_marshal_flags);
 
     registry_handle_control(&ilm_context.wl, nullptr, 0 ,"ivi_input", 0);
-
-    ASSERT_EQ(2, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_proxy_add_listener_fake.call_count);
+    EXPECT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_REGISTRY_BIND);
+    EXPECT_EQ(0, wl_proxy_add_listener_fake.call_count);
+    RESET_FAKE(wl_proxy_marshal_flags);
 
     registry_handle_control(&ilm_context.wl, nullptr, 0 ,"wl_output", 0);
-
-    ASSERT_EQ(3, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(0, wl_proxy_add_listener_fake.call_count);
+    EXPECT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_REGISTRY_BIND);
+    EXPECT_EQ(0, wl_proxy_add_listener_fake.call_count);
+    RESET_FAKE(wl_proxy_marshal_flags);
 
     struct wl_proxy *id[1] = {(struct wl_proxy *)0xFFFFFFFF};
     SET_RETURN_SEQ(wl_proxy_marshal_flags, id, 1);
     SET_RETURN_SEQ(wl_proxy_add_listener, mp_failureResult, 1);
-
     registry_handle_control(&ilm_context.wl, nullptr, 0 ,"wl_output", 0);
-
-    ASSERT_EQ(4, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(1, wl_proxy_add_listener_fake.call_count);
+    EXPECT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_REGISTRY_BIND);
+    EXPECT_EQ(1, wl_proxy_add_listener_fake.call_count);
+    RESET_FAKE(wl_proxy_marshal_flags);
+    RESET_FAKE(wl_proxy_add_listener);
 
     SET_RETURN_SEQ(wl_proxy_marshal_flags, id, 1);
     SET_RETURN_SEQ(wl_proxy_add_listener, mp_successResult, 1);
-
     registry_handle_control(&ilm_context.wl, nullptr, 0 ,"wl_output", 0);
-
-    ASSERT_EQ(5, wl_proxy_marshal_flags_fake.call_count);
-    ASSERT_EQ(2, wl_proxy_add_listener_fake.call_count);
-    ASSERT_EQ(1, wl_list_insert_fake.call_count);
-
+    EXPECT_EQ(1, wl_proxy_marshal_flags_fake.call_count);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_REGISTRY_BIND);
+    EXPECT_EQ(1, wl_proxy_add_listener_fake.call_count);
+    EXPECT_EQ(1, wl_list_insert_fake.call_count);
     struct screen_context *lp_createScreen = (struct screen_context*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct screen_context, link));
     free(lp_createScreen);
 }
@@ -4065,25 +4301,22 @@ TEST_F(IlmControlTest, registry_handle_control_remove_invalidName)
  *                      -# Calling the registry_handle_control_remove() time 2
  *                      -# Verification point:
  *                         +# wl_list_remove() must be called
- *                         +# Allocate memory for resources are freed when running the test
+ *                      -# Set NULL for resources are freed when running the test
  */
 TEST_F(IlmControlTest, registry_handle_control_remove_oneNode)
 {
     wl_list_remove_fake.custom_fake = custom_wl_list_remove;
 
     registry_handle_control_remove(&ilm_context.wl, nullptr, 0);
-
-    ASSERT_EQ(1, wl_list_remove_fake.call_count);
-
-    mp_ctxScreen[0] = (struct screen_context*)calloc(1, sizeof(struct screen_context));
+    EXPECT_EQ(1, wl_list_remove_fake.call_count);
 
     mp_ctxScreen[1]->controller = nullptr;
     mp_ctxScreen[1]->output = nullptr;
     registry_handle_control_remove(&ilm_context.wl, nullptr, 1);
+    EXPECT_EQ(2, wl_list_remove_fake.call_count);
 
-    ASSERT_EQ(2, wl_list_remove_fake.call_count);
-
-    mp_ctxScreen[1] = (struct screen_context*)calloc(1, sizeof(struct screen_context));
+    mp_ctxScreen[0] = nullptr;
+    mp_ctxScreen[1] = nullptr;
 }
 
 /** ================================================================================================
@@ -4096,15 +4329,18 @@ TEST_F(IlmControlTest, registry_handle_control_remove_oneNode)
  *                      -# Set the ilm context initialized is false, not ready init
  *                      -# Calling the ilmControl_init() time 2
  *                      -# Verification point:
- *                         +# Both of ilmControl_init() time 1 and time 2 must return ILM_FAILED
+ *                         +# ilmControl_init() time 1 must return ILM_FAILED and wl_display_create_queue() should not be run
+ *                         +# ilmControl_init() time 2 must return ILM_FAILED and wl_display_create_queue() should run 1 time
  */
 TEST_F(IlmControlTest, ilmControl_init_failed)
 {
     ilm_context.initialized = true;
     ASSERT_EQ(ILM_FAILED, ilmControl_init(1));
+    ASSERT_EQ(0, wl_display_create_queue_fake.call_count);
 
     ilm_context.initialized = false;
     ASSERT_EQ(ILM_FAILED, ilmControl_init(1));
+    ASSERT_EQ(1, wl_display_create_queue_fake.call_count);
 }
 
 /** ================================================================================================
@@ -4114,10 +4350,12 @@ TEST_F(IlmControlTest, ilmControl_init_failed)
  *                      -# Calling the ilmControl_init()
  *                      -# Verification point:
  *                         +# ilmControl_init() must return ILM_ERROR_INVALID_ARGUMENTS
+ *                         +# wl_list_init() should not be called
  */
 TEST_F(IlmControlTest, ilmControl_init_error)
 {
     ASSERT_EQ(ILM_ERROR_INVALID_ARGUMENTS, ilmControl_init(0));
+    ASSERT_EQ(0, wl_list_init_fake.call_count);
 }
 
 /** ================================================================================================
@@ -4254,8 +4492,6 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_SupportArgb8888AndUnsupportWlshmGlobal
     ilm_context.wl.has_argb8888 = true;
     ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 0);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
 }
 
 /** ================================================================================================
@@ -4280,9 +4516,6 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_SupportWlshmGlobalAndUnsupportArgb8888
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 0);
-    // revert to default data
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
 }
 
 /** ================================================================================================
@@ -4295,7 +4528,7 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_SupportWlshmGlobalAndUnsupportArgb8888
  *                         is called to send request to server
  *                      -# Verification point:
  *                         +# ilm_takeScreenshot() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags should be called 5 times
+ *                         +# wl_proxy_marshal_flags should be called 5 times with corresponding opcode
  */
 TEST_F(IlmControlTest, ilm_takeScreenshot_SendScreenshotRequestFailed)
 {
@@ -4313,9 +4546,11 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_SendScreenshotRequestFailed)
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
-    // revert to default data
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], WL_SHM_CREATE_POOL);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_POOL_CREATE_BUFFER);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_DESTROY);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], IVI_WM_SCREEN_SCREENSHOT);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], WL_BUFFER_DESTROY);
 }
 
 /** ================================================================================================
@@ -4329,7 +4564,7 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_SendScreenshotRequestFailed)
  *                      -# Call ilm_takeScreenshot()
  *                      -# Verification point:
  *                         +# ilm_takeScreenshot() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags should be called 3 times
+ *                         +# wl_proxy_marshal_flags should be called 3 times with corresponding opcode
  */
 TEST_F(IlmControlTest, ilm_takeScreenshot_CreateBufferFailed)
 {
@@ -4347,9 +4582,9 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_CreateBufferFailed)
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 3);
-    // revert to default data
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], WL_SHM_CREATE_POOL);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_POOL_CREATE_BUFFER);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_DESTROY);
 }
 
 /** ================================================================================================
@@ -4365,7 +4600,7 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_CreateBufferFailed)
  *                            with successfully status, but need to assert with ILM_FAILED because in unittest 
  *                            context, client side does not get event from server, so need to make wl_display_dispatch_queue() 
  *                            return failure object to finish ilm_takeScreenshot() function.
- *                         +# wl_proxy_marshal_flags should be called 5 times
+ *                         +# wl_proxy_marshal_flags should be called 5 times with corresponding opcode
  *                         +# wl_proxy_add_listener should be called 1 times
  */
 TEST_F(IlmControlTest, ilm_takeScreenshot_Successfully)
@@ -4386,9 +4621,11 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_Successfully)
     ASSERT_EQ(ILM_FAILED, ilm_takeScreenshot(lScreenID, filename));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
     ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    // revert to default data
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], WL_SHM_CREATE_POOL);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_POOL_CREATE_BUFFER);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_DESTROY);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], IVI_WM_SCREEN_SCREENSHOT);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], WL_BUFFER_DESTROY);
 }
 
 /** ================================================================================================
@@ -4401,7 +4638,7 @@ TEST_F(IlmControlTest, ilm_takeScreenshot_Successfully)
  *                      -# Call ilm_takeAsyncScreenshot() with valid screenID, callback_done, callback_error, user_data
  *                      -# Verification point:
  *                         +# ilm_takeAsyncScreenshot() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags should be called 4 times
+ *                         +# wl_proxy_marshal_flags should be called 4 times with corresponding opcode
  *                         +# wl_proxy_add_listener should be called 1 times
  *                         +# wl_display_flush should be called 1 times
  *                         +# All callback of screenshot_context should be setted
@@ -4419,19 +4656,21 @@ TEST_F(IlmControlTest, ilm_takeAsyncScreenshot_Successfully)
     SET_RETURN_SEQ(wl_proxy_marshal_flags, lScreenshotRetList, 1);
     SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
     // call and verify data
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncScreenshot(lScreenID, lValidAddress, lValidAddress, lValidAddress));
-    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 4);
-    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
+    EXPECT_EQ(ILM_SUCCESS, ilm_takeAsyncScreenshot(lScreenID, lValidAddress, lValidAddress, lValidAddress));
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.call_count, 4);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], WL_SHM_CREATE_POOL);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_POOL_CREATE_BUFFER);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_DESTROY);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], IVI_WM_SCREEN_SCREENSHOT);
+    EXPECT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_display_flush_fake.call_count, 1);
     struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
-    ASSERT_EQ(ctx_scrshot->callback_done, lValidAddress);
-    ASSERT_EQ(ctx_scrshot->callback_error, lValidAddress);
-    ASSERT_EQ(ctx_scrshot->callback_priv, lValidAddress);
-    // release resource and revert to default data
+    EXPECT_EQ(ctx_scrshot->callback_done, lValidAddress);
+    EXPECT_EQ(ctx_scrshot->callback_error, lValidAddress);
+    EXPECT_EQ(ctx_scrshot->callback_priv, lValidAddress);
+    // release resource
     destroy_shm_buffer(ctx_scrshot->ivi_buffer);
     free(ctx_scrshot);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
 }
 
 /** ================================================================================================
@@ -4457,7 +4696,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_FileNameNull)
  *                      -# Call ilm_takeSurfaceScreenshot()
  *                      -# Verification point:
  *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags should be called 1 time
+ *                         +# wl_proxy_marshal_flags should be called 1 time with opcode IVI_WM_SURFACE_GET
  *                         +# wl_display_roundtrip_queue should be called 1 time
  */
 TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_InvalidSurfaceID)
@@ -4472,6 +4711,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_InvalidSurfaceID)
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lInvalidSurfaceID));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
     ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
 }
 
@@ -4507,7 +4747,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_controllderIsNull)
  *                      -# Call ilm_takeSurfaceScreenshot()
  *                      -# Verification point:
  *                         +# ilm_takeScreenshot() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() should be called 1 time
+ *                         +# wl_proxy_marshal_flags() should be called 1 time with opcode IVI_WM_SURFACE_GET
  *                         +# wl_display_roundtrip_queue() should be called 1 time
  */
 
@@ -4520,6 +4760,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_wl_display_roundtrip_queue_Fail
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
     ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
 }
 
@@ -4532,7 +4773,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_wl_display_roundtrip_queue_Fail
  *                      -# call ilm_takeSurfaceScreenshot() with valid screenID and file name
  *                      -# Verification point:
  *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() should be called 1 time
+ *                         +# wl_proxy_marshal_flags() should be called 1 time with opcode IVI_WM_SURFACE_GET
  *                         +# wl_display_roundtrip_queue() should be called 1 time
  */
 TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SupportArgb8888AndUnsupportWlshmGlobal)
@@ -4550,6 +4791,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SupportArgb8888AndUnsupportWlsh
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
     ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
 }
 
@@ -4561,7 +4803,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SupportArgb8888AndUnsupportWlsh
  *                      -# call ilm_takeSurfaceScreenshot() with valid screenID and file name
  *                      -# Verification point:
  *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() should be called 1 time
+ *                         +# wl_proxy_marshal_flags() should be called 1 time with opcode IVI_WM_SURFACE_GET
  *                         +# wl_display_roundtrip_queue() should be called 1 time
  */
 TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SupportWlshmGlobalAndUnsupportArgb8888)
@@ -4579,6 +4821,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SupportWlshmGlobalAndUnsupportA
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 1);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
     ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
 }
 
@@ -4594,7 +4837,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SupportWlshmGlobalAndUnsupportA
  *                      -# Call ilm_takeSurfaceScreenshot()
  *                      -# Verification point:
  *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() should be called 4 times
+ *                         +# wl_proxy_marshal_flags() should be called 4 times with corresponding opcode
  *                         +# wl_display_roundtrip_queue() should be called 1 time
  */
 TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_CreateBufferFailed)
@@ -4614,6 +4857,10 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_CreateBufferFailed)
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 4);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
     ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
 }
 
@@ -4628,7 +4875,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_CreateBufferFailed)
  *                         is called to send request to server
  *                      -# Verification point:
  *                         +# ilm_takeSurfaceScreenshot() must return ILM_FAILED
- *                         +# wl_proxy_marshal_flags() should be called 6 times
+ *                         +# wl_proxy_marshal_flags() should be called 6 times with corresponding opcode
  *                         +# wl_display_roundtrip_queue() should be called 1 time
  *                         +# wl_proxy_add_listener() should not be called
  */
@@ -4649,6 +4896,12 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SendSurfaceScreenShotFailed)
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 6);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[5], WL_BUFFER_DESTROY);
     ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
     ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 0);
 }
@@ -4666,7 +4919,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_SendSurfaceScreenShotFailed)
  *                            with successfully status, but need to assert with ILM_FAILED because in unittest 
  *                            context, client side does not get event from server, so need to make wl_display_dispatch_queue() 
  *                            return failure object to finish ilm_takeSurfaceScreenshot() function.
- *                         +# wl_proxy_marshal_flags should be called 6 times
+ *                         +# wl_proxy_marshal_flags should be called 6 times with corresponding opcode
  *                         +# wl_display_roundtrip_queue should be called 1 time
  *                         +# wl_proxy_add_listener should be called 1 time
  *                         +# wl_display_dispatch_queue should be called 1 time
@@ -4689,6 +4942,12 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_Successfully)
     // call and verify data
     ASSERT_EQ(ILM_FAILED, ilm_takeSurfaceScreenshot(filename, lSurfaceID));
     ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 6);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    ASSERT_EQ(wl_proxy_marshal_flags_fake.arg1_history[5], WL_BUFFER_DESTROY);
     ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
     ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
     ASSERT_EQ(wl_display_flush_fake.call_count, 0);
@@ -4705,7 +4964,7 @@ TEST_F(IlmControlTest, ilm_takeSurfaceScreenshot_Successfully)
  *                      -# Call ilm_takeAsyncScreenshot() with valid screenID, callback_done, callback_error, user_data
  *                      -# Verification point:
  *                         +# ilm_takeAsyncScreenshot() must return ILM_SUCCESS
- *                         +# wl_proxy_marshal_flags should be called 4 times
+ *                         +# wl_proxy_marshal_flags should be called 4 times with corresponding opcode
  *                         +# wl_proxy_add_listener should be called 1 times
  *                         +# wl_display_flush should be called 1 times
  *                         +# All callback of screenshot_context should be setted
@@ -4724,21 +4983,24 @@ TEST_F(IlmControlTest, ilm_takeAsyncSurfaceScreenshot_Successfully)
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
     SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
     // call and verify data
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, lValidAddress, lValidAddress, lValidAddress));
-    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
-    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
-    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
-    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    EXPECT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, lValidAddress, lValidAddress, lValidAddress));
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    EXPECT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    EXPECT_EQ(wl_display_flush_fake.call_count, 1);
+    EXPECT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
     struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
-    ASSERT_EQ(ctx_scrshot->callback_done, lValidAddress);
-    ASSERT_EQ(ctx_scrshot->callback_error, lValidAddress);
-    ASSERT_EQ(ctx_scrshot->callback_priv, lValidAddress);
-    // release resource and revert to default data
+    EXPECT_EQ(ctx_scrshot->callback_done, lValidAddress);
+    EXPECT_EQ(ctx_scrshot->callback_error, lValidAddress);
+    EXPECT_EQ(ctx_scrshot->callback_priv, lValidAddress);
+    // release resource
     destroy_shm_buffer(ctx_scrshot->ivi_buffer);
     free(ctx_scrshot);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
 }
 
 /** ================================================================================================
@@ -4768,27 +5030,30 @@ TEST_F(IlmControlTest, screenshot_done_UnknownFileFormat)
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
     SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
     // setup callback for ilm_context
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
-    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
-    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
-    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
-    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    EXPECT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    EXPECT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    EXPECT_EQ(wl_display_flush_fake.call_count, 1);
+    EXPECT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
     struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
-    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    EXPECT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_priv, &screenshotData);
     // set file format
     ctx_scrshot->filename = "test.txt";
     // call API and verify data
     screenshot_done(ctx_scrshot, lValidAddress, 1);
-    ASSERT_EQ(save_as_png_fake.call_count, 0);
-    ASSERT_EQ(save_as_bitmap_fake.call_count, 1);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    EXPECT_EQ(save_as_png_fake.call_count, 0);
+    EXPECT_EQ(save_as_bitmap_fake.call_count, 1);
     destroy_shm_buffer(ctx_scrshot->ivi_buffer);
     // make sure call back is called
-    ASSERT_NE(screenshotData.fd.load(), -1);
+    EXPECT_NE(screenshotData.fd.load(), -1);
     free(ctx_scrshot);
 }
 
@@ -4821,16 +5086,21 @@ TEST_F(IlmControlTest, screenshot_done_pngFileFormatSaveAsPngPassed)
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
     SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
     // setup callback for ilm_context
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
-    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
-    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
-    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
-    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    EXPECT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    EXPECT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    EXPECT_EQ(wl_display_flush_fake.call_count, 1);
+    EXPECT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
     struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
-    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    EXPECT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_priv, &screenshotData);
     // set file format
     ctx_scrshot->filename = "test.png";
     // mock save_as_png
@@ -4838,14 +5108,12 @@ TEST_F(IlmControlTest, screenshot_done_pngFileFormatSaveAsPngPassed)
     SET_RETURN_SEQ(save_as_png, save_as_png_passed, 1);
     // call API and verify data
     screenshot_done(ctx_scrshot, lValidAddress, 1);
-    ASSERT_EQ(save_as_png_fake.call_count, 1);
-    ASSERT_EQ(save_as_bitmap_fake.call_count, 0);
-    ASSERT_EQ(ctx_scrshot->result, ILM_SUCCESS);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    EXPECT_EQ(save_as_png_fake.call_count, 1);
+    EXPECT_EQ(save_as_bitmap_fake.call_count, 0);
+    EXPECT_EQ(ctx_scrshot->result, ILM_SUCCESS);
     destroy_shm_buffer(ctx_scrshot->ivi_buffer);
     // make sure call back is called
-    ASSERT_NE(screenshotData.fd.load(), -1);
+    EXPECT_NE(screenshotData.fd.load(), -1);
     free(ctx_scrshot);
 }
 
@@ -4878,16 +5146,21 @@ TEST_F(IlmControlTest, screenshot_done_pngFileFormatSaveAsPngFailed)
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
     SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
     // setup callback for ilm_context
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
-    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
-    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
-    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
-    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    EXPECT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    EXPECT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    EXPECT_EQ(wl_display_flush_fake.call_count, 1);
+    EXPECT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
     struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
-    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    EXPECT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_priv, &screenshotData);
     // set file format
     ctx_scrshot->filename = "test.png";
     // mock save_as_png
@@ -4895,14 +5168,12 @@ TEST_F(IlmControlTest, screenshot_done_pngFileFormatSaveAsPngFailed)
     SET_RETURN_SEQ(save_as_png, save_as_png_failed, 1);
     // call API and verify data
     screenshot_done(ctx_scrshot, lValidAddress, 1);
-    ASSERT_EQ(save_as_png_fake.call_count, 1);
-    ASSERT_EQ(save_as_bitmap_fake.call_count, 0);
-    ASSERT_EQ(ctx_scrshot->result, ILM_FAILED);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    EXPECT_EQ(save_as_png_fake.call_count, 1);
+    EXPECT_EQ(save_as_bitmap_fake.call_count, 0);
+    EXPECT_EQ(ctx_scrshot->result, ILM_FAILED);
     destroy_shm_buffer(ctx_scrshot->ivi_buffer);
     // make sure call back is called
-    ASSERT_NE(screenshotData.fd.load(), -1);
+    EXPECT_NE(screenshotData.fd.load(), -1);
     free(ctx_scrshot);
 }
 
@@ -4935,16 +5206,21 @@ TEST_F(IlmControlTest, screenshot_done_bitmapFileFormatSaveAsBitmapPassed)
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
     SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
     // setup callback for ilm_context
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
-    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
-    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
-    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
-    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    EXPECT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    EXPECT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    EXPECT_EQ(wl_display_flush_fake.call_count, 1);
+    EXPECT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
     struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
-    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    EXPECT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_priv, &screenshotData);
     // set file format
     ctx_scrshot->filename = "test.bmp";
     // mock save_as_bitmap
@@ -4952,14 +5228,12 @@ TEST_F(IlmControlTest, screenshot_done_bitmapFileFormatSaveAsBitmapPassed)
     SET_RETURN_SEQ(save_as_bitmap, save_as_bitmap_passed, 1);
     // call API and verify data
     screenshot_done(ctx_scrshot, lValidAddress, 1);
-    ASSERT_EQ(save_as_png_fake.call_count, 0);
-    ASSERT_EQ(save_as_bitmap_fake.call_count, 1);
-    ASSERT_EQ(ctx_scrshot->result, ILM_SUCCESS);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    EXPECT_EQ(save_as_png_fake.call_count, 0);
+    EXPECT_EQ(save_as_bitmap_fake.call_count, 1);
+    EXPECT_EQ(ctx_scrshot->result, ILM_SUCCESS);
     destroy_shm_buffer(ctx_scrshot->ivi_buffer);
     // make sure call back is called
-    ASSERT_NE(screenshotData.fd.load(), -1);
+    EXPECT_NE(screenshotData.fd.load(), -1);
     free(ctx_scrshot);
 }
 
@@ -4992,16 +5266,21 @@ TEST_F(IlmControlTest, screenshot_done_bitmapFileFormatSaveAsBitmapFailed)
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
     SET_RETURN_SEQ(wl_proxy_get_version, lVersionRetList, 1);
     // setup callback for ilm_context
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
-    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
-    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
-    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
-    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    EXPECT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    EXPECT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    EXPECT_EQ(wl_display_flush_fake.call_count, 1);
+    EXPECT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
     struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
-    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    EXPECT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_priv, &screenshotData);
     // set file format
     ctx_scrshot->filename = "test.bmp";
     // mock save_as_bitmap
@@ -5009,14 +5288,12 @@ TEST_F(IlmControlTest, screenshot_done_bitmapFileFormatSaveAsBitmapFailed)
     SET_RETURN_SEQ(save_as_bitmap, save_as_bitmap_failed, 1);
     // call API and verify data
     screenshot_done(ctx_scrshot, lValidAddress, 1);
-    ASSERT_EQ(save_as_png_fake.call_count, 0);
-    ASSERT_EQ(save_as_bitmap_fake.call_count, 1);
-    ASSERT_EQ(ctx_scrshot->result, ILM_FAILED);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    EXPECT_EQ(save_as_png_fake.call_count, 0);
+    EXPECT_EQ(save_as_bitmap_fake.call_count, 1);
+    EXPECT_EQ(ctx_scrshot->result, ILM_FAILED);
     destroy_shm_buffer(ctx_scrshot->ivi_buffer);
     // make sure call back is called
-    ASSERT_NE(screenshotData.fd.load(), -1);
+    EXPECT_NE(screenshotData.fd.load(), -1);
     free(ctx_scrshot);
 }
 
@@ -5046,24 +5323,27 @@ TEST_F(IlmControlTest, screenshot_error_CheckCall)
     SET_RETURN_SEQ(wl_display_dispatch_queue, mp_failureResult, 1);
     SET_RETURN_SEQ(wl_proxy_get_version, version, 1);
     // setup callback for ilm_context
-    ASSERT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
-    ASSERT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
-    ASSERT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
-    ASSERT_EQ(wl_display_flush_fake.call_count, 1);
-    ASSERT_EQ(wl_proxy_add_listener_fake.call_count, 1);
-    ASSERT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
+    EXPECT_EQ(ILM_SUCCESS, ilm_takeAsyncSurfaceScreenshot(lSurfaceID, ScreenshotDoneCallbackFunc, ScreenshotErrorCallbackFunc, &screenshotData));
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.call_count, 5);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[0], IVI_WM_SURFACE_GET);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[1], WL_SHM_CREATE_POOL);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[2], WL_SHM_POOL_CREATE_BUFFER);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[3], WL_SHM_POOL_DESTROY);
+    EXPECT_EQ(wl_proxy_marshal_flags_fake.arg1_history[4], IVI_WM_SURFACE_SCREENSHOT);
+    EXPECT_EQ(wl_display_roundtrip_queue_fake.call_count, 1);
+    EXPECT_EQ(wl_display_flush_fake.call_count, 1);
+    EXPECT_EQ(wl_proxy_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_display_dispatch_queue_fake.call_count, 0);
     struct screenshot_context *ctx_scrshot = wl_proxy_add_listener_fake.arg2_val;
-    ASSERT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
-    ASSERT_EQ(ctx_scrshot->callback_priv, &screenshotData);
+    EXPECT_EQ(ctx_scrshot->callback_done, ScreenshotDoneCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_error, ScreenshotErrorCallbackFunc);
+    EXPECT_EQ(ctx_scrshot->callback_priv, &screenshotData);
     ctx_scrshot->filename = "test.txt";
     screenshot_error(ctx_scrshot, lValidAddress, 1, "Error message");
-    ASSERT_EQ(save_as_png_fake.call_count, 0);
-    ASSERT_EQ(save_as_bitmap_fake.call_count, 0);
-    ilm_context.wl.wl_shm = NULL;
-    ilm_context.wl.has_argb8888 = false;
+    EXPECT_EQ(save_as_png_fake.call_count, 0);
+    EXPECT_EQ(save_as_bitmap_fake.call_count, 0);
     destroy_shm_buffer(ctx_scrshot->ivi_buffer);
     // make sure call back is called
-    ASSERT_NE(screenshotData.error.load(), -1);
+    EXPECT_NE(screenshotData.error.load(), -1);
     free(ctx_scrshot);
 }
