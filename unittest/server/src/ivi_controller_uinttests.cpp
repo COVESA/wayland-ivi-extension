@@ -155,6 +155,7 @@ public:
         custom_wl_list_init(&mp_iviShell->list_controller);
         custom_wl_list_init(&mp_iviShell->ivisurface_created_signal.listener_list);
         custom_wl_list_init(&mp_iviShell->ivisurface_removed_signal.listener_list);
+        custom_wl_list_init(&mp_iviShell->id_allocation_request_signal.listener_list);
 
         for(uint8_t i = 0; i < OBJECT_NUMBER; i++)
         {
@@ -535,9 +536,7 @@ TEST_F(ControllerTests, send_layer_prop_hasEvents)
  *                      -# Verification point:
  *                         +# get_id_of_surface() must be called once time
  *                         +# get_properties_of_surface() must be called once time
- *                         +# wl_list_init() must be called once time
  *                         +# surface_get_weston_surface() must be called once time
- *                         +# wl_list_insert() must be called 2 times
  *                         +# surface_add_listener() must be called once time
  *                         +# wl_resource_post_event() must be called {OBJECT_NUMBER} times with opcode IVI_WM_SURFACE_CREATED
  *                         +# The result output should same with prepare data
@@ -557,6 +556,56 @@ TEST_F(ControllerTests, surface_event_create_idDifferentBkgnSurfaceId)
     EXPECT_EQ(get_id_of_surface_fake.call_count, 1);
     EXPECT_EQ(get_properties_of_surface_fake.call_count, 1);
     EXPECT_EQ(surface_get_weston_surface_fake.call_count, 1);
+    EXPECT_EQ(surface_add_listener_fake.call_count, 1);
+    EXPECT_EQ(wl_resource_post_event_fake.call_count, OBJECT_NUMBER);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_CREATED);
+    EXPECT_EQ(wl_resource_post_event_fake.arg1_history[1], IVI_WM_SURFACE_CREATED);
+    EXPECT_EQ(OBJECT_NUMBER, g_SurfaceCreatedCount);
+    struct ivisurface *lp_iviSurf = (struct ivisurface*)(uintptr_t(wl_list_init_fake.arg0_history[0]) - offsetof(struct ivisurface, notification_list));
+    EXPECT_EQ(lp_iviSurf->shell, mp_iviShell);
+    EXPECT_EQ(lp_iviSurf->layout_surface, &l_layoutSurface);
+    EXPECT_EQ(mp_iviShell->bkgnd_surface, nullptr);
+
+    free(lp_iviSurf);
+    free(lp_westonSurface);
+}
+
+/** ================================================================================================
+ * @test_id             surface_event_create_EventCreateADesktopSurface
+ * @brief               surface_event_create() is called when a desktop surface is created
+ * @test_procedure Steps:
+ *                      -# Set id_surface and bkgnd_surface_id
+ *                      -# Mocking the surface_get_weston_surface() does return an object
+ *                      -# Mocking the get_id_of_surface() does return an invalid ID in first call, an valid ID in second call
+ *                      -# Mocking the weston_surface_get_desktop_surface() does return an object
+ *                      -# Calling the surface_event_create()
+ *                      -# Verification point:
+ *                         +# get_id_of_surface() must be called 2 times
+ *                         +# get_properties_of_surface() must be called once time
+ *                         +# surface_get_weston_surface() must be called once time
+ *                         +# surface_add_listener() must be called once time
+ *                         +# wl_resource_post_event() must be called {OBJECT_NUMBER} times with opcode IVI_WM_SURFACE_CREATED
+ *                         +# The result output should same with prepare data
+ *                      -# Free resources are allocated when running the test
+ */
+TEST_F(ControllerTests, surface_event_create_EventCreateADesktopSurface)
+{
+    struct ivi_layout_surface l_layoutSurface;
+    l_layoutSurface.id_surface = IVI_INVALID_ID;
+    mp_iviShell->bkgnd_surface_id = 1;
+
+    struct weston_surface *lp_westonSurface = (struct weston_surface *)malloc(sizeof(struct weston_surface));
+    SET_RETURN_SEQ(surface_get_weston_surface, &lp_westonSurface, 1);
+    uint32_t IDSurfaceRetList[2] = {IVI_INVALID_ID, 1};
+    SET_RETURN_SEQ(get_id_of_surface, IDSurfaceRetList, 2);
+    struct weston_desktop_surface *lp_westonDesktopSurface = (struct weston_desktop_surface*) 0xFFFFFFFF; // a fake valid address
+    SET_RETURN_SEQ(weston_surface_get_desktop_surface, &lp_westonDesktopSurface, 1);
+
+    surface_event_create(&mp_iviShell->surface_created, &l_layoutSurface);
+
+    EXPECT_EQ(get_id_of_surface_fake.call_count, 2);
+    EXPECT_EQ(get_properties_of_surface_fake.call_count, 1);
+    EXPECT_EQ(surface_get_weston_surface_fake.call_count, 2);
     EXPECT_EQ(surface_add_listener_fake.call_count, 1);
     EXPECT_EQ(wl_resource_post_event_fake.call_count, OBJECT_NUMBER);
     EXPECT_EQ(wl_resource_post_event_fake.arg1_history[0], IVI_WM_SURFACE_CREATED);
@@ -708,6 +757,62 @@ TEST_F(ControllerTests, output_created_event_defaultConfigScreen)
     EXPECT_EQ(lp_iviScreen->id_screen, mp_screenInfo->screen_id);
 
     free(lp_iviScreen);
+}
+
+/** ================================================================================================
+ * @test_id             output_created_event_whenBackgroundViewAndClientAvailable
+ * @brief               Test case of output_created_event() where weston output is a default name
+ *                      same screen info default, background view and client of shell are available
+ * @test_procedure Steps:
+ *                      -# Set weston output with name is default name and id is 1000
+ *                      -# Set data for ivi shell with valid bkgnd_view and client
+ *                      -# Calling the output_created_event()
+ *                      -# Verification point:
+ *                         +# wl_list_insert() must be called 2 times
+ *                         +# wl_list_init() must be called once time
+ *                         +# wl_list_remove() must be called once time
+ *                         +# weston_compositor_schedule_repaint() should not be called
+ *                         +# The result output should same with prepare data
+ *                      -# Free resources are allocated when running the test
+ */
+TEST_F(ControllerTests, output_created_event_whenBackgroundViewAndClientAvailable)
+{
+    struct weston_output l_createdOutput;
+    l_createdOutput.id = 1000;
+    l_createdOutput.name = mp_screenInfo->screen_name;
+
+    mp_iviShell->bkgnd_view = (struct weston_view*)malloc(sizeof(struct weston_view));
+    mp_iviShell->bkgnd_view->surface = (struct weston_surface*)malloc(sizeof(struct weston_surface));
+    mp_iviShell->bkgnd_view->surface->width = 1;
+    mp_iviShell->bkgnd_view->surface->height = 1;
+    mp_iviShell->bkgnd_view->surface->compositor = (struct weston_compositor*)malloc(sizeof(weston_compositor));
+    custom_wl_list_init(&mp_iviShell->bkgnd_view->surface->compositor->output_list);
+    struct weston_output *l_output = (struct weston_output *)malloc(sizeof(struct weston_output));
+    l_output->name = (char*)"default_screen";
+    l_output->id = 1;
+    l_output->x = 1;
+    l_output->y = 1;
+    l_output->width = 1;
+    l_output->height = 1;
+    custom_wl_list_insert(&mp_iviShell->compositor->output_list, &l_output->link);
+    mp_iviShell->client = (struct wl_client*)&mp_fakeClient;
+
+    output_created_event(&mp_iviShell->output_created, &l_createdOutput);
+
+    EXPECT_EQ(wl_list_insert_fake.call_count, 2);
+    EXPECT_EQ(wl_list_init_fake.call_count, 1);
+    EXPECT_EQ(weston_compositor_schedule_repaint_fake.call_count, 0);
+    struct iviscreen *lp_iviScreen = (struct iviscreen*)(uintptr_t(wl_list_insert_fake.arg1_history[0]) - offsetof(struct iviscreen, link));
+    EXPECT_EQ(lp_iviScreen->shell, mp_iviShell);
+    EXPECT_EQ(lp_iviScreen->output, &l_createdOutput);
+    EXPECT_EQ(lp_iviScreen->id_screen, mp_screenInfo->screen_id);
+    EXPECT_EQ(wl_list_remove_fake.call_count, 1);
+
+    free(lp_iviScreen);
+    free(l_output);
+    free(mp_iviShell->bkgnd_view->surface->compositor);
+    free(mp_iviShell->bkgnd_view->surface);
+    free(mp_iviShell->bkgnd_view);
 }
 
 /** ================================================================================================

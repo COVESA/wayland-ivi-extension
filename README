@@ -67,8 +67,8 @@ How to test functional testing
 
 How to test unit testing
 ====================================
-1. Build the testsuite by setting BUILD_ILM_UNIT_TESTS option.
-   Example: cmake -DBUILD_ILM_UNIT_TESTS=ON
+1. Build the testsuite by setting BUILD_UNIT_TESTS option.
+   Example: cmake -DBUILD_UNIT_TESTS=ON
 2. After build successfully, just run the testsuite right away.
    Syntax: <your installation path>/bin/unittest*
    Example: $HOME/install/bin/unittest-ivi-controller
