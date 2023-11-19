@@ -262,7 +262,6 @@ ilm_setInputFocus(t_ilm_surface *surfaceIDs, t_ilm_uint num_surfaces,
         && num_surfaces > 1 && is_set == ILM_TRUE) {
         fprintf(stderr,
                 "Cannot set pointer or touch focus for multiple surfaces\n");
-        release_instance();
         return ILM_FAILED;
     }
 
