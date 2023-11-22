@@ -470,8 +470,8 @@ controller_surface_screenshot(struct wl_client *client,
         goto err;
     }
 
-    result = lyt->surface_get_size(layout_surface, &width, &height, &stride);
-    if ((result != IVI_SUCCEEDED) || !width || !height || !stride) {
+    lyt->surface_get_size(layout_surface, &width, &height, &stride);
+    if (!width || !height || !stride) {
         ivi_screenshot_send_error(screenshot, IVI_SCREENSHOT_ERROR_NO_CONTENT, 
                 "surface_screenshot: surface does not have content");
         goto err;
@@ -1861,13 +1861,8 @@ check_layout_layers(struct ivishell *shell)
     uint32_t id_layer = 0;
     int32_t length = 0;
     int32_t i = 0;
-    int32_t ret = 0;
 
-    ret = lyt->get_layers(&length, &pArray);
-    if(ret != 0) {
-        weston_log("failed to get layers at check_layout_layers\n");
-        return -1;
-    }
+    lyt->get_layers(&length, &pArray);
 
     if (length == 0) {
         /* if length is 0, pArray doesn't need to free.*/
@@ -1897,13 +1892,8 @@ check_layout_surfaces(struct ivishell *shell)
     uint32_t id_surface = 0;
     int32_t length = 0;
     int32_t i = 0;
-    int32_t ret = 0;
 
-    ret = lyt->get_surfaces(&length, &pArray);
-    if(ret != 0) {
-        weston_log("failed to get surfaces at check_layout_surfaces\n");
-        return -1;
-    }
+    lyt->get_surfaces(&length, &pArray);
 
     if (length == 0) {
         /* if length is 0, pArray doesn't need to free.*/
