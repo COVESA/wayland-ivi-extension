@@ -2135,7 +2135,7 @@ load_input_module(struct ivishell *shell)
         return 0;
     }
 
-    input_module_init = wet_load_module_entrypoint(input_module, "input_controller_module_init");
+    input_module_init = weston_load_module(input_module, "input_controller_module_init", MODULEDIR);
     if (!input_module_init)
         return -1;
 
@@ -2209,7 +2209,7 @@ static int load_id_agent_module(struct ivishell *shell)
         return 0;
     }
 
-    id_agent_module_init = wet_load_module_entrypoint(id_agent_module, "id_agent_module_init");
+    id_agent_module_init = weston_load_module(id_agent_module, "id_agent_module_init", MODULEDIR);
     if (!id_agent_module_init)
         return -1;
 

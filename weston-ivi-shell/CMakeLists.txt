@@ -48,8 +48,6 @@ add_custom_command(
 
 INCLUDE (CheckFunctionExists)
 
-CHECK_FUNCTION_EXISTS(posix_fallocate HAVE_POSIX_FALLOCATE)
-
 configure_file(src/config.h.cmake config.h)
 
 include_directories(
