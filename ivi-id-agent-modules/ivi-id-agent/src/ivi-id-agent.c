@@ -346,10 +346,10 @@ id_agent_module_init(struct ivishell *shell)
     ida->compositor = shell->compositor;
     ida->interface = shell->interface;
     ida->id_allocation_listener.notify = id_allocation_event_request;
-    ida->destroy_listener.notify = id_agent_module_deinit;
     ida->surface_removed.notify = surface_event_remove;
 
-    wl_signal_add(&ida->compositor->destroy_signal, &ida->destroy_listener);
+    ida->interface->shell_add_destroy_listener_once(
+            &ida->destroy_listener, id_agent_module_deinit);
     wl_signal_add(&shell->id_allocation_request_signal, &ida->id_allocation_listener);
     ida->interface->add_listener_remove_surface(&ida->surface_removed);
 

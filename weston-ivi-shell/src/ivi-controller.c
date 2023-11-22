@@ -2274,12 +2274,6 @@ wet_module_init(struct weston_compositor *compositor,
         free(shell);
         return -1;
     }
-    /* add compositor destroy signal after loading input
-     * modules, to ensure input module is the first one to
-     * de-initialize
-     */
-    shell->destroy_listener.notify = ivi_shell_destroy;
-    wl_signal_add(&compositor->destroy_signal, &shell->destroy_listener);
 
     if (shell->bkgnd_surface_id && shell->ivi_client_name) {
         loop = wl_display_get_event_loop(compositor->wl_display);
@@ -2289,6 +2283,13 @@ wet_module_init(struct weston_compositor *compositor,
     if (load_id_agent_module(shell) < 0) {
         weston_log("ivi-controller: id-agent module not loaded\n");
     }
+
+    /* add ivi-shell destroy signal after loading input
+     * modules and id-agent to ensure ivi-controller module is
+     * the last one to de-initialize
+     */
+    shell->interface->shell_add_destroy_listener_once(
+            &shell->destroy_listener, ivi_shell_destroy);
 
     return 0;
 }

@@ -71,7 +71,7 @@ struct input_context {
 
     struct wl_listener surface_created;
     struct wl_listener surface_destroyed;
-    struct wl_listener compositor_destroy_listener;
+    struct wl_listener shell_destroy_listener;
     struct wl_listener seat_create_listener;
 
     char *seat_default_name;
@@ -1277,7 +1277,7 @@ destroy_input_context(struct input_context *ctx)
     wl_list_remove(&ctx->seat_create_listener.link);
     wl_list_remove(&ctx->surface_created.link);
     wl_list_remove(&ctx->surface_destroyed.link);
-    wl_list_remove(&ctx->compositor_destroy_listener.link);
+    wl_list_remove(&ctx->shell_destroy_listener.link);
 
     wl_resource_for_each_safe(resource, tmp_resource, &ctx->resource_list) {
         /*We have set destroy function for this resource.
@@ -1324,7 +1324,7 @@ input_controller_destroy(struct wl_listener *listener, void *data)
     (void)data;
     if (NULL != listener) {
         struct input_context *ctx = wl_container_of(listener,
-                ctx, compositor_destroy_listener);
+                ctx, shell_destroy_listener);
 
         input_controller_deinit(ctx);
     }
@@ -1386,11 +1386,11 @@ create_input_context(struct ivishell *shell)
     /* Add signal handlers for ivi surfaces. */
     ctx->surface_created.notify = handle_surface_create;
     ctx->surface_destroyed.notify = handle_surface_destroy;
-    ctx->compositor_destroy_listener.notify = input_controller_destroy;
 
     wl_signal_add(&ctx->ivishell->ivisurface_created_signal, &ctx->surface_created);
     wl_signal_add(&ctx->ivishell->ivisurface_removed_signal, &ctx->surface_destroyed);
-    wl_signal_add(&ctx->ivishell->compositor->destroy_signal, &ctx->compositor_destroy_listener);
+    ctx->ivishell->interface->shell_add_destroy_listener_once(
+            &ctx->shell_destroy_listener, input_controller_destroy);
 
     ctx->seat_create_listener.notify = &handle_seat_create;
     wl_signal_add(&ctx->ivishell->compositor->seat_created_signal, &ctx->seat_create_listener);
