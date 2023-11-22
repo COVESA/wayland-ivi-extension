@@ -1801,13 +1801,8 @@ surface_event_configure(struct wl_listener *listener, void *data)
     struct weston_surface *w_surface;
 
     w_surface = lyt->surface_get_weston_surface(layout_surface);
-    /* ivi_shell only emits the surface configured event when
-       it has the content and new size of buffer. Otherwise,
-       when the id-agent set the surface id for surface. */
-    if (!weston_surface_has_content(w_surface))
-        return;
-
     surface_id = lyt->get_id_of_surface(layout_surface);
+
     if (shell->bkgnd_surface_id == (int32_t)surface_id) {
 
         if (!shell->bkgnd_view) {
@@ -1829,8 +1824,13 @@ surface_event_configure(struct wl_listener *listener, void *data)
         return;
     }
 
+    /* ivi-controller only care the surface configured event when
+     * it has changed the size. Doesn't handle the id-agent sets
+     * the id of surface.*/
+    if (!(ivisurf->prop->event_mask & IVI_NOTIFICATION_CONFIGURE))
+        return;
+
     if (ivisurf->type == IVI_WM_SURFACE_TYPE_DESKTOP) {
-        w_surface = lyt->surface_get_weston_surface(layout_surface);
         lyt->surface_set_destination_rectangle(layout_surface,
                                                ivisurf->prop->dest_x,
                                                ivisurf->prop->dest_y,
@@ -1842,6 +1842,13 @@ surface_event_configure(struct wl_listener *listener, void *data)
                                           w_surface->width,
                                           w_surface->height);
         lyt->commit_changes();
+    }
+    else {
+        /* Surface has attached an invaild buffer, then it attachs
+         * again with a vaild buffer. This case, allow to rebuild the view list.*/
+        if ((weston_surface_has_content(w_surface)) &&
+                !weston_surface_is_mapped(w_surface))
+            lyt->commit_current();
     }
 
     wl_list_for_each(noti, &ivisurf->notification_list, layout_link) {
