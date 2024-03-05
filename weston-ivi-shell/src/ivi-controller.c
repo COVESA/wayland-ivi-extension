@@ -874,6 +874,7 @@ set_bkgnd_surface_prop(struct ivishell *shell)
     compositor = shell->compositor;
 
     wl_list_remove(&shell->bkgnd_transform.link);
+    wl_list_init(&shell->bkgnd_transform.link);
     weston_matrix_init(&shell->bkgnd_transform.matrix);
 
     /*find the available screen's resolution*/
