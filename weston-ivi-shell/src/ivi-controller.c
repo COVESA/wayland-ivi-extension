@@ -1702,12 +1702,15 @@ surface_event_create(struct wl_listener *listener, void *data)
 
     id_surface = lyt->get_id_of_surface(layout_surface);
 
+    /* Defer our internal surface creation until we receive the
+     * "desktop_surface_configured" signal, ensuring that clients
+     * have had enough time to provide sufficient details such
+     * as window title and app-id, before calling wl_surface_commit()
+     * for the first time.
+     */
     if ((id_surface == IVI_INVALID_ID) &&
             surface_is_desktop_surface(shell, layout_surface)) {
-        wl_signal_emit(&shell->id_allocation_request_signal, layout_surface);
-
-        /* Trying to get surface_id after allocated id*/
-        id_surface = lyt->get_id_of_surface(layout_surface);
+	return;
     }
 
     ivisurf = create_surface(shell, layout_surface, id_surface);
@@ -1864,6 +1867,33 @@ desktop_surface_event_configure(struct wl_listener *listener, void *data)
 {
     struct ivishell *shell = wl_container_of(listener, shell,
             desktop_surface_configured);
+    const struct ivi_layout_interface *lyt = shell->interface;
+    struct ivi_layout_surface *layout_surface =
+           (struct ivi_layout_surface *) data;
+    struct ivisurface *ivisurf = NULL;
+    uint32_t surface_id = 0;
+
+    surface_id = lyt->get_id_of_surface(layout_surface);
+
+    /* Create the surface and allocate an ID in
+     * the first desktop_surface_configure event
+     */
+    if ((surface_id == IVI_INVALID_ID) &&
+        surface_is_desktop_surface(shell, layout_surface)) {
+
+        wl_signal_emit(&shell->id_allocation_request_signal, layout_surface);
+
+        /* Trying to get surface_id after allocated id*/
+        surface_id = lyt->get_id_of_surface(layout_surface);
+
+        ivisurf = create_surface(shell, layout_surface, surface_id);
+
+        if (ivisurf == NULL)
+            weston_log("failed to create surface");
+        else if (shell->bkgnd_surface_id != (int32_t)surface_id)
+            wl_signal_emit(&shell->ivisurface_created_signal, ivisurf);
+    }
+
     surface_event_configure(&shell->surface_configured, data);
 }
 
