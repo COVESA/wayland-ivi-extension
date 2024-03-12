@@ -881,15 +881,15 @@ set_bkgnd_surface_prop(struct ivishell *shell)
     wl_list_for_each(output, &compositor->output_list, link) {
         if (!count)
         {
-            x = output->x;
-            y = output->y;
+            x = output->pos.c.x;
+            y = output->pos.c.y;
             count++;
         }
-        dest_width = output->x + output->width;
+        dest_width = output->pos.c.x + output->width;
         if (output->height > dest_height)
             dest_height = output->height;
         weston_log("set_bkgnd_surface_prop: o_name:%s x:%d y:%d o_width:%d o_height:%d\n",
-                   output->name, output->x, output->y, output->width, output->height);
+                   output->name, output->pos.c.x, output->pos.c.y, output->width, output->height);
     }
 
     w_surface = view->surface;
@@ -2197,7 +2197,7 @@ launch_client_process(void *data)
       setenv(IVI_CLIENT_ENABLE_CURSOR_ENV_NAME, option, 0x1);
     }
 
-    shell->client = weston_client_start(shell->compositor,
+    shell->client = wet_client_start(shell->compositor,
                                         shell->ivi_client_name);
 
     shell->client_destroy_listener.notify = ivi_shell_client_destroy;
